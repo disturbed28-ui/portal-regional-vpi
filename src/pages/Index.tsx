@@ -1,39 +1,25 @@
-import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
 
 const Index = () => {
   const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userName, setUserName] = useState("Visitante");
-  const [userStatus, setUserStatus] = useState("Offline");
-  const [userPhoto, setUserPhoto] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { user, loading: authLoading, signInWithGoogle, signOut } = useAuth();
+  const { profile, loading: profileLoading } = useProfile(user?.id);
 
-  // Simulação de dados do usuário (será substituído por Firebase)
-  useEffect(() => {
-    // Temporariamente simulando usuário logado
-    const mockUser = {
-      name: "Visitante",
-      status: "Offline",
-      photo: "",
-      isAdmin: false
-    };
-    
-    setUserName(mockUser.name);
-    setUserStatus(mockUser.status);
-    setUserPhoto(mockUser.photo);
-    setIsAdmin(mockUser.isAdmin);
-  }, []);
+  const isLoggedIn = !!user;
+  const userName = profile?.name || "Visitante";
+  const userStatus = isLoggedIn ? "Online" : "Offline";
+  const userPhoto = profile?.photo_url || "";
+  const isAdmin = profile?.is_admin || false;
 
   const handleConnect = () => {
-    // Implementar autenticação Firebase
-    console.log("Conectar");
+    signInWithGoogle();
   };
 
   const handleDisconnect = () => {
-    // Implementar logout
-    console.log("Desconectar");
+    signOut();
   };
 
   const handleAgenda = () => {
