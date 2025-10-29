@@ -2,17 +2,19 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const Index = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading, signInWithGoogle, signOut } = useAuth();
-  const { profile, loading: profileLoading } = useProfile(user?.id);
+  const { profile, loading: profileLoading } = useProfile(user?.uid);
+  const { hasRole, loading: roleLoading } = useUserRole(user?.uid);
 
   const isLoggedIn = !!user;
   const userName = profile?.name || "Visitante";
   const userStatus = isLoggedIn ? "Online" : "Offline";
   const userPhoto = profile?.photo_url || "";
-  const isAdmin = profile?.is_admin || false;
+  const isAdmin = hasRole('admin');
 
   const handleConnect = () => {
     signInWithGoogle();
@@ -117,7 +119,7 @@ const Index = () => {
           <div className="mt-auto pt-4 border-t border-border">
             <div className="text-center text-xs text-muted-foreground space-y-1">
               <div>v2.1.0</div>
-              <div>🔒 Autenticacao segura via Firebase (Google)</div>
+              <div>🔒 Autenticação segura via Firebase (Google)</div>
             </div>
           </div>
         </div>

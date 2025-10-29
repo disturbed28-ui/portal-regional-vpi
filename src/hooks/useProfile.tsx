@@ -6,7 +6,6 @@ interface Profile {
   name: string;
   status: string;
   photo_url: string | null;
-  is_admin: boolean;
 }
 
 export const useProfile = (userId: string | undefined) => {
