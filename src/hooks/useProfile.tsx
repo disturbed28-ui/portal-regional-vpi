@@ -24,7 +24,7 @@ export const useProfile = (userId: string | undefined) => {
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching profile:', error);
@@ -48,7 +48,12 @@ export const useProfile = (userId: string | undefined) => {
           filter: `id=eq.${userId}`,
         },
         (payload) => {
-          setProfile(payload.new as Profile);
+          console.log('Profile updated via realtime:', payload);
+          if (payload.eventType === 'DELETE') {
+            setProfile(null);
+          } else {
+            setProfile(payload.new as Profile);
+          }
         }
       )
       .subscribe();

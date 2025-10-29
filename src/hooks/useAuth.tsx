@@ -46,10 +46,13 @@ export const useAuth = () => {
 
           console.log('User synced successfully:', data);
           
-          toast({
-            title: "Conectado com sucesso!",
-            description: "Bem-vindo ao Portal Regional",
-          });
+          // Give time for profile to be created and propagate
+          setTimeout(() => {
+            toast({
+              title: "Conectado com sucesso!",
+              description: "Bem-vindo ao Portal Regional",
+            });
+          }, 500);
         } catch (error: any) {
           console.error('Failed to sync user:', error);
           toast({
