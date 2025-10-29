@@ -22,6 +22,7 @@ export const useUserRole = (userId: string | undefined) => {
     }
 
     const fetchRoles = async () => {
+      setLoading(true); // ✅ Garantir que loading está true durante fetch
       console.log('[useUserRole] Buscando roles para userId:', userId);
       
       const { data, error } = await supabase
