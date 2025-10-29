@@ -66,18 +66,35 @@ const Admin = () => {
       return;
     }
     
-    // Se não tem user OU não tem role admin
-    if (!user || !hasRole('admin')) {
-      console.log('[Admin] ACESSO NEGADO - user:', !!user, 'isAdmin:', hasRole('admin'));
+    // Se não tem user, negar acesso
+    if (!user) {
+      console.log('[Admin] ACESSO NEGADO - sem usuário');
       toast({
         title: "Acesso Negado",
-        description: "Apenas administradores podem acessar esta area",
+        description: "Você precisa estar logado",
         variant: "destructive",
       });
       navigate("/");
-    } else {
-      console.log('[Admin] ACESSO PERMITIDO');
+      return;
     }
+    
+    // IMPORTANTE: Dar um pequeno delay para garantir que roles foram carregadas
+    // Isso resolve race condition entre setRoles e setLoading no useUserRole
+    const timeoutId = setTimeout(() => {
+      if (!hasRole('admin')) {
+        console.log('[Admin] ACESSO NEGADO - não é admin. Roles:', roles);
+        toast({
+          title: "Acesso Negado",
+          description: "Apenas administradores podem acessar esta area",
+          variant: "destructive",
+        });
+        navigate("/");
+      } else {
+        console.log('[Admin] ACESSO PERMITIDO');
+      }
+    }, 50);
+    
+    return () => clearTimeout(timeoutId);
   }, [user, hasRole, roles, authLoading, roleLoading, navigate, toast]);
 
   // Carregar perfis
