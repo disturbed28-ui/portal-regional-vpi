@@ -93,14 +93,33 @@ serve(async (req) => {
 
       console.log('Role assigned successfully');
     } else {
-      // Update existing profile
+      // Update existing profile - preserve critical fields
+      const updateData: {
+        status: string;
+        name?: string;
+        photo_url?: string;
+      } = {
+        status: 'Online'  // Always update presence status
+      };
+
+      // Only update name if there's a new value AND it's different
+      if (displayName && displayName !== existingProfile.name) {
+        updateData.name = displayName;
+        console.log(`Updating name: ${existingProfile.name} -> ${displayName}`);
+      }
+
+      // Only update photo if there's a new value AND it's different
+      if (photoURL && photoURL !== existingProfile.photo_url) {
+        updateData.photo_url = photoURL;
+        console.log(`Updating photo_url: ${existingProfile.photo_url} -> ${photoURL}`);
+      }
+
+      // Log for debugging
+      console.log('Update data:', JSON.stringify(updateData, null, 2));
+
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({
-          name: displayName || existingProfile.name,
-          photo_url: photoURL || existingProfile.photo_url,
-          status: 'Online'
-        })
+        .update(updateData)
         .eq('id', uid);
 
       if (updateError) {
@@ -111,7 +130,7 @@ serve(async (req) => {
         );
       }
 
-      console.log('Profile updated successfully');
+      console.log('Profile updated successfully (preserved nome_colete and other fields)');
     }
 
     return new Response(

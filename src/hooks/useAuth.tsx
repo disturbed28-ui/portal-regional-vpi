@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { 
@@ -14,6 +14,7 @@ export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Listen to Firebase auth state changes
@@ -21,46 +22,54 @@ export const useAuth = () => {
       setUser(firebaseUser);
       setLoading(false);
 
-      if (firebaseUser) {
-        // Sync Firebase user with Lovable Cloud via Edge Function
-        try {
-          console.log('Syncing user with Lovable Cloud:', firebaseUser.uid);
-          
-          const { data, error } = await supabase.functions.invoke('sync-firebase-user', {
-            body: {
-              uid: firebaseUser.uid,
-              displayName: firebaseUser.displayName,
-              photoURL: firebaseUser.photoURL,
-            }
-          });
+      // Clear previous timeout if exists
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+        console.log('Debouncing sync call...');
+      }
 
-          if (error) {
-            console.error('Error syncing user:', error);
+      if (firebaseUser) {
+        // Wait 2s before syncing (debounce)
+        syncTimeoutRef.current = setTimeout(async () => {
+          try {
+            console.log('Syncing user with Lovable Cloud:', firebaseUser.uid);
+            
+            const { data, error } = await supabase.functions.invoke('sync-firebase-user', {
+              body: {
+                uid: firebaseUser.uid,
+                displayName: firebaseUser.displayName,
+                photoURL: firebaseUser.photoURL,
+              }
+            });
+
+            if (error) {
+              console.error('Error syncing user:', error);
+              toast({
+                title: "Erro ao sincronizar perfil",
+                description: error.message,
+                variant: "destructive",
+              });
+              return;
+            }
+
+            console.log('User synced successfully:', data);
+            
+            // Give time for profile to be created and propagate
+            setTimeout(() => {
+              toast({
+                title: "Conectado com sucesso!",
+                description: "Bem-vindo ao Portal Regional",
+              });
+            }, 500);
+          } catch (error: any) {
+            console.error('Failed to sync user:', error);
             toast({
-              title: "Erro ao sincronizar perfil",
+              title: "Erro ao conectar",
               description: error.message,
               variant: "destructive",
             });
-            return;
           }
-
-          console.log('User synced successfully:', data);
-          
-          // Give time for profile to be created and propagate
-          setTimeout(() => {
-            toast({
-              title: "Conectado com sucesso!",
-              description: "Bem-vindo ao Portal Regional",
-            });
-          }, 500);
-        } catch (error: any) {
-          console.error('Failed to sync user:', error);
-          toast({
-            title: "Erro ao conectar",
-            description: error.message,
-            variant: "destructive",
-          });
-        }
+        }, 2000); // 2 second debounce
       } else {
         toast({
           title: "Desconectado",
@@ -69,7 +78,13 @@ export const useAuth = () => {
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      // Clear timeout on unmount
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+    };
   }, [toast]);
 
   const signInWithGoogle = async () => {
