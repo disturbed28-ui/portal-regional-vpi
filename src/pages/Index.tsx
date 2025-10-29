@@ -81,9 +81,6 @@ const Index = () => {
     navigate("/admin");
   };
 
-  const handleRefreshProfile = () => {
-    window.location.reload();
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -159,15 +156,6 @@ const Index = () => {
                 className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl"
               >
                 Administracao
-              </Button>
-            )}
-            
-            {isLoggedIn && userName === "Visitante" && (
-              <Button 
-                onClick={handleRefreshProfile}
-                className="w-full h-12 bg-red-600 hover:bg-red-700 text-white border border-border rounded-xl"
-              >
-                🔄 Recarregar Perfil (Debug)
               </Button>
             )}
           </div>
