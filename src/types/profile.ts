@@ -23,5 +23,11 @@ export interface ProfileWithHistory {
   nome_colete: string | null;
   profile_status: ProfileStatus;
   observacao: string | null;
+  regional: string | null;
+  divisao: string | null;
+  cargo: string | null;
+  funcao: string | null;
+  data_entrada: string | null;
+  grau: string | null;
   history?: ProfileHistory[];
 }

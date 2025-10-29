@@ -46,35 +46,53 @@ export type Database = {
       }
       profiles: {
         Row: {
+          cargo: string | null
           created_at: string
+          data_entrada: string | null
+          divisao: string | null
+          funcao: string | null
+          grau: string | null
           id: string
           name: string
           nome_colete: string | null
           observacao: string | null
           photo_url: string | null
           profile_status: string
+          regional: string | null
           status: string
           updated_at: string
         }
         Insert: {
+          cargo?: string | null
           created_at?: string
+          data_entrada?: string | null
+          divisao?: string | null
+          funcao?: string | null
+          grau?: string | null
           id: string
           name?: string
           nome_colete?: string | null
           observacao?: string | null
           photo_url?: string | null
           profile_status?: string
+          regional?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
+          cargo?: string | null
           created_at?: string
+          data_entrada?: string | null
+          divisao?: string | null
+          funcao?: string | null
+          grau?: string | null
           id?: string
           name?: string
           nome_colete?: string | null
           observacao?: string | null
           photo_url?: string | null
           profile_status?: string
+          regional?: string | null
           status?: string
           updated_at?: string
         }

@@ -13,20 +13,28 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { ProfileStatus } from "@/types/profile";
+import { ProfileDetailDialog } from "@/components/admin/ProfileDetailDialog";
 
 interface Profile {
   id: string;
   name: string;
   nome_colete: string | null;
-  profile_status: string;
+  profile_status: ProfileStatus;
   observacao: string | null;
   photo_url: string | null;
   created_at: string;
+  regional: string | null;
+  divisao: string | null;
+  cargo: string | null;
+  funcao: string | null;
+  data_entrada: string | null;
+  grau: string | null;
 }
 
 const Admin = () => {
@@ -41,6 +49,8 @@ const Admin = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [actionType, setActionType] = useState<'aprovar' | 'recusar' | 'inativar' | null>(null);
   const [observacao, setObservacao] = useState("");
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [detailProfile, setDetailProfile] = useState<Profile | null>(null);
 
   // Verificar se é admin
   useEffect(() => {
@@ -89,7 +99,7 @@ const Admin = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setProfiles(data || []);
+      setProfiles((data || []) as Profile[]);
     } catch (error) {
       console.error('Error fetching profiles:', error);
       toast({
@@ -107,6 +117,11 @@ const Admin = () => {
     setActionType(action);
     setObservacao(profile.observacao || "");
     setDialogOpen(true);
+  };
+
+  const openDetailDialog = (profile: Profile) => {
+    setDetailProfile(profile);
+    setDetailDialogOpen(true);
   };
 
   const handleAction = async () => {
@@ -185,20 +200,17 @@ const Admin = () => {
     const statusBadge = getStatusBadge(profile.profile_status);
     
     return (
-      <Card className="mb-3">
+      <Card className="mb-3 hover:shadow-lg transition-shadow">
         <CardContent className="p-4">
-          <div className="flex items-center gap-4">
-            <div 
-              className="w-12 h-12 rounded-full bg-secondary bg-cover bg-center flex-shrink-0"
-              style={{
-                backgroundImage: profile.photo_url 
-                  ? `url(${profile.photo_url})` 
-                  : `url('/images/skull.png')`
-              }}
-            />
+          <div className="flex items-start gap-4">
+            <Avatar className="w-14 h-14 flex-shrink-0">
+              <AvatarImage src={profile.photo_url || ''} />
+              <AvatarFallback>{profile.name.charAt(0).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <h4 className="font-semibold text-foreground truncate">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <h4 className="font-semibold text-foreground">
                   {profile.nome_colete || profile.name}
                 </h4>
                 <Badge variant={statusBadge.variant}>
@@ -206,13 +218,26 @@ const Admin = () => {
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground">{profile.name}</p>
+              {(profile.regional || profile.cargo) && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {[profile.regional, profile.cargo].filter(Boolean).join(' • ')}
+                </p>
+              )}
               {profile.observacao && (
                 <p className="text-xs text-muted-foreground mt-1 italic">
                   Obs: {profile.observacao}
                 </p>
               )}
             </div>
-            <div className="flex flex-col gap-2">
+            
+            <div className="flex flex-col gap-2 flex-shrink-0">
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => openDetailDialog(profile)}
+              >
+                Ver Detalhes
+              </Button>
               {profile.profile_status === 'Analise' && (
                 <>
                   <Button 
@@ -356,6 +381,14 @@ const Admin = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Dialog de Detalhes */}
+        <ProfileDetailDialog
+          profile={detailProfile}
+          open={detailDialogOpen}
+          onOpenChange={setDetailDialogOpen}
+          onSuccess={fetchProfiles}
+        />
       </div>
     </div>
   );
