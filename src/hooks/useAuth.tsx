@@ -22,40 +22,42 @@ export const useAuth = () => {
       setLoading(false);
 
       if (firebaseUser) {
-        // Sync Firebase user with Lovable Cloud profiles table
-        const { data: existingProfile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', firebaseUser.uid)
-          .maybeSingle();
-
-        if (!existingProfile) {
-          // Create profile for new user
-          await supabase.from('profiles').insert({
-            id: firebaseUser.uid,
-            name: firebaseUser.displayName || 'Visitante',
-            photo_url: firebaseUser.photoURL || '',
-            status: 'Online'
+        // Sync Firebase user with Lovable Cloud via Edge Function
+        try {
+          console.log('Syncing user with Lovable Cloud:', firebaseUser.uid);
+          
+          const { data, error } = await supabase.functions.invoke('sync-firebase-user', {
+            body: {
+              uid: firebaseUser.uid,
+              displayName: firebaseUser.displayName,
+              photoURL: firebaseUser.photoURL,
+            }
           });
 
-          // Assign default 'user' role
-          await supabase.from('user_roles').insert({
-            user_id: firebaseUser.uid,
-            role: 'user'
+          if (error) {
+            console.error('Error syncing user:', error);
+            toast({
+              title: "Erro ao sincronizar perfil",
+              description: error.message,
+              variant: "destructive",
+            });
+            return;
+          }
+
+          console.log('User synced successfully:', data);
+          
+          toast({
+            title: "Conectado com sucesso!",
+            description: "Bem-vindo ao Portal Regional",
           });
-        } else {
-          // Update existing profile status and info
-          await supabase.from('profiles').update({
-            name: firebaseUser.displayName || existingProfile.name,
-            photo_url: firebaseUser.photoURL || existingProfile.photo_url,
-            status: 'Online'
-          }).eq('id', firebaseUser.uid);
+        } catch (error: any) {
+          console.error('Failed to sync user:', error);
+          toast({
+            title: "Erro ao conectar",
+            description: error.message,
+            variant: "destructive",
+          });
         }
-
-        toast({
-          title: "Conectado com sucesso!",
-          description: "Bem-vindo ao Portal Regional",
-        });
       } else {
         toast({
           title: "Desconectado",
