@@ -83,20 +83,20 @@ const Perfil = () => {
       return;
     }
 
-    // Se estava recusado, permitir nova tentativa
     const newStatus = profile?.profile_status === 'Recusado' ? 'Analise' : 'Analise';
 
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ 
+      // Chamar edge function em vez de UPDATE direto
+      const { data, error } = await supabase.functions.invoke('update-profile', {
+        body: {
+          userId: user?.uid,
           nome_colete: nomeColete.trim(),
-          profile_status: newStatus,
-          observacao: null // Limpar observacao ao tentar novamente
-        })
-        .eq('id', user?.uid);
+          profile_status: newStatus
+        }
+      });
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       toast({
         title: "Sucesso",
@@ -105,15 +105,15 @@ const Perfil = () => {
           : "✅ Nome de colete enviado para analise",
       });
 
-      // Redirecionar para tela principal após 1.5s
       setTimeout(() => {
         navigate("/");
       }, 1500);
     } catch (error) {
       console.error('Error updating profile:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Falha ao enviar';
       toast({
         title: "Erro",
-        description: "Falha ao enviar",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -123,7 +123,7 @@ const Perfil = () => {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-[360px] flex flex-col">
         {/* Container com mesmo tamanho do index */}
-        <div className="bg-card border border-border rounded-3xl p-6 flex flex-col">
+        <div className="bg-card border border-border rounded-3xl p-6 flex flex-col min-h-[600px]">
           {/* Cabeçalho */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-foreground">

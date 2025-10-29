@@ -89,7 +89,7 @@ const Index = () => {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-[360px] flex flex-col">
         {/* Container principal com altura fixa */}
-        <div className="bg-card border border-border rounded-3xl p-6 flex flex-col">
+        <div className="bg-card border border-border rounded-3xl p-6 flex flex-col min-h-[600px]">
           {/* Cabeçalho */}
           <div className="text-center mb-6">
             <h1 className="text-2xl font-bold text-foreground tracking-wider">
