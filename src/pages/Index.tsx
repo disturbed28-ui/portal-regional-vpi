@@ -19,6 +19,15 @@ const Index = () => {
     ? "Carregando..." 
     : (profile?.nome_colete || profile?.name || "Visitante");
   
+  // DEBUG: Log state
+  console.log('📊 Index state:', {
+    isLoggedIn,
+    profileLoading,
+    profile,
+    userName,
+    userId: user?.uid
+  });
+  
   // Mapeamento de status com cores e ícones
   const statusConfig = {
     'Pendente': { color: 'text-yellow-600', icon: '🟡', label: 'Pendente' },
@@ -70,6 +79,10 @@ const Index = () => {
 
   const handleAdmin = () => {
     navigate("/admin");
+  };
+
+  const handleRefreshProfile = () => {
+    window.location.reload();
   };
 
   return (
@@ -146,6 +159,15 @@ const Index = () => {
                 className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl"
               >
                 Administracao
+              </Button>
+            )}
+            
+            {isLoggedIn && userName === "Visitante" && (
+              <Button 
+                onClick={handleRefreshProfile}
+                className="w-full h-12 bg-red-600 hover:bg-red-700 text-white border border-border rounded-xl"
+              >
+                🔄 Recarregar Perfil (Debug)
               </Button>
             )}
           </div>

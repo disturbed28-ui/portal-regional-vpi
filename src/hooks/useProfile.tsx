@@ -29,8 +29,16 @@ export const useProfile = (userId: string | undefined) => {
         .eq('id', userId)
         .maybeSingle();
 
+      // DEBUG: Log fetch results
+      console.log('🔍 useProfile fetch:', {
+        userId,
+        data,
+        error,
+        hasData: !!data
+      });
+
       if (error) {
-        console.error('Error fetching profile:', error);
+        console.error('❌ Error fetching profile:', error);
       } else {
         setProfile(data);
       }
@@ -51,7 +59,7 @@ export const useProfile = (userId: string | undefined) => {
           filter: `id=eq.${userId}`,
         },
         (payload) => {
-          console.log('Profile updated via realtime:', payload);
+          console.log('🔄 Profile updated via realtime:', payload);
           if (payload.eventType === 'DELETE') {
             setProfile(null);
           } else {
@@ -65,6 +73,25 @@ export const useProfile = (userId: string | undefined) => {
       supabase.removeChannel(channel);
     };
   }, [userId]);
+
+  // Refetch automático após 1 segundo se estiver logado mas sem perfil
+  useEffect(() => {
+    if (userId && !profile && !loading) {
+      console.log('⚠️ Forcing profile refetch after timeout');
+      const timer = setTimeout(async () => {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
+        
+        console.log('🔄 Force refetch result:', { data, error });
+        if (data) setProfile(data);
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [userId, profile, loading]);
 
   return { profile, loading };
 };
