@@ -48,7 +48,7 @@ const Admin = () => {
       if (!user || !hasRole('admin')) {
         toast({
           title: "Acesso Negado",
-          description: "Apenas administradores podem acessar esta área",
+          description: "Apenas administradores podem acessar esta area",
           variant: "destructive",
         });
         navigate("/");
@@ -168,8 +168,8 @@ const Admin = () => {
 
   const getStatusBadge = (status: string) => {
     const config = {
-      'Pendente': { variant: 'secondary' as const, label: '🟡 Pendente' },
-      'Analise': { variant: 'secondary' as const, label: '⏳ Em Análise' },
+    'Pendente': { variant: 'secondary' as const, label: '🟡 Pendente' },
+    'Analise': { variant: 'secondary' as const, label: '⏳ Em Analise' },
       'Ativo': { variant: 'default' as const, label: '✅ Ativo' },
       'Recusado': { variant: 'destructive' as const, label: '❌ Recusado' },
       'Inativo': { variant: 'outline' as const, label: '⚫ Inativo' }
@@ -255,7 +255,7 @@ const Admin = () => {
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Administração de Perfis</h1>
+          <h1 className="text-2xl font-bold">Administracao de Perfis</h1>
           <Button onClick={() => navigate("/")} variant="outline">
             Voltar
           </Button>
@@ -263,9 +263,9 @@ const Admin = () => {
 
         <Tabs defaultValue="analise" className="w-full">
           <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="analise">
-              Em Análise ({filterByStatus('Analise').length})
-            </TabsTrigger>
+              <TabsTrigger value="analise">
+                Em Analise ({filterByStatus('Analise').length})
+              </TabsTrigger>
             <TabsTrigger value="ativo">
               Ativos ({filterByStatus('Ativo').length})
             </TabsTrigger>
@@ -286,7 +286,7 @@ const Admin = () => {
             ))}
             {filterByStatus('Analise').length === 0 && (
               <p className="text-center text-muted-foreground py-8">
-                Nenhum perfil aguardando análise
+                Nenhum perfil aguardando analise
               </p>
             )}
           </TabsContent>
@@ -332,16 +332,16 @@ const Admin = () => {
 
             <div className="py-4">
               <label className="text-sm font-medium mb-2 block">
-                Observação {actionType === 'recusar' && '(obrigatória)'}
+                Observacao {actionType === 'recusar' && '(obrigatoria)'}
               </label>
               <Textarea
                 value={observacao}
                 onChange={(e) => setObservacao(e.target.value)}
-                placeholder={
-                  actionType === 'recusar' 
-                    ? "Digite o motivo da recusa..."
-                    : "Adicione uma observação (opcional)..."
-                }
+                  placeholder={
+                    actionType === 'recusar' 
+                      ? "Digite o motivo da recusa..."
+                      : "Adicione uma observacao (opcional)..."
+                  }
                 className="min-h-[100px]"
               />
             </div>

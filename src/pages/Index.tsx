@@ -18,7 +18,7 @@ const Index = () => {
   // Mapeamento de status com cores e ícones
   const statusConfig = {
     'Pendente': { color: 'text-yellow-600', icon: '🟡', label: 'Pendente' },
-    'Analise': { color: 'text-yellow-600', icon: '⏳', label: 'Em Análise' },
+    'Analise': { color: 'text-yellow-600', icon: '⏳', label: 'Em Analise' },
     'Ativo': { color: 'text-green-600', icon: '✅', label: 'Ativo' },
     'Recusado': { color: 'text-red-600', icon: '❌', label: 'Recusado' },
     'Inativo': { color: 'text-gray-500', icon: '⚫', label: 'Inativo' }
@@ -54,7 +54,7 @@ const Index = () => {
     if (!isLoggedIn) {
       toast({
         title: "Acesso Negado",
-        description: "Você precisa estar conectado para acessar seu perfil",
+        description: "Voce precisa estar conectado para acessar seu perfil",
         variant: "destructive",
       });
       return;
@@ -148,7 +148,7 @@ const Index = () => {
           <div className="mt-auto pt-4 border-t border-border">
             <div className="text-center text-xs text-muted-foreground space-y-1">
               <div>v2.1.0</div>
-              <div>🔒 Autenticação segura via Firebase (Google)</div>
+              <div>🔒 Autenticacao segura via Firebase (Google)</div>
             </div>
           </div>
         </div>

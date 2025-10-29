@@ -32,22 +32,22 @@ const Perfil = () => {
       case 'Analise':
         return {
           type: 'warning',
-          message: '⏳ Seu perfil está em análise pelos administradores'
+          message: '⏳ Seu perfil esta em analise pelos administradores'
         };
       case 'Ativo':
         return {
           type: 'success',
-          message: '✅ Você é um membro ativo do clube!'
+          message: '✅ Voce e um membro ativo do clube!'
         };
       case 'Recusado':
         return {
           type: 'error',
-          message: `❌ Sua solicitação foi recusada. Motivo: ${profile?.observacao || 'Não informado'}`
+          message: `❌ Sua solicitacao foi recusada. Motivo: ${profile?.observacao || 'Nao informado'}`
         };
       case 'Inativo':
         return {
           type: 'neutral',
-          message: '⚫ Você não está mais ativo no clube'
+          message: '⚫ Voce nao esta mais ativo no clube'
         };
       default:
         return null;
@@ -61,7 +61,7 @@ const Perfil = () => {
     if (!loading && !user) {
       toast({
         title: "Acesso Negado",
-        description: "Você precisa estar conectado para acessar seu perfil",
+        description: "Voce precisa estar conectado para acessar seu perfil",
         variant: "destructive",
       });
       navigate("/");
@@ -92,7 +92,7 @@ const Perfil = () => {
         .update({ 
           nome_colete: nomeColete.trim(),
           profile_status: newStatus,
-          observacao: null // Limpar observação ao tentar novamente
+          observacao: null // Limpar observacao ao tentar novamente
         })
         .eq('id', user?.uid);
 
@@ -101,8 +101,8 @@ const Perfil = () => {
       toast({
         title: "Sucesso",
         description: profile?.profile_status === 'Recusado'
-          ? "✅ Solicitação reenviada para análise"
-          : "✅ Nome de colete enviado para análise",
+          ? "✅ Solicitacao reenviada para analise"
+          : "✅ Nome de colete enviado para analise",
       });
 
       // Redirecionar para tela principal após 1.5s
