@@ -1,19 +1,35 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
 
 const Perfil = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, loading } = useAuth();
+  const { profile } = useProfile(user?.uid);
   const [nomeColete, setNomeColete] = useState("");
   
-  // Dados mockados do usuário (será substituído por dados reais)
-  const userName = "Usuario Teste";
-  const userEmail = "usuario@example.com";
-  const userPhoto = "";
+  // Redirecionar se não estiver logado
+  useEffect(() => {
+    if (!loading && !user) {
+      toast({
+        title: "Acesso Negado",
+        description: "Você precisa estar conectado para acessar seu perfil",
+        variant: "destructive",
+      });
+      navigate("/");
+    }
+  }, [user, loading, navigate, toast]);
+
+  // Dados reais do usuário
+  const userName = profile?.name || user?.displayName || "Visitante";
+  const userEmail = user?.email || "Sem email";
+  const userPhoto = profile?.photo_url || user?.photoURL || "";
 
   const handleEnviar = async () => {
     if (!nomeColete.trim()) {

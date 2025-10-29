@@ -3,9 +3,11 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { user, loading: authLoading, signInWithGoogle, signOut } = useAuth();
   const { profile, loading: profileLoading } = useProfile(user?.uid);
   const { hasRole, loading: roleLoading } = useUserRole(user?.uid);
@@ -33,6 +35,14 @@ const Index = () => {
   };
 
   const handlePerfil = () => {
+    if (!isLoggedIn) {
+      toast({
+        title: "Acesso Negado",
+        description: "Você precisa estar conectado para acessar seu perfil",
+        variant: "destructive",
+      });
+      return;
+    }
     navigate("/perfil");
   };
 
@@ -100,7 +110,8 @@ const Index = () => {
             
             <Button 
               onClick={handlePerfil}
-              className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl"
+              disabled={!isLoggedIn}
+              className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Perfil do Usuario
             </Button>
