@@ -92,7 +92,7 @@ const Admin = () => {
       } else {
         console.log('[Admin] ACESSO PERMITIDO');
       }
-    }, 50);
+    }, 150);
     
     return () => clearTimeout(timeoutId);
   }, [user, hasRole, roles, authLoading, roleLoading, navigate, toast]);
