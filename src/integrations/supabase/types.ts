@@ -19,7 +19,9 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          nome_colete: string | null
           photo_url: string | null
+          profile_status: string
           status: string
           updated_at: string
         }
@@ -27,7 +29,9 @@ export type Database = {
           created_at?: string
           id: string
           name?: string
+          nome_colete?: string | null
           photo_url?: string | null
+          profile_status?: string
           status?: string
           updated_at?: string
         }
@@ -35,7 +39,9 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          nome_colete?: string | null
           photo_url?: string | null
+          profile_status?: string
           status?: string
           updated_at?: string
         }

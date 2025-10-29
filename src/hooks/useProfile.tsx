@@ -6,6 +6,8 @@ interface Profile {
   name: string;
   status: string;
   photo_url: string | null;
+  nome_colete: string | null;
+  profile_status: string;
 }
 
 export const useProfile = (userId: string | undefined) => {

@@ -61,7 +61,8 @@ serve(async (req) => {
           id: uid,
           name: displayName || 'Visitante',
           photo_url: photoURL || '',
-          status: 'Online'
+          status: 'Online',
+          profile_status: 'Pendente'
         });
 
       if (profileError) {

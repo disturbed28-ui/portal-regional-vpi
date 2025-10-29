@@ -13,8 +13,10 @@ const Index = () => {
   const { hasRole, loading: roleLoading } = useUserRole(user?.uid);
 
   const isLoggedIn = !!user;
-  const userName = profile?.name || "Visitante";
-  const userStatus = isLoggedIn ? "Online" : "Offline";
+  const userName = profile?.nome_colete || profile?.name || "Visitante";
+  const userStatus = isLoggedIn 
+    ? `Online/${profile?.profile_status || 'Pendente'}` 
+    : "Offline";
   const userPhoto = profile?.photo_url || "";
   const isAdmin = hasRole('admin');
 

@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
+import { supabase } from "@/integrations/supabase/client";
 
 const Perfil = () => {
   const navigate = useNavigate();
@@ -13,6 +14,13 @@ const Perfil = () => {
   const { user, loading } = useAuth();
   const { profile } = useProfile(user?.uid);
   const [nomeColete, setNomeColete] = useState("");
+  
+  // Carregar nome_colete existente do perfil
+  useEffect(() => {
+    if (profile?.nome_colete) {
+      setNomeColete(profile.nome_colete);
+    }
+  }, [profile]);
   
   // Redirecionar se não estiver logado
   useEffect(() => {
@@ -42,13 +50,22 @@ const Perfil = () => {
     }
 
     try {
-      // Aqui será implementada a chamada à API
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          nome_colete: nomeColete.trim(),
+          profile_status: 'Analise' 
+        })
+        .eq('id', user?.uid);
+
+      if (error) throw error;
+
       toast({
         title: "Sucesso",
-        description: "✅ Enviado com sucesso",
+        description: "✅ Nome de colete enviado para análise",
       });
-      setNomeColete("");
     } catch (error) {
+      console.error('Error updating profile:', error);
       toast({
         title: "Erro",
         description: "Falha ao enviar",
@@ -112,6 +129,11 @@ const Perfil = () => {
               onChange={(e) => setNomeColete(e.target.value)}
               className="w-full bg-input border-border text-foreground rounded-xl"
             />
+            {profile?.profile_status === 'Analise' && (
+              <p className="text-xs text-yellow-600 mt-1">
+                ⏳ Aguardando análise
+              </p>
+            )}
           </div>
 
           {/* Botão Enviar */}
