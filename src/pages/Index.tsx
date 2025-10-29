@@ -19,14 +19,14 @@ const Index = () => {
     ? "Carregando..." 
     : (profile?.nome_colete || profile?.name || "Visitante");
   
-  // DEBUG: Log state
-  console.log('📊 Index state:', {
-    isLoggedIn,
-    profileLoading,
-    profile,
-    userName,
-    userId: user?.uid
-  });
+  // DEBUG: Log state (comentado para evitar spam)
+  // console.log('📊 Index state:', {
+  //   isLoggedIn,
+  //   profileLoading,
+  //   profile,
+  //   userName,
+  //   userId: user?.uid
+  // });
   
   // Mapeamento de status com cores e ícones
   const statusConfig = {

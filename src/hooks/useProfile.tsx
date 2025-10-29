@@ -14,11 +14,13 @@ interface Profile {
 export const useProfile = (userId: string | undefined) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasFetched, setHasFetched] = useState(false);
 
   useEffect(() => {
     if (!userId) {
       setProfile(null);
       setLoading(false);
+      setHasFetched(false);
       return;
     }
 
@@ -43,9 +45,12 @@ export const useProfile = (userId: string | undefined) => {
         setProfile(data);
       }
       setLoading(false);
+      setHasFetched(true);
     };
 
-    fetchProfile();
+    if (!hasFetched) {
+      fetchProfile();
+    }
 
     // Subscribe to profile changes
     const channel = supabase
@@ -72,26 +77,7 @@ export const useProfile = (userId: string | undefined) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId]);
-
-  // Refetch automático após 1 segundo se estiver logado mas sem perfil
-  useEffect(() => {
-    if (userId && !profile && !loading) {
-      console.log('⚠️ Forcing profile refetch after timeout');
-      const timer = setTimeout(async () => {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle();
-        
-        console.log('🔄 Force refetch result:', { data, error });
-        if (data) setProfile(data);
-      }, 1000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [userId, profile, loading]);
+  }, [userId, hasFetched]);
 
   return { profile, loading };
 };
