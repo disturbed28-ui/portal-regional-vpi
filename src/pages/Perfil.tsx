@@ -104,6 +104,11 @@ const Perfil = () => {
           ? "✅ Solicitação reenviada para análise"
           : "✅ Nome de colete enviado para análise",
       });
+
+      // Redirecionar para tela principal após 1.5s
+      setTimeout(() => {
+        navigate("/");
+      }, 1500);
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
