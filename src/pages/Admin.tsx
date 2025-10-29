@@ -41,7 +41,7 @@ const Admin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
-  const { hasRole, loading: roleLoading } = useUserRole(user?.uid);
+  const { roles, hasRole, loading: roleLoading } = useUserRole(user?.uid);
   
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,22 +57,28 @@ const Admin = () => {
     console.log('[Admin] Verificação de acesso iniciada');
     console.log('[Admin] authLoading:', authLoading, 'roleLoading:', roleLoading);
     console.log('[Admin] user:', user?.uid);
+    console.log('[Admin] roles:', roles);
     console.log('[Admin] hasRole(admin):', hasRole('admin'));
     
-    if (!authLoading && !roleLoading) {
-      if (!user || !hasRole('admin')) {
-        console.log('[Admin] ACESSO NEGADO - user:', !!user, 'isAdmin:', hasRole('admin'));
-        toast({
-          title: "Acesso Negado",
-          description: "Apenas administradores podem acessar esta area",
-          variant: "destructive",
-        });
-        navigate("/");
-      } else {
-        console.log('[Admin] ACESSO PERMITIDO');
-      }
+    // Esperar authLoading E roleLoading terminarem
+    if (authLoading || roleLoading) {
+      console.log('[Admin] Aguardando carregamento...');
+      return;
     }
-  }, [user, hasRole, authLoading, roleLoading, navigate, toast]);
+    
+    // Se não tem user OU não tem role admin
+    if (!user || !hasRole('admin')) {
+      console.log('[Admin] ACESSO NEGADO - user:', !!user, 'isAdmin:', hasRole('admin'));
+      toast({
+        title: "Acesso Negado",
+        description: "Apenas administradores podem acessar esta area",
+        variant: "destructive",
+      });
+      navigate("/");
+    } else {
+      console.log('[Admin] ACESSO PERMITIDO');
+    }
+  }, [user, hasRole, roles, authLoading, roleLoading, navigate, toast]);
 
   // Carregar perfis
   useEffect(() => {

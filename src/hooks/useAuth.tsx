@@ -15,7 +15,6 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isInitialAuthRef = useRef(true);
 
   useEffect(() => {
     // Listen to Firebase auth state changes
@@ -55,15 +54,17 @@ export const useAuth = () => {
 
             console.log('User synced successfully:', data);
             
-            // Apenas mostrar toast no primeiro login da sessão
-            if (isInitialAuthRef.current) {
+            // Usar sessionStorage para controlar toast por sessão
+            const hasShownWelcomeToast = sessionStorage.getItem('welcome_toast_shown');
+            
+            if (!hasShownWelcomeToast) {
               setTimeout(() => {
                 toast({
                   title: "Conectado com sucesso!",
                   description: "Bem-vindo ao Portal Regional",
                 });
               }, 500);
-              isInitialAuthRef.current = false;
+              sessionStorage.setItem('welcome_toast_shown', 'true');
             }
           } catch (error: any) {
             console.error('Failed to sync user:', error);
@@ -75,8 +76,8 @@ export const useAuth = () => {
           }
         }, 500); // 500ms debounce - suficiente para evitar multiplas chamadas
       } else {
-        // Reset flag on logout para permitir toast no próximo login
-        isInitialAuthRef.current = true;
+        // Limpar flag do sessionStorage no logout
+        sessionStorage.removeItem('welcome_toast_shown');
         
         toast({
           title: "Desconectado",
