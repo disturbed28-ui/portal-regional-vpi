@@ -202,7 +202,8 @@ const Perfil = () => {
           <div className="flex justify-end">
             <Button 
               onClick={handleEnviar}
-              className="bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-xl px-6"
+              disabled={profile?.profile_status === 'Ativo' || profile?.profile_status === 'Inativo'}
+              className="bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-xl px-6 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Enviar
             </Button>
