@@ -58,7 +58,7 @@ const Index = () => {
   };
 
   const handleAgenda = () => {
-    console.log("Agenda");
+    navigate("/agenda");
   };
 
   const handleOrganograma = () => {
