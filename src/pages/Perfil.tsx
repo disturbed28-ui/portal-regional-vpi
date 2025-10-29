@@ -21,6 +21,40 @@ const Perfil = () => {
       setNomeColete(profile.nome_colete);
     }
   }, [profile]);
+
+  const getStatusMessage = () => {
+    switch (profile?.profile_status) {
+      case 'Pendente':
+        return {
+          type: 'info',
+          message: '📝 Preencha seu nome de colete para solicitar entrada no clube'
+        };
+      case 'Analise':
+        return {
+          type: 'warning',
+          message: '⏳ Seu perfil está em análise pelos administradores'
+        };
+      case 'Ativo':
+        return {
+          type: 'success',
+          message: '✅ Você é um membro ativo do clube!'
+        };
+      case 'Recusado':
+        return {
+          type: 'error',
+          message: `❌ Sua solicitação foi recusada. Motivo: ${profile?.observacao || 'Não informado'}`
+        };
+      case 'Inativo':
+        return {
+          type: 'neutral',
+          message: '⚫ Você não está mais ativo no clube'
+        };
+      default:
+        return null;
+    }
+  };
+
+  const statusMessage = getStatusMessage();
   
   // Redirecionar se não estiver logado
   useEffect(() => {
@@ -49,12 +83,16 @@ const Perfil = () => {
       return;
     }
 
+    // Se estava recusado, permitir nova tentativa
+    const newStatus = profile?.profile_status === 'Recusado' ? 'Analise' : 'Analise';
+
     try {
       const { error } = await supabase
         .from('profiles')
         .update({ 
           nome_colete: nomeColete.trim(),
-          profile_status: 'Analise' 
+          profile_status: newStatus,
+          observacao: null // Limpar observação ao tentar novamente
         })
         .eq('id', user?.uid);
 
@@ -62,7 +100,9 @@ const Perfil = () => {
 
       toast({
         title: "Sucesso",
-        description: "✅ Nome de colete enviado para análise",
+        description: profile?.profile_status === 'Recusado'
+          ? "✅ Solicitação reenviada para análise"
+          : "✅ Nome de colete enviado para análise",
       });
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -116,6 +156,27 @@ const Perfil = () => {
             <div className="text-sm text-foreground truncate">{userEmail}</div>
           </div>
 
+          {/* Mensagem de Status */}
+          {statusMessage && (
+            <div className={`mb-4 p-3 rounded-lg border ${
+              statusMessage.type === 'success' ? 'bg-green-50 border-green-200' :
+              statusMessage.type === 'warning' ? 'bg-yellow-50 border-yellow-200' :
+              statusMessage.type === 'error' ? 'bg-red-50 border-red-200' :
+              statusMessage.type === 'info' ? 'bg-blue-50 border-blue-200' :
+              'bg-gray-50 border-gray-200'
+            }`}>
+              <p className={`text-sm ${
+                statusMessage.type === 'success' ? 'text-green-700' :
+                statusMessage.type === 'warning' ? 'text-yellow-700' :
+                statusMessage.type === 'error' ? 'text-red-700' :
+                statusMessage.type === 'info' ? 'text-blue-700' :
+                'text-gray-700'
+              }`}>
+                {statusMessage.message}
+              </p>
+            </div>
+          )}
+
           {/* Nome de Colete */}
           <div className="mb-6">
             <Label htmlFor="nomeColete" className="text-xs text-muted-foreground mb-2 block">
@@ -127,13 +188,9 @@ const Perfil = () => {
               placeholder="digite aqui..."
               value={nomeColete}
               onChange={(e) => setNomeColete(e.target.value)}
-              className="w-full bg-input border-border text-foreground rounded-xl"
+              disabled={profile?.profile_status === 'Ativo' || profile?.profile_status === 'Inativo'}
+              className="w-full bg-input border-border text-foreground rounded-xl disabled:opacity-50"
             />
-            {profile?.profile_status === 'Analise' && (
-              <p className="text-xs text-yellow-600 mt-1">
-                ⏳ Aguardando análise
-              </p>
-            )}
           </div>
 
           {/* Botão Enviar */}

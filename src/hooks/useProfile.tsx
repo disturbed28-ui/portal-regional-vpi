@@ -8,6 +8,7 @@ interface Profile {
   photo_url: string | null;
   nome_colete: string | null;
   profile_status: string;
+  observacao: string | null;
 }
 
 export const useProfile = (userId: string | undefined) => {

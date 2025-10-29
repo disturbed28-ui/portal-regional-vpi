@@ -14,9 +14,23 @@ const Index = () => {
 
   const isLoggedIn = !!user;
   const userName = profile?.nome_colete || profile?.name || "Visitante";
+  
+  // Mapeamento de status com cores e ícones
+  const statusConfig = {
+    'Pendente': { color: 'text-yellow-600', icon: '🟡', label: 'Pendente' },
+    'Analise': { color: 'text-yellow-600', icon: '⏳', label: 'Em Análise' },
+    'Ativo': { color: 'text-green-600', icon: '✅', label: 'Ativo' },
+    'Recusado': { color: 'text-red-600', icon: '❌', label: 'Recusado' },
+    'Inativo': { color: 'text-gray-500', icon: '⚫', label: 'Inativo' }
+  };
+
+  const profileStatus = profile?.profile_status || 'Pendente';
+  const currentStatus = statusConfig[profileStatus as keyof typeof statusConfig];
+
   const userStatus = isLoggedIn 
-    ? `Online/${profile?.profile_status || 'Pendente'}` 
+    ? `${profile?.status}/${currentStatus.label}` 
     : "Offline";
+  
   const userPhoto = profile?.photo_url || "";
   const isAdmin = hasRole('admin');
 
@@ -49,7 +63,7 @@ const Index = () => {
   };
 
   const handleAdmin = () => {
-    console.log("Administração");
+    navigate("/admin");
   };
 
   return (
@@ -84,7 +98,9 @@ const Index = () => {
             <h3 className="text-xl font-semibold text-foreground mb-1">
               {userName}
             </h3>
-            <p className="text-sm text-muted-foreground">{userStatus}</p>
+            <p className={`text-sm font-medium ${isLoggedIn ? currentStatus.color : 'text-muted-foreground'}`}>
+              {isLoggedIn && currentStatus.icon} {userStatus}
+            </p>
           </div>
 
           {/* Botões - todos com o mesmo tamanho */}

@@ -14,12 +14,43 @@ export type Database = {
   }
   public: {
     Tables: {
+      profile_history: {
+        Row: {
+          alterado_por: string | null
+          created_at: string | null
+          id: string
+          observacao: string | null
+          profile_id: string
+          status_anterior: string
+          status_novo: string
+        }
+        Insert: {
+          alterado_por?: string | null
+          created_at?: string | null
+          id?: string
+          observacao?: string | null
+          profile_id: string
+          status_anterior: string
+          status_novo: string
+        }
+        Update: {
+          alterado_por?: string | null
+          created_at?: string | null
+          id?: string
+          observacao?: string | null
+          profile_id?: string
+          status_anterior?: string
+          status_novo?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
           id: string
           name: string
           nome_colete: string | null
+          observacao: string | null
           photo_url: string | null
           profile_status: string
           status: string
@@ -30,6 +61,7 @@ export type Database = {
           id: string
           name?: string
           nome_colete?: string | null
+          observacao?: string | null
           photo_url?: string | null
           profile_status?: string
           status?: string
@@ -40,6 +72,7 @@ export type Database = {
           id?: string
           name?: string
           nome_colete?: string | null
+          observacao?: string | null
           photo_url?: string | null
           profile_status?: string
           status?: string
