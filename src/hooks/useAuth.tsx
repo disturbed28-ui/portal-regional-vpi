@@ -69,7 +69,7 @@ export const useAuth = () => {
               variant: "destructive",
             });
           }
-        }, 2000); // 2 second debounce
+        }, 500); // 500ms debounce - suficiente para evitar multiplas chamadas
       } else {
         toast({
           title: "Desconectado",

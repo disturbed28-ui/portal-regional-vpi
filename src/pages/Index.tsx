@@ -13,7 +13,11 @@ const Index = () => {
   const { hasRole, loading: roleLoading } = useUserRole(user?.uid);
 
   const isLoggedIn = !!user;
-  const userName = profile?.nome_colete || profile?.name || "Visitante";
+  const isLoadingProfile = isLoggedIn && profileLoading;
+  
+  const userName = isLoadingProfile 
+    ? "Carregando..." 
+    : (profile?.nome_colete || profile?.name || "Visitante");
   
   // Mapeamento de status com cores e ícones
   const statusConfig = {
@@ -25,13 +29,15 @@ const Index = () => {
   };
 
   const profileStatus = profile?.profile_status || 'Pendente';
-  const currentStatus = statusConfig[profileStatus as keyof typeof statusConfig];
+  const currentStatus = statusConfig[profileStatus as keyof typeof statusConfig] || statusConfig['Pendente'];
 
-  const userStatus = isLoggedIn 
-    ? `${profile?.status}/${currentStatus.label}` 
-    : "Offline";
+  const userStatus = isLoadingProfile
+    ? "Carregando..."
+    : isLoggedIn 
+      ? `${profile?.status || 'Online'}/${currentStatus.label}` 
+      : "Offline";
   
-  const userPhoto = profile?.photo_url || "";
+  const userPhoto = isLoadingProfile ? "" : (profile?.photo_url || "");
   const isAdmin = hasRole('admin');
 
   const handleConnect = () => {
