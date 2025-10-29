@@ -59,9 +59,9 @@ const Perfil = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-[360px]">
+      <div className="w-full max-w-[360px] flex flex-col">
         {/* Container com mesmo tamanho do index */}
-        <div className="bg-card border border-border rounded-3xl p-6">
+        <div className="bg-card border border-border rounded-3xl p-6 flex flex-col">
           {/* Cabeçalho */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-foreground">
