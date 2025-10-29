@@ -12,23 +12,31 @@ export const useUserRole = (userId: string | undefined) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('[useUserRole] Hook iniciado com userId:', userId);
+    
     if (!userId) {
+      console.log('[useUserRole] userId é undefined/null, abortando');
       setRoles([]);
       setLoading(false);
       return;
     }
 
     const fetchRoles = async () => {
+      console.log('[useUserRole] Buscando roles para userId:', userId);
+      
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId);
 
       if (error) {
-        console.error('Error fetching user roles:', error);
+        console.error('[useUserRole] ERRO ao buscar roles:', error);
         setRoles([]);
       } else {
-        setRoles((data as UserRole[]).map(r => r.role));
+        console.log('[useUserRole] Roles encontradas:', data);
+        const mappedRoles = (data as UserRole[]).map(r => r.role);
+        console.log('[useUserRole] Roles mapeadas:', mappedRoles);
+        setRoles(mappedRoles);
       }
       setLoading(false);
     };

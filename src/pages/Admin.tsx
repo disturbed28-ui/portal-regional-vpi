@@ -54,14 +54,22 @@ const Admin = () => {
 
   // Verificar se é admin
   useEffect(() => {
+    console.log('[Admin] Verificação de acesso iniciada');
+    console.log('[Admin] authLoading:', authLoading, 'roleLoading:', roleLoading);
+    console.log('[Admin] user:', user?.uid);
+    console.log('[Admin] hasRole(admin):', hasRole('admin'));
+    
     if (!authLoading && !roleLoading) {
       if (!user || !hasRole('admin')) {
+        console.log('[Admin] ACESSO NEGADO - user:', !!user, 'isAdmin:', hasRole('admin'));
         toast({
           title: "Acesso Negado",
           description: "Apenas administradores podem acessar esta area",
           variant: "destructive",
         });
         navigate("/");
+      } else {
+        console.log('[Admin] ACESSO PERMITIDO');
       }
     }
   }, [user, hasRole, authLoading, roleLoading, navigate, toast]);
