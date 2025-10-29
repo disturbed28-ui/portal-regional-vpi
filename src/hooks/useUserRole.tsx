@@ -45,7 +45,7 @@ export const useUserRole = (userId: string | undefined) => {
 
     // Subscribe to role changes
     const channel = supabase
-      .channel('user-roles-changes')
+      .channel(`user-roles-changes-${userId}`)
       .on(
         'postgres_changes',
         {

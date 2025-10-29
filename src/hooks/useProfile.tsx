@@ -14,24 +14,23 @@ interface Profile {
 export const useProfile = (userId: string | undefined) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [hasFetched, setHasFetched] = useState(false);
 
   useEffect(() => {
     if (!userId) {
       setProfile(null);
       setLoading(false);
-      setHasFetched(false);
       return;
     }
 
     const fetchProfile = async () => {
+      setLoading(true);
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
 
-      // DEBUG: Log fetch results
       console.log('🔍 useProfile fetch:', {
         userId,
         data,
@@ -45,16 +44,13 @@ export const useProfile = (userId: string | undefined) => {
         setProfile(data);
       }
       setLoading(false);
-      setHasFetched(true);
     };
 
-    if (!hasFetched) {
-      fetchProfile();
-    }
+    fetchProfile();
 
     // Subscribe to profile changes
     const channel = supabase
-      .channel('profile-changes')
+      .channel(`profile-changes-${userId}`)
       .on(
         'postgres_changes',
         {
@@ -77,7 +73,7 @@ export const useProfile = (userId: string | undefined) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, hasFetched]);
+  }, [userId]);
 
   return { profile, loading };
 };
