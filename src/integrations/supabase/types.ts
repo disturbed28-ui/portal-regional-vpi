@@ -204,6 +204,7 @@ export type Database = {
           caveira: boolean | null
           caveira_suplente: boolean | null
           comando_texto: string
+          combate_insano: boolean | null
           created_at: string | null
           data_entrada: string | null
           data_vinculacao: string | null
@@ -233,6 +234,7 @@ export type Database = {
           caveira?: boolean | null
           caveira_suplente?: boolean | null
           comando_texto: string
+          combate_insano?: boolean | null
           created_at?: string | null
           data_entrada?: string | null
           data_vinculacao?: string | null
@@ -262,6 +264,7 @@ export type Database = {
           caveira?: boolean | null
           caveira_suplente?: boolean | null
           comando_texto?: string
+          combate_insano?: boolean | null
           created_at?: string | null
           data_entrada?: string | null
           data_vinculacao?: string | null

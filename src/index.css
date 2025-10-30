@@ -2,15 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom Font */
-@font-face {
-  font-family: 'Carnivalee Freakshow';
-  src: url('/fonts/Carnivalee_Freakshow.woff2') format('woff2');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
 */
@@ -110,17 +101,8 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Carnivalee Freakshow', cursive;
-  }
-
-  /* Admin pages override - readable font */
-  .admin-page {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
       'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-      sans-serif !important;
-  }
-
-  .admin-page * {
-    font-family: inherit;
+      sans-serif;
   }
 }

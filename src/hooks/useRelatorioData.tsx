@@ -130,7 +130,7 @@ export const useRelatorioData = (regionalTexto?: string) => {
         }
 
         // Times especiais
-        if (integrante.sgt_armas) divisaoData.combate_insano++;
+        if (integrante.combate_insano) divisaoData.combate_insano++;
         if (integrante.batedor) divisaoData.batedores++;
         if (integrante.caveira) divisaoData.caveiras++;
         if (integrante.caveira_suplente) divisaoData.caveiras_suplentes++;

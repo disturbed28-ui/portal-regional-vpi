@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DivisaoRelatorio, TotaisRelatorio } from '@/hooks/useRelatorioData';
-import { Car, Bike, User, Shield, Target, Skull } from 'lucide-react';
+import { Car, Bike, User, Shield, Skull, HardHat } from 'lucide-react';
 
 interface EstatisticasEspeciaisProps {
   divisoes: DivisaoRelatorio[];
@@ -46,12 +46,12 @@ export const EstatisticasEspeciais = ({ divisoes, totais }: EstatisticasEspeciai
         </CardContent>
       </Card>
 
-      {/* Combate Insano (SGT Armas) */}
+      {/* Combate Insano */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5" />
-            Combate Insano (SGT Armas)
+            Combate Insano
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -82,7 +82,7 @@ export const EstatisticasEspeciais = ({ divisoes, totais }: EstatisticasEspeciai
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5" />
+            <Bike className="h-5 w-5" />
             Batedores
           </CardTitle>
         </CardHeader>
@@ -123,8 +123,18 @@ export const EstatisticasEspeciais = ({ divisoes, totais }: EstatisticasEspeciai
             <TableHeader>
               <TableRow>
                 <TableHead>Divisão</TableHead>
-                <TableHead className="text-center">Titulares</TableHead>
-                <TableHead className="text-center">Suplentes</TableHead>
+                <TableHead className="text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <Skull className="h-4 w-4" />
+                    Titulares
+                  </div>
+                </TableHead>
+                <TableHead className="text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <HardHat className="h-4 w-4" />
+                    Suplentes
+                  </div>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
