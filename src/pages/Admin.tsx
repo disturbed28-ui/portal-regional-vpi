@@ -33,8 +33,16 @@ interface Profile {
   divisao: string | null;
   cargo: string | null;
   funcao: string | null;
+  regional_id: string | null;
+  divisao_id: string | null;
+  cargo_id: string | null;
+  funcao_id: string | null;
   data_entrada: string | null;
   grau: string | null;
+  regionais?: { nome: string } | null;
+  divisoes?: { nome: string } | null;
+  cargos?: { nome: string } | null;
+  funcoes?: { nome: string } | null;
 }
 
 const Admin = () => {
@@ -121,7 +129,13 @@ const Admin = () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`
+          *,
+          regionais:regional_id (nome),
+          divisoes:divisao_id (nome),
+          cargos:cargo_id (nome),
+          funcoes:funcao_id (nome)
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -263,9 +277,13 @@ const Admin = () => {
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground">{profile.name}</p>
-              {(profile.regional || profile.cargo) && (
+              {(profile.regionais?.nome || profile.divisoes?.nome || profile.cargos?.nome) && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  {[profile.regional, profile.cargo].filter(Boolean).join(' • ')}
+                  {[
+                    profile.regionais?.nome,
+                    profile.divisoes?.nome,
+                    profile.cargos?.nome
+                  ].filter(Boolean).join(' • ')}
                 </p>
               )}
               {profile.observacao && (

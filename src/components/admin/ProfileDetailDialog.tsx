@@ -22,6 +22,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { ProfileStatus } from "@/types/profile";
+import { useRegionais } from "@/hooks/useRegionais";
+import { useDivisoes } from "@/hooks/useDivisoes";
+import { useCargos } from "@/hooks/useCargos";
+import { useFuncoes } from "@/hooks/useFuncoes";
 
 interface Profile {
   id: string;
@@ -32,6 +36,10 @@ interface Profile {
   divisao: string | null;
   cargo: string | null;
   funcao: string | null;
+  regional_id: string | null;
+  divisao_id: string | null;
+  cargo_id: string | null;
+  funcao_id: string | null;
   data_entrada: string | null;
   grau: string | null;
   profile_status: ProfileStatus;
@@ -53,35 +61,15 @@ const STATUS_OPTIONS: ProfileStatus[] = [
   'Inativo',
 ];
 
-const REGIONAL_OPTIONS = [
-  'Regional Norte',
-  'Regional Sul',
-  'Regional Leste',
-  'Regional Oeste',
-  'Regional Centro',
-];
-
-const DIVISAO_OPTIONS = [
-  'Divisao Alpha',
-  'Divisao Beta',
-  'Divisao Gamma',
-  'Divisao Delta',
-];
-
-const CARGO_OPTIONS = [
-  'Presidente',
-  'Vice-Presidente',
-  'Secretario',
-  'Tesoureiro',
-  'Conselheiro',
-  'Membro',
-];
-
 const GRAU_OPTIONS = [
-  'Prospect',
-  'Membro Pleno',
-  'Membro Honorario',
-  'Membro Vitalicio',
+  'X',
+  'IX',
+  'VIII',
+  'VI',
+  'V',
+  'IV',
+  'III',
+  'Camiseta',
 ];
 
 export function ProfileDetailDialog({
@@ -94,21 +82,30 @@ export function ProfileDetailDialog({
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<Partial<Profile>>({});
+  const [selectedRegionalId, setSelectedRegionalId] = useState<string>('');
+
+  const { regionais } = useRegionais();
+  const { divisoes } = useDivisoes(selectedRegionalId || undefined);
+  const { cargos } = useCargos();
+  const { funcoes } = useFuncoes();
 
   useEffect(() => {
     if (profile) {
       setFormData({
         name: profile.name,
         nome_colete: profile.nome_colete,
-        regional: profile.regional,
-        divisao: profile.divisao,
-        cargo: profile.cargo,
-        funcao: profile.funcao,
+        regional_id: profile.regional_id,
+        divisao_id: profile.divisao_id,
+        cargo_id: profile.cargo_id,
+        funcao_id: profile.funcao_id,
         data_entrada: profile.data_entrada,
         grau: profile.grau,
         profile_status: profile.profile_status,
         observacao: profile.observacao,
       });
+      if (profile.regional_id) {
+        setSelectedRegionalId(profile.regional_id);
+      }
     }
   }, [profile]);
 
@@ -218,16 +215,19 @@ export function ProfileDetailDialog({
             <div className="space-y-2">
               <Label htmlFor="regional">Regional</Label>
               <Select
-                value={formData.regional || ''}
-                onValueChange={(value) => setFormData({ ...formData, regional: value })}
+                value={formData.regional_id || ''}
+                onValueChange={(value) => {
+                  setFormData({ ...formData, regional_id: value, divisao_id: null });
+                  setSelectedRegionalId(value);
+                }}
               >
-                <SelectTrigger>
+                <SelectTrigger className="bg-background">
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
-                <SelectContent>
-                  {REGIONAL_OPTIONS.map((opt) => (
-                    <SelectItem key={opt} value={opt}>
-                      {opt}
+                <SelectContent className="bg-background z-50">
+                  {regionais.map((regional) => (
+                    <SelectItem key={regional.id} value={regional.id}>
+                      {regional.nome}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -238,16 +238,17 @@ export function ProfileDetailDialog({
             <div className="space-y-2">
               <Label htmlFor="divisao">Divisao</Label>
               <Select
-                value={formData.divisao || ''}
-                onValueChange={(value) => setFormData({ ...formData, divisao: value })}
+                value={formData.divisao_id || ''}
+                onValueChange={(value) => setFormData({ ...formData, divisao_id: value })}
+                disabled={!selectedRegionalId}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder={selectedRegionalId ? "Selecione..." : "Selecione regional primeiro"} />
                 </SelectTrigger>
-                <SelectContent>
-                  {DIVISAO_OPTIONS.map((opt) => (
-                    <SelectItem key={opt} value={opt}>
-                      {opt}
+                <SelectContent className="bg-background z-50">
+                  {divisoes.map((divisao) => (
+                    <SelectItem key={divisao.id} value={divisao.id}>
+                      {divisao.nome}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -258,16 +259,16 @@ export function ProfileDetailDialog({
             <div className="space-y-2">
               <Label htmlFor="cargo">Cargo</Label>
               <Select
-                value={formData.cargo || ''}
-                onValueChange={(value) => setFormData({ ...formData, cargo: value })}
+                value={formData.cargo_id || ''}
+                onValueChange={(value) => setFormData({ ...formData, cargo_id: value })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="bg-background">
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
-                <SelectContent>
-                  {CARGO_OPTIONS.map((opt) => (
-                    <SelectItem key={opt} value={opt}>
-                      {opt}
+                <SelectContent className="bg-background z-50">
+                  {cargos.map((cargo) => (
+                    <SelectItem key={cargo.id} value={cargo.id}>
+                      {cargo.nome}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -281,10 +282,10 @@ export function ProfileDetailDialog({
                 value={formData.grau || ''}
                 onValueChange={(value) => setFormData({ ...formData, grau: value })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="bg-background">
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background z-50">
                   {GRAU_OPTIONS.map((opt) => (
                     <SelectItem key={opt} value={opt}>
                       {opt}
@@ -298,12 +299,21 @@ export function ProfileDetailDialog({
           {/* Funcao */}
           <div className="space-y-2">
             <Label htmlFor="funcao">Funcao</Label>
-            <Input
-              id="funcao"
-              value={formData.funcao || ''}
-              onChange={(e) => setFormData({ ...formData, funcao: e.target.value })}
-              placeholder="Ex: Coordenador de Eventos"
-            />
+            <Select
+              value={formData.funcao_id || ''}
+              onValueChange={(value) => setFormData({ ...formData, funcao_id: value })}
+            >
+              <SelectTrigger className="bg-background">
+                <SelectValue placeholder="Selecione..." />
+              </SelectTrigger>
+              <SelectContent className="bg-background z-50">
+                {funcoes.map((funcao) => (
+                  <SelectItem key={funcao.id} value={funcao.id}>
+                    {funcao.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Data de Entrada */}
