@@ -48,6 +48,7 @@ const Index = () => {
   
   const userPhoto = isLoadingProfile ? "" : (profile?.photo_url || "");
   const isAdmin = hasRole('admin');
+  const isDiretorRegional = hasRole('diretor_regional');
   const isActive = profile?.profile_status === 'Ativo';
 
   const handleConnect = () => {
@@ -80,6 +81,10 @@ const Index = () => {
 
   const handleAdmin = () => {
     navigate("/admin");
+  };
+
+  const handleRelatorios = () => {
+    navigate("/relatorios");
   };
 
 
@@ -160,6 +165,16 @@ const Index = () => {
                 className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Administracao
+              </Button>
+            )}
+            
+            {(isAdmin || isDiretorRegional) && (
+              <Button 
+                onClick={handleRelatorios}
+                disabled={!isLoggedIn || !isActive}
+                className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Relatorios
               </Button>
             )}
           </div>

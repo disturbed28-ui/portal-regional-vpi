@@ -11,12 +11,14 @@ import { useIntegrantes } from "@/hooks/useIntegrantes";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { parseExcelFile, processDelta, parseCargoGrau } from "@/lib/excelParser";
+import { parseMensalidadesExcel } from "@/lib/mensalidadesParser";
 import { Upload, ArrowLeft, Users, UserCheck, UserX, AlertCircle, FileSpreadsheet } from "lucide-react";
 
 const AdminIntegrantes = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mensalidadesInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   
   const { integrantes, loading, stats, refetch } = useIntegrantes({ ativo: true });
@@ -142,6 +144,39 @@ const AdminIntegrantes = () => {
         throw new Error(data.error);
       }
 
+      // Salvar snapshot no histórico de cargas
+      const integrantesAtualizados = await supabase
+        .from('integrantes_portal')
+        .select('*')
+        .eq('ativo', true);
+
+      if (integrantesAtualizados.data) {
+        const snapshot = {
+          timestamp: new Date().toISOString(),
+          integrantes: integrantesAtualizados.data.map(i => ({
+            registro_id: i.registro_id,
+            nome_colete: i.nome_colete,
+            divisao_texto: i.divisao_texto,
+            comando_texto: i.comando_texto,
+            regional_texto: i.regional_texto,
+            cargo_grau_texto: i.cargo_grau_texto,
+            ativo: i.ativo,
+            tem_moto: i.tem_moto,
+            tem_carro: i.tem_carro,
+            sgt_armas: i.sgt_armas,
+            caveira: i.caveira,
+            caveira_suplente: i.caveira_suplente,
+            batedor: i.batedor,
+          }))
+        };
+
+        await supabase.from('cargas_historico').insert({
+          total_integrantes: integrantesAtualizados.data.length,
+          dados_snapshot: snapshot,
+          realizado_por: user.uid,
+        });
+      }
+
       toast({
         title: "Importacao concluida",
         description: data?.message || `${delta.novos.length} novos, ${delta.atualizados.length} atualizados`,
@@ -159,6 +194,62 @@ const AdminIntegrantes = () => {
       });
     } finally {
       setProcessing(false);
+    }
+  };
+
+  const handleMensalidadesFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!user) {
+      toast({
+        title: "Erro de autenticacao",
+        description: "Usuario nao autenticado",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setProcessing(true);
+      const mensalidadesData = await parseMensalidadesExcel(file);
+
+      if (mensalidadesData.length === 0) {
+        toast({
+          title: "Nenhum dado encontrado",
+          description: "O arquivo não contém dados válidos de mensalidades",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Salvar no banco
+      const { error } = await supabase.from('mensalidades_atraso').insert(
+        mensalidadesData.map((m) => ({
+          ...m,
+          realizado_por: user.uid,
+        }))
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Mensalidades importadas",
+        description: `${mensalidadesData.length} registros de atraso importados`,
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao importar mensalidades",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessing(false);
+      if (mensalidadesInputRef.current) {
+        mensalidadesInputRef.current.value = '';
+      }
     }
   };
 
@@ -181,16 +272,33 @@ const AdminIntegrantes = () => {
               Gerencie o banco de dados de integrantes do portal
             </p>
           </div>
-          <Button onClick={() => fileInputRef.current?.click()} disabled={processing}>
-            <Upload className="mr-2 h-4 w-4" />
-            Importar Excel
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => fileInputRef.current?.click()} disabled={processing}>
+              <Upload className="mr-2 h-4 w-4" />
+              Importar Integrantes
+            </Button>
+            <Button 
+              onClick={() => mensalidadesInputRef.current?.click()} 
+              disabled={processing}
+              variant="outline"
+            >
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              Importar Mensalidades
+            </Button>
+          </div>
           <input
             ref={fileInputRef}
             type="file"
             accept=".xlsx,.xls,.csv"
             className="hidden"
             onChange={handleFileSelect}
+          />
+          <input
+            ref={mensalidadesInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={handleMensalidadesFileSelect}
           />
         </div>
 
