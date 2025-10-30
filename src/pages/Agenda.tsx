@@ -1,71 +1,40 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import { useState, useMemo } from "react";
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
 import { EventCard } from "@/components/agenda/EventCard";
-import { EventFilters } from "@/components/agenda/EventFilters";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 const Agenda = () => {
   const navigate = useNavigate();
   const { data: events, isLoading, error } = useCalendarEvents();
-  const [selectedType, setSelectedType] = useState<string>("all");
-  const [selectedDivision, setSelectedDivision] = useState<string>("all");
 
-  const availableTypes = useMemo(() => {
-    if (!events) return [];
-    return Array.from(new Set(events.map(e => e.type))).sort();
-  }, [events]);
-
-  const availableDivisions = useMemo(() => {
-    if (!events) return [];
-    return Array.from(new Set(events.map(e => e.division))).sort();
-  }, [events]);
-
-  const filteredEvents = useMemo(() => {
-    if (!events) return [];
-    return events.filter(event => {
-      const typeMatch = selectedType === "all" || event.type === selectedType;
-      const divisionMatch = selectedDivision === "all" || event.division === selectedDivision;
-      return typeMatch && divisionMatch;
-    });
-  }, [events, selectedType, selectedDivision]);
+  const currentMonth = format(new Date(), "MMMM", { locale: ptBR });
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <Button
-            variant="outline"
-            onClick={() => navigate("/")}
-            className="mb-4"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
-          </Button>
-          <h1 className="text-3xl font-bold text-foreground mb-4">
-            Agenda Regional Vale do Paraiba I - SP
-          </h1>
+    <div className="min-h-screen bg-background">
+      <div className="bg-[hsl(var(--primary))] text-primary-foreground p-4 sticky top-0 z-10 shadow-md">
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/")}
+          className="mb-2 text-primary-foreground hover:bg-primary-foreground/10"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Voltar
+        </Button>
+        <h1 className="text-3xl font-bold">Agenda Pub</h1>
+        <p className="text-lg capitalize mt-2 opacity-90">{currentMonth}</p>
+      </div>
 
-          {!isLoading && !error && (
-            <EventFilters
-              selectedType={selectedType}
-              selectedDivision={selectedDivision}
-              onTypeChange={setSelectedType}
-              onDivisionChange={setSelectedDivision}
-              availableTypes={availableTypes}
-              availableDivisions={availableDivisions}
-            />
-          )}
-        </div>
-
+      <div className="p-4">
         {isLoading && (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Skeleton key={i} className="h-48 rounded-lg" />
+          <div className="space-y-4">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-24 rounded-lg" />
             ))}
           </div>
         )}
@@ -79,17 +48,17 @@ const Agenda = () => {
           </Alert>
         )}
 
-        {!isLoading && !error && filteredEvents.length === 0 && (
+        {!isLoading && !error && (!events || events.length === 0) && (
           <Alert>
             <AlertDescription>
-              Nenhum evento encontrado para os filtros selecionados.
+              Nenhum evento encontrado.
             </AlertDescription>
           </Alert>
         )}
 
-        {!isLoading && !error && filteredEvents.length > 0 && (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredEvents.map((event) => (
+        {!isLoading && !error && events && events.length > 0 && (
+          <div className="space-y-4">
+            {events.map((event) => (
               <EventCard key={event.id} event={event} />
             ))}
           </div>
