@@ -62,18 +62,21 @@ Deno.serve(async (req) => {
     let insertedCount = 0;
     let updatedCount = 0;
 
-    // Insert new integrantes
+    // Upsert new integrantes (insert or update if registro_id exists)
     if (novos && novos.length > 0) {
-      console.log('[admin-import-integrantes] Inserting novos:', novos.length);
+      console.log('[admin-import-integrantes] Upserting novos:', novos.length);
       
-      const { error: insertError } = await supabase
+      const { error: upsertError } = await supabase
         .from('integrantes_portal')
-        .insert(novos);
+        .upsert(novos, { 
+          onConflict: 'registro_id',
+          ignoreDuplicates: false 
+        });
 
-      if (insertError) {
-        console.error('[admin-import-integrantes] Error inserting:', insertError);
+      if (upsertError) {
+        console.error('[admin-import-integrantes] Error upserting:', upsertError);
         return new Response(
-          JSON.stringify({ error: 'Erro ao inserir novos integrantes', details: insertError.message }),
+          JSON.stringify({ error: 'Erro ao processar integrantes', details: upsertError.message }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
