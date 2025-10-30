@@ -19,14 +19,46 @@ export interface ParseResult {
     divisoesEncontradas: string[];
     periodoRef: string;
   };
+  erros: string[];
 }
+
+// Normalizar ref para formato YYYYMM
+export const normalizeRef = (ref: string): string | null => {
+  const refStr = String(ref).trim();
+  
+  // Se já está no formato correto (6 dígitos)
+  if (/^\d{6}$/.test(refStr)) {
+    return refStr;
+  }
+  
+  // Se tem 4-5 dígitos (ex: 1025 ou 10025), assume ano atual ou adiciona 20 na frente
+  if (/^\d{4,5}$/.test(refStr)) {
+    const currentYear = new Date().getFullYear();
+    // Se for 4 dígitos (MMYY ou YYMM), tentar ambos os formatos
+    if (refStr.length === 4) {
+      const mesFirst = parseInt(refStr.substring(0, 2));
+      if (mesFirst >= 1 && mesFirst <= 12) {
+        // Formato MMYY
+        const ano = '20' + refStr.substring(2, 4);
+        return ano + refStr.substring(0, 2);
+      }
+    }
+    // Se for 5 dígitos, adicionar 0 na frente do mês
+    if (refStr.length === 5) {
+      return refStr.substring(0, 4) + '0' + refStr.substring(4);
+    }
+  }
+  
+  return null;
+};
 
 // Validar formato de Ref (AAAAMM - 6 dígitos)
 export const isValidRef = (ref: string): boolean => {
-  if (!/^\d{6}$/.test(ref)) return false;
+  const normalized = normalizeRef(ref);
+  if (!normalized) return false;
   
-  const ano = parseInt(ref.substring(0, 4));
-  const mes = parseInt(ref.substring(4, 6));
+  const ano = parseInt(normalized.substring(0, 4));
+  const mes = parseInt(normalized.substring(4, 6));
   
   return ano >= 2020 && ano <= 2099 && mes >= 1 && mes <= 12;
 };
@@ -53,6 +85,7 @@ export const parseMensalidadesExcel = async (file: File): Promise<ParseResult> =
         const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
 
         const mensalidades: MensalidadeAtraso[] = [];
+        const erros: string[] = [];
         let divisaoAtual = '';
         let registroAtual = 0;
         let nomeAtual = '';
@@ -93,21 +126,24 @@ export const parseMensalidadesExcel = async (file: File): Promise<ParseResult> =
             
             // Se houver dados de mensalidade na mesma linha
             if (row[1] || row[2]) {
-              const ref = String(row[1] || '').trim();
+              const refRaw = String(row[1] || '').trim();
+              const refNormalized = normalizeRef(refRaw);
               const dataVenc = parseData(row[2]);
               const valor = parseValor(row[3]);
               const situacao = String(row[4] || '').trim();
 
-              if (ref && dataVenc && valor > 0) {
+              if (refNormalized && dataVenc && valor > 0) {
                 mensalidades.push({
                   registro_id: registroAtual,
                   nome_colete: nomeAtual,
                   divisao_texto: divisaoAtual,
-                  ref,
+                  ref: refNormalized,
                   data_vencimento: dataVenc,
                   valor,
                   situacao,
                 });
+              } else if (refRaw && !refNormalized) {
+                erros.push(`Linha ${i + 1}: Ref inválido "${refRaw}" para ${nomeAtual}`);
               }
             }
             continue;
@@ -120,40 +156,45 @@ export const parseMensalidadesExcel = async (file: File): Promise<ParseResult> =
             
             // Se o primeiro campo parece ser uma referência (formato: 202510 ou similar)
             if (possibleRef.match(/^\d{4,6}$/)) {
-              const ref = possibleRef;
+              const refNormalized = normalizeRef(possibleRef);
               const dataVenc = parseData(row[1]);
               const valor = parseValor(row[2]);
               const situacao = String(row[3] || '').trim();
 
-              if (ref && dataVenc && valor > 0) {
+              if (refNormalized && dataVenc && valor > 0) {
                 mensalidades.push({
                   registro_id: registroAtual,
                   nome_colete: nomeAtual,
                   divisao_texto: divisaoAtual,
-                  ref,
+                  ref: refNormalized,
                   data_vencimento: dataVenc,
                   valor,
                   situacao,
                 });
+              } else if (!refNormalized) {
+                erros.push(`Linha ${i + 1}: Ref inválido "${possibleRef}" para ${nomeAtual}`);
               }
             } else {
               // Pode ser só o nome, então os dados estão deslocados
               nomeAtual = firstCell;
-              const ref = String(row[1] || '').trim();
+              const refRaw = String(row[1] || '').trim();
+              const refNormalized = normalizeRef(refRaw);
               const dataVenc = parseData(row[2]);
               const valor = parseValor(row[3]);
               const situacao = String(row[4] || '').trim();
 
-              if (ref && dataVenc && valor > 0) {
+              if (refNormalized && dataVenc && valor > 0) {
                 mensalidades.push({
                   registro_id: registroAtual,
                   nome_colete: nomeAtual,
                   divisao_texto: divisaoAtual,
-                  ref,
+                  ref: refNormalized,
                   data_vencimento: dataVenc,
                   valor,
                   situacao,
                 });
+              } else if (refRaw && !refNormalized) {
+                erros.push(`Linha ${i + 1}: Ref inválido "${refRaw}" para ${nomeAtual}`);
               }
             }
           }
@@ -196,7 +237,8 @@ export const parseMensalidadesExcel = async (file: File): Promise<ParseResult> =
             totalInvalidas: mensalidades.length - validas.length,
             divisoesEncontradas: Array.from(divisoesSet),
             periodoRef: refMaisComum ? formatRef(refMaisComum) : '',
-          }
+          },
+          erros
         };
 
         resolve(resultado);

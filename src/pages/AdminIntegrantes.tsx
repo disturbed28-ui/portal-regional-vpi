@@ -241,39 +241,54 @@ const AdminIntegrantes = () => {
     try {
       setProcessing(true);
 
-      // 1. Marcar carga anterior como inativa
+      // 1. PRIMEIRO: Buscar registros da carga anterior ANTES de marcar como inativa
+      const { data: cargaAnterior } = await supabase
+        .from('mensalidades_atraso')
+        .select('id, registro_id, ref, data_carga')
+        .eq('ativo', true)
+        .order('data_carga', { ascending: false });
+
+      console.log('📊 Carga anterior encontrada:', cargaAnterior?.length || 0, 'registros');
+
+      // Criar Set com chaves da carga anterior
+      const cargaAnteriorChaves = new Set(
+        (cargaAnterior || []).map(m => `${m.registro_id}_${m.ref}`)
+      );
+
+      // 2. Criar Set com chaves do novo upload
+      const novasChaves = new Set(
+        mensalidadesPreview.mensalidades.map(m => `${m.registro_id}_${m.ref}`)
+      );
+
+      // 3. Identificar liquidações (estava na anterior, não está na nova)
+      const liquidacoesChaves = Array.from(cargaAnteriorChaves).filter(
+        chave => !novasChaves.has(chave)
+      );
+
+      console.log('✅ Liquidações detectadas:', liquidacoesChaves.length);
+
+      // 4. AGORA: Marcar carga anterior como inativa
       await supabase
         .from('mensalidades_atraso')
         .update({ ativo: false })
         .eq('ativo', true);
 
-      // 2. Buscar registros da carga anterior para detectar liquidações
-      const { data: cargaAnterior } = await supabase
-        .from('mensalidades_atraso')
-        .select('id, registro_id, ref')
-        .eq('ativo', false)
-        .order('data_carga', { ascending: false })
-        .limit(1000);
+      // 5. Buscar IDs dos registros a liquidar
+      const liquidacoesIds = (cargaAnterior || [])
+        .filter(m => liquidacoesChaves.includes(`${m.registro_id}_${m.ref}`))
+        .map(m => m.id);
 
-      // Criar Set com chaves (registro_id + ref) do novo upload
-      const novasChaves = new Set(
-        mensalidadesPreview.mensalidades.map(m => `${m.registro_id}_${m.ref}`)
-      );
-
-      // Identificar liquidações (estava na anterior, não está na nova)
-      const liquidacoes = (cargaAnterior || []).filter(
-        m => !novasChaves.has(`${m.registro_id}_${m.ref}`)
-      );
-
-      // Marcar como liquidado
-      if (liquidacoes.length > 0) {
+      // 6. Marcar como liquidado
+      if (liquidacoesIds.length > 0) {
         await supabase
           .from('mensalidades_atraso')
           .update({ 
             liquidado: true, 
             data_liquidacao: new Date().toISOString() 
           })
-          .in('id', liquidacoes.map(l => l.id));
+          .in('id', liquidacoesIds);
+
+        console.log('💰 Registros liquidados:', liquidacoesIds.length);
       }
 
       // 3. Inserir novos registros
@@ -299,7 +314,7 @@ const AdminIntegrantes = () => {
 
       toast({
         title: "✅ Mensalidades importadas com sucesso!",
-        description: `• ${mensalidadesPreview.mensalidades.length} registros importados\n• ${liquidacoes.length} liquidações detectadas\n• Período: ${mensalidadesPreview.stats.periodoRef}`,
+        description: `• ${mensalidadesPreview.mensalidades.length} registros importados\n• ${liquidacoesIds.length} liquidações detectadas\n• Período: ${mensalidadesPreview.stats.periodoRef}`,
       });
 
       setMensalidadesPreview(null);

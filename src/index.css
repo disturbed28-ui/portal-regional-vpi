@@ -106,3 +106,16 @@ All colors MUST be HSL.
       sans-serif;
   }
 }
+
+/* Fonte especial para landing page */
+@font-face {
+  font-family: 'Carnivalee Freakshow';
+  src: url('/fonts/Carnivalee_Freakshow.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+.landing-page {
+  font-family: 'Carnivalee Freakshow', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
