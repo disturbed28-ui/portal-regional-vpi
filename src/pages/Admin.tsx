@@ -151,7 +151,7 @@ const Admin = () => {
   };
 
   const handleAction = async () => {
-    if (!selectedProfile || !actionType) return;
+    if (!selectedProfile || !actionType || !user) return;
 
     // Validar observação para recusa
     if (actionType === 'recusar' && !observacao.trim()) {
@@ -181,21 +181,20 @@ const Admin = () => {
           break;
       }
 
-      // Obter token de autenticação
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Sessão não encontrada');
-
-      // Chamar edge function com service role
+      // Chamar edge function passando o Firebase UID
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      
       const response = await fetch(
         `${supabaseUrl}/functions/v1/admin-update-profile`,
         {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${session.access_token}`,
+            'apikey': supabaseKey,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
+            admin_user_id: user.uid,
             profile_id: selectedProfile.id,
             ...updates,
           }),

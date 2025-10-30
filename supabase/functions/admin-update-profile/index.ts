@@ -15,43 +15,9 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get JWT from Authorization header
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Verify user is admin
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !user) {
-      console.error('Auth error:', authError);
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Check if user has admin role
-    const { data: roles, error: roleError } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id);
-
-    if (roleError || !roles?.some(r => r.role === 'admin')) {
-      console.error('Role check failed:', roleError);
-      return new Response(
-        JSON.stringify({ error: 'Forbidden - Admin access required' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     // Parse request body
     const {
+      admin_user_id,
       profile_id,
       name,
       nome_colete,
@@ -65,14 +31,32 @@ Deno.serve(async (req) => {
       observacao,
     } = await req.json();
 
-    if (!profile_id) {
+    if (!admin_user_id || !profile_id) {
       return new Response(
-        JSON.stringify({ error: 'profile_id is required' }),
+        JSON.stringify({ error: 'admin_user_id and profile_id are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Updating profile:', profile_id, 'by admin:', user.id);
+    console.log('Checking admin role for user:', admin_user_id);
+
+    // Check if user has admin role
+    const { data: roles, error: roleError } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', admin_user_id);
+
+    console.log('Roles found:', roles);
+
+    if (roleError || !roles?.some(r => r.role === 'admin')) {
+      console.error('Role check failed:', roleError);
+      return new Response(
+        JSON.stringify({ error: 'Forbidden - Admin access required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Updating profile:', profile_id, 'by admin:', admin_user_id);
 
     // Update profile
     const { data: updatedProfile, error: updateError } = await supabase
