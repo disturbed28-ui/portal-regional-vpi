@@ -1,19 +1,45 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
 import { EventCard } from "@/components/agenda/EventCard";
+import { EventDetailDialog } from "@/components/agenda/EventDetailDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth, addMonths, subMonths, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { CalendarEvent } from "@/lib/googleCalendar";
+import { useState } from "react";
 
 const Agenda = () => {
   const navigate = useNavigate();
   const { data: events, isLoading, error } = useCalendarEvents();
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
-  const currentMonth = format(new Date(), "MMMM", { locale: ptBR });
+  const currentMonth = format(selectedMonth, "MMMM 'de' yyyy", { locale: ptBR });
+
+  const filteredEvents = events?.filter((event) => {
+    const eventDate = new Date(event.start);
+    const monthStart = startOfMonth(selectedMonth);
+    const monthEnd = endOfMonth(selectedMonth);
+    return isWithinInterval(eventDate, { start: monthStart, end: monthEnd });
+  }) || [];
+
+  const handlePreviousMonth = () => {
+    setSelectedMonth(subMonths(selectedMonth, 1));
+  };
+
+  const handleNextMonth = () => {
+    setSelectedMonth(addMonths(selectedMonth, 1));
+  };
+
+  const handleEventClick = (event: CalendarEvent) => {
+    setSelectedEvent(event);
+    setDialogOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -27,7 +53,26 @@ const Agenda = () => {
           Voltar
         </Button>
         <h1 className="text-3xl font-bold">Agenda Regional Vale do Paraiba I</h1>
-        <p className="text-lg capitalize mt-2 opacity-90">{currentMonth}</p>
+        
+        <div className="flex items-center justify-between mt-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handlePreviousMonth}
+            className="text-primary-foreground hover:bg-primary-foreground/10"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          <p className="text-lg capitalize font-semibold">{currentMonth}</p>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleNextMonth}
+            className="text-primary-foreground hover:bg-primary-foreground/10"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
 
       <div className="p-4">
@@ -48,22 +93,28 @@ const Agenda = () => {
           </Alert>
         )}
 
-        {!isLoading && !error && (!events || events.length === 0) && (
+        {!isLoading && !error && filteredEvents.length === 0 && (
           <Alert>
             <AlertDescription>
-              Nenhum evento encontrado.
+              Nenhum evento encontrado para este mes.
             </AlertDescription>
           </Alert>
         )}
 
-        {!isLoading && !error && events && events.length > 0 && (
+        {!isLoading && !error && filteredEvents.length > 0 && (
           <div className="space-y-4">
-            {events.map((event) => (
-              <EventCard key={event.id} event={event} />
+            {filteredEvents.map((event) => (
+              <EventCard key={event.id} event={event} onClick={() => handleEventClick(event)} />
             ))}
           </div>
         )}
       </div>
+
+      <EventDetailDialog
+        event={selectedEvent}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+      />
     </div>
   );
 };

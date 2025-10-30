@@ -5,14 +5,15 @@ import { ptBR } from "date-fns/locale";
 
 interface EventCardProps {
   event: CalendarEvent;
+  onClick: () => void;
 }
 
-export function EventCard({ event }: EventCardProps) {
+export function EventCard({ event, onClick }: EventCardProps) {
   const startDate = new Date(event.start);
   const endDate = new Date(event.end);
   
   return (
-    <div className="flex gap-4">
+    <div className="flex gap-4 cursor-pointer" onClick={onClick}>
       <div className="flex flex-col items-center justify-start pt-2 min-w-[60px]">
         <div className="text-xs font-semibold text-muted-foreground uppercase">
           {format(startDate, "EEE.", { locale: ptBR })}
@@ -22,7 +23,7 @@ export function EventCard({ event }: EventCardProps) {
         </div>
       </div>
       
-      <Card className="flex-1 p-4 hover:shadow-md transition-shadow">
+      <Card className="flex-1 p-4 hover:shadow-lg transition-all hover:scale-[1.02]">
         <h3 className="font-bold text-foreground text-lg mb-2">
           {event.title}
         </h3>
