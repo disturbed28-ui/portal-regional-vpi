@@ -739,6 +739,7 @@ const AdminIntegrantes = () => {
         </DialogContent>
       </Dialog>
     </div>
+  </div>
   );
 };
 
