@@ -96,7 +96,12 @@ const Perfil = () => {
       return;
     }
 
-    const newStatus = profile?.profile_status === 'Recusado' ? 'Analise' : 'Analise';
+    // Apenas mudar status se for Pendente ou Recusado
+    // Usuários Ativo/Inativo mantêm seu status
+    const currentStatus = profile?.profile_status || 'Pendente';
+    const newStatus = (currentStatus === 'Ativo' || currentStatus === 'Inativo') 
+      ? currentStatus 
+      : 'Analise';
 
     try {
       // Chamar edge function em vez de UPDATE direto
@@ -114,9 +119,11 @@ const Perfil = () => {
 
       toast({
         title: "Sucesso",
-        description: profile?.profile_status === 'Recusado'
-          ? "Solicitacao reenviada para analise"
-          : "Nome de colete enviado para analise",
+        description: currentStatus === 'Ativo' || currentStatus === 'Inativo'
+          ? "Telefone atualizado com sucesso"
+          : profile?.profile_status === 'Recusado'
+            ? "Solicitacao reenviada para analise"
+            : "Nome de colete enviado para analise",
       });
 
       setTimeout(() => {
@@ -231,8 +238,7 @@ const Perfil = () => {
           <div className="flex justify-end">
             <Button 
               onClick={handleEnviar}
-              disabled={profile?.profile_status === 'Ativo' || profile?.profile_status === 'Inativo'}
-              className="bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-xl px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-xl px-6"
             >
               Enviar
             </Button>
