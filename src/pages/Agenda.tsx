@@ -26,7 +26,7 @@ const Agenda = () => {
           <ArrowLeft className="mr-2 h-4 w-4" />
           Voltar
         </Button>
-        <h1 className="text-3xl font-bold">Agenda Pub</h1>
+        <h1 className="text-3xl font-bold">Agenda Regional Vale do Paraiba I</h1>
         <p className="text-lg capitalize mt-2 opacity-90">{currentMonth}</p>
       </div>
 

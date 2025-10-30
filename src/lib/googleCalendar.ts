@@ -1,5 +1,13 @@
 const CALENDAR_ID = "3db053177f24bf333254be1f501c71880940cc1eb0e319bf3d45830ba4cbea07@group.calendar.google.com";
 
+function removeSpecialCharacters(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ç/gi, 'c')
+    .replace(/Ç/g, 'C');
+}
+
 export interface CalendarEvent {
   id: string;
   title: string;
@@ -44,7 +52,7 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
   
   return data.items.map((item: any) => ({
     id: item.id,
-    title: item.summary || "Sem titulo",
+    title: removeSpecialCharacters(item.summary || "Sem titulo"),
     description: item.description || "",
     start: item.start.dateTime || item.start.date,
     end: item.end.dateTime || item.end.date,
