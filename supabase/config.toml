@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.admin-import-integrantes]
 verify_jwt = false
+
+[functions.admin-import-mensalidades]
+verify_jwt = false

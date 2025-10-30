@@ -240,91 +240,43 @@ const AdminIntegrantes = () => {
 
     try {
       setProcessing(true);
+      console.log('🚀 Enviando mensalidades para edge function...');
+      
+      const { data, error } = await supabase.functions.invoke('admin-import-mensalidades', {
+        body: {
+          firebase_uid: user.uid,
+          mensalidades: mensalidadesPreview.mensalidades,
+          realizado_por: user.displayName || user.email || 'Admin'
+        }
+      });
 
-      // 1. PRIMEIRO: Buscar registros da carga anterior ANTES de marcar como inativa
-      const { data: cargaAnterior } = await supabase
-        .from('mensalidades_atraso')
-        .select('id, registro_id, ref, data_carga')
-        .eq('ativo', true)
-        .order('data_carga', { ascending: false });
-
-      console.log('📊 Carga anterior encontrada:', cargaAnterior?.length || 0, 'registros');
-
-      // Criar Set com chaves da carga anterior
-      const cargaAnteriorChaves = new Set(
-        (cargaAnterior || []).map(m => `${m.registro_id}_${m.ref}`)
-      );
-
-      // 2. Criar Set com chaves do novo upload
-      const novasChaves = new Set(
-        mensalidadesPreview.mensalidades.map(m => `${m.registro_id}_${m.ref}`)
-      );
-
-      // 3. Identificar liquidações (estava na anterior, não está na nova)
-      const liquidacoesChaves = Array.from(cargaAnteriorChaves).filter(
-        chave => !novasChaves.has(chave)
-      );
-
-      console.log('✅ Liquidações detectadas:', liquidacoesChaves.length);
-
-      // 4. AGORA: Marcar carga anterior como inativa
-      await supabase
-        .from('mensalidades_atraso')
-        .update({ ativo: false })
-        .eq('ativo', true);
-
-      // 5. Buscar IDs dos registros a liquidar
-      const liquidacoesIds = (cargaAnterior || [])
-        .filter(m => liquidacoesChaves.includes(`${m.registro_id}_${m.ref}`))
-        .map(m => m.id);
-
-      // 6. Marcar como liquidado
-      if (liquidacoesIds.length > 0) {
-        await supabase
-          .from('mensalidades_atraso')
-          .update({ 
-            liquidado: true, 
-            data_liquidacao: new Date().toISOString() 
-          })
-          .in('id', liquidacoesIds);
-
-        console.log('💰 Registros liquidados:', liquidacoesIds.length);
+      if (error) {
+        console.error('❌ Erro ao importar:', error);
+        toast({
+          title: "Erro ao importar mensalidades",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
       }
 
-      // 3. Inserir novos registros
-      const novosRegistros = mensalidadesPreview.mensalidades.map(m => ({
-        data_carga: new Date().toISOString(),
-        registro_id: m.registro_id,
-        nome_colete: m.nome_colete,
-        divisao_texto: m.divisao_texto,
-        ref: m.ref,
-        data_vencimento: m.data_vencimento,
-        valor: m.valor,
-        situacao: m.situacao,
-        realizado_por: user.uid,
-        ativo: true,
-        liquidado: false
-      }));
-
-      const { error } = await supabase
-        .from('mensalidades_atraso')
-        .insert(novosRegistros);
-
-      if (error) throw error;
+      console.log('✅ Importação concluída:', data);
 
       toast({
         title: "✅ Mensalidades importadas com sucesso!",
-        description: `• ${mensalidadesPreview.mensalidades.length} registros importados\n• ${liquidacoesIds.length} liquidações detectadas\n• Período: ${mensalidadesPreview.stats.periodoRef}`,
+        description: `• ${data.insertedCount} registros importados\n• ${data.liquidatedCount} liquidações detectadas\n• Período: ${mensalidadesPreview.stats.periodoRef}`,
       });
 
       setMensalidadesPreview(null);
       if (mensalidadesInputRef.current) {
         mensalidadesInputRef.current.value = '';
       }
-    } catch (error) {
+
+    } catch (error: any) {
+      console.error('💥 Erro inesperado:', error);
       toast({
-        title: "Erro ao importar mensalidades",
-        description: error instanceof Error ? error.message : "Erro desconhecido",
+        title: "Erro inesperado",
+        description: error.message || "Erro desconhecido",
         variant: "destructive",
       });
     } finally {
