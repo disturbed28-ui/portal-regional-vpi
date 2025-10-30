@@ -165,6 +165,21 @@ export function ProfileDetailDialog({
       console.log('Matched data:', matched);
       console.log('Parsed grau:', grau);
 
+      // Mostrar feedback do matching
+      if (matched.matched_fields.length > 0) {
+        toast({
+          title: "Dados encontrados",
+          description: matched.matched_fields.join(', '),
+        });
+      }
+      if (matched.failed_fields.length > 0) {
+        toast({
+          title: "Campos não encontrados",
+          description: matched.failed_fields.join(', '),
+          variant: "destructive",
+        });
+      }
+
       // Atualizar estados de cascata PRIMEIRO
       if (matched.comando_id) {
         console.log('Setting comando_id:', matched.comando_id);

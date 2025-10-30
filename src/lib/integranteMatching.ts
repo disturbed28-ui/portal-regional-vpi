@@ -6,7 +6,24 @@ interface MatchResult {
   divisao_id: string | null;
   cargo_id: string | null;
   funcao_id: string | null;
+  matched_fields: string[];
+  failed_fields: string[];
 }
+
+// Função para normalizar texto antes do matching
+const normalizeText = (text: string): string => {
+  if (!text) return '';
+  
+  return text
+    .toUpperCase()
+    .replace(/^COMANDO\s+REGIONAL\s+/i, '')
+    .replace(/^REGIONAL\s+/i, '')
+    .replace(/^DIVISAO\s+/i, '')
+    .replace(/^DIVISÃO\s+/i, '')
+    .replace(/\s+-\s+[A-Z]{2}$/i, '') // Remove " - SP", " - RJ", etc
+    .replace(/\s+/g, ' ')
+    .trim();
+};
 
 export const matchIntegranteToStructure = async (
   comandoTexto: string,
@@ -21,46 +38,99 @@ export const matchIntegranteToStructure = async (
     divisao_id: null,
     cargo_id: null,
     funcao_id: null,
+    matched_fields: [],
+    failed_fields: [],
   };
 
   try {
-    // Buscar Comando (match exato ou similar)
+    // Normalizar textos de entrada
+    const comandoNormalizado = normalizeText(comandoTexto);
+    const regionalNormalizado = normalizeText(regionalTexto);
+    const divisaoNormalizado = normalizeText(divisaoTexto);
+
+    console.log('🔍 Matching integrante to structure:');
+    console.log('Comando original:', comandoTexto, '→ normalizado:', comandoNormalizado);
+    console.log('Regional original:', regionalTexto, '→ normalizado:', regionalNormalizado);
+    console.log('Divisao original:', divisaoTexto, '→ normalizado:', divisaoNormalizado);
+
+    // Buscar TODOS os comandos para fazer matching melhor
     const { data: comandos } = await supabase
       .from('comandos')
       .select('id, nome')
-      .ilike('nome', `%${comandoTexto}%`)
-      .limit(1);
+      .order('nome');
 
     if (comandos && comandos.length > 0) {
-      result.comando_id = comandos[0].id;
+      // Tentar matching inteligente
+      const comandoMatch = comandos.find(c => {
+        const comandoDbNormalizado = normalizeText(c.nome);
+        return comandoDbNormalizado.includes(comandoNormalizado) || 
+               comandoNormalizado.includes(comandoDbNormalizado);
+      });
+
+      if (comandoMatch) {
+        result.comando_id = comandoMatch.id;
+        result.matched_fields.push('comando');
+        console.log('✅ Comando matched:', comandoMatch.nome);
+      } else {
+        result.failed_fields.push('comando');
+        console.log('❌ Comando NOT matched. Available:', comandos.map(c => c.nome));
+      }
     }
 
-    // Buscar Regional (match exato ou similar)
+    // Buscar Regional (se encontrou comando)
     if (result.comando_id) {
       const { data: regionais } = await supabase
         .from('regionais')
         .select('id, nome')
         .eq('comando_id', result.comando_id)
-        .ilike('nome', `%${regionalTexto}%`)
-        .limit(1);
+        .order('nome');
 
       if (regionais && regionais.length > 0) {
-        result.regional_id = regionais[0].id;
+        const regionalMatch = regionais.find(r => {
+          const regionalDbNormalizado = normalizeText(r.nome);
+          return regionalDbNormalizado.includes(regionalNormalizado) || 
+                 regionalNormalizado.includes(regionalDbNormalizado);
+        });
+
+        if (regionalMatch) {
+          result.regional_id = regionalMatch.id;
+          result.matched_fields.push('regional');
+          console.log('✅ Regional matched:', regionalMatch.nome);
+        } else {
+          result.failed_fields.push('regional');
+          console.log('❌ Regional NOT matched. Available:', regionais.map(r => r.nome));
+        }
       }
+    } else {
+      result.failed_fields.push('regional');
     }
 
-    // Buscar Divisao (match exato ou similar)
+    // Buscar Divisao (se encontrou regional)
     if (result.regional_id) {
       const { data: divisoes } = await supabase
         .from('divisoes')
         .select('id, nome')
         .eq('regional_id', result.regional_id)
-        .ilike('nome', `%${divisaoTexto}%`)
-        .limit(1);
+        .order('nome');
 
       if (divisoes && divisoes.length > 0) {
-        result.divisao_id = divisoes[0].id;
+        const divisaoMatch = divisoes.find(d => {
+          const divisaoDbNormalizado = normalizeText(d.nome);
+          return divisaoDbNormalizado.includes(divisaoNormalizado) || 
+                 divisaoNormalizado.includes(divisaoDbNormalizado);
+        });
+
+        if (divisaoMatch) {
+          result.divisao_id = divisaoMatch.id;
+          result.matched_fields.push('divisao');
+          console.log('✅ Divisao matched:', divisaoMatch.nome);
+        } else {
+          result.failed_fields.push('divisao');
+          console.log('❌ Divisao NOT matched. Available:', divisoes.map(d => d.nome));
+        }
       }
+    } else {
+      result.failed_fields.push('divisao');
     }
 
     // Buscar Cargo (se tem grau e nome de cargo)
@@ -74,8 +144,18 @@ export const matchIntegranteToStructure = async (
 
       if (cargos && cargos.length > 0) {
         result.cargo_id = cargos[0].id;
+        result.matched_fields.push('cargo');
+        console.log('✅ Cargo matched:', cargos[0].nome, cargos[0].grau);
+      } else {
+        result.failed_fields.push('cargo');
+        console.log('❌ Cargo NOT matched for grau:', grau, 'nome:', cargoNome);
       }
     }
+
+    console.log('📊 Match result:', {
+      matched: result.matched_fields,
+      failed: result.failed_fields
+    });
 
     return result;
   } catch (error) {
