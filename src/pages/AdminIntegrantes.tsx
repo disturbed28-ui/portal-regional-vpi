@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useIntegrantes } from "@/hooks/useIntegrantes";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { parseExcelFile, processDelta, parseCargoGrau } from "@/lib/excelParser";
 import { Upload, ArrowLeft, Users, UserCheck, UserX, AlertCircle, FileSpreadsheet } from "lucide-react";
@@ -16,6 +17,7 @@ const AdminIntegrantes = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuth();
   
   const { integrantes, loading, stats, refetch } = useIntegrantes({ ativo: true });
   const [searchTerm, setSearchTerm] = useState("");
@@ -59,85 +61,97 @@ const AdminIntegrantes = () => {
   const handleApplyChanges = async () => {
     if (!uploadPreview) return;
 
+    if (!user) {
+      toast({
+        title: "Erro de autenticacao",
+        description: "Usuario nao autenticado",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setProcessing(true);
-      const { delta, excelData } = uploadPreview;
+      const { delta } = uploadPreview;
 
-      // Inserir novos
-      if (delta.novos.length > 0) {
-        const novosData = delta.novos.map((item: any) => {
-          const { cargo, grau } = parseCargoGrau(item.cargo_grau);
-          return {
-            registro_id: item.id_integrante,
-            nome_colete: item.nome_colete,
-            comando_texto: item.comando,
-            regional_texto: item.regional,
-            divisao_texto: item.divisao,
-            cargo_grau_texto: item.cargo_grau,
-            cargo_nome: cargo,
-            grau: grau,
-            ativo: true,
-            cargo_estagio: item.cargo_estagio || null,
-            sgt_armas: item.sgt_armas || false,
-            caveira: item.caveira || false,
-            caveira_suplente: item.caveira_suplente || false,
-            batedor: item.batedor || false,
-            ursinho: item.ursinho || false,
-            lobo: item.lobo || false,
-            tem_moto: item.tem_moto || false,
-            tem_carro: item.tem_carro || false,
-            data_entrada: item.data_entrada || null,
-          };
-        });
+      // Preparar dados para inserção
+      const novosData = delta.novos.map((item: any) => {
+        const { cargo, grau } = parseCargoGrau(item.cargo_grau);
+        return {
+          registro_id: item.id_integrante,
+          nome_colete: item.nome_colete,
+          comando_texto: item.comando,
+          regional_texto: item.regional,
+          divisao_texto: item.divisao,
+          cargo_grau_texto: item.cargo_grau,
+          cargo_nome: cargo,
+          grau: grau,
+          ativo: true,
+          cargo_estagio: item.cargo_estagio || null,
+          sgt_armas: item.sgt_armas || false,
+          caveira: item.caveira || false,
+          caveira_suplente: item.caveira_suplente || false,
+          batedor: item.batedor || false,
+          ursinho: item.ursinho || false,
+          lobo: item.lobo || false,
+          tem_moto: item.tem_moto || false,
+          tem_carro: item.tem_carro || false,
+          data_entrada: item.data_entrada || null,
+        };
+      });
 
-        const { error: insertError } = await supabase
-          .from('integrantes_portal')
-          .insert(novosData);
+      // Preparar dados para atualização
+      const atualizadosData = delta.atualizados.map((item: any) => {
+        const { cargo, grau } = parseCargoGrau(item.novo.cargo_grau);
+        return {
+          id: item.antigo.id,
+          nome_colete: item.novo.nome_colete,
+          comando_texto: item.novo.comando,
+          regional_texto: item.novo.regional,
+          divisao_texto: item.novo.divisao,
+          cargo_grau_texto: item.novo.cargo_grau,
+          cargo_nome: cargo,
+          grau: grau,
+          cargo_estagio: item.novo.cargo_estagio || null,
+          sgt_armas: item.novo.sgt_armas || false,
+          caveira: item.novo.caveira || false,
+          caveira_suplente: item.novo.caveira_suplente || false,
+          batedor: item.novo.batedor || false,
+          ursinho: item.novo.ursinho || false,
+          lobo: item.novo.lobo || false,
+          tem_moto: item.novo.tem_moto || false,
+          tem_carro: item.novo.tem_carro || false,
+          data_entrada: item.novo.data_entrada || null,
+        };
+      });
 
-        if (insertError) throw insertError;
+      // Chamar edge function
+      const { data, error } = await supabase.functions.invoke('admin-import-integrantes', {
+        body: {
+          admin_user_id: user.uid,
+          novos: novosData,
+          atualizados: atualizadosData,
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Erro ao importar integrantes');
       }
 
-      // Atualizar existentes
-      if (delta.atualizados.length > 0) {
-        for (const { antigo, novo } of delta.atualizados) {
-          const { cargo, grau } = parseCargoGrau(novo.cargo_grau);
-          
-          const { error: updateError } = await supabase
-            .from('integrantes_portal')
-            .update({
-              nome_colete: novo.nome_colete,
-              comando_texto: novo.comando,
-              regional_texto: novo.regional,
-              divisao_texto: novo.divisao,
-              cargo_grau_texto: novo.cargo_grau,
-              cargo_nome: cargo,
-              grau: grau,
-              cargo_estagio: novo.cargo_estagio || null,
-              sgt_armas: novo.sgt_armas || false,
-              caveira: novo.caveira || false,
-              caveira_suplente: novo.caveira_suplente || false,
-              batedor: novo.batedor || false,
-              ursinho: novo.ursinho || false,
-              lobo: novo.lobo || false,
-              tem_moto: novo.tem_moto || false,
-              tem_carro: novo.tem_carro || false,
-              data_entrada: novo.data_entrada || null,
-            })
-            .eq('id', antigo.id);
-
-          if (updateError) throw updateError;
-        }
+      if (data?.error) {
+        throw new Error(data.error);
       }
 
       toast({
         title: "Importacao concluida",
-        description: `${delta.novos.length} novos, ${delta.atualizados.length} atualizados`,
+        description: data?.message || `${delta.novos.length} novos, ${delta.atualizados.length} atualizados`,
       });
 
       setShowUploadDialog(false);
       setUploadPreview(null);
       refetch();
     } catch (error) {
+      console.error('Error applying changes:', error);
       toast({
         title: "Erro ao aplicar mudancas",
         description: error instanceof Error ? error.message : "Erro desconhecido",
