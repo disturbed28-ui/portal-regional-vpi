@@ -1,1 +1,4 @@
 project_id = "bnkbnpiuzpftflfmnsge"
+
+[functions.admin-update-profile]
+verify_jwt = false
