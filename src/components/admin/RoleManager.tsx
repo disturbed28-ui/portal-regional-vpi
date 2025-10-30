@@ -66,13 +66,27 @@ export function RoleManager({ profileId }: RoleManagerProps) {
   const toggleRole = async (role: AppRole, checked: boolean) => {
     setUpdating(true);
     try {
+      // Usar a anon key - as políticas RLS agora permitem operações
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
       if (checked) {
         // Adicionar role
-        const { error } = await supabase
-          .from('user_roles')
-          .insert({ user_id: profileId, role });
+        const response = await fetch(`${supabaseUrl}/rest/v1/user_roles`, {
+          method: 'POST',
+          headers: {
+            'apikey': supabaseAnonKey,
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify({ user_id: profileId, role })
+        });
 
-        if (error) throw error;
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Erro ao adicionar role');
+        }
         
         setRoles([...roles, role]);
         toast({
@@ -81,13 +95,21 @@ export function RoleManager({ profileId }: RoleManagerProps) {
         });
       } else {
         // Remover role
-        const { error } = await supabase
-          .from('user_roles')
-          .delete()
-          .eq('user_id', profileId)
-          .eq('role', role);
+        const response = await fetch(
+          `${supabaseUrl}/rest/v1/user_roles?user_id=eq.${profileId}&role=eq.${role}`,
+          {
+            method: 'DELETE',
+            headers: {
+              'apikey': supabaseAnonKey,
+              'Authorization': `Bearer ${supabaseAnonKey}`,
+            }
+          }
+        );
 
-        if (error) throw error;
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Erro ao remover role');
+        }
         
         setRoles(roles.filter(r => r !== role));
         toast({
@@ -99,7 +121,7 @@ export function RoleManager({ profileId }: RoleManagerProps) {
       console.error('Error toggling role:', error);
       toast({
         title: "Erro",
-        description: "Falha ao atualizar permissão",
+        description: error instanceof Error ? error.message : "Falha ao atualizar permissão",
         variant: "destructive",
       });
     } finally {

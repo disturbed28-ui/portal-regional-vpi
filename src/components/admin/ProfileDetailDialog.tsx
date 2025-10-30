@@ -162,24 +162,36 @@ export function ProfileDetailDialog({
         grau
       );
 
-      // Atualizar estados de cascata ANTES do formData
-      if (matched.comando_id) setSelectedComandoId(matched.comando_id);
-      if (matched.regional_id) setSelectedRegionalId(matched.regional_id);
-      if (grau) setSelectedGrau(grau);
+      console.log('Matched data:', matched);
 
-      // Aguardar um tick para garantir que os hooks de dados foram atualizados
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Atualizar estados de cascata PRIMEIRO
+      if (matched.comando_id) {
+        setSelectedComandoId(matched.comando_id);
+      }
+      if (matched.regional_id) {
+        setSelectedRegionalId(matched.regional_id);
+      }
+      if (grau) {
+        setSelectedGrau(grau);
+      }
 
-      // Atualizar form data
-      setFormData({
+      // Aguardar para garantir que os hooks de dados carregaram
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // Atualizar form data com TODOS os campos
+      const newFormData = {
         ...formData,
         nome_colete: integranteSelecionado.nome_colete,
-        comando_id: matched.comando_id || undefined,
-        regional_id: matched.regional_id || undefined,
-        divisao_id: matched.divisao_id || undefined,
-        cargo_id: matched.cargo_id || undefined,
-        grau: grau || undefined,
-      });
+        comando_id: matched.comando_id || null,
+        regional_id: matched.regional_id || null,
+        divisao_id: matched.divisao_id || null,
+        cargo_id: matched.cargo_id || null,
+        grau: grau || null,
+        data_entrada: integranteSelecionado.data_entrada || null,
+      };
+
+      console.log('New form data:', newFormData);
+      setFormData(newFormData);
 
       // Vincular integrante ao perfil
       const { error: updateIntegranteError } = await supabase
@@ -193,11 +205,12 @@ export function ProfileDetailDialog({
 
       if (updateIntegranteError) {
         console.error('Error updating integrante:', updateIntegranteError);
+        throw updateIntegranteError;
       }
 
       toast({
         title: "Dados importados",
-        description: "Dados do integrante foram importados. Revise e salve.",
+        description: "Dados do integrante foram importados com sucesso. Revise e clique em Salvar.",
       });
 
       setShowIntegranteLookup(false);
@@ -205,7 +218,7 @@ export function ProfileDetailDialog({
       console.error('Error importing integrante:', error);
       toast({
         title: "Erro ao importar",
-        description: "Falha ao importar dados do integrante",
+        description: error instanceof Error ? error.message : "Falha ao importar dados do integrante",
         variant: "destructive",
       });
     } finally {
