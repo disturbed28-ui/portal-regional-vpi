@@ -355,6 +355,9 @@ const Admin = () => {
             <Button onClick={() => navigate("/admin/dados")} variant="outline">
               Gestao de Dados
             </Button>
+            <Button onClick={() => navigate("/admin/integrantes")} variant="outline">
+              Gestao de Integrantes
+            </Button>
             <Button onClick={() => navigate("/")} variant="outline">
               Voltar
             </Button>

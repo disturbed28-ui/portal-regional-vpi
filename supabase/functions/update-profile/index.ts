@@ -13,9 +13,9 @@ serve(async (req) => {
 
   try {
     console.log('Received update-profile request');
-    const { userId, nome_colete, profile_status } = await req.json();
+    const { userId, nome_colete, telefone, profile_status } = await req.json();
     
-    console.log('Request data:', { userId, nome_colete, profile_status });
+    console.log('Request data:', { userId, nome_colete, telefone, profile_status });
 
     if (!userId || !nome_colete) {
       console.error('Missing required fields');
@@ -33,13 +33,19 @@ serve(async (req) => {
 
     console.log('Updating profile for userId:', userId);
 
+    const updateData: any = {
+      nome_colete: nome_colete.trim(),
+      profile_status: profile_status || 'Analise',
+      observacao: null
+    };
+
+    if (telefone) {
+      updateData.telefone = telefone.trim();
+    }
+
     const { data, error } = await supabaseAdmin
       .from('profiles')
-      .update({
-        nome_colete: nome_colete.trim(),
-        profile_status: profile_status || 'Analise',
-        observacao: null
-      })
+      .update(updateData)
       .eq('id', userId)
       .select()
       .single();

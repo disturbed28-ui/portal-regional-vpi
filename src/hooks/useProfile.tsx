@@ -9,6 +9,7 @@ interface Profile {
   nome_colete: string | null;
   profile_status: string;
   observacao: string | null;
+  telefone: string | null;
 }
 
 export const useProfile = (userId: string | undefined) => {

@@ -19,6 +19,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { ProfileStatus } from "@/types/profile";
@@ -27,6 +30,12 @@ import { useRegionais } from "@/hooks/useRegionais";
 import { useDivisoes } from "@/hooks/useDivisoes";
 import { useCargos } from "@/hooks/useCargos";
 import { useFuncoes } from "@/hooks/useFuncoes";
+import { IntegranteLookup } from "./IntegranteLookup";
+import { IntegrantePortal } from "@/hooks/useIntegrantes";
+import { parseCargoGrau } from "@/lib/excelParser";
+import { matchIntegranteToStructure } from "@/lib/integranteMatching";
+import { supabase } from "@/integrations/supabase/client";
+import { Download, CheckCircle } from "lucide-react";
 
 interface Profile {
   id: string;
@@ -87,6 +96,8 @@ export function ProfileDetailDialog({
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<Partial<Profile>>({});
+  const [integranteSelecionado, setIntegranteSelecionado] = useState<IntegrantePortal | null>(null);
+  const [showIntegranteLookup, setShowIntegranteLookup] = useState(false);
   
   // Estados para cascata
   const [selectedComandoId, setSelectedComandoId] = useState<string>('');
@@ -131,6 +142,72 @@ export function ProfileDetailDialog({
       }
     }
   }, [profile]);
+
+  const handleImportarIntegrante = async () => {
+    if (!integranteSelecionado) return;
+
+    try {
+      setLoading(true);
+      
+      // Parse cargo e grau
+      const { cargo, grau } = parseCargoGrau(integranteSelecionado.cargo_grau_texto);
+      
+      // Fazer matching com a estrutura existente
+      const matched = await matchIntegranteToStructure(
+        integranteSelecionado.comando_texto,
+        integranteSelecionado.regional_texto,
+        integranteSelecionado.divisao_texto,
+        cargo,
+        grau
+      );
+
+      // Atualizar form data
+      setFormData({
+        ...formData,
+        nome_colete: integranteSelecionado.nome_colete,
+        comando_id: matched.comando_id || undefined,
+        regional_id: matched.regional_id || undefined,
+        divisao_id: matched.divisao_id || undefined,
+        cargo_id: matched.cargo_id || undefined,
+        grau: grau || undefined,
+      });
+
+      // Atualizar estados de cascata
+      if (matched.comando_id) setSelectedComandoId(matched.comando_id);
+      if (matched.regional_id) setSelectedRegionalId(matched.regional_id);
+      if (grau) setSelectedGrau(grau);
+
+      // Vincular integrante ao perfil
+      const { error: updateIntegranteError } = await supabase
+        .from('integrantes_portal')
+        .update({
+          profile_id: profile?.id,
+          vinculado: true,
+          data_vinculacao: new Date().toISOString(),
+        })
+        .eq('id', integranteSelecionado.id);
+
+      if (updateIntegranteError) {
+        console.error('Error updating integrante:', updateIntegranteError);
+      }
+
+      toast({
+        title: "Dados importados",
+        description: "Dados do integrante foram importados. Revise e salve.",
+      });
+
+      setShowIntegranteLookup(false);
+    } catch (error) {
+      console.error('Error importing integrante:', error);
+      toast({
+        title: "Erro ao importar",
+        description: "Falha ao importar dados do integrante",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -210,6 +287,101 @@ export function ProfileDetailDialog({
               </AvatarFallback>
             </Avatar>
           </div>
+
+          {/* Secao de Vinculacao com Integrante do Portal */}
+          <Card className="p-4 bg-accent">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold">Vincular Integrante do Portal</h3>
+                {integranteSelecionado && (
+                  <Badge variant="secondary" className="flex items-center gap-1">
+                    <CheckCircle className="h-3 w-3" />
+                    Selecionado
+                  </Badge>
+                )}
+              </div>
+              
+              {!showIntegranteLookup && !integranteSelecionado && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowIntegranteLookup(true)}
+                  className="w-full"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Buscar e Importar Dados
+                </Button>
+              )}
+
+              {showIntegranteLookup && (
+                <div className="space-y-3">
+                  <IntegranteLookup
+                    onSelect={setIntegranteSelecionado}
+                    excludeVinculados={true}
+                    selectedId={integranteSelecionado?.id}
+                  />
+                  
+                  {integranteSelecionado && (
+                    <div className="space-y-2">
+                      <Card className="p-3 bg-background">
+                        <div className="space-y-1 text-sm">
+                          <p><span className="font-semibold">Registro:</span> {integranteSelecionado.registro_id}</p>
+                          <p><span className="font-semibold">Nome:</span> {integranteSelecionado.nome_colete}</p>
+                          <p><span className="font-semibold">Cargo:</span> {integranteSelecionado.cargo_grau_texto}</p>
+                          <p><span className="font-semibold">Divisao:</span> {integranteSelecionado.divisao_texto}</p>
+                          <p><span className="font-semibold">Regional:</span> {integranteSelecionado.regional_texto}</p>
+                          <p><span className="font-semibold">Comando:</span> {integranteSelecionado.comando_texto}</p>
+                        </div>
+                      </Card>
+                      
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          onClick={handleImportarIntegrante}
+                          disabled={loading}
+                          className="flex-1"
+                        >
+                          <Download className="mr-2 h-4 w-4" />
+                          Importar e Preencher
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setIntegranteSelecionado(null);
+                            setShowIntegranteLookup(false);
+                          }}
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {integranteSelecionado && !showIntegranteLookup && (
+                <div className="space-y-2">
+                  <Card className="p-3 bg-background">
+                    <div className="space-y-1 text-sm">
+                      <p><span className="font-semibold">Vinculado:</span> {integranteSelecionado.nome_colete}</p>
+                      <p className="text-muted-foreground">Registro: {integranteSelecionado.registro_id}</p>
+                    </div>
+                  </Card>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowIntegranteLookup(true)}
+                  >
+                    Alterar Vinculo
+                  </Button>
+                </div>
+              )}
+            </div>
+          </Card>
+
+          <Separator />
 
           {/* Nome Completo */}
           <div className="space-y-2">

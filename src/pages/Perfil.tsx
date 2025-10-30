@@ -14,11 +14,15 @@ const Perfil = () => {
   const { user, loading } = useAuth();
   const { profile } = useProfile(user?.uid);
   const [nomeColete, setNomeColete] = useState("");
+  const [telefone, setTelefone] = useState("");
   
   // Carregar nome_colete existente do perfil
   useEffect(() => {
     if (profile?.nome_colete) {
       setNomeColete(profile.nome_colete);
+    }
+    if (profile?.telefone) {
+      setTelefone(profile.telefone);
     }
   }, [profile]);
 
@@ -83,6 +87,15 @@ const Perfil = () => {
       return;
     }
 
+    if (!telefone.trim()) {
+      toast({
+        title: "Erro",
+        description: "Digite um telefone celular.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const newStatus = profile?.profile_status === 'Recusado' ? 'Analise' : 'Analise';
 
     try {
@@ -91,6 +104,7 @@ const Perfil = () => {
         body: {
           userId: user?.uid,
           nome_colete: nomeColete.trim(),
+          telefone: telefone.trim(),
           profile_status: newStatus
         }
       });
@@ -183,7 +197,7 @@ const Perfil = () => {
           )}
 
           {/* Nome de Colete */}
-          <div className="mb-6">
+          <div className="mb-4">
             <Label htmlFor="nomeColete" className="text-xs text-muted-foreground mb-2 block">
               Nome de Colete
             </Label>
@@ -193,6 +207,22 @@ const Perfil = () => {
               placeholder="digite aqui..."
               value={nomeColete}
               onChange={(e) => setNomeColete(e.target.value)}
+              disabled={profile?.profile_status === 'Ativo' || profile?.profile_status === 'Inativo'}
+              className="w-full bg-input border-border text-foreground rounded-xl disabled:opacity-50"
+            />
+          </div>
+
+          {/* Telefone Celular */}
+          <div className="mb-6">
+            <Label htmlFor="telefone" className="text-xs text-muted-foreground mb-2 block">
+              Telefone Celular
+            </Label>
+            <Input
+              id="telefone"
+              type="tel"
+              placeholder="(00) 00000-0000"
+              value={telefone}
+              onChange={(e) => setTelefone(e.target.value)}
               disabled={profile?.profile_status === 'Ativo' || profile?.profile_status === 'Inativo'}
               className="w-full bg-input border-border text-foreground rounded-xl disabled:opacity-50"
             />

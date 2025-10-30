@@ -113,6 +113,125 @@ export type Database = {
         }
         Relationships: []
       }
+      integrantes_historico: {
+        Row: {
+          acao: string
+          alterado_por: string | null
+          created_at: string | null
+          dados_anteriores: Json | null
+          dados_novos: Json | null
+          id: string
+          integrante_id: string | null
+          observacao: string | null
+          profile_id: string | null
+        }
+        Insert: {
+          acao: string
+          alterado_por?: string | null
+          created_at?: string | null
+          dados_anteriores?: Json | null
+          dados_novos?: Json | null
+          id?: string
+          integrante_id?: string | null
+          observacao?: string | null
+          profile_id?: string | null
+        }
+        Update: {
+          acao?: string
+          alterado_por?: string | null
+          created_at?: string | null
+          dados_anteriores?: Json | null
+          dados_novos?: Json | null
+          id?: string
+          integrante_id?: string | null
+          observacao?: string | null
+          profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integrantes_historico_integrante_id_fkey"
+            columns: ["integrante_id"]
+            isOneToOne: false
+            referencedRelation: "integrantes_portal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integrantes_historico_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integrantes_portal: {
+        Row: {
+          ativo: boolean | null
+          cargo_grau_texto: string
+          cargo_nome: string | null
+          comando_texto: string
+          created_at: string | null
+          data_vinculacao: string | null
+          divisao_texto: string
+          firebase_uid: string | null
+          grau: string | null
+          id: string
+          nome_colete: string
+          observacoes: string | null
+          profile_id: string | null
+          regional_texto: string
+          registro_id: number
+          updated_at: string | null
+          vinculado: boolean | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          cargo_grau_texto: string
+          cargo_nome?: string | null
+          comando_texto: string
+          created_at?: string | null
+          data_vinculacao?: string | null
+          divisao_texto: string
+          firebase_uid?: string | null
+          grau?: string | null
+          id?: string
+          nome_colete: string
+          observacoes?: string | null
+          profile_id?: string | null
+          regional_texto: string
+          registro_id: number
+          updated_at?: string | null
+          vinculado?: boolean | null
+        }
+        Update: {
+          ativo?: boolean | null
+          cargo_grau_texto?: string
+          cargo_nome?: string | null
+          comando_texto?: string
+          created_at?: string | null
+          data_vinculacao?: string | null
+          divisao_texto?: string
+          firebase_uid?: string | null
+          grau?: string | null
+          id?: string
+          nome_colete?: string
+          observacoes?: string | null
+          profile_id?: string | null
+          regional_texto?: string
+          registro_id?: number
+          updated_at?: string | null
+          vinculado?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integrantes_portal_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profile_history: {
         Row: {
           alterado_por: string | null
@@ -164,6 +283,7 @@ export type Database = {
           regional: string | null
           regional_id: string | null
           status: string
+          telefone: string | null
           updated_at: string
         }
         Insert: {
@@ -186,6 +306,7 @@ export type Database = {
           regional?: string | null
           regional_id?: string | null
           status?: string
+          telefone?: string | null
           updated_at?: string
         }
         Update: {
@@ -208,6 +329,7 @@ export type Database = {
           regional?: string | null
           regional_id?: string | null
           status?: string
+          telefone?: string | null
           updated_at?: string
         }
         Relationships: [
