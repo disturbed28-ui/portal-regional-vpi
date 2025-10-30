@@ -8,17 +8,20 @@ export interface Regional {
   created_at: string;
 }
 
-export const useRegionais = () => {
+export const useRegionais = (comandoId?: string) => {
   const [regionais, setRegionais] = useState<Regional[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchRegionais = async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('regionais')
-        .select('*')
-        .order('nome');
+      let query = supabase.from('regionais').select('*');
+      
+      if (comandoId) {
+        query = query.eq('comando_id', comandoId);
+      }
+      
+      const { data, error } = await query.order('nome');
 
       if (error) {
         console.error('Error fetching regionais:', error);
@@ -29,7 +32,7 @@ export const useRegionais = () => {
     };
 
     fetchRegionais();
-  }, []);
+  }, [comandoId]);
 
   return { regionais, loading };
 };

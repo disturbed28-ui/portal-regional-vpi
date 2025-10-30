@@ -29,6 +29,7 @@ interface Profile {
   observacao: string | null;
   photo_url: string | null;
   created_at: string;
+  comando_id: string | null;
   regional: string | null;
   divisao: string | null;
   cargo: string | null;
@@ -39,6 +40,7 @@ interface Profile {
   funcao_id: string | null;
   data_entrada: string | null;
   grau: string | null;
+  comandos?: { nome: string } | null;
   regionais?: { nome: string } | null;
   divisoes?: { nome: string } | null;
   cargos?: { nome: string } | null;
@@ -131,6 +133,7 @@ const Admin = () => {
         .from('profiles')
         .select(`
           *,
+          comandos:comando_id (nome),
           regionais:regional_id (nome),
           divisoes:divisao_id (nome),
           cargos:cargo_id (nome),
@@ -277,9 +280,10 @@ const Admin = () => {
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground">{profile.name}</p>
-              {(profile.regionais?.nome || profile.divisoes?.nome || profile.cargos?.nome) && (
+              {(profile.comandos?.nome || profile.regionais?.nome || profile.divisoes?.nome || profile.cargos?.nome) && (
                 <p className="text-xs text-muted-foreground mt-1">
                   {[
+                    profile.comandos?.nome,
                     profile.regionais?.nome,
                     profile.divisoes?.nome,
                     profile.cargos?.nome
@@ -344,9 +348,17 @@ const Admin = () => {
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Administracao de Perfis</h1>
-          <Button onClick={() => navigate("/")} variant="outline">
-            Voltar
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => navigate("/admin/estrutura")} variant="outline">
+              Gestão de Estrutura
+            </Button>
+            <Button onClick={() => navigate("/admin/dados")} variant="outline">
+              Gestão de Dados
+            </Button>
+            <Button onClick={() => navigate("/")} variant="outline">
+              Voltar
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="analise" className="w-full">

@@ -21,6 +21,7 @@ Deno.serve(async (req) => {
       profile_id,
       name,
       nome_colete,
+      comando_id,
       regional,
       divisao,
       cargo,
@@ -68,6 +69,7 @@ Deno.serve(async (req) => {
       .update({
         name,
         nome_colete,
+        comando_id,
         regional,
         divisao,
         cargo,

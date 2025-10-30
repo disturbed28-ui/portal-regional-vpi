@@ -79,10 +79,49 @@ function detectEventType(title: string): string {
 function detectDivision(title: string): string {
   const lower = title.toLowerCase();
   
-  if (lower.includes("regional")) return "Regional";
-  if (lower.includes("divleste") || lower.includes("div leste")) return "DivLeste SJC";
-  if (lower.includes("divjac centro")) return "DivJac Centro";
-  if (lower.includes("divjac")) return "DivJac";
+  // Mapeamento de códigos para divisões
+  if (lower.includes("cacapava") || lower.includes("caçapava")) {
+    return "Divisao Cacapava - SP";
+  }
+  if (lower.includes("estsul")) {
+    return "Divisao Sao Jose dos Campos Extremo Sul - SP";
+  }
+  if (lower.includes("estleste")) {
+    return "Divisao Sao Jose dos Campos Extremo Leste - SP";
+  }
+  if (lower.includes("estnorte")) {
+    return "Divisao Sao Jose dos Campos Extremo Norte - SP";
+  }
+  if (lower.includes("diveleste") || lower.includes("div leste")) {
+    return "Divisao Sao Jose dos Campos Leste - SP";
+  }
+  if (lower.includes("divesjc centro") || lower.includes("divsjc centro")) {
+    return "Divisao Sao Jose dos Campos Centro - SP";
+  }
+  
+  // Jacareí com suas divisões
+  if (lower.includes("jacarei sul") || lower.includes("jac sul")) {
+    return "Divisao Jacarei Sul - SP";
+  }
+  if (lower.includes("jacarei norte") || lower.includes("jac norte")) {
+    return "Divisao Jacarei Norte - SP";
+  }
+  if (lower.includes("jacarei leste") || lower.includes("jac leste")) {
+    return "Divisao Jacarei Leste - SP";
+  }
+  if (lower.includes("jacarei oeste") || lower.includes("jac oeste")) {
+    return "Divisao Jacarei Oeste - SP";
+  }
+  if (lower.includes("jacarei centro") || lower.includes("jac centro")) {
+    return "Divisao Jacarei Centro - SP";
+  }
+  if (lower.includes("jacarei") || lower.includes("jac")) {
+    return "Divisao Jacarei - SP";
+  }
+  
+  if (lower.includes("regional")) {
+    return "Regional";
+  }
   
   return "Sem Divisao";
 }
