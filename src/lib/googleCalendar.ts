@@ -16,7 +16,7 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
   const API_KEY = import.meta.env.VITE_GOOGLE_CALENDAR_API_KEY;
   
   if (!API_KEY) {
-    throw new Error("Google Calendar API Key não configurada");
+    throw new Error("Google Calendar API Key nao configurada");
   }
 
   const now = new Date();
@@ -44,7 +44,7 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
   
   return data.items.map((item: any) => ({
     id: item.id,
-    title: item.summary || "Sem título",
+    title: item.summary || "Sem titulo",
     description: item.description || "",
     start: item.start.dateTime || item.start.date,
     end: item.end.dateTime || item.end.date,
@@ -59,9 +59,9 @@ function detectEventType(title: string): string {
   const lower = title.toLowerCase();
   
   if (lower.includes("pub")) return "Pub";
-  if (lower.includes("ação social") || lower.includes("acao social")) return "Ação Social";
-  if (lower.includes("reunião") || lower.includes("reuniao")) return "Reunião";
-  if (lower.includes("arrecadação") || lower.includes("arrecadacao")) return "Arrecadação";
+  if (lower.includes("acao social")) return "Acao Social";
+  if (lower.includes("reuniao")) return "Reuniao";
+  if (lower.includes("arrecadacao")) return "Arrecadacao";
   if (lower.includes("bonde")) return "Bonde";
   if (lower.includes("treino")) return "Treino";
   
@@ -76,5 +76,5 @@ function detectDivision(title: string): string {
   if (lower.includes("divjac centro")) return "DivJac Centro";
   if (lower.includes("divjac")) return "DivJac";
   
-  return "Sem Divisão";
+  return "Sem Divisao";
 }

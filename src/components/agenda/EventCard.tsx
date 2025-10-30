@@ -11,9 +11,9 @@ interface EventCardProps {
 
 const typeColors: Record<string, string> = {
   "Pub": "bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-500/30",
-  "Ação Social": "bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30",
-  "Reunião": "bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30",
-  "Arrecadação": "bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/30",
+  "Acao Social": "bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30",
+  "Reuniao": "bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30",
+  "Arrecadacao": "bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/30",
   "Bonde": "bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30",
   "Treino": "bg-orange-500/20 text-orange-700 dark:text-orange-300 border-orange-500/30",
   "Outros": "bg-gray-500/20 text-gray-700 dark:text-gray-300 border-gray-500/30",
@@ -41,7 +41,7 @@ export function EventCard({ event }: EventCardProps) {
           <Badge variant="outline" className={typeColors[event.type] || typeColors["Outros"]}>
             {event.type}
           </Badge>
-          {event.division !== "Sem Divisão" && (
+          {event.division !== "Sem Divisao" && (
             <Badge variant="secondary">{event.division}</Badge>
           )}
         </div>

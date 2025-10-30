@@ -68,10 +68,10 @@ const Admin = () => {
     
     // Se não tem user, negar acesso
     if (!user) {
-      console.log('[Admin] ACESSO NEGADO - sem usuário');
+      console.log('[Admin] ACESSO NEGADO - sem usuario');
       toast({
         title: "Acesso Negado",
-        description: "Você precisa estar logado",
+        description: "Voce precisa estar logado",
         variant: "destructive",
       });
       navigate("/");
@@ -80,10 +80,10 @@ const Admin = () => {
     
     // Verificar se é admin (sem setTimeout, roles como dependência)
     if (!hasRole('admin')) {
-      console.log('[Admin] ACESSO NEGADO - não é admin. Roles:', roles);
+      console.log('[Admin] ACESSO NEGADO - nao e admin. Roles:', roles);
       toast({
         title: "Acesso Negado",
-        description: "Apenas administradores podem acessar esta área",
+        description: "Apenas administradores podem acessar esta area",
         variant: "destructive",
       });
       navigate("/");
@@ -228,11 +228,11 @@ const Admin = () => {
 
   const getStatusBadge = (status: string) => {
     const config = {
-    'Pendente': { variant: 'secondary' as const, label: '🟡 Pendente' },
-    'Analise': { variant: 'secondary' as const, label: '⏳ Em Analise' },
-      'Ativo': { variant: 'default' as const, label: '✅ Ativo' },
-      'Recusado': { variant: 'destructive' as const, label: '❌ Recusado' },
-      'Inativo': { variant: 'outline' as const, label: '⚫ Inativo' }
+    'Pendente': { variant: 'secondary' as const, label: 'Pendente' },
+    'Analise': { variant: 'secondary' as const, label: 'Em Analise' },
+      'Ativo': { variant: 'default' as const, label: 'Ativo' },
+      'Recusado': { variant: 'destructive' as const, label: 'Recusado' },
+      'Inativo': { variant: 'outline' as const, label: 'Inativo' }
     };
     return config[status];
   };

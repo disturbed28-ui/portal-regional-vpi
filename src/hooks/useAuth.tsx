@@ -54,7 +54,7 @@ export const useAuth = () => {
 
             console.log('User synced successfully:', data);
             
-            // Usar sessionStorage para controlar toast por sessão
+            // Usar sessionStorage para controlar toast por sessao
             const hasShownWelcomeToast = sessionStorage.getItem('welcome_toast_shown');
             
             if (!hasShownWelcomeToast) {
@@ -81,7 +81,7 @@ export const useAuth = () => {
         
         toast({
           title: "Desconectado",
-          description: "Até logo!",
+          description: "Ate logo!",
         });
       }
     });

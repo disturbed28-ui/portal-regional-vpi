@@ -62,16 +62,16 @@ const REGIONAL_OPTIONS = [
 ];
 
 const DIVISAO_OPTIONS = [
-  'Divisão Alpha',
-  'Divisão Beta',
-  'Divisão Gamma',
-  'Divisão Delta',
+  'Divisao Alpha',
+  'Divisao Beta',
+  'Divisao Gamma',
+  'Divisao Delta',
 ];
 
 const CARGO_OPTIONS = [
   'Presidente',
   'Vice-Presidente',
-  'Secretário',
+  'Secretario',
   'Tesoureiro',
   'Conselheiro',
   'Membro',
@@ -80,8 +80,8 @@ const CARGO_OPTIONS = [
 const GRAU_OPTIONS = [
   'Prospect',
   'Membro Pleno',
-  'Membro Honorário',
-  'Membro Vitalício',
+  'Membro Honorario',
+  'Membro Vitalicio',
 ];
 
 export function ProfileDetailDialog({
@@ -116,8 +116,8 @@ export function ProfileDetailDialog({
     e.preventDefault();
     if (!profile || !user) {
       toast({
-        title: "Erro de autenticação",
-        description: "Você precisa estar logado",
+        title: "Erro de autenticacao",
+        description: "Voce precisa estar logado",
         variant: "destructive",
       });
       return;
@@ -151,7 +151,7 @@ export function ProfileDetailDialog({
 
       toast({
         title: "Perfil atualizado",
-        description: "As alterações foram salvas com sucesso",
+        description: "As alteracoes foram salvas com sucesso",
       });
 
       onOpenChange(false);
@@ -176,7 +176,7 @@ export function ProfileDetailDialog({
         <DialogHeader>
           <DialogTitle>Editar Perfil</DialogTitle>
           <DialogDescription>
-            Atualize as informações administrativas do membro
+            Atualize as informacoes administrativas do membro
           </DialogDescription>
         </DialogHeader>
 
@@ -234,9 +234,9 @@ export function ProfileDetailDialog({
               </Select>
             </div>
 
-            {/* Divisão */}
+            {/* Divisao */}
             <div className="space-y-2">
-              <Label htmlFor="divisao">Divisão</Label>
+              <Label htmlFor="divisao">Divisao</Label>
               <Select
                 value={formData.divisao || ''}
                 onValueChange={(value) => setFormData({ ...formData, divisao: value })}
@@ -295,9 +295,9 @@ export function ProfileDetailDialog({
             </div>
           </div>
 
-          {/* Função */}
+          {/* Funcao */}
           <div className="space-y-2">
-            <Label htmlFor="funcao">Função</Label>
+            <Label htmlFor="funcao">Funcao</Label>
             <Input
               id="funcao"
               value={formData.funcao || ''}
@@ -339,9 +339,9 @@ export function ProfileDetailDialog({
             </Select>
           </div>
 
-          {/* Observação */}
+          {/* Observacao */}
           <div className="space-y-2">
-            <Label htmlFor="observacao">Observação</Label>
+            <Label htmlFor="observacao">Observacao</Label>
             <Textarea
               id="observacao"
               value={formData.observacao || ''}
@@ -361,7 +361,7 @@ export function ProfileDetailDialog({
               Cancelar
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? "Salvando..." : "Salvar Alterações"}
+              {loading ? "Salvando..." : "Salvar Alteracoes"}
             </Button>
           </DialogFooter>
         </form>

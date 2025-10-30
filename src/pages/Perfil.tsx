@@ -27,27 +27,27 @@ const Perfil = () => {
       case 'Pendente':
         return {
           type: 'info',
-          message: '📝 Preencha seu nome de colete para solicitar entrada no clube'
+          message: 'Preencha seu nome de colete para solicitar entrada no clube'
         };
       case 'Analise':
         return {
           type: 'warning',
-          message: '⏳ Seu perfil esta em analise pelos administradores'
+          message: 'Seu perfil esta em analise pelos administradores'
         };
       case 'Ativo':
         return {
           type: 'success',
-          message: '✅ Voce e um membro ativo do clube!'
+          message: 'Voce e um membro ativo do clube!'
         };
       case 'Recusado':
         return {
           type: 'error',
-          message: `❌ Sua solicitacao foi recusada. Motivo: ${profile?.observacao || 'Nao informado'}`
+          message: `Sua solicitacao foi recusada. Motivo: ${profile?.observacao || 'Nao informado'}`
         };
       case 'Inativo':
         return {
           type: 'neutral',
-          message: '⚫ Voce nao esta mais ativo no clube'
+          message: 'Voce nao esta mais ativo no clube'
         };
       default:
         return null;
@@ -101,8 +101,8 @@ const Perfil = () => {
       toast({
         title: "Sucesso",
         description: profile?.profile_status === 'Recusado'
-          ? "✅ Solicitacao reenviada para analise"
-          : "✅ Nome de colete enviado para analise",
+          ? "Solicitacao reenviada para analise"
+          : "Nome de colete enviado para analise",
       });
 
       setTimeout(() => {

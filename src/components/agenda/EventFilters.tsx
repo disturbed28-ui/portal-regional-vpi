@@ -44,10 +44,10 @@ export function EventFilters({
       <div className="flex-1">
         <Select value={selectedDivision} onValueChange={onDivisionChange}>
           <SelectTrigger>
-            <SelectValue placeholder="Filtrar por divisão" />
+            <SelectValue placeholder="Filtrar por divisao" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todas as divisões</SelectItem>
+            <SelectItem value="all">Todas as divisoes</SelectItem>
             {availableDivisions.map((division) => (
               <SelectItem key={division} value={division}>
                 {division}

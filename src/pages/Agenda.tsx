@@ -47,7 +47,7 @@ const Agenda = () => {
             Voltar
           </Button>
           <h1 className="text-3xl font-bold text-foreground mb-4">
-            Agenda Regional Vale do Paraíba I - SP
+            Agenda Regional Vale do Paraiba I - SP
           </h1>
 
           {!isLoading && !error && (
@@ -74,7 +74,7 @@ const Agenda = () => {
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Erro ao carregar eventos. Verifique se a API Key do Google Calendar está configurada corretamente.
+              Erro ao carregar eventos. Verifique se a API Key do Google Calendar esta configurada corretamente.
             </AlertDescription>
           </Alert>
         )}
