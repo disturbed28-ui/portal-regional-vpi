@@ -181,12 +181,31 @@ const Admin = () => {
           break;
       }
 
-      const { error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', selectedProfile.id);
+      // Obter token de autenticação
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Sessão não encontrada');
 
-      if (error) throw error;
+      // Chamar edge function com service role
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/admin-update-profile`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            profile_id: selectedProfile.id,
+            ...updates,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao atualizar perfil');
+      }
 
       toast({
         title: "Sucesso",
@@ -197,11 +216,12 @@ const Admin = () => {
       setSelectedProfile(null);
       setObservacao("");
       setActionType(null);
+      fetchProfiles(); // Recarregar perfis
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
         title: "Erro",
-        description: "Falha ao atualizar perfil",
+        description: error instanceof Error ? error.message : "Falha ao atualizar perfil",
         variant: "destructive",
       });
     }
