@@ -19,8 +19,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { ProfileStatus } from "@/types/profile";
 
 interface Profile {
@@ -91,6 +91,7 @@ export function ProfileDetailDialog({
   onSuccess,
 }: ProfileDetailDialogProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<Partial<Profile>>({});
 
@@ -113,29 +114,40 @@ export function ProfileDetailDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile) return;
+    if (!profile || !user) {
+      toast({
+        title: "Erro de autenticação",
+        description: "Você precisa estar logado",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       
-      if (!session) {
-        toast({
-          title: "Erro de autenticação",
-          description: "Você precisa estar logado",
-          variant: "destructive",
-        });
-        return;
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/admin-update-profile`,
+        {
+          method: 'POST',
+          headers: {
+            'apikey': supabaseKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            admin_user_id: user.uid,
+            profile_id: profile.id,
+            ...formData,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao atualizar perfil');
       }
-
-      const { data, error } = await supabase.functions.invoke('admin-update-profile', {
-        body: {
-          profile_id: profile.id,
-          ...formData,
-        },
-      });
-
-      if (error) throw error;
 
       toast({
         title: "Perfil atualizado",
