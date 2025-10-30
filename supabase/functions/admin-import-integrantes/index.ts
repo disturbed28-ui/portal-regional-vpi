@@ -64,11 +64,17 @@ Deno.serve(async (req) => {
 
     // Upsert new integrantes (insert or update if registro_id exists)
     if (novos && novos.length > 0) {
-      console.log('[admin-import-integrantes] Upserting novos:', novos.length);
+      // Deduplicate by registro_id (keep last occurrence)
+      const uniqueNovos = Array.from(
+        new Map(novos.map((item: any) => [item.registro_id, item])).values()
+      );
+      
+      console.log('[admin-import-integrantes] Total novos:', novos.length);
+      console.log('[admin-import-integrantes] Unique novos after dedup:', uniqueNovos.length);
       
       const { error: upsertError } = await supabase
         .from('integrantes_portal')
-        .upsert(novos, { 
+        .upsert(uniqueNovos, { 
           onConflict: 'registro_id',
           ignoreDuplicates: false 
         });
@@ -81,7 +87,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      insertedCount = novos.length;
+      insertedCount = uniqueNovos.length;
     }
 
     // Update existing integrantes
