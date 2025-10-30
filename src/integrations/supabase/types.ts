@@ -167,59 +167,89 @@ export type Database = {
       integrantes_portal: {
         Row: {
           ativo: boolean | null
+          batedor: boolean | null
+          cargo_estagio: string | null
           cargo_grau_texto: string
           cargo_nome: string | null
+          caveira: boolean | null
+          caveira_suplente: boolean | null
           comando_texto: string
           created_at: string | null
+          data_entrada: string | null
           data_vinculacao: string | null
           divisao_texto: string
           firebase_uid: string | null
           grau: string | null
           id: string
+          lobo: boolean | null
           nome_colete: string
           observacoes: string | null
           profile_id: string | null
           regional_texto: string
           registro_id: number
+          sgt_armas: boolean | null
+          tem_carro: boolean | null
+          tem_moto: boolean | null
           updated_at: string | null
+          ursinho: boolean | null
           vinculado: boolean | null
         }
         Insert: {
           ativo?: boolean | null
+          batedor?: boolean | null
+          cargo_estagio?: string | null
           cargo_grau_texto: string
           cargo_nome?: string | null
+          caveira?: boolean | null
+          caveira_suplente?: boolean | null
           comando_texto: string
           created_at?: string | null
+          data_entrada?: string | null
           data_vinculacao?: string | null
           divisao_texto: string
           firebase_uid?: string | null
           grau?: string | null
           id?: string
+          lobo?: boolean | null
           nome_colete: string
           observacoes?: string | null
           profile_id?: string | null
           regional_texto: string
           registro_id: number
+          sgt_armas?: boolean | null
+          tem_carro?: boolean | null
+          tem_moto?: boolean | null
           updated_at?: string | null
+          ursinho?: boolean | null
           vinculado?: boolean | null
         }
         Update: {
           ativo?: boolean | null
+          batedor?: boolean | null
+          cargo_estagio?: string | null
           cargo_grau_texto?: string
           cargo_nome?: string | null
+          caveira?: boolean | null
+          caveira_suplente?: boolean | null
           comando_texto?: string
           created_at?: string | null
+          data_entrada?: string | null
           data_vinculacao?: string | null
           divisao_texto?: string
           firebase_uid?: string | null
           grau?: string | null
           id?: string
+          lobo?: boolean | null
           nome_colete?: string
           observacoes?: string | null
           profile_id?: string | null
           regional_texto?: string
           registro_id?: number
+          sgt_armas?: boolean | null
+          tem_carro?: boolean | null
+          tem_moto?: boolean | null
           updated_at?: string | null
+          ursinho?: boolean | null
           vinculado?: boolean | null
         }
         Relationships: [

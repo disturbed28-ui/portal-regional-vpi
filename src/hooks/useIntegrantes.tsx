@@ -19,6 +19,16 @@ export interface IntegrantePortal {
   observacoes: string | null;
   created_at: string;
   updated_at: string;
+  cargo_estagio: string | null;
+  sgt_armas: boolean;
+  caveira: boolean;
+  caveira_suplente: boolean;
+  batedor: boolean;
+  ursinho: boolean;
+  lobo: boolean;
+  tem_moto: boolean;
+  tem_carro: boolean;
+  data_entrada: string | null;
 }
 
 interface UseIntegrantesOptions {

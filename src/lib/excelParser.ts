@@ -8,6 +8,16 @@ export interface ExcelIntegrante {
   id_integrante: number;
   nome_colete: string;
   cargo_grau: string;
+  cargo_estagio?: string;
+  sgt_armas?: boolean;
+  caveira?: boolean;
+  caveira_suplente?: boolean;
+  batedor?: boolean;
+  ursinho?: boolean;
+  lobo?: boolean;
+  tem_moto?: boolean;
+  tem_carro?: boolean;
+  data_entrada?: string;
 }
 
 export interface ProcessDeltaResult {
@@ -38,10 +48,28 @@ export const parseExcelFile = async (file: File): Promise<ExcelIntegrante[]> => 
           const regional = row.regional || row.Regional || row.REGIONAL || '';
           const divisao = row.divisao || row.Divisao || row.Divisão || row.DIVISAO || '';
           const id_integrante = parseInt(
-            row.id_integrante || row.ID_Integrante || row.registro || row.Registro || '0'
+            row.id_integrante || row.ID_Integrante || row.id__integrante || row.registro || row.Registro || '0'
           );
-          const nome_colete = row.nome_colete || row.Nome_Colete || row['Nome Colete'] || row.nome || row.Nome || '';
+          const nome_colete = row.nome_colete || row.Nome_Colete || row.NomeColete || row['Nome Colete'] || row.nome || row.Nome || '';
           const cargo_grau = row.cargo_grau || row.Cargo_Grau || row['Cargo Grau'] || row.cargo || row.Cargo || '';
+          const cargo_estagio = row.cargo_estagio || row.Cargo_Estagio || row.CargoEstagio || '';
+          
+          // Converter campos S/N para boolean
+          const converterBool = (value: any) => value === 'S' || value === 's' || value === true;
+          
+          // Parsear data de entrada
+          const parseData = (value: any) => {
+            if (!value) return undefined;
+            if (typeof value === 'number') {
+              // Excel serial date
+              const date = new Date((value - 25569) * 86400 * 1000);
+              return date.toISOString().split('T')[0];
+            }
+            if (value instanceof Date) {
+              return value.toISOString().split('T')[0];
+            }
+            return value.toString();
+          };
 
           return {
             comando: comando.trim(),
@@ -50,6 +78,16 @@ export const parseExcelFile = async (file: File): Promise<ExcelIntegrante[]> => 
             id_integrante,
             nome_colete: nome_colete.trim(),
             cargo_grau: cargo_grau.trim(),
+            cargo_estagio: cargo_estagio.trim() || undefined,
+            sgt_armas: converterBool(row.SgtArmas || row.sgt_armas),
+            caveira: converterBool(row.Caveira || row.caveira),
+            caveira_suplente: converterBool(row.CaveiraSuplente || row.caveira_suplente),
+            batedor: converterBool(row.Batedor || row.batedor),
+            ursinho: converterBool(row.Ursinho || row.ursinho),
+            lobo: converterBool(row.Lobo || row.lobo),
+            tem_moto: converterBool(row.TemMoto || row.tem_moto),
+            tem_carro: converterBool(row.TemCarro || row.tem_carro),
+            data_entrada: parseData(row.data_entrada || row.data__entrada),
           };
         });
 
@@ -100,7 +138,17 @@ export const processDelta = (
         dbItem.comando_texto !== excelItem.comando ||
         dbItem.regional_texto !== excelItem.regional ||
         dbItem.divisao_texto !== excelItem.divisao ||
-        dbItem.cargo_grau_texto !== excelItem.cargo_grau;
+        dbItem.cargo_grau_texto !== excelItem.cargo_grau ||
+        dbItem.cargo_estagio !== (excelItem.cargo_estagio || null) ||
+        dbItem.sgt_armas !== (excelItem.sgt_armas || false) ||
+        dbItem.caveira !== (excelItem.caveira || false) ||
+        dbItem.caveira_suplente !== (excelItem.caveira_suplente || false) ||
+        dbItem.batedor !== (excelItem.batedor || false) ||
+        dbItem.ursinho !== (excelItem.ursinho || false) ||
+        dbItem.lobo !== (excelItem.lobo || false) ||
+        dbItem.tem_moto !== (excelItem.tem_moto || false) ||
+        dbItem.tem_carro !== (excelItem.tem_carro || false) ||
+        dbItem.data_entrada !== (excelItem.data_entrada || null);
 
       if (mudou) {
         atualizados.push({ antigo: dbItem, novo: excelItem });
@@ -122,13 +170,22 @@ export const processDelta = (
 };
 
 export const parseCargoGrau = (cargoGrauTexto: string): { cargo: string; grau: string | null } => {
-  // Padroes: "Diretor Regional Grau V", "Full Grau X", "Prospect"
-  const match = cargoGrauTexto.match(/(.+?)\s+Grau\s+([IVX]+)/i);
+  if (!cargoGrauTexto) return { cargo: '', grau: null };
   
-  if (match) {
+  // Padroes: "Diretor Regional (Grau V)", "Diretor Regional Grau V", "Full Grau X", "Prospect", "Sem Cargo"
+  const matchParenteses = cargoGrauTexto.match(/(.+?)\s*\(Grau\s+([IVX]+)\)/i);
+  if (matchParenteses) {
     return {
-      cargo: match[1].trim(),
-      grau: match[2].toUpperCase(),
+      cargo: matchParenteses[1].trim(),
+      grau: matchParenteses[2].toUpperCase(),
+    };
+  }
+  
+  const matchEspaco = cargoGrauTexto.match(/(.+?)\s+Grau\s+([IVX]+)/i);
+  if (matchEspaco) {
+    return {
+      cargo: matchEspaco[1].trim(),
+      grau: matchEspaco[2].toUpperCase(),
     };
   }
 

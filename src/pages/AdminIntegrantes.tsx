@@ -77,6 +77,16 @@ const AdminIntegrantes = () => {
             cargo_nome: cargo,
             grau: grau,
             ativo: true,
+            cargo_estagio: item.cargo_estagio || null,
+            sgt_armas: item.sgt_armas || false,
+            caveira: item.caveira || false,
+            caveira_suplente: item.caveira_suplente || false,
+            batedor: item.batedor || false,
+            ursinho: item.ursinho || false,
+            lobo: item.lobo || false,
+            tem_moto: item.tem_moto || false,
+            tem_carro: item.tem_carro || false,
+            data_entrada: item.data_entrada || null,
           };
         });
 
@@ -102,6 +112,16 @@ const AdminIntegrantes = () => {
               cargo_grau_texto: novo.cargo_grau,
               cargo_nome: cargo,
               grau: grau,
+              cargo_estagio: novo.cargo_estagio || null,
+              sgt_armas: novo.sgt_armas || false,
+              caveira: novo.caveira || false,
+              caveira_suplente: novo.caveira_suplente || false,
+              batedor: novo.batedor || false,
+              ursinho: novo.ursinho || false,
+              lobo: novo.lobo || false,
+              tem_moto: novo.tem_moto || false,
+              tem_carro: novo.tem_carro || false,
+              data_entrada: novo.data_entrada || null,
             })
             .eq('id', antigo.id);
 
@@ -239,8 +259,24 @@ const AdminIntegrantes = () => {
                       </div>
                       <div className="text-sm space-y-1">
                         <p><span className="font-semibold">Cargo:</span> {integrante.cargo_grau_texto}</p>
+                        {integrante.cargo_estagio && (
+                          <p><span className="font-semibold">Estagiando:</span> {integrante.cargo_estagio}</p>
+                        )}
                         <p><span className="font-semibold">Divisao:</span> {integrante.divisao_texto}</p>
                         <p><span className="font-semibold">Regional:</span> {integrante.regional_texto}</p>
+                        {integrante.data_entrada && (
+                          <p><span className="font-semibold">Entrada:</span> {new Date(integrante.data_entrada).toLocaleDateString('pt-BR')}</p>
+                        )}
+                        <div className="flex gap-1 flex-wrap mt-2">
+                          {integrante.tem_moto && <Badge variant="secondary">🏍️ Moto</Badge>}
+                          {integrante.tem_carro && <Badge variant="secondary">🚗 Carro</Badge>}
+                          {integrante.sgt_armas && <Badge variant="secondary">⚔️ Sgt Armas</Badge>}
+                          {integrante.caveira && <Badge variant="secondary">💀 Caveira</Badge>}
+                          {integrante.caveira_suplente && <Badge variant="outline">💀 Suplente</Badge>}
+                          {integrante.batedor && <Badge variant="secondary">🛡️ Batedor</Badge>}
+                          {integrante.ursinho && <Badge variant="secondary">🐻 Ursinho</Badge>}
+                          {integrante.lobo && <Badge variant="secondary">🐺 Lobo</Badge>}
+                        </div>
                       </div>
                     </div>
                   </Card>
@@ -267,7 +303,23 @@ const AdminIntegrantes = () => {
                       </div>
                       <div className="text-sm space-y-1">
                         <p><span className="font-semibold">Cargo:</span> {integrante.cargo_grau_texto}</p>
+                        {integrante.cargo_estagio && (
+                          <p><span className="font-semibold">Estagiando:</span> {integrante.cargo_estagio}</p>
+                        )}
                         <p><span className="font-semibold">Divisao:</span> {integrante.divisao_texto}</p>
+                        {integrante.data_entrada && (
+                          <p><span className="font-semibold">Entrada:</span> {new Date(integrante.data_entrada).toLocaleDateString('pt-BR')}</p>
+                        )}
+                        <div className="flex gap-1 flex-wrap mt-2">
+                          {integrante.tem_moto && <Badge variant="secondary">🏍️ Moto</Badge>}
+                          {integrante.tem_carro && <Badge variant="secondary">🚗 Carro</Badge>}
+                          {integrante.sgt_armas && <Badge variant="secondary">⚔️ Sgt Armas</Badge>}
+                          {integrante.caveira && <Badge variant="secondary">💀 Caveira</Badge>}
+                          {integrante.caveira_suplente && <Badge variant="outline">💀 Suplente</Badge>}
+                          {integrante.batedor && <Badge variant="secondary">🛡️ Batedor</Badge>}
+                          {integrante.ursinho && <Badge variant="secondary">🐻 Ursinho</Badge>}
+                          {integrante.lobo && <Badge variant="secondary">🐺 Lobo</Badge>}
+                        </div>
                       </div>
                     </div>
                   </Card>
@@ -293,7 +345,23 @@ const AdminIntegrantes = () => {
                       </div>
                       <div className="text-sm space-y-1">
                         <p><span className="font-semibold">Cargo:</span> {integrante.cargo_grau_texto}</p>
+                        {integrante.cargo_estagio && (
+                          <p><span className="font-semibold">Estagiando:</span> {integrante.cargo_estagio}</p>
+                        )}
                         <p><span className="font-semibold">Divisao:</span> {integrante.divisao_texto}</p>
+                        {integrante.data_entrada && (
+                          <p><span className="font-semibold">Entrada:</span> {new Date(integrante.data_entrada).toLocaleDateString('pt-BR')}</p>
+                        )}
+                        <div className="flex gap-1 flex-wrap mt-2">
+                          {integrante.tem_moto && <Badge variant="secondary">🏍️ Moto</Badge>}
+                          {integrante.tem_carro && <Badge variant="secondary">🚗 Carro</Badge>}
+                          {integrante.sgt_armas && <Badge variant="secondary">⚔️ Sgt Armas</Badge>}
+                          {integrante.caveira && <Badge variant="secondary">💀 Caveira</Badge>}
+                          {integrante.caveira_suplente && <Badge variant="outline">💀 Suplente</Badge>}
+                          {integrante.batedor && <Badge variant="secondary">🛡️ Batedor</Badge>}
+                          {integrante.ursinho && <Badge variant="secondary">🐻 Ursinho</Badge>}
+                          {integrante.lobo && <Badge variant="secondary">🐺 Lobo</Badge>}
+                        </div>
                       </div>
                     </div>
                   </Card>
