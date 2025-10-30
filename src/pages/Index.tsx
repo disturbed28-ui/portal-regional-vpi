@@ -48,6 +48,7 @@ const Index = () => {
   
   const userPhoto = isLoadingProfile ? "" : (profile?.photo_url || "");
   const isAdmin = hasRole('admin');
+  const isActive = profile?.profile_status === 'Ativo';
 
   const handleConnect = () => {
     signInWithGoogle();
@@ -130,21 +131,23 @@ const Index = () => {
             
             <Button 
               onClick={handleAgenda}
-              className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl"
+              disabled={!isLoggedIn || !isActive}
+              className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Agenda
             </Button>
             
             <Button 
               onClick={handleOrganograma}
-              className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl"
+              disabled={!isLoggedIn || !isActive}
+              className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Organograma
             </Button>
             
             <Button 
               onClick={handlePerfil}
-              disabled={!isLoggedIn}
+              disabled={!isLoggedIn || !isActive}
               className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Perfil do Usuario
@@ -153,7 +156,8 @@ const Index = () => {
             {isAdmin && (
               <Button 
                 onClick={handleAdmin}
-                className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl"
+                disabled={!isLoggedIn || !isActive}
+                className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Administracao
               </Button>
