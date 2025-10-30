@@ -141,7 +141,7 @@ const Perfil = () => {
           {/* Cabecalho */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-foreground">
-              Perfil do Usuario
+              Perfil do Integrante
             </h2>
             <Button 
               onClick={() => navigate("/")}
@@ -223,8 +223,7 @@ const Perfil = () => {
               placeholder="(00) 00000-0000"
               value={telefone}
               onChange={(e) => setTelefone(e.target.value)}
-              disabled={profile?.profile_status === 'Ativo' || profile?.profile_status === 'Inativo'}
-              className="w-full bg-input border-border text-foreground rounded-xl disabled:opacity-50"
+              className="w-full bg-input border-border text-foreground rounded-xl"
             />
           </div>
 

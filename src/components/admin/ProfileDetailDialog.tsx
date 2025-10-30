@@ -117,7 +117,14 @@ export function ProfileDetailDialog({
     ? cargos.filter(cargo => cargo.grau === selectedGrau)
     : cargos;
 
+  // Reset form quando profile muda OU quando dialog abre
   useEffect(() => {
+    // Reset integrante selecionado quando dialog abre ou muda de perfil
+    if (open) {
+      setIntegranteSelecionado(null);
+      setShowIntegranteLookup(false);
+    }
+
     if (profile) {
       setFormData({
         name: profile.name,
@@ -142,7 +149,7 @@ export function ProfileDetailDialog({
         setSelectedGrau(profile.grau);
       }
     }
-  }, [profile]);
+  }, [profile, open]);
 
   const handleImportarIntegrante = async () => {
     if (!integranteSelecionado) return;
@@ -165,18 +172,39 @@ export function ProfileDetailDialog({
       console.log('Matched data:', matched);
       console.log('Parsed grau:', grau);
 
-      // Mostrar feedback do matching
+      // Mostrar feedback sobre o que foi encontrado
       if (matched.matched_fields.length > 0) {
         toast({
           title: "Dados encontrados",
-          description: matched.matched_fields.join(', '),
+          description: matched.matched_fields.join(", "),
         });
       }
-      if (matched.failed_fields.length > 0) {
+
+      // Filtrar failed_fields para não mostrar divisão como erro se for cargo de nível regional
+      const cargoNome = integranteSelecionado.cargo_nome?.toLowerCase() || "";
+      const isCargoRegional = cargoNome.includes("regional") || cargoNome.includes("diretor");
+      
+      const relevantFailedFields = matched.failed_fields.filter(field => {
+        // Se é cargo regional e o campo que falhou é divisão, não mostrar como erro
+        if (isCargoRegional && field.toLowerCase().includes("divisão")) {
+          return false;
+        }
+        return true;
+      });
+
+      if (relevantFailedFields.length > 0) {
         toast({
           title: "Campos não encontrados",
-          description: matched.failed_fields.join(', '),
+          description: relevantFailedFields.join(", "),
           variant: "destructive",
+        });
+      }
+      
+      // Mensagem informativa para cargos regionais
+      if (isCargoRegional && matched.failed_fields.some(f => f.toLowerCase().includes("divisão"))) {
+        toast({
+          title: "Integrante de nível Regional",
+          description: "Divisão não aplicável para este cargo",
         });
       }
 
