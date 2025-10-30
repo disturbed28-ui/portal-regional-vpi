@@ -64,12 +64,30 @@ Deno.serve(async (req) => {
 
     // Upsert new integrantes (insert or update if registro_id exists)
     if (novos && novos.length > 0) {
-      // Deduplicate by registro_id (keep last occurrence)
-      const uniqueNovos = Array.from(
-        new Map(novos.map((item: any) => [item.registro_id, item])).values()
-      );
+      // Filter out any records with null/undefined registro_id
+      const validNovos = novos.filter((item: any) => item.registro_id != null);
       
-      console.log('[admin-import-integrantes] Total novos:', novos.length);
+      console.log('[admin-import-integrantes] Total novos received:', novos.length);
+      console.log('[admin-import-integrantes] Valid novos (non-null registro_id):', validNovos.length);
+      
+      // Deduplicate by registro_id (keep last occurrence)
+      const seenIds = new Set();
+      const uniqueNovos = [];
+      const duplicates = [];
+      
+      for (const item of validNovos) {
+        if (seenIds.has(item.registro_id)) {
+          duplicates.push(item.registro_id);
+        } else {
+          seenIds.add(item.registro_id);
+          uniqueNovos.push(item);
+        }
+      }
+      
+      if (duplicates.length > 0) {
+        console.log('[admin-import-integrantes] Duplicate registro_ids found:', duplicates);
+      }
+      
       console.log('[admin-import-integrantes] Unique novos after dedup:', uniqueNovos.length);
       
       const { error: upsertError } = await supabase
