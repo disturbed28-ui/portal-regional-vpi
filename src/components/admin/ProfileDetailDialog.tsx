@@ -36,6 +36,7 @@ import { parseCargoGrau } from "@/lib/excelParser";
 import { matchIntegranteToStructure } from "@/lib/integranteMatching";
 import { supabase } from "@/integrations/supabase/client";
 import { Download, CheckCircle } from "lucide-react";
+import { RoleManager } from "./RoleManager";
 
 interface Profile {
   id: string;
@@ -161,6 +162,14 @@ export function ProfileDetailDialog({
         grau
       );
 
+      // Atualizar estados de cascata ANTES do formData
+      if (matched.comando_id) setSelectedComandoId(matched.comando_id);
+      if (matched.regional_id) setSelectedRegionalId(matched.regional_id);
+      if (grau) setSelectedGrau(grau);
+
+      // Aguardar um tick para garantir que os hooks de dados foram atualizados
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       // Atualizar form data
       setFormData({
         ...formData,
@@ -171,11 +180,6 @@ export function ProfileDetailDialog({
         cargo_id: matched.cargo_id || undefined,
         grau: grau || undefined,
       });
-
-      // Atualizar estados de cascata
-      if (matched.comando_id) setSelectedComandoId(matched.comando_id);
-      if (matched.regional_id) setSelectedRegionalId(matched.regional_id);
-      if (grau) setSelectedGrau(grau);
 
       // Vincular integrante ao perfil
       const { error: updateIntegranteError } = await supabase
@@ -380,6 +384,11 @@ export function ProfileDetailDialog({
               )}
             </div>
           </Card>
+
+          <Separator />
+
+          {/* Gerenciamento de Roles */}
+          <RoleManager profileId={profile.id} />
 
           <Separator />
 
