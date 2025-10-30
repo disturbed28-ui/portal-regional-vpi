@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface IntegrantePortal {
@@ -47,9 +47,15 @@ export const useIntegrantes = (options?: UseIntegrantesOptions) => {
     inativos: 0,
   });
 
+  // Estabilizar o objeto options para evitar loop infinito
+  const stableOptions = useMemo(
+    () => options,
+    [options?.vinculado, options?.ativo, options?.search]
+  );
+
   useEffect(() => {
     fetchIntegrantes();
-  }, [options]);
+  }, [stableOptions]);
 
   const fetchIntegrantes = async () => {
     setLoading(true);
