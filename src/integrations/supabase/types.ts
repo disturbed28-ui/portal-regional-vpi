@@ -14,6 +14,105 @@ export type Database = {
   }
   public: {
     Tables: {
+      cargos: {
+        Row: {
+          created_at: string | null
+          grau: string
+          id: string
+          nivel: number | null
+          nome: string
+        }
+        Insert: {
+          created_at?: string | null
+          grau: string
+          id?: string
+          nivel?: number | null
+          nome: string
+        }
+        Update: {
+          created_at?: string | null
+          grau?: string
+          id?: string
+          nivel?: number | null
+          nome?: string
+        }
+        Relationships: []
+      }
+      comandos: {
+        Row: {
+          created_at: string | null
+          id: string
+          nome: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          nome: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
+      divisoes: {
+        Row: {
+          created_at: string | null
+          id: string
+          nome: string
+          regional_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          nome: string
+          regional_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          nome?: string
+          regional_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "divisoes_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "regionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "divisoes_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["regional_id"]
+          },
+        ]
+      }
+      funcoes: {
+        Row: {
+          created_at: string | null
+          id: string
+          nome: string
+          ordem: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          nome: string
+          ordem?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          nome?: string
+          ordem?: number | null
+        }
+        Relationships: []
+      }
       profile_history: {
         Row: {
           alterado_por: string | null
@@ -47,10 +146,14 @@ export type Database = {
       profiles: {
         Row: {
           cargo: string | null
+          cargo_id: string | null
+          comando_id: string | null
           created_at: string
           data_entrada: string | null
           divisao: string | null
+          divisao_id: string | null
           funcao: string | null
+          funcao_id: string | null
           grau: string | null
           id: string
           name: string
@@ -59,15 +162,20 @@ export type Database = {
           photo_url: string | null
           profile_status: string
           regional: string | null
+          regional_id: string | null
           status: string
           updated_at: string
         }
         Insert: {
           cargo?: string | null
+          cargo_id?: string | null
+          comando_id?: string | null
           created_at?: string
           data_entrada?: string | null
           divisao?: string | null
+          divisao_id?: string | null
           funcao?: string | null
+          funcao_id?: string | null
           grau?: string | null
           id: string
           name?: string
@@ -76,15 +184,20 @@ export type Database = {
           photo_url?: string | null
           profile_status?: string
           regional?: string | null
+          regional_id?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
           cargo?: string | null
+          cargo_id?: string | null
+          comando_id?: string | null
           created_at?: string
           data_entrada?: string | null
           divisao?: string | null
+          divisao_id?: string | null
           funcao?: string | null
+          funcao_id?: string | null
           grau?: string | null
           id?: string
           name?: string
@@ -93,10 +206,104 @@ export type Database = {
           photo_url?: string | null
           profile_status?: string
           regional?: string | null
+          regional_id?: string | null
           status?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_cargo_id_fkey"
+            columns: ["cargo_id"]
+            isOneToOne: false
+            referencedRelation: "cargos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_comando_id_fkey"
+            columns: ["comando_id"]
+            isOneToOne: false
+            referencedRelation: "comandos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_comando_id_fkey"
+            columns: ["comando_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["comando_id"]
+          },
+          {
+            foreignKeyName: "profiles_divisao_id_fkey"
+            columns: ["divisao_id"]
+            isOneToOne: false
+            referencedRelation: "divisoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_divisao_id_fkey"
+            columns: ["divisao_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["divisao_id"]
+          },
+          {
+            foreignKeyName: "profiles_funcao_id_fkey"
+            columns: ["funcao_id"]
+            isOneToOne: false
+            referencedRelation: "funcoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "regionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["regional_id"]
+          },
+        ]
+      }
+      regionais: {
+        Row: {
+          comando_id: string
+          created_at: string | null
+          id: string
+          nome: string
+        }
+        Insert: {
+          comando_id: string
+          created_at?: string | null
+          id?: string
+          nome: string
+        }
+        Update: {
+          comando_id?: string
+          created_at?: string | null
+          id?: string
+          nome?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "regionais_comando_id_fkey"
+            columns: ["comando_id"]
+            isOneToOne: false
+            referencedRelation: "comandos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "regionais_comando_id_fkey"
+            columns: ["comando_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["comando_id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -121,7 +328,17 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      vw_estrutura_completa: {
+        Row: {
+          comando: string | null
+          comando_id: string | null
+          divisao: string | null
+          divisao_id: string | null
+          regional: string | null
+          regional_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
