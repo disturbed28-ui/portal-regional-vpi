@@ -350,10 +350,10 @@ const Admin = () => {
           <h1 className="text-2xl font-bold">Administracao de Perfis</h1>
           <div className="flex gap-2">
             <Button onClick={() => navigate("/admin/estrutura")} variant="outline">
-              Gestão de Estrutura
+              Gestao de Estrutura
             </Button>
             <Button onClick={() => navigate("/admin/dados")} variant="outline">
-              Gestão de Dados
+              Gestao de Dados
             </Button>
             <Button onClick={() => navigate("/")} variant="outline">
               Voltar

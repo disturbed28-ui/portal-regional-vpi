@@ -201,17 +201,17 @@ const AdminEstrutura = () => {
     try {
       if (divisaoForm.id) {
         await updateDivisao(divisaoForm.id, divisaoForm.nome, divisaoForm.regional_id);
-        toast({ title: "Divisão atualizada com sucesso" });
+        toast({ title: "Divisao atualizada com sucesso" });
       } else {
         await createDivisao(divisaoForm.nome, divisaoForm.regional_id);
-        toast({ title: "Divisão criada com sucesso" });
+        toast({ title: "Divisao criada com sucesso" });
       }
       setDivisaoDialogOpen(false);
       window.location.reload();
     } catch (error) {
       toast({
         title: "Erro",
-        description: "Falha ao salvar divisão",
+        description: "Falha ao salvar divisao",
         variant: "destructive",
       });
     }
@@ -254,7 +254,7 @@ const AdminEstrutura = () => {
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Gestão de Estrutura</h1>
+          <h1 className="text-2xl font-bold">Gestao de Estrutura</h1>
           <Button onClick={() => navigate("/admin")} variant="outline">
             Voltar
           </Button>
@@ -264,7 +264,7 @@ const AdminEstrutura = () => {
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="comandos">Comandos</TabsTrigger>
             <TabsTrigger value="regionais">Regionais</TabsTrigger>
-            <TabsTrigger value="divisoes">Divisões</TabsTrigger>
+            <TabsTrigger value="divisoes">Divisoes</TabsTrigger>
           </TabsList>
 
           {/* Tab Comandos */}
@@ -361,7 +361,7 @@ const AdminEstrutura = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <Button onClick={() => openDivisaoDialog()}>+ Nova Divisão</Button>
+              <Button onClick={() => openDivisaoDialog()}>+ Nova Divisao</Button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -465,7 +465,7 @@ const AdminEstrutura = () => {
         <Dialog open={divisaoDialogOpen} onOpenChange={setDivisaoDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{divisaoForm.id ? 'Editar' : 'Nova'} Divisão</DialogTitle>
+              <DialogTitle>{divisaoForm.id ? 'Editar' : 'Nova'} Divisao</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
@@ -487,12 +487,12 @@ const AdminEstrutura = () => {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="divisao-nome">Nome da Divisão</Label>
+                <Label htmlFor="divisao-nome">Nome da Divisao</Label>
                 <Input
                   id="divisao-nome"
                   value={divisaoForm.nome}
                   onChange={(e) => setDivisaoForm({ ...divisaoForm, nome: e.target.value })}
-                  placeholder="Ex: Divisão Sul"
+                  placeholder="Ex: Divisao Sul"
                 />
               </div>
             </div>

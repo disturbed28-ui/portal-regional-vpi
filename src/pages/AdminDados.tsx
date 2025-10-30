@@ -154,17 +154,17 @@ const AdminDados = () => {
       const ordem = funcaoForm.ordem ? parseInt(funcaoForm.ordem) : null;
       if (funcaoForm.id) {
         await updateFuncao(funcaoForm.id, funcaoForm.nome, ordem);
-        toast({ title: "Função atualizada com sucesso" });
+        toast({ title: "Funcao atualizada com sucesso" });
       } else {
         await createFuncao(funcaoForm.nome, ordem);
-        toast({ title: "Função criada com sucesso" });
+        toast({ title: "Funcao criada com sucesso" });
       }
       setFuncaoDialogOpen(false);
       window.location.reload();
     } catch (error) {
       toast({
         title: "Erro",
-        description: "Falha ao salvar função",
+        description: "Falha ao salvar funcao",
         variant: "destructive",
       });
     }
@@ -205,7 +205,7 @@ const AdminDados = () => {
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Gestão de Dados Administrativos</h1>
+          <h1 className="text-2xl font-bold">Gestao de Dados Administrativos</h1>
           <Button onClick={() => navigate("/admin")} variant="outline">
             Voltar
           </Button>
@@ -214,7 +214,7 @@ const AdminDados = () => {
         <Tabs defaultValue="cargos" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="cargos">Cargos</TabsTrigger>
-            <TabsTrigger value="funcoes">Funções</TabsTrigger>
+            <TabsTrigger value="funcoes">Funcoes</TabsTrigger>
           </TabsList>
 
           {/* Tab Cargos */}
@@ -249,7 +249,7 @@ const AdminDados = () => {
 
           {/* Tab Funções */}
           <TabsContent value="funcoes" className="mt-4 space-y-4">
-            <Button onClick={() => openFuncaoDialog()}>+ Nova Função</Button>
+            <Button onClick={() => openFuncaoDialog()}>+ Nova Funcao</Button>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {funcoes.map((funcao) => (
@@ -307,7 +307,7 @@ const AdminDados = () => {
                   id="cargo-nome"
                   value={cargoForm.nome}
                   onChange={(e) => setCargoForm({ ...cargoForm, nome: e.target.value })}
-                  placeholder="Ex: Diretor de Divisão"
+                  placeholder="Ex: Diretor de Divisao"
                 />
               </div>
               <div className="space-y-2">
@@ -334,11 +334,11 @@ const AdminDados = () => {
         <Dialog open={funcaoDialogOpen} onOpenChange={setFuncaoDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{funcaoForm.id ? 'Editar' : 'Nova'} Função</DialogTitle>
+              <DialogTitle>{funcaoForm.id ? 'Editar' : 'Nova'} Funcao</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="funcao-nome">Nome da Função</Label>
+                <Label htmlFor="funcao-nome">Nome da Funcao</Label>
                 <Input
                   id="funcao-nome"
                   value={funcaoForm.nome}

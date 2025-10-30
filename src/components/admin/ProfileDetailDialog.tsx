@@ -357,7 +357,7 @@ export function ProfileDetailDialog({
 
             {/* Funcao */}
             <div className="space-y-2">
-              <Label htmlFor="funcao">Funcao</Label>
+              <Label htmlFor="funcao_id">Funcao</Label>
               <Select
                 value={formData.funcao_id || ''}
                 onValueChange={(value) => setFormData({ ...formData, funcao_id: value })}
