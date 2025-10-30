@@ -168,16 +168,23 @@ export const useRelatorioData = (regionalTexto?: string) => {
         }
       });
 
-      // Calcular devedores ÚNICOS por divisão (pessoas, não parcelas)
+      // Calcular devedores ÚNICOS por divisão usando registro_id do integrante atual
       const devedoresPorDivisao = new Map<string, Set<number>>();
       mensalidadesData.forEach((m) => {
-        if (!devedoresPorDivisao.has(m.divisao_texto)) {
-          devedoresPorDivisao.set(m.divisao_texto, new Set());
+        // Buscar integrante atual pelo registro_id
+        const integrante = integrantesAtuais.find(i => i.registro_id === m.registro_id);
+        
+        if (integrante) {
+          const divisao = integrante.divisao_texto; // Usar divisão do integrante atual
+          if (!devedoresPorDivisao.has(divisao)) {
+            devedoresPorDivisao.set(divisao, new Set());
+          }
+          // Usar Set para garantir unicidade por registro_id
+          devedoresPorDivisao.get(divisao)!.add(m.registro_id);
         }
-        // Usar Set para garantir unicidade por registro_id
-        devedoresPorDivisao.get(m.divisao_texto)!.add(m.registro_id);
       });
 
+      // Atualizar contagem de devedores em cada divisão
       devedoresPorDivisao.forEach((devedoresSet, divisao) => {
         if (divisoesMap.has(divisao)) {
           // .size retorna quantidade de pessoas únicas
