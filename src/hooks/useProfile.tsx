@@ -31,7 +31,7 @@ export const useProfile = (userId: string | undefined) => {
         .eq('id', userId)
         .maybeSingle();
 
-      console.log('🔍 useProfile fetch:', {
+      console.log('useProfile fetch:', {
         userId,
         data,
         error,
@@ -39,7 +39,7 @@ export const useProfile = (userId: string | undefined) => {
       });
 
       if (error) {
-        console.error('❌ Error fetching profile:', error);
+        console.error('Error fetching profile:', error);
       } else {
         setProfile(data);
       }
@@ -60,7 +60,7 @@ export const useProfile = (userId: string | undefined) => {
           filter: `id=eq.${userId}`,
         },
         (payload) => {
-          console.log('🔄 Profile updated via realtime:', payload);
+          console.log('Profile updated via realtime:', payload);
           if (payload.eventType === 'DELETE') {
             setProfile(null);
           } else {

@@ -52,9 +52,9 @@ const Admin = () => {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [detailProfile, setDetailProfile] = useState<Profile | null>(null);
 
-  // Verificar se é admin
+  // Verificar se e admin
   useEffect(() => {
-    console.log('[Admin] Verificação de acesso iniciada');
+    console.log('[Admin] Verificacao de acesso iniciada');
     console.log('[Admin] authLoading:', authLoading, 'roleLoading:', roleLoading);
     console.log('[Admin] user:', user?.uid);
     console.log('[Admin] roles:', roles);
@@ -66,7 +66,7 @@ const Admin = () => {
       return;
     }
     
-    // Se não tem user, negar acesso
+    // Se nao tem user, negar acesso
     if (!user) {
       console.log('[Admin] ACESSO NEGADO - sem usuario');
       toast({
@@ -78,7 +78,7 @@ const Admin = () => {
       return;
     }
     
-    // Verificar se é admin (sem setTimeout, roles como dependência)
+    // Verificar se e admin (sem setTimeout, roles como dependencia)
     if (!hasRole('admin')) {
       console.log('[Admin] ACESSO NEGADO - nao e admin. Roles:', roles);
       toast({
@@ -153,7 +153,7 @@ const Admin = () => {
   const handleAction = async () => {
     if (!selectedProfile || !actionType || !user) return;
 
-    // Validar observação para recusa
+    // Validar observacao para recusa
     if (actionType === 'recusar' && !observacao.trim()) {
       toast({
         title: "Erro",
@@ -386,7 +386,7 @@ const Admin = () => {
           </TabsContent>
         </Tabs>
 
-        {/* Dialog de Ação */}
+        {/* Dialog de Acao */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent>
             <DialogHeader>

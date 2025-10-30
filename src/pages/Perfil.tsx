@@ -56,7 +56,7 @@ const Perfil = () => {
 
   const statusMessage = getStatusMessage();
   
-  // Redirecionar se não estiver logado
+  // Redirecionar se nao estiver logado
   useEffect(() => {
     if (!loading && !user) {
       toast({
@@ -68,7 +68,7 @@ const Perfil = () => {
     }
   }, [user, loading, navigate, toast]);
 
-  // Dados reais do usuário
+  // Dados reais do usuario
   const userName = profile?.name || user?.displayName || "Visitante";
   const userEmail = user?.email || "Sem email";
   const userPhoto = profile?.photo_url || user?.photoURL || "";
@@ -124,7 +124,7 @@ const Perfil = () => {
       <div className="w-full max-w-[360px] flex flex-col">
         {/* Container com mesmo tamanho do index */}
         <div className="bg-card border border-border rounded-3xl p-6 flex flex-col min-h-[600px]">
-          {/* Cabeçalho */}
+          {/* Cabecalho */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-foreground">
               Perfil do Usuario
@@ -198,7 +198,7 @@ const Perfil = () => {
             />
           </div>
 
-          {/* Botão Enviar */}
+          {/* Botao Enviar */}
           <div className="flex justify-end">
             <Button 
               onClick={handleEnviar}

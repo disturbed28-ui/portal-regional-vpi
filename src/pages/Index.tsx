@@ -28,13 +28,13 @@ const Index = () => {
   //   userId: user?.uid
   // });
   
-  // Mapeamento de status com cores e ícones
+  // Mapeamento de status com cores e icones
   const statusConfig = {
-    'Pendente': { color: 'text-yellow-600', icon: '🟡', label: 'Pendente' },
-    'Analise': { color: 'text-yellow-600', icon: '⏳', label: 'Em Analise' },
-    'Ativo': { color: 'text-green-600', icon: '✅', label: 'Ativo' },
-    'Recusado': { color: 'text-red-600', icon: '❌', label: 'Recusado' },
-    'Inativo': { color: 'text-gray-500', icon: '⚫', label: 'Inativo' }
+    'Pendente': { color: 'text-yellow-600', icon: '', label: 'Pendente' },
+    'Analise': { color: 'text-yellow-600', icon: '', label: 'Em Analise' },
+    'Ativo': { color: 'text-green-600', icon: '', label: 'Ativo' },
+    'Recusado': { color: 'text-red-600', icon: '', label: 'Recusado' },
+    'Inativo': { color: 'text-gray-500', icon: '', label: 'Inativo' }
   };
 
   const profileStatus = profile?.profile_status || 'Pendente';
@@ -88,7 +88,7 @@ const Index = () => {
       <div className="w-full max-w-[360px] flex flex-col">
         {/* Container principal com altura fixa */}
         <div className="bg-card border border-border rounded-3xl p-6 flex flex-col min-h-[600px]">
-          {/* Cabeçalho */}
+          {/* Cabecalho */}
           <div className="text-center mb-6">
             <h1 className="text-2xl font-bold text-foreground tracking-wider">
               PORTAL REGIONAL
@@ -116,11 +116,11 @@ const Index = () => {
               {userName}
             </h3>
             <p className={`text-sm font-medium ${isLoggedIn ? currentStatus.color : 'text-muted-foreground'}`}>
-              {isLoggedIn && currentStatus.icon} {userStatus}
+              {userStatus}
             </p>
           </div>
 
-          {/* Botões - todos com o mesmo tamanho */}
+          {/* Botoes - todos com o mesmo tamanho */}
           <div className="flex flex-col gap-3 mb-6">
             <Button 
               onClick={isLoggedIn ? handleDisconnect : handleConnect}

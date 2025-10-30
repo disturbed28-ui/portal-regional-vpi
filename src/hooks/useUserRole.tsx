@@ -15,14 +15,14 @@ export const useUserRole = (userId: string | undefined) => {
     console.log('[useUserRole] Hook iniciado com userId:', userId);
     
     if (!userId) {
-      console.log('[useUserRole] userId é undefined/null, abortando');
+      console.log('[useUserRole] userId e undefined/null, abortando');
       setRoles([]);
       setLoading(false);
       return;
     }
 
     const fetchRoles = async () => {
-      setLoading(true); // ✅ Garantir que loading está true durante fetch
+      setLoading(true); // Garantir que loading esta true durante fetch
       console.log('[useUserRole] Buscando roles para userId:', userId);
       
       const { data, error } = await supabase
