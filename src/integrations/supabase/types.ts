@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      cargas_historico: {
+        Row: {
+          created_at: string | null
+          dados_snapshot: Json
+          data_carga: string
+          id: string
+          observacoes: string | null
+          realizado_por: string | null
+          total_integrantes: number
+        }
+        Insert: {
+          created_at?: string | null
+          dados_snapshot: Json
+          data_carga?: string
+          id?: string
+          observacoes?: string | null
+          realizado_por?: string | null
+          total_integrantes: number
+        }
+        Update: {
+          created_at?: string | null
+          dados_snapshot?: Json
+          data_carga?: string
+          id?: string
+          observacoes?: string | null
+          realizado_por?: string | null
+          total_integrantes?: number
+        }
+        Relationships: []
+      }
       cargos: {
         Row: {
           created_at: string | null
@@ -262,6 +292,48 @@ export type Database = {
           },
         ]
       }
+      mensalidades_atraso: {
+        Row: {
+          created_at: string | null
+          data_carga: string
+          data_vencimento: string | null
+          divisao_texto: string
+          id: string
+          nome_colete: string
+          realizado_por: string | null
+          ref: string | null
+          registro_id: number
+          situacao: string | null
+          valor: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          data_carga?: string
+          data_vencimento?: string | null
+          divisao_texto: string
+          id?: string
+          nome_colete: string
+          realizado_por?: string | null
+          ref?: string | null
+          registro_id: number
+          situacao?: string | null
+          valor?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          data_carga?: string
+          data_vencimento?: string | null
+          divisao_texto?: string
+          id?: string
+          nome_colete?: string
+          realizado_por?: string | null
+          ref?: string | null
+          registro_id?: number
+          situacao?: string | null
+          valor?: number | null
+        }
+        Relationships: []
+      }
       profile_history: {
         Row: {
           alterado_por: string | null
@@ -502,7 +574,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user"
+      app_role: "admin" | "moderator" | "user" | "diretor_regional"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -630,7 +702,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "moderator", "user"],
+      app_role: ["admin", "moderator", "user", "diretor_regional"],
     },
   },
 } as const
