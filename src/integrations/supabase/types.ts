@@ -297,11 +297,14 @@ export type Database = {
       }
       mensalidades_atraso: {
         Row: {
+          ativo: boolean | null
           created_at: string | null
           data_carga: string
+          data_liquidacao: string | null
           data_vencimento: string | null
           divisao_texto: string
           id: string
+          liquidado: boolean | null
           nome_colete: string
           realizado_por: string | null
           ref: string | null
@@ -310,11 +313,14 @@ export type Database = {
           valor: number | null
         }
         Insert: {
+          ativo?: boolean | null
           created_at?: string | null
           data_carga?: string
+          data_liquidacao?: string | null
           data_vencimento?: string | null
           divisao_texto: string
           id?: string
+          liquidado?: boolean | null
           nome_colete: string
           realizado_por?: string | null
           ref?: string | null
@@ -323,11 +329,14 @@ export type Database = {
           valor?: number | null
         }
         Update: {
+          ativo?: boolean | null
           created_at?: string | null
           data_carga?: string
+          data_liquidacao?: string | null
           data_vencimento?: string | null
           divisao_texto?: string
           id?: string
+          liquidado?: boolean | null
           nome_colete?: string
           realizado_por?: string | null
           ref?: string | null
@@ -555,6 +564,31 @@ export type Database = {
       }
     }
     Views: {
+      vw_devedores_ativos: {
+        Row: {
+          divisao_texto: string | null
+          meses_devendo: number | null
+          nome_colete: string | null
+          registro_id: number | null
+          total_devido: number | null
+          total_parcelas: number | null
+          ultima_carga: string | null
+          ultimo_vencimento: string | null
+        }
+        Relationships: []
+      }
+      vw_devedores_cronicos: {
+        Row: {
+          divisao_texto: string | null
+          nome_colete: string | null
+          primeira_divida: string | null
+          registro_id: number | null
+          total_historico_devido: number | null
+          total_meses_historico: number | null
+          ultima_divida: string | null
+        }
+        Relationships: []
+      }
       vw_estrutura_completa: {
         Row: {
           comando: string | null

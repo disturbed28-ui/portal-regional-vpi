@@ -10,7 +10,37 @@ export interface MensalidadeAtraso {
   situacao: string;
 }
 
-export const parseMensalidadesExcel = async (file: File): Promise<MensalidadeAtraso[]> => {
+export interface ParseResult {
+  mensalidades: MensalidadeAtraso[];
+  stats: {
+    totalLinhas: number;
+    totalValidas: number;
+    totalInvalidas: number;
+    divisoesEncontradas: string[];
+    periodoRef: string;
+  };
+}
+
+// Validar formato de Ref (AAAAMM - 6 dígitos)
+export const isValidRef = (ref: string): boolean => {
+  if (!/^\d{6}$/.test(ref)) return false;
+  
+  const ano = parseInt(ref.substring(0, 4));
+  const mes = parseInt(ref.substring(4, 6));
+  
+  return ano >= 2020 && ano <= 2099 && mes >= 1 && mes <= 12;
+};
+
+// Formatar Ref para display humano (Ex: "Out/2025")
+export const formatRef = (ref: string): string => {
+  const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
+                 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+  const mes = parseInt(ref.substring(4, 6)) - 1;
+  const ano = ref.substring(0, 4);
+  return `${meses[mes]}/${ano}`;
+};
+
+export const parseMensalidadesExcel = async (file: File): Promise<ParseResult> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
@@ -136,11 +166,40 @@ export const parseMensalidadesExcel = async (file: File): Promise<MensalidadeAtr
             m.nome_colete &&
             m.divisao_texto &&
             m.ref &&
+            isValidRef(m.ref) &&
             m.data_vencimento &&
             m.valor > 0
         );
 
-        resolve(validas);
+        // Calcular estatísticas
+        const divisoesSet = new Set(validas.map(m => m.divisao_texto));
+        const refsCount = new Map<string, number>();
+        validas.forEach(m => {
+          refsCount.set(m.ref, (refsCount.get(m.ref) || 0) + 1);
+        });
+        
+        // Ref mais comum (período do relatório)
+        let refMaisComum = '';
+        let maxCount = 0;
+        refsCount.forEach((count, ref) => {
+          if (count > maxCount) {
+            maxCount = count;
+            refMaisComum = ref;
+          }
+        });
+
+        const resultado: ParseResult = {
+          mensalidades: validas,
+          stats: {
+            totalLinhas: jsonData.length,
+            totalValidas: validas.length,
+            totalInvalidas: mensalidades.length - validas.length,
+            divisoesEncontradas: Array.from(divisoesSet),
+            periodoRef: refMaisComum ? formatRef(refMaisComum) : '',
+          }
+        };
+
+        resolve(resultado);
       } catch (error) {
         reject(new Error('Erro ao processar arquivo Excel de mensalidades: ' + error));
       }

@@ -7,6 +7,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useRelatorioData } from '@/hooks/useRelatorioData';
 import { RelatorioTable } from '@/components/relatorios/RelatorioTable';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DashboardInadimplencia } from '@/components/relatorios/DashboardInadimplencia';
 import { EstatisticasEspeciais } from '@/components/relatorios/EstatisticasEspeciais';
 import * as XLSX from 'xlsx';
 import { toast } from '@/hooks/use-toast';
@@ -303,6 +305,21 @@ const Relatorios = () => {
 
             {/* Estatísticas Especiais */}
             <EstatisticasEspeciais divisoes={relatorioData.divisoes} totais={relatorioData.totais} />
+            
+            <Tabs defaultValue="relatorio" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="relatorio">Relatório</TabsTrigger>
+                <TabsTrigger value="inadimplencia">Inadimplência</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="relatorio">
+                {/* Conteúdo já mostrado acima */}
+              </TabsContent>
+              
+              <TabsContent value="inadimplencia">
+                <DashboardInadimplencia />
+              </TabsContent>
+            </Tabs>
           </>
         )}
 

@@ -72,22 +72,12 @@ export const useRelatorioData = (regionalTexto?: string) => {
 
       const { data: integrantesAtuais = [] } = await queryAtual;
 
-      // 4. Buscar mensalidades da última carga
-      const { data: ultimaCargaMensalidades } = await supabase
+      // 4. Buscar apenas mensalidades ATIVAS e NÃO LIQUIDADAS
+      const { data: mensalidadesData = [] } = await supabase
         .from('mensalidades_atraso')
-        .select('data_carga')
-        .order('data_carga', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      let mensalidades: any[] = [];
-      if (ultimaCargaMensalidades) {
-        const { data: mensalidadesData = [] } = await supabase
-          .from('mensalidades_atraso')
-          .select('*')
-          .eq('data_carga', ultimaCargaMensalidades.data_carga);
-        mensalidades = mensalidadesData;
-      }
+        .select('*')
+        .eq('ativo', true)
+        .eq('liquidado', false);
 
       // Processar dados
       const integrantesAnteriores = (penultimaCarga?.dados_snapshot as any)?.integrantes || [];
@@ -178,18 +168,20 @@ export const useRelatorioData = (regionalTexto?: string) => {
         }
       });
 
-      // Calcular devedores únicos por divisão
+      // Calcular devedores ÚNICOS por divisão (pessoas, não parcelas)
       const devedoresPorDivisao = new Map<string, Set<number>>();
-      mensalidades.forEach((m) => {
+      mensalidadesData.forEach((m) => {
         if (!devedoresPorDivisao.has(m.divisao_texto)) {
           devedoresPorDivisao.set(m.divisao_texto, new Set());
         }
+        // Usar Set para garantir unicidade por registro_id
         devedoresPorDivisao.get(m.divisao_texto)!.add(m.registro_id);
       });
 
-      devedoresPorDivisao.forEach((devedores, divisao) => {
+      devedoresPorDivisao.forEach((devedoresSet, divisao) => {
         if (divisoesMap.has(divisao)) {
-          divisoesMap.get(divisao)!.devedores = devedores.size;
+          // .size retorna quantidade de pessoas únicas
+          divisoesMap.get(divisao)!.devedores = devedoresSet.size;
         }
       });
 

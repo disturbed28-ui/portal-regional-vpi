@@ -1,18 +1,22 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useIntegrantes } from "@/hooks/useIntegrantes";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { parseExcelFile, processDelta, parseCargoGrau } from "@/lib/excelParser";
-import { parseMensalidadesExcel } from "@/lib/mensalidadesParser";
-import { Upload, ArrowLeft, Users, UserCheck, UserX, AlertCircle, FileSpreadsheet } from "lucide-react";
+import { parseMensalidadesExcel, formatRef, ParseResult } from "@/lib/mensalidadesParser";
+import { Upload, ArrowLeft, Users, UserCheck, UserX, AlertCircle, FileSpreadsheet, History, Info } from "lucide-react";
+import { HistoricoDevedores } from "@/components/admin/HistoricoDevedores";
+import { useMensalidades } from "@/hooks/useMensalidades";
+import { format } from "date-fns";
 
 const AdminIntegrantes = () => {
   const navigate = useNavigate();
@@ -26,6 +30,10 @@ const AdminIntegrantes = () => {
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [uploadPreview, setUploadPreview] = useState<any>(null);
   const [processing, setProcessing] = useState(false);
+  const [mensalidadesPreview, setMensalidadesPreview] = useState<ParseResult | null>(null);
+  const [showHistoricoDialog, setShowHistoricoDialog] = useState(false);
+  
+  const { ultimaCargaInfo, devedoresAtivos } = useMensalidades();
 
   const integrantesFiltrados = integrantes.filter((i) =>
     i.nome_colete.toLowerCase().includes(searchTerm.toLowerCase())
@@ -201,20 +209,11 @@ const AdminIntegrantes = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!user) {
-      toast({
-        title: "Erro de autenticacao",
-        description: "Usuario nao autenticado",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
       setProcessing(true);
-      const mensalidadesData = await parseMensalidadesExcel(file);
+      const parseResult = await parseMensalidadesExcel(file);
 
-      if (mensalidadesData.length === 0) {
+      if (parseResult.mensalidades.length === 0) {
         toast({
           title: "Nenhum dado encontrado",
           description: "O arquivo não contém dados válidos de mensalidades",
@@ -223,22 +222,90 @@ const AdminIntegrantes = () => {
         return;
       }
 
-      // Salvar no banco
-      const { error } = await supabase.from('mensalidades_atraso').insert(
-        mensalidadesData.map((m) => ({
-          ...m,
-          realizado_por: user.uid,
-        }))
+      setMensalidadesPreview(parseResult);
+    } catch (error) {
+      toast({
+        title: "Erro ao processar arquivo",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
+        variant: "destructive",
+      });
+      setMensalidadesPreview(null);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleUploadMensalidades = async () => {
+    if (!mensalidadesPreview || !user) return;
+
+    try {
+      setProcessing(true);
+
+      // 1. Marcar carga anterior como inativa
+      await supabase
+        .from('mensalidades_atraso')
+        .update({ ativo: false })
+        .eq('ativo', true);
+
+      // 2. Buscar registros da carga anterior para detectar liquidações
+      const { data: cargaAnterior } = await supabase
+        .from('mensalidades_atraso')
+        .select('id, registro_id, ref')
+        .eq('ativo', false)
+        .order('data_carga', { ascending: false })
+        .limit(1000);
+
+      // Criar Set com chaves (registro_id + ref) do novo upload
+      const novasChaves = new Set(
+        mensalidadesPreview.mensalidades.map(m => `${m.registro_id}_${m.ref}`)
       );
 
-      if (error) {
-        throw error;
+      // Identificar liquidações (estava na anterior, não está na nova)
+      const liquidacoes = (cargaAnterior || []).filter(
+        m => !novasChaves.has(`${m.registro_id}_${m.ref}`)
+      );
+
+      // Marcar como liquidado
+      if (liquidacoes.length > 0) {
+        await supabase
+          .from('mensalidades_atraso')
+          .update({ 
+            liquidado: true, 
+            data_liquidacao: new Date().toISOString() 
+          })
+          .in('id', liquidacoes.map(l => l.id));
       }
 
+      // 3. Inserir novos registros
+      const novosRegistros = mensalidadesPreview.mensalidades.map(m => ({
+        data_carga: new Date().toISOString(),
+        registro_id: m.registro_id,
+        nome_colete: m.nome_colete,
+        divisao_texto: m.divisao_texto,
+        ref: m.ref,
+        data_vencimento: m.data_vencimento,
+        valor: m.valor,
+        situacao: m.situacao,
+        realizado_por: user.uid,
+        ativo: true,
+        liquidado: false
+      }));
+
+      const { error } = await supabase
+        .from('mensalidades_atraso')
+        .insert(novosRegistros);
+
+      if (error) throw error;
+
       toast({
-        title: "Mensalidades importadas",
-        description: `${mensalidadesData.length} registros de atraso importados`,
+        title: "✅ Mensalidades importadas com sucesso!",
+        description: `• ${mensalidadesPreview.mensalidades.length} registros importados\n• ${liquidacoes.length} liquidações detectadas\n• Período: ${mensalidadesPreview.stats.periodoRef}`,
       });
+
+      setMensalidadesPreview(null);
+      if (mensalidadesInputRef.current) {
+        mensalidadesInputRef.current.value = '';
+      }
     } catch (error) {
       toast({
         title: "Erro ao importar mensalidades",
@@ -247,9 +314,6 @@ const AdminIntegrantes = () => {
       });
     } finally {
       setProcessing(false);
-      if (mensalidadesInputRef.current) {
-        mensalidadesInputRef.current.value = '';
-      }
     }
   };
 
@@ -276,14 +340,6 @@ const AdminIntegrantes = () => {
             <Button onClick={() => fileInputRef.current?.click()} disabled={processing}>
               <Upload className="mr-2 h-4 w-4" />
               Importar Integrantes
-            </Button>
-            <Button 
-              onClick={() => mensalidadesInputRef.current?.click()} 
-              disabled={processing}
-              variant="outline"
-            >
-              <FileSpreadsheet className="mr-2 h-4 w-4" />
-              Importar Mensalidades
             </Button>
           </div>
           <input
@@ -341,6 +397,107 @@ const AdminIntegrantes = () => {
             </div>
           </Card>
         </div>
+
+        {/* Card de Mensalidades em Atraso */}
+        <Card className="border-orange-200">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-orange-500" />
+              <CardTitle>Mensalidades em Atraso</CardTitle>
+            </div>
+            <CardDescription>
+              Importe o relatório de mensalidades. Liquidações são detectadas automaticamente a cada novo upload.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Upload Section */}
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <Input
+                  type="file"
+                  accept=".xls,.xlsx"
+                  ref={mensalidadesInputRef}
+                  onChange={handleMensalidadesFileSelect}
+                  className="flex-1 hidden"
+                />
+                <Button 
+                  onClick={() => mensalidadesInputRef.current?.click()}
+                  disabled={processing}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Selecionar Arquivo
+                </Button>
+                {mensalidadesPreview && (
+                  <Button 
+                    onClick={handleUploadMensalidades}
+                    disabled={processing}
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    Confirmar Importação
+                  </Button>
+                )}
+              </div>
+
+              {/* Preview após seleção */}
+              {mensalidadesPreview && (
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertTitle>Preview da Importação</AlertTitle>
+                  <AlertDescription>
+                    • {mensalidadesPreview.stats.totalValidas} registros válidos<br/>
+                    • {mensalidadesPreview.stats.divisoesEncontradas.length} divisões<br/>
+                    • Período: {mensalidadesPreview.stats.periodoRef}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Resumo da última carga */}
+              {ultimaCargaInfo && (
+                <div className="p-4 bg-muted rounded-lg space-y-2">
+                  <h4 className="font-semibold">Última Carga Ativa</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Data</p>
+                      <p className="font-medium">
+                        {format(new Date(ultimaCargaInfo.data_carga), 'dd/MM/yyyy HH:mm')}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Devedores Ativos</p>
+                      <p className="font-medium text-orange-600">
+                        {ultimaCargaInfo.devedores_ativos}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Total de Débitos</p>
+                      <p className="font-medium text-red-600">
+                        R$ {ultimaCargaInfo.total_debitos.toFixed(2)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Período</p>
+                      <p className="font-medium">
+                        {formatRef(ultimaCargaInfo.ref_principal)}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setShowHistoricoDialog(true)}
+                    className="mt-2"
+                  >
+                    <History className="mr-2 h-4 w-4" />
+                    Ver Histórico Completo
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Busca */}
         <Input
@@ -491,9 +648,18 @@ const AdminIntegrantes = () => {
             </div>
           </TabsContent>
         </Tabs>
-      </div>
 
-      {/* Dialog de Preview de Upload */}
+        {/* Dialog de Histórico */}
+        <Dialog open={showHistoricoDialog} onOpenChange={setShowHistoricoDialog}>
+          <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Histórico de Mensalidades</DialogTitle>
+            </DialogHeader>
+            <HistoricoDevedores />
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog de Preview de Upload */}
       <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
