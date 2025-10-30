@@ -163,15 +163,19 @@ export function ProfileDetailDialog({
       );
 
       console.log('Matched data:', matched);
+      console.log('Parsed grau:', grau);
 
       // Atualizar estados de cascata PRIMEIRO
       if (matched.comando_id) {
+        console.log('Setting comando_id:', matched.comando_id);
         setSelectedComandoId(matched.comando_id);
       }
       if (matched.regional_id) {
+        console.log('Setting regional_id:', matched.regional_id);
         setSelectedRegionalId(matched.regional_id);
       }
       if (grau) {
+        console.log('Setting grau:', grau);
         setSelectedGrau(grau);
       }
 
@@ -182,15 +186,16 @@ export function ProfileDetailDialog({
       const newFormData = {
         ...formData,
         nome_colete: integranteSelecionado.nome_colete,
-        comando_id: matched.comando_id || null,
-        regional_id: matched.regional_id || null,
-        divisao_id: matched.divisao_id || null,
-        cargo_id: matched.cargo_id || null,
-        grau: grau || null,
-        data_entrada: integranteSelecionado.data_entrada || null,
+        comando_id: matched.comando_id || formData.comando_id,
+        regional_id: matched.regional_id || formData.regional_id,
+        divisao_id: matched.divisao_id || formData.divisao_id,
+        cargo_id: matched.cargo_id || formData.cargo_id,
+        grau: grau || formData.grau,
+        data_entrada: integranteSelecionado.data_entrada || formData.data_entrada,
       };
 
-      console.log('New form data:', newFormData);
+      console.log('New form data to set:', newFormData);
+      console.log('Current formData before update:', formData);
       setFormData(newFormData);
 
       // Vincular integrante ao perfil
