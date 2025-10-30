@@ -52,7 +52,7 @@ const Agenda = () => {
           <ArrowLeft className="mr-2 h-4 w-4" />
           Voltar
         </Button>
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">Agenda Regional Vale do Paraiba I</h1>
+        <h1 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-bold">Agenda Regional Vale do Paraiba I</h1>
         
         <div className="flex items-center justify-between mt-4">
           <Button
