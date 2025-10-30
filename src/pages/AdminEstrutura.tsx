@@ -251,7 +251,7 @@ const AdminEstrutura = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4">
+    <div className="admin-page min-h-screen bg-background p-4">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Gestao de Estrutura</h1>

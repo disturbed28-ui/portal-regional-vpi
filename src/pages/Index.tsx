@@ -165,12 +165,12 @@ const Index = () => {
           </div>
 
           {/* Footer - dentro do card, no bottom */}
-          <div className="mt-auto pt-4 border-t border-border">
-            <div className="text-center text-xs text-muted-foreground space-y-1">
-              <div>v2.1.0</div>
-              <div>Autenticacao segura via Firebase (Google)</div>
-            </div>
+        <div className="mt-auto pt-4 border-t border-border">
+          <div className="text-center text-xs text-muted-foreground space-y-1">
+            <div>2025 - {new Date().getFullYear()}</div>
+            <div>🔐 Autenticacao segura via Firebase (Google)</div>
           </div>
+        </div>
         </div>
       </div>
     </div>
