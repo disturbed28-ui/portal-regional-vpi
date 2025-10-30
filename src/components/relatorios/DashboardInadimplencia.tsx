@@ -6,8 +6,9 @@ import { AlertTriangle, TrendingUp, Users, DollarSign } from 'lucide-react';
 export const DashboardInadimplencia = () => {
   const { ultimaCargaInfo, devedoresAtivos, devedoresCronicos } = useMensalidades();
 
-  const totalDebito = ultimaCargaInfo?.total_debitos || 0;
-  const totalDevedores = ultimaCargaInfo?.devedores_ativos || 0;
+  // Calcular totais a partir da view vw_devedores_ativos
+  const totalDevedores = devedoresAtivos.length;
+  const totalDebito = devedoresAtivos.reduce((sum, d) => sum + (d.total_devido || 0), 0);
   const totalCronicos = devedoresCronicos.length;
 
   return (

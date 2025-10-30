@@ -15,23 +15,9 @@ export const useMensalidades = () => {
 
       if (!mensalidades || mensalidades.length === 0) return null;
 
-      const dataCarga = mensalidades[0].data_carga;
-      
-      // Contar devedores ativos únicos
-      const { data: devedoresAtivosData } = await supabase
-        .from('mensalidades_atraso')
-        .select('registro_id, valor')
-        .eq('ativo', true)
-        .eq('liquidado', false);
-
-      const devedoresUnicos = new Set(devedoresAtivosData?.map(d => d.registro_id) || []);
-      const totalDebitos = devedoresAtivosData?.reduce((sum, d) => sum + (d.valor || 0), 0) || 0;
-
       return {
-        data_carga: dataCarga,
+        data_carga: mensalidades[0].data_carga,
         ref_principal: mensalidades[0].ref,
-        devedores_ativos: devedoresUnicos.size,
-        total_debitos: totalDebitos,
       };
     }
   });

@@ -432,18 +432,6 @@ const AdminIntegrantes = () => {
                       </p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Devedores Ativos</p>
-                      <p className="font-medium text-orange-600">
-                        {ultimaCargaInfo.devedores_ativos}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Total de Débitos</p>
-                      <p className="font-medium text-red-600">
-                        R$ {ultimaCargaInfo.total_debitos.toFixed(2)}
-                      </p>
-                    </div>
-                    <div>
                       <p className="text-muted-foreground">Período</p>
                       <p className="font-medium">
                         {formatRef(ultimaCargaInfo.ref_principal)}
