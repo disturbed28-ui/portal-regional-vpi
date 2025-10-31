@@ -16,11 +16,20 @@ const normalizeText = (text: string): string => {
   
   return text
     .toUpperCase()
+    // Remover acentos
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    // Remover prefixos
     .replace(/^COMANDO\s+REGIONAL\s+/i, '')
     .replace(/^REGIONAL\s+/i, '')
     .replace(/^DIVISAO\s+/i, '')
     .replace(/^DIVISÃO\s+/i, '')
-    .replace(/\s+-\s+[A-Z]{2}$/i, '') // Remove " - SP", " - RJ", etc
+    // Remover sufixos geográficos " - SP", " - RJ"
+    .replace(/\s+-\s+[A-Z]{2}$/i, '')
+    // Remover hífen solto no final " -"
+    .replace(/\s+-\s*$/i, '')
+    // Remover sufixos entre parênteses " (Grau VI)"
+    .replace(/\s+\([^)]*\)\s*$/i, '')
+    // Normalizar espaços
     .replace(/\s+/g, ' ')
     .trim();
 };
@@ -135,20 +144,31 @@ export const matchIntegranteToStructure = async (
 
     // Buscar Cargo (se tem grau e nome de cargo)
     if (grau && cargoNome) {
+      // Normalizar o nome do cargo para comparação
+      const cargoNormalizado = normalizeText(cargoNome);
+      
       const { data: cargos } = await supabase
         .from('cargos')
         .select('id, nome, grau')
-        .eq('grau', grau)
-        .ilike('nome', `%${cargoNome}%`)
-        .limit(1);
+        .eq('grau', grau);
 
       if (cargos && cargos.length > 0) {
-        result.cargo_id = cargos[0].id;
-        result.matched_fields.push('cargo');
-        console.log('✅ Cargo matched:', cargos[0].nome, cargos[0].grau);
-      } else {
-        result.failed_fields.push('cargo');
-        console.log('❌ Cargo NOT matched for grau:', grau, 'nome:', cargoNome);
+        // Fazer matching manual com nomes normalizados
+        const cargoMatch = cargos.find(c => {
+          const cargoDbNormalizado = normalizeText(c.nome);
+          return cargoDbNormalizado.includes(cargoNormalizado) || 
+                 cargoNormalizado.includes(cargoDbNormalizado);
+        });
+
+        if (cargoMatch) {
+          result.cargo_id = cargoMatch.id;
+          result.matched_fields.push('cargo');
+          console.log('✅ Cargo matched:', cargoMatch.nome, cargoMatch.grau);
+        } else {
+          result.failed_fields.push('cargo');
+          console.log('❌ Cargo NOT matched for grau:', grau, 'nome:', cargoNome);
+          console.log('Available cargos:', cargos.map(c => `"${c.nome}"`));
+        }
       }
     }
 
