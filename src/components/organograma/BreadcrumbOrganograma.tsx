@@ -28,7 +28,7 @@ export const BreadcrumbOrganograma = ({
     return (
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Regional {regionalNome}</h1>
-        <p className="text-sm text-muted-foreground mt-1">Estrutura Hierárquica</p>
+        <p className="text-sm text-muted-foreground mt-1">Estrutura Hierárquica (clique em cada caixa para navegar)</p>
       </div>
     );
   }
