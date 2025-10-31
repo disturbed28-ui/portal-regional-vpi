@@ -6,6 +6,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -48,6 +55,7 @@ interface Profile {
   integrante?: {
     vinculado: boolean;
   } | null;
+  roles?: string[];
 }
 
 const Admin = () => {
@@ -64,6 +72,8 @@ const Admin = () => {
   const [observacao, setObservacao] = useState("");
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [detailProfile, setDetailProfile] = useState<Profile | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<ProfileStatus>('Analise');
+  const [selectedRole, setSelectedRole] = useState<'all' | 'admin' | 'moderator' | 'user'>('all');
 
   // Verificar se e admin
   useEffect(() => {
@@ -143,19 +153,23 @@ const Admin = () => {
           funcoes:funcao_id (nome),
           integrante:integrantes_portal!integrantes_portal_profile_id_fkey(
             vinculado
-          )
+          ),
+          roles:user_roles(role)
         `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       
-      // Processar integrantes (pode ser array)
+      // Processar integrantes e roles (podem ser arrays)
       if (data) {
         const processedData = data.map(profile => ({
           ...profile,
           integrante: Array.isArray(profile.integrante) 
             ? profile.integrante[0] 
-            : profile.integrante
+            : profile.integrante,
+          roles: Array.isArray(profile.roles) 
+            ? profile.roles.map((r: any) => r.role)
+            : []
         }));
         setProfiles(processedData as Profile[]);
       }
@@ -274,6 +288,18 @@ const Admin = () => {
     return profiles.filter(p => p.profile_status === status);
   };
 
+  const filterByStatusAndRole = (status: ProfileStatus) => {
+    let filtered = profiles.filter(p => p.profile_status === status);
+    
+    if (selectedRole !== 'all') {
+      filtered = filtered.filter(p => 
+        Array.isArray(p.roles) && p.roles.includes(selectedRole)
+      );
+    }
+    
+    return filtered;
+  };
+
   const ProfileCard = ({ profile }: { profile: Profile }) => {
     const statusBadge = getStatusBadge(profile.profile_status);
     
@@ -306,6 +332,24 @@ const Admin = () => {
                   <Badge variant="outline" className="text-orange-600 border-orange-300">
                     Não Vinculado
                   </Badge>
+                )}
+                
+                {/* Badges de Role */}
+                {Array.isArray(profile.roles) && profile.roles.length > 0 && (
+                  profile.roles.map(role => {
+                    const roleConfig = {
+                      admin: { label: 'Admin', variant: 'destructive' as const },
+                      moderator: { label: 'Moderador', variant: 'default' as const },
+                      user: { label: 'Usuário', variant: 'secondary' as const },
+                      diretor_regional: { label: 'Diretor Regional', variant: 'default' as const },
+                    }[role] || { label: role, variant: 'outline' as const };
+                    
+                    return (
+                      <Badge key={role} variant={roleConfig.variant}>
+                        {roleConfig.label}
+                      </Badge>
+                    );
+                  })
                 )}
               </div>
               <p className="text-xs text-muted-foreground">{profile.name}</p>
@@ -396,60 +440,67 @@ const Admin = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="analise" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="analise">
-                Em Analise ({filterByStatus('Analise').length})
-              </TabsTrigger>
-            <TabsTrigger value="ativo">
-              Ativos ({filterByStatus('Ativo').length})
-            </TabsTrigger>
-            <TabsTrigger value="pendente">
-              Pendentes ({filterByStatus('Pendente').length})
-            </TabsTrigger>
-            <TabsTrigger value="recusado">
-              Recusados ({filterByStatus('Recusado').length})
-            </TabsTrigger>
-            <TabsTrigger value="inativo">
-              Inativos ({filterByStatus('Inativo').length})
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="analise" className="mt-4">
-            {filterByStatus('Analise').map(profile => (
+        <div className="space-y-4">
+          {/* Filtros */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Filtro de Status */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">Filtrar por Status</label>
+              <Select value={selectedStatus} onValueChange={(v) => setSelectedStatus(v as ProfileStatus)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Analise">
+                    Em Análise ({filterByStatus('Analise').length})
+                  </SelectItem>
+                  <SelectItem value="Ativo">
+                    Ativos ({filterByStatus('Ativo').length})
+                  </SelectItem>
+                  <SelectItem value="Pendente">
+                    Pendentes ({filterByStatus('Pendente').length})
+                  </SelectItem>
+                  <SelectItem value="Recusado">
+                    Recusados ({filterByStatus('Recusado').length})
+                  </SelectItem>
+                  <SelectItem value="Inativo">
+                    Inativos ({filterByStatus('Inativo').length})
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Filtro de Role */}
+            <div>
+              <label className="text-sm font-medium mb-2 block">Filtrar por Perfil de Acesso</label>
+              <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as any)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Perfis</SelectItem>
+                  <SelectItem value="admin">Administradores</SelectItem>
+                  <SelectItem value="moderator">Moderadores</SelectItem>
+                  <SelectItem value="diretor_regional">Diretores Regionais</SelectItem>
+                  <SelectItem value="user">Usuários Comuns</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          {/* Lista Filtrada */}
+          <div className="space-y-3">
+            {filterByStatusAndRole(selectedStatus).map(profile => (
               <ProfileCard key={profile.id} profile={profile} />
             ))}
-            {filterByStatus('Analise').length === 0 && (
+            
+            {filterByStatusAndRole(selectedStatus).length === 0 && (
               <p className="text-center text-muted-foreground py-8">
-                Nenhum perfil aguardando analise
+                Nenhum perfil encontrado com os filtros selecionados
               </p>
             )}
-          </TabsContent>
-
-          <TabsContent value="ativo" className="mt-4">
-            {filterByStatus('Ativo').map(profile => (
-              <ProfileCard key={profile.id} profile={profile} />
-            ))}
-          </TabsContent>
-
-          <TabsContent value="pendente" className="mt-4">
-            {filterByStatus('Pendente').map(profile => (
-              <ProfileCard key={profile.id} profile={profile} />
-            ))}
-          </TabsContent>
-
-          <TabsContent value="recusado" className="mt-4">
-            {filterByStatus('Recusado').map(profile => (
-              <ProfileCard key={profile.id} profile={profile} />
-            ))}
-          </TabsContent>
-
-          <TabsContent value="inativo" className="mt-4">
-            {filterByStatus('Inativo').map(profile => (
-              <ProfileCard key={profile.id} profile={profile} />
-            ))}
-          </TabsContent>
-        </Tabs>
+          </div>
+        </div>
 
         {/* Dialog de Acao */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

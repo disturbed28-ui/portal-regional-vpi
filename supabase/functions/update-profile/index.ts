@@ -1,10 +1,166 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import nodemailer from "npm:nodemailer@6.9.7";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Função para enviar notificação por email aos admins
+async function sendAdminNotification(profileData: any) {
+  try {
+    console.log('Configurando transporter SMTP...');
+    
+    // Configurar transporter com Gmail SMTP
+    const transporter = nodemailer.createTransport({
+      host: Deno.env.get('SMTP_HOST'), // smtp.gmail.com
+      port: parseInt(Deno.env.get('SMTP_PORT') || '465'), // 465
+      secure: Deno.env.get('SMTP_SECURE') === 'ssl', // true para SSL
+      auth: {
+        user: Deno.env.get('SMTP_USER'),
+        pass: Deno.env.get('SMTP_PASS'),
+      },
+    });
+
+    console.log('Verificando conexão SMTP...');
+    await transporter.verify();
+    console.log('Conexão SMTP verificada com sucesso!');
+
+    // Buscar emails dos admins
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    const { data: adminRoles, error: adminError } = await supabaseAdmin
+      .from('user_roles')
+      .select('user_id')
+      .eq('role', 'admin');
+
+    if (adminError || !adminRoles || adminRoles.length === 0) {
+      console.log('Nenhum admin encontrado ou erro:', adminError);
+      return;
+    }
+
+    console.log(`Encontrados ${adminRoles.length} admins`);
+
+    // Buscar emails dos admins via auth.users
+    const adminIds = adminRoles.map((r: any) => r.user_id);
+    const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+    
+    if (!authUsers) {
+      console.log('Erro ao buscar usuários do auth');
+      return;
+    }
+
+    const adminEmails = authUsers.users
+      .filter((u: any) => adminIds.includes(u.id))
+      .map((u: any) => u.email)
+      .filter(Boolean) as string[];
+
+    if (adminEmails.length === 0) {
+      console.log('Nenhum email de admin encontrado');
+      return;
+    }
+
+    console.log(`Enviando email para ${adminEmails.length} admins`);
+
+    // URL do portal
+    const portalUrl = `https://portal-regional-vp1.lovable.app/admin`;
+
+    // Enviar email
+    const info = await transporter.sendMail({
+      from: `"Portal Regional VP1" <${Deno.env.get('SMTP_USER')}>`,
+      to: adminEmails.join(', '),
+      subject: '🆕 Novo Cadastro Aguardando Análise',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: #dc2626; color: white; padding: 20px; border-radius: 8px 8px 0 0; }
+            .content { background: #f9fafb; padding: 20px; }
+            .data-box { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626; }
+            .data-row { margin: 10px 0; }
+            .label { font-weight: bold; color: #374151; }
+            .value { color: #6b7280; }
+            .button { display: inline-block; background: #dc2626; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0; }
+            .footer { text-align: center; color: #9ca3af; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h2 style="margin: 0;">🆕 Novo Cadastro Recebido</h2>
+            </div>
+            <div class="content">
+              <p>Um novo usuário completou seu cadastro no Portal Regional Vale do Paraíba I - SP e está aguardando aprovação.</p>
+              
+              <div class="data-box">
+                <h3 style="margin-top: 0; color: #dc2626;">Dados do Integrante</h3>
+                <div class="data-row">
+                  <span class="label">Nome:</span> 
+                  <span class="value">${profileData.name || 'Não informado'}</span>
+                </div>
+                <div class="data-row">
+                  <span class="label">Nome de Colete:</span> 
+                  <span class="value">${profileData.nome_colete || 'Não informado'}</span>
+                </div>
+                <div class="data-row">
+                  <span class="label">Telefone:</span> 
+                  <span class="value">${profileData.telefone || 'Não informado'}</span>
+                </div>
+                <div class="data-row">
+                  <span class="label">Status:</span> 
+                  <span class="value">${profileData.profile_status || 'Em Análise'}</span>
+                </div>
+                <div class="data-row">
+                  <span class="label">Data de Cadastro:</span> 
+                  <span class="value">${new Date().toLocaleDateString('pt-BR')}</span>
+                </div>
+              </div>
+              
+              <div style="text-align: center;">
+                <a href="${portalUrl}" class="button">
+                  Acessar Portal de Administração →
+                </a>
+              </div>
+              
+              <div class="footer">
+                <p>Esta é uma notificação automática do Portal Regional<br>Vale do Paraíba I - SP</p>
+                <p style="margin-top: 10px; font-size: 11px;">Para parar de receber estas notificações, contate o administrador do sistema.</p>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+Novo Cadastro Recebido
+
+Um novo usuário completou seu cadastro e está aguardando aprovação.
+
+Dados do Integrante:
+- Nome: ${profileData.name || 'Não informado'}
+- Nome de Colete: ${profileData.nome_colete || 'Não informado'}
+- Telefone: ${profileData.telefone || 'Não informado'}
+- Status: ${profileData.profile_status || 'Em Análise'}
+
+Acesse o portal: ${portalUrl}
+      `,
+    });
+
+    console.log('Email enviado com sucesso! Message ID:', info.messageId);
+    console.log('Destinatários:', adminEmails);
+  } catch (error) {
+    console.error('Erro ao enviar email de notificação:', error);
+    // Não lançar erro para não bloquear o update do perfil
+  }
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -56,6 +212,12 @@ serve(async (req) => {
     }
 
     console.log('Profile updated successfully:', data);
+
+    // Enviar notificação para admins (não-bloqueante)
+    console.log('Tentando enviar notificação para admins...');
+    sendAdminNotification(data).catch(err => {
+      console.error('Falha ao enviar notificação (não-crítico):', err);
+    });
 
     return new Response(
       JSON.stringify({ success: true, data }),
