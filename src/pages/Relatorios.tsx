@@ -19,7 +19,7 @@ const Relatorios = () => {
   const { hasRole } = useUserRole(user?.uid);
   
   // Verificar permissões
-  const isAutorizado = hasRole('admin') || hasRole('diretor_regional');
+  const isAutorizado = hasRole('admin') || hasRole('diretor_regional') || hasRole('moderator');
 
   const { data: relatorioData, isLoading } = useRelatorioData();
 

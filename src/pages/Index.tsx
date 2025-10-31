@@ -4,6 +4,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useToast } from "@/hooks/use-toast";
+import { usePresence } from "@/hooks/usePresence";
+import { OnlineUsersModal } from "@/components/OnlineUsersModal";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -11,6 +13,7 @@ const Index = () => {
   const { user, loading: authLoading, signInWithGoogle, signOut } = useAuth();
   const { profile, loading: profileLoading } = useProfile(user?.uid);
   const { hasRole, loading: roleLoading } = useUserRole(user?.uid);
+  const { onlineUsers, totalOnline } = usePresence(user?.uid, profile?.nome_colete);
 
   const isLoggedIn = !!user;
   const isLoadingProfile = isLoggedIn && profileLoading;
@@ -95,9 +98,17 @@ const Index = () => {
         <div className="bg-card border border-border rounded-3xl p-6 flex flex-col min-h-[600px]">
           {/* Cabecalho */}
           <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold text-foreground tracking-wider">
-              PORTAL REGIONAL
-            </h1>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex-1" />
+              <h1 className="text-2xl font-bold text-foreground tracking-wider">
+                PORTAL REGIONAL
+              </h1>
+              <div className="flex-1 flex justify-end">
+                {isLoggedIn && totalOnline > 0 && (
+                  <OnlineUsersModal users={onlineUsers} totalOnline={totalOnline} />
+                )}
+              </div>
+            </div>
             <h2 className="text-lg text-muted-foreground tracking-wide">
               VALE DO PARAIBA I - SP
             </h2>
@@ -142,13 +153,14 @@ const Index = () => {
               Agenda
             </Button>
             
-            <Button 
+            {/* Temporariamente oculto até implementação da tela */}
+            {/* <Button 
               onClick={handleOrganograma}
               disabled={!isLoggedIn || !isActive}
               className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Organograma
-            </Button>
+            </Button> */}
             
             <Button 
               onClick={handlePerfil}
@@ -168,7 +180,7 @@ const Index = () => {
               </Button>
             )}
             
-            {(isAdmin || isDiretorRegional) && (
+            {(isAdmin || isDiretorRegional || hasRole('moderator')) && (
               <Button 
                 onClick={handleRelatorios}
                 disabled={!isLoggedIn || !isActive}
