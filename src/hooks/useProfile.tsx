@@ -10,6 +10,11 @@ interface Profile {
   profile_status: string;
   observacao: string | null;
   telefone: string | null;
+  integrante?: {
+    vinculado: boolean;
+    cargo_nome: string;
+    grau: string;
+  } | null;
 }
 
 export const useProfile = (userId: string | undefined) => {
@@ -28,7 +33,14 @@ export const useProfile = (userId: string | undefined) => {
       
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`
+          *,
+          integrante:integrantes_portal!integrantes_portal_profile_id_fkey(
+            vinculado,
+            cargo_nome,
+            grau
+          )
+        `)
         .eq('id', userId)
         .maybeSingle();
 
@@ -41,8 +53,19 @@ export const useProfile = (userId: string | undefined) => {
 
       if (error) {
         console.error('Error fetching profile:', error);
+        setProfile(null);
+      } else if (data) {
+        // Processar integrante (pode ser array)
+        const integranteData = Array.isArray(data.integrante) 
+          ? data.integrante[0] 
+          : data.integrante;
+        
+        setProfile({
+          ...data,
+          integrante: integranteData || null
+        } as Profile);
       } else {
-        setProfile(data);
+        setProfile(null);
       }
       setLoading(false);
     };
@@ -65,7 +88,16 @@ export const useProfile = (userId: string | undefined) => {
           if (payload.eventType === 'DELETE') {
             setProfile(null);
           } else {
-            setProfile(payload.new as Profile);
+            // Processar integrante do payload também
+            const newData = payload.new as any;
+            const integranteData = Array.isArray(newData.integrante) 
+              ? newData.integrante[0] 
+              : newData.integrante;
+            
+            setProfile({
+              ...newData,
+              integrante: integranteData || null
+            } as Profile);
           }
         }
       )

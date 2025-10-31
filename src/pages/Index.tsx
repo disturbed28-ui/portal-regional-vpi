@@ -131,8 +131,21 @@ const Index = () => {
             <h3 className="text-xl font-semibold text-foreground mb-1">
               {userName}
             </h3>
+            
+            {/* Cargo */}
+            {isLoggedIn && profile?.integrante?.cargo_nome && (
+              <p className="text-sm text-muted-foreground mb-1">
+                {profile.integrante.cargo_nome}
+                {profile.integrante.grau && ` (${profile.integrante.grau})`}
+              </p>
+            )}
+            
+            {/* Status com Vinculado */}
             <p className={`text-sm font-medium ${isLoggedIn ? currentStatus.color : 'text-muted-foreground'}`}>
               {userStatus}
+              {isLoggedIn && profile?.integrante?.vinculado && (
+                <span>/Vinculado</span>
+              )}
             </p>
           </div>
 

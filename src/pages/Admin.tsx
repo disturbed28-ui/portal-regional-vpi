@@ -45,6 +45,9 @@ interface Profile {
   divisoes?: { nome: string } | null;
   cargos?: { nome: string } | null;
   funcoes?: { nome: string } | null;
+  integrante?: {
+    vinculado: boolean;
+  } | null;
 }
 
 const Admin = () => {
@@ -137,12 +140,25 @@ const Admin = () => {
           regionais:regional_id (nome),
           divisoes:divisao_id (nome),
           cargos:cargo_id (nome),
-          funcoes:funcao_id (nome)
+          funcoes:funcao_id (nome),
+          integrante:integrantes_portal!integrantes_portal_profile_id_fkey(
+            vinculado
+          )
         `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setProfiles((data || []) as Profile[]);
+      
+      // Processar integrantes (pode ser array)
+      if (data) {
+        const processedData = data.map(profile => ({
+          ...profile,
+          integrante: Array.isArray(profile.integrante) 
+            ? profile.integrante[0] 
+            : profile.integrante
+        }));
+        setProfiles(processedData as Profile[]);
+      }
     } catch (error) {
       console.error('Error fetching profiles:', error);
       toast({
@@ -275,9 +291,22 @@ const Admin = () => {
                 <h4 className="font-semibold text-foreground">
                   {profile.nome_colete || profile.name}
                 </h4>
+                
+                {/* Badge de Status do Perfil */}
                 <Badge variant={statusBadge.variant}>
                   {statusBadge.label}
                 </Badge>
+                
+                {/* Badge de Vínculo */}
+                {profile.integrante?.vinculado ? (
+                  <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-300">
+                    Vinculado
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-orange-600 border-orange-300">
+                    Não Vinculado
+                  </Badge>
+                )}
               </div>
               <p className="text-xs text-muted-foreground">{profile.name}</p>
               {(profile.comandos?.nome || profile.regionais?.nome || profile.divisoes?.nome || profile.cargos?.nome) && (
