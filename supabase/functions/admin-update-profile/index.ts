@@ -63,27 +63,30 @@ Deno.serve(async (req) => {
 
     console.log('Updating profile:', profile_id, 'by admin:', admin_user_id);
 
+    // Preparar payload de atualização - adicionar apenas campos fornecidos
+    const updatePayload: any = {
+      updated_at: new Date().toISOString(),
+    };
+
+    // Adicionar campos apenas se fornecidos explicitamente
+    if (name !== undefined) updatePayload.name = name;
+    if (nome_colete !== undefined) updatePayload.nome_colete = nome_colete;
+    if (comando_id !== undefined) updatePayload.comando_id = comando_id;
+    if (regional_id !== undefined) updatePayload.regional_id = regional_id;
+    if (divisao_id !== undefined) updatePayload.divisao_id = divisao_id;
+    if (cargo_id !== undefined) updatePayload.cargo_id = cargo_id;
+    if (funcao_id !== undefined) updatePayload.funcao_id = funcao_id;
+    if (data_entrada !== undefined) updatePayload.data_entrada = data_entrada;
+    if (grau !== undefined) updatePayload.grau = grau;
+    if (profile_status !== undefined) updatePayload.profile_status = profile_status;
+    if (observacao !== undefined) updatePayload.observacao = observacao;
+
+    console.log('Update payload:', updatePayload);
+
     // Update profile
     const { data: updatedProfile, error: updateError } = await supabase
       .from('profiles')
-      .update({
-        name,
-        nome_colete,
-        comando_id,
-        regional,
-        divisao,
-        cargo,
-        funcao,
-        regional_id,
-        divisao_id,
-        cargo_id,
-        funcao_id,
-        data_entrada,
-        grau,
-        profile_status,
-        observacao,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('id', profile_id)
       .select()
       .single();

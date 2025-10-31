@@ -12,7 +12,7 @@ export const RelatorioTable = ({ divisoes, totais, regionalNome }: RelatorioTabl
   return (
     <Card className="overflow-hidden">
       <div className="overflow-x-auto">
-        <Table>
+        <Table className="min-w-[600px]">
           <TableHeader>
             <TableRow className="bg-muted">
               <TableHead className="font-bold border-r border-border">DIVISÕES</TableHead>

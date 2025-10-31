@@ -10,7 +10,7 @@ interface EstatisticasEspeciaisProps {
 
 export const EstatisticasEspeciais = ({ divisoes, totais }: EstatisticasEspeciaisProps) => {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-[300px]">
       {/* Veículos */}
       <Card>
         <CardHeader>

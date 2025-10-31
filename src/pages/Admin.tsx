@@ -264,13 +264,13 @@ const Admin = () => {
     return (
       <Card className="mb-3 hover:shadow-lg transition-shadow">
         <CardContent className="p-4">
-          <div className="flex items-start gap-4">
-            <Avatar className="w-14 h-14 flex-shrink-0">
+          <div className="flex flex-col sm:flex-row items-start gap-4">
+            <Avatar className="w-14 h-14 flex-shrink-0 self-center sm:self-start">
               <AvatarImage src={profile.photo_url || ''} />
               <AvatarFallback>{profile.name.charAt(0).toUpperCase()}</AvatarFallback>
             </Avatar>
             
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 w-full sm:w-auto">
               <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <h4 className="font-semibold text-foreground">
                   {profile.nome_colete || profile.name}
@@ -297,11 +297,12 @@ const Admin = () => {
               )}
             </div>
             
-            <div className="flex flex-col gap-2 flex-shrink-0">
+            <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-shrink-0">
               <Button 
                 size="sm" 
                 variant="outline"
                 onClick={() => openDetailDialog(profile)}
+                className="w-full sm:w-auto"
               >
                 Ver Detalhes
               </Button>
@@ -310,7 +311,7 @@ const Admin = () => {
                   <Button 
                     size="sm" 
                     onClick={() => openDialog(profile, 'aprovar')}
-                    className="bg-green-600 hover:bg-green-700"
+                    className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
                   >
                     Aprovar
                   </Button>
@@ -318,6 +319,7 @@ const Admin = () => {
                     size="sm" 
                     variant="destructive"
                     onClick={() => openDialog(profile, 'recusar')}
+                    className="w-full sm:w-auto"
                   >
                     Recusar
                   </Button>
@@ -328,6 +330,7 @@ const Admin = () => {
                   size="sm" 
                   variant="outline"
                   onClick={() => openDialog(profile, 'inativar')}
+                  className="w-full sm:w-auto"
                 >
                   Inativar
                 </Button>
@@ -346,19 +349,19 @@ const Admin = () => {
   return (
     <div className="admin-page min-h-screen bg-background p-4">
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col gap-4 mb-6 md:flex-row md:items-center md:justify-between">
           <h1 className="text-2xl font-bold">Administracao de Perfis</h1>
-          <div className="flex gap-2">
-            <Button onClick={() => navigate("/admin/estrutura")} variant="outline">
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => navigate("/admin/estrutura")} variant="outline" className="flex-1 sm:flex-none">
               Gestao de Estrutura
             </Button>
-            <Button onClick={() => navigate("/admin/dados")} variant="outline">
+            <Button onClick={() => navigate("/admin/dados")} variant="outline" className="flex-1 sm:flex-none">
               Gestao de Dados
             </Button>
-            <Button onClick={() => navigate("/admin/integrantes")} variant="outline">
+            <Button onClick={() => navigate("/admin/integrantes")} variant="outline" className="flex-1 sm:flex-none">
               Gestao de Integrantes
             </Button>
-            <Button onClick={() => navigate("/")} variant="outline">
+            <Button onClick={() => navigate("/")} variant="outline" className="flex-1 sm:flex-none">
               Voltar
             </Button>
           </div>

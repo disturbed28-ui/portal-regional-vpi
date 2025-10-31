@@ -287,6 +287,20 @@ export function ProfileDetailDialog({
 
     setLoading(true);
     try {
+      console.log('📤 Enviando para edge function:', {
+        name: formData.name,
+        nome_colete: formData.nome_colete,
+        comando_id: formData.comando_id,
+        regional_id: formData.regional_id,
+        divisao_id: formData.divisao_id,
+        cargo_id: formData.cargo_id,
+        funcao_id: formData.funcao_id,
+        grau: formData.grau,
+        data_entrada: formData.data_entrada,
+        profile_status: formData.profile_status,
+        observacao: formData.observacao,
+      });
+
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       
@@ -301,7 +315,18 @@ export function ProfileDetailDialog({
           body: JSON.stringify({
             admin_user_id: user.uid,
             profile_id: profile.id,
-            ...formData,
+            // Enviar APENAS IDs e campos básicos
+            name: formData.name,
+            nome_colete: formData.nome_colete,
+            comando_id: formData.comando_id,
+            regional_id: formData.regional_id,
+            divisao_id: formData.divisao_id,
+            cargo_id: formData.cargo_id,
+            funcao_id: formData.funcao_id,
+            data_entrada: formData.data_entrada,
+            grau: formData.grau,
+            profile_status: formData.profile_status,
+            observacao: formData.observacao,
           }),
         }
       );
@@ -334,7 +359,7 @@ export function ProfileDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="admin-page max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="admin-page max-w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar Perfil</DialogTitle>
           <DialogDescription>

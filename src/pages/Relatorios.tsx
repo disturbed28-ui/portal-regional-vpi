@@ -28,206 +28,92 @@ const Relatorios = () => {
 
     try {
       const wb = XLSX.utils.book_new();
-      const now = new Date();
-      
-      // Calcular mês e semana
-      const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-      const mesesCompletos = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-      const mesAbrev = meses[now.getMonth()];
-      const mesCompleto = mesesCompletos[now.getMonth()];
-      const ano = now.getFullYear().toString().slice(-2);
-      const anoCompleto = now.getFullYear();
-      
-      // Calcular número da semana do mês (aproximado)
-      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-      const semanaDoMes = Math.ceil((now.getDate() + firstDay.getDay()) / 7);
-      
-      const nomeArquivo = `${mesAbrev}.${ano}.Sem.${semanaDoMes}.CMD_V_-_IMC_-_REGIONAL_Vale_do_Paraiba_I.xlsx`;
+      const dataAtual = new Date().toLocaleDateString('pt-BR');
 
-      // ===== SHEET: Relatório Regional =====
-      const wsData: any[][] = [
-        // Header
-        ['', 'REGIONAL VALE DO PARAIBA I - SP'],
+      // ===== SHEET 1: Relatório Regional =====
+      const sheet1Data: any[][] = [
+        ['RELATÓRIO REGIONAL'],
+        [`Data: ${dataAtual}`],
         [],
-        ['', ''],
-        ['1', '', '', 'Diretor Regional'], // Campos manuais - deixar vazios
-        ['1', '', '', 'Operacional Regional'],
-        ['1', '', '', 'Social Regional'],
-        ['1', '', '', 'ADM Regional'],
-        ['1', '', '', 'Comunicação Regional'],
-        ['5'],
-        [],
-        ['', '', '', '', '', `${mesCompleto} / ${anoCompleto}`, '', '', '', 'MÊS Anterior', '', '', now.toLocaleDateString('pt-BR')],
-        [],
-        // Tabela Principal
-        ['', '', '', 'DIVISÕES', '', 'Entrada', 'Saída', '', 'Saldo', '', 'Total Integ. Anterior', '', '', 'Total Integ. Atual', '', 'Cresc. Atual'],
-        [],
+        ['DIVISÕES', 'Entrada', 'Saída', 'Saldo', 'Total Integ. Anterior', 'Total Integ. Atual', 'Devedores'],
       ];
 
       // Adicionar divisões
       relatorioData.divisoes.forEach((div) => {
-        const crescimento = div.total_anterior > 0 
-          ? ((div.total_atual - div.total_anterior) / div.total_anterior * 100).toFixed(2) + '%'
-          : '0.00%';
-        
-        wsData.push([
-          '', '', '', div.nome, '', 
-          div.entrada, 
-          div.saida, 
-          '', 
-          div.saldo, 
-          '', 
-          div.total_anterior, 
-          '', '', 
-          div.total_atual, 
-          '', 
-          crescimento
+        sheet1Data.push([
+          div.nome,
+          div.entrada,
+          div.saida,
+          div.saldo,
+          div.total_anterior,
+          div.total_atual,
+          div.devedores,
         ]);
       });
 
-      // Totais
-      wsData.push(['', '', '', ',', '', '', '', '', '', '', '', '', '', '', '', '']);
-      
-      const crescimentoTotal = relatorioData.totais.total_anterior > 0
-        ? ((relatorioData.totais.total_atual - relatorioData.totais.total_anterior) / relatorioData.totais.total_anterior * 100).toFixed(2) + '%'
-        : '0.00%';
-      
-      wsData.push([
-        '', '', '', 'REGIONAL VALE DO PARAIBA I', '', 
-        'Entrada', 
-        'Saída', 
-        '', 
-        'Saldo', 
-        '', 
-        'Geral Integ. Anterior', 
-        '', '', 
-        'Geral Integ. Atual', 
-        '', 
-        'Cresc. Atual'
-      ]);
-      
-      wsData.push([
-        '', '', '', `${mesCompleto}/${ano}`, '', 
-        relatorioData.totais.entrada, 
-        relatorioData.totais.saida, 
-        '', 
-        relatorioData.totais.saldo, 
-        '', 
-        relatorioData.totais.total_anterior, 
-        '', '', 
-        relatorioData.totais.total_atual, 
-        '', 
-        crescimentoTotal
+      // Total Regional
+      sheet1Data.push([
+        'TOTAL REGIONAL',
+        relatorioData.totais.entrada,
+        relatorioData.totais.saida,
+        relatorioData.totais.saldo,
+        relatorioData.totais.total_anterior,
+        relatorioData.totais.total_atual,
+        relatorioData.totais.devedores,
       ]);
 
-      // Efetivo (Veículos)
-      wsData.push([]);
-      wsData.push([]);
-      wsData.push([]);
-      wsData.push(['', '', '', 'Efetivo VALE DO PARAIBA I', 'Qtd.', '', 'Perc,']);
-      
-      const totalEfetivo = relatorioData.totais.total_atual;
-      const percSemVeiculo = totalEfetivo > 0 ? ((relatorioData.totais.sem_veiculo / totalEfetivo) * 100).toFixed(2) + '%' : '0.00%';
-      const percCarro = totalEfetivo > 0 ? ((relatorioData.totais.com_carro / totalEfetivo) * 100).toFixed(2) + '%' : '0.00%';
-      const percMoto = totalEfetivo > 0 ? ((relatorioData.totais.com_moto / totalEfetivo) * 100).toFixed(2) + '%' : '0.00%';
-      
-      wsData.push(['', '', '', 'Sem Veículo', relatorioData.totais.sem_veiculo, '', percSemVeiculo]);
-      wsData.push(['', '', '', 'Carro', relatorioData.totais.com_carro, '', percCarro]);
-      wsData.push(['', '', '', 'Moto', relatorioData.totais.com_moto, '', percMoto]);
-      wsData.push([]);
-      wsData.push(['', '', '', 'Total Efetivo', totalEfetivo]);
+      const ws1 = XLSX.utils.aoa_to_sheet(sheet1Data);
+      XLSX.utils.book_append_sheet(wb, ws1, 'Relatório Regional');
 
-      // Inadimplência
-      wsData.push([]);
-      wsData.push([]);
-      wsData.push([]);
-      wsData.push([]);
-      wsData.push([]);
-      wsData.push([]);
-      wsData.push(['', '', '', 'Inadimplência']);
-      wsData.push([]);
-      wsData.push(['', '', '', '', '', 'Divisões', '', '', 'Total', '', 'Perc.', '', 'Pagos']);
-      
+      // ===== SHEET 2: Estatísticas Especiais =====
+      const sheet2Data: any[][] = [
+        ['ESTATÍSTICAS ESPECIAIS'],
+        [],
+        ['VEÍCULOS'],
+        ['Sem Veículo', relatorioData.totais.sem_veiculo],
+        ['Com Moto', relatorioData.totais.com_moto],
+        ['Com Carro', relatorioData.totais.com_carro],
+        [],
+        ['COMBATE INSANO (SGT ARMAS)'],
+        ['Divisão', 'Quantidade'],
+      ];
+
+      // Combate Insano por divisão
       relatorioData.divisoes.forEach((div) => {
-        const percInadimplencia = div.total_atual > 0 ? ((div.devedores / div.total_atual) * 100).toFixed(2) + '%' : '0.00%';
-        const percPagos = div.total_atual > 0 ? (((div.total_atual - div.devedores) / div.total_atual) * 100).toFixed(2) + '%' : '100.00%';
-        wsData.push(['', '', '', '', '', div.nome, '', '', div.devedores, '', percInadimplencia, '', percPagos]);
+        sheet2Data.push([div.nome, div.combate_insano]);
       });
+      sheet2Data.push(['TOTAL REGIONAL', relatorioData.totais.combate_insano]);
       
-      wsData.push([]);
-      const percInadimplenciaTotal = totalEfetivo > 0 ? ((relatorioData.totais.devedores / totalEfetivo) * 100).toFixed(2) + '%' : '0.00%';
-      const percPagosTotal = totalEfetivo > 0 ? (((totalEfetivo - relatorioData.totais.devedores) / totalEfetivo) * 100).toFixed(2) + '%' : '100.00%';
-      wsData.push(['', '', '', '', '', 'Total Geral', '', '', relatorioData.totais.devedores, '', percInadimplenciaTotal, '', percPagosTotal]);
-
-      // Ações (manual)
-      wsData.push([]);
-      wsData.push(['', '', '', 'Ações.:']);
-      wsData.push([]);
-      wsData.push([]);
-      // Deixar espaço para ações manuais
-      for (let i = 0; i < 10; i++) {
-        wsData.push(['', '', '', '', '', '', '']);
-      }
-
-      // Entrada e Saída
-      wsData.push([]);
-      wsData.push(['', '', '', 'Entrada e Saída']);
-      wsData.push(['', '', '', '', '', 'Entrada', relatorioData.totais.entrada]);
-      wsData.push(['', '', '', '', '', 'Saída', relatorioData.totais.saida]);
-      wsData.push(['', '', '', '', '', 'Transf. Saída', 0]); // Campo manual
-      wsData.push(['', '', '', '', '', 'Saldo', relatorioData.totais.saldo]);
-
-      // Motivos Saída (manual)
-      wsData.push([]);
-      wsData.push(['', '', '', '', '', 'Motivos Saída:', '', '', '', '', '', '', 'Divisão']);
-      wsData.push([]);
-      // Deixar espaço para motivos manuais
-      for (let i = 0; i < 8; i++) {
-        wsData.push(['', '', '', '', '', '', '', '', '', '', '', '', '']);
-      }
-
-      // Combate Insano
-      wsData.push([]);
-      wsData.push([]);
-      wsData.push(['', '', '', 'Combate Insano']);
-      wsData.push(['', '', '', '', '', 'Divisão', '', '', 'Qtd']);
+      sheet2Data.push([]);
+      sheet2Data.push(['BATEDORES']);
+      sheet2Data.push(['Divisão', 'Quantidade']);
+      
+      // Batedores por divisão
       relatorioData.divisoes.forEach((div) => {
-        wsData.push(['', '', '', '', '', div.nome, '', '', div.combate_insano]);
+        sheet2Data.push([div.nome, div.batedores]);
       });
-      wsData.push([]);
-      wsData.push(['', '', '', '', '', 'Total Regional', '', '', relatorioData.totais.combate_insano]);
-
-      // Batedores
-      wsData.push([]);
-      wsData.push([]);
-      wsData.push(['', '', '', 'Batedores']);
-      wsData.push(['', '', '', '', '', 'Divisão', '', '', 'Qtd']);
+      sheet2Data.push(['TOTAL REGIONAL', relatorioData.totais.batedores]);
+      
+      sheet2Data.push([]);
+      sheet2Data.push(['CAVEIRAS']);
+      sheet2Data.push(['Divisão', 'Titulares', 'Suplentes']);
+      
+      // Caveiras por divisão
       relatorioData.divisoes.forEach((div) => {
-        wsData.push(['', '', '', '', '', div.nome, '', '', div.batedores]);
+        sheet2Data.push([div.nome, div.caveiras, div.caveiras_suplentes]);
       });
-      wsData.push([]);
-      wsData.push(['', '', '', '', '', 'Total Regional', '', '', relatorioData.totais.batedores]);
+      sheet2Data.push(['TOTAL REGIONAL', relatorioData.totais.caveiras, relatorioData.totais.caveiras_suplentes]);
 
-      // Time de Caveiras
-      wsData.push([]);
-      wsData.push([]);
-      wsData.push(['', '', '', 'Time de Caveiras']);
-      wsData.push(['', '', '', '', '', 'Divisão', '', '', 'Titular', '', 'Suplente']);
-      relatorioData.divisoes.forEach((div) => {
-        wsData.push(['', '', '', '', '', div.nome, '', '', div.caveiras, '', div.caveiras_suplentes]);
-      });
-      wsData.push([]);
-      wsData.push(['', '', '', '', '', 'Total Regional', '', '', relatorioData.totais.caveiras, '', relatorioData.totais.caveiras_suplentes]);
+      const ws2 = XLSX.utils.aoa_to_sheet(sheet2Data);
+      XLSX.utils.book_append_sheet(wb, ws2, 'Estatísticas Especiais');
 
-      const ws = XLSX.utils.aoa_to_sheet(wsData);
-      XLSX.utils.book_append_sheet(wb, ws, 'Relatório Regional');
-
-      // Exportar
-      XLSX.writeFile(wb, nomeArquivo);
+      // Exportar arquivo
+      const fileName = `relatorio_regional_${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, fileName);
 
       toast({
         title: 'Sucesso',
-        description: `Relatório ${nomeArquivo} exportado com sucesso`,
+        description: `Relatório exportado: ${fileName}`,
       });
     } catch (error) {
       console.error('Erro ao exportar:', error);
@@ -297,14 +183,18 @@ const Relatorios = () => {
         {/* Tabela Principal */}
         {relatorioData && (
           <>
-            <RelatorioTable
-              divisoes={relatorioData.divisoes}
-              totais={relatorioData.totais}
-              regionalNome="REGIONAL VALE DO PARAIBA I"
-            />
+            <div className="overflow-x-auto">
+              <RelatorioTable
+                divisoes={relatorioData.divisoes}
+                totais={relatorioData.totais}
+                regionalNome="REGIONAL VALE DO PARAIBA I"
+              />
+            </div>
 
             {/* Estatísticas Especiais */}
-            <EstatisticasEspeciais divisoes={relatorioData.divisoes} totais={relatorioData.totais} />
+            <div className="overflow-x-auto">
+              <EstatisticasEspeciais divisoes={relatorioData.divisoes} totais={relatorioData.totais} />
+            </div>
             
             <Tabs defaultValue="relatorio" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
