@@ -45,24 +45,61 @@ async function sendAdminNotification(profileData: any) {
 
     console.log(`Encontrados ${adminRoles.length} admins`);
 
-    // Buscar emails dos admins via auth.users
+    // Buscar emails dos admins via auth.users com paginação adequada
     const adminIds = adminRoles.map((r: any) => r.user_id);
-    const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+    console.log('Admin IDs a buscar:', adminIds);
     
-    if (!authUsers) {
-      console.log('Erro ao buscar usuários do auth');
-      return;
+    // Método 1: Tentar listUsers com paginação maior
+    const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000 // Aumentar limite
+    });
+    
+    console.log('Auth users retornados:', authUsers?.users?.length || 0);
+    console.log('Erro ao buscar auth users:', authError);
+    
+    let adminEmails: string[] = [];
+    
+    if (authUsers?.users) {
+      adminEmails = authUsers.users
+        .filter((u: any) => adminIds.includes(u.id))
+        .map((u: any) => u.email)
+        .filter(Boolean) as string[];
+      
+      console.log('Emails encontrados via listUsers:', adminEmails);
     }
 
-    const adminEmails = authUsers.users
-      .filter((u: any) => adminIds.includes(u.id))
-      .map((u: any) => u.email)
-      .filter(Boolean) as string[];
-
+    // Método 2 (Fallback): Se não encontrou emails, buscar individualmente
     if (adminEmails.length === 0) {
-      console.log('Nenhum email de admin encontrado');
-      return;
+      console.log('Tentando método alternativo: getUserById para cada admin...');
+      
+      const emailPromises = adminIds.map(async (id: string) => {
+        try {
+          const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(id);
+          if (userError) {
+            console.error(`Erro ao buscar usuário ${id}:`, userError);
+            return null;
+          }
+          console.log(`Email encontrado para ${id}:`, userData?.user?.email);
+          return userData?.user?.email;
+        } catch (err) {
+          console.error(`Exceção ao buscar usuário ${id}:`, err);
+          return null;
+        }
+      });
+      
+      const emails = await Promise.all(emailPromises);
+      adminEmails = emails.filter(Boolean) as string[];
+      console.log('Emails encontrados via getUserById:', adminEmails);
     }
+
+    // Método 3 (Último recurso): Email hardcoded como fallback
+    if (adminEmails.length === 0) {
+      console.warn('⚠️ FALLBACK: Usando email hardcoded');
+      adminEmails = ['diretor.regional.vale1@gmail.com'];
+    }
+
+    console.log(`✅ Total de ${adminEmails.length} email(s) para notificação:`, adminEmails);
 
     console.log(`Enviando email para ${adminEmails.length} admins`);
 
