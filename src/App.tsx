@@ -11,6 +11,7 @@ import AdminDados from "./pages/AdminDados";
 import AdminIntegrantes from "./pages/AdminIntegrantes";
 import Agenda from "./pages/Agenda";
 import Relatorios from "./pages/Relatorios";
+import Organograma from "./pages/Organograma";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/admin/integrantes" element={<AdminIntegrantes />} />
           <Route path="/agenda" element={<Agenda />} />
           <Route path="/relatorios" element={<Relatorios />} />
+          <Route path="/organograma" element={<Organograma />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
