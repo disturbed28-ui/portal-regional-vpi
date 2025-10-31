@@ -7,6 +7,10 @@ import { useToast } from "@/hooks/use-toast";
 import { usePresence } from "@/hooks/usePresence";
 import { OnlineUsersModal } from "@/components/OnlineUsersModal";
 import { removeAccents } from "@/lib/utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { QRCodeSVG } from "qrcode.react";
+import { QrCode, X } from "lucide-react";
+import { useState } from "react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -15,6 +19,7 @@ const Index = () => {
   const { profile, loading: profileLoading } = useProfile(user?.uid);
   const { hasRole, loading: roleLoading } = useUserRole(user?.uid);
   const { onlineUsers, totalOnline } = usePresence(user?.uid, profile?.nome_colete);
+  const [showQRCode, setShowQRCode] = useState(false);
 
   const isLoggedIn = !!user;
   const isLoadingProfile = isLoggedIn && profileLoading;
@@ -121,7 +126,7 @@ const Index = () => {
           </div>
 
           {/* Avatar */}
-          <div className="flex justify-center mb-4">
+          <div className="flex justify-center items-center mb-4 relative">
             <div 
               className="w-32 h-32 rounded-full bg-secondary border-2 border-border bg-cover bg-center"
               style={{
@@ -130,6 +135,15 @@ const Index = () => {
                   : `url('/images/skull.png')`
               }}
             />
+            {isLoggedIn && profile?.id && (
+              <button
+                onClick={() => setShowQRCode(true)}
+                className="absolute right-[calc(50%-80px)] top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground flex items-center justify-center shadow-lg transition-all hover:scale-110"
+                title="Ver QR Code"
+              >
+                <QrCode className="w-5 h-5" />
+              </button>
+            )}
           </div>
 
           {/* Nome e Status */}
@@ -229,6 +243,39 @@ const Index = () => {
         </div>
         </div>
       </div>
+
+      {/* Modal de QR Code */}
+      <Dialog open={showQRCode} onOpenChange={setShowQRCode}>
+        <DialogContent 
+          className="max-w-[90vw] w-full max-h-[90vh] h-auto p-6 bg-background border-border"
+          onClick={() => setShowQRCode(false)}
+        >
+          <DialogHeader>
+            <DialogTitle className="text-center text-xl font-bold">Meu QR Code</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center gap-6 py-6">
+            <div className="bg-white p-6 rounded-xl">
+              <QRCodeSVG 
+                value={profile?.id || ""} 
+                size={Math.min(window.innerWidth * 0.7, 400)}
+                level="H"
+                includeMargin
+              />
+            </div>
+            <p className="text-sm text-muted-foreground text-center">
+              ID: {profile?.id}
+            </p>
+            <Button 
+              onClick={() => setShowQRCode(false)} 
+              variant="outline"
+              className="w-full max-w-xs"
+            >
+              <X className="w-4 h-4 mr-2" />
+              Fechar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
