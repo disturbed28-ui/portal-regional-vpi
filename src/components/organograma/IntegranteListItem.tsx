@@ -7,6 +7,7 @@ interface IntegranteListItemProps {
   nome: string;
   cargo: string;
   grau?: string;
+  divisao?: string;
   foto?: string | null;
   badges?: ('sgt_armas' | 'caveira' | 'caveira_suplente' | 'batedor' | 'combate_insano')[];
   onClick?: () => void;
@@ -24,6 +25,7 @@ export const IntegranteListItem = ({
   nome,
   cargo,
   grau,
+  divisao,
   foto,
   badges = [],
   onClick
@@ -45,6 +47,7 @@ export const IntegranteListItem = ({
           <h4 className="text-sm font-semibold truncate">{nome}</h4>
           <p className="text-xs text-muted-foreground">{cargo}</p>
           {grau && <p className="text-xs text-muted-foreground">Grau {grau}</p>}
+          {divisao && <p className="text-xs text-muted-foreground">{divisao}</p>}
         </div>
 
         {badges.length > 0 && (

@@ -213,15 +213,16 @@ const Organograma = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {getListaAtual().map((integrante) => (
-                  <IntegranteListItem
-                    key={integrante.id}
-                    nome={integrante.nome_colete}
-                    cargo={integrante.cargo_nome || 'Sem cargo'}
-                    grau={integrante.grau || undefined}
-                    foto={integrante.foto}
-                    badges={getBadges(integrante)}
-                    onClick={() => navegarParaDivisao(integrante.divisao_texto)}
-                  />
+            <IntegranteListItem
+              key={integrante.id}
+              nome={integrante.nome_colete}
+              cargo={integrante.cargo_nome || 'Sem cargo'}
+              grau={integrante.grau || undefined}
+              divisao={integrante.divisao_texto}
+              foto={integrante.foto}
+              badges={getBadges(integrante)}
+              onClick={() => navegarParaDivisao(integrante.divisao_texto)}
+            />
                 ))}
               </div>
             )}

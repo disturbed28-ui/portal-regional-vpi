@@ -24,6 +24,7 @@ export const DivisaoGrid = ({ integrantes }: DivisaoGridProps) => {
           nome={integrante.nome_colete}
           cargo={integrante.cargo_nome || 'Sem cargo'}
           grau={integrante.grau || undefined}
+          divisao={integrante.divisao_texto}
           foto={integrante.foto}
           badges={getBadges(integrante)}
         />
