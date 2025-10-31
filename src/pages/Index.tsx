@@ -6,6 +6,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useToast } from "@/hooks/use-toast";
 import { usePresence } from "@/hooks/usePresence";
 import { OnlineUsersModal } from "@/components/OnlineUsersModal";
+import { removeAccents } from "@/lib/utils";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -18,9 +19,13 @@ const Index = () => {
   const isLoggedIn = !!user;
   const isLoadingProfile = isLoggedIn && profileLoading;
   
-  const userName = isLoadingProfile 
+  const rawUserName = isLoadingProfile 
     ? "Carregando..." 
     : (profile?.nome_colete || profile?.name || "Visitante");
+  
+  const userName = rawUserName === "Carregando..." || rawUserName === "Visitante" 
+    ? rawUserName 
+    : removeAccents(rawUserName);
   
   // DEBUG: Log state (comentado para evitar spam)
   // console.log('📊 Index state:', {
