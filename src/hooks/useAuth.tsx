@@ -32,11 +32,15 @@ export const useAuth = () => {
         // Wait 2s before syncing (debounce)
         syncTimeoutRef.current = setTimeout(async () => {
           try {
-            // Reload user data from Firebase to get latest profile info (including photo)
+            // Force token refresh to get latest user data from Google
+            const token = await firebaseUser.getIdToken(true);
+            
+            // Reload user data from Firebase
             await firebaseUser.reload();
             const refreshedUser = auth.currentUser;
             
             console.log('Syncing user with Lovable Cloud:', firebaseUser.uid);
+            console.log('Photo URL from Firebase:', refreshedUser?.photoURL);
             
             const { data, error } = await supabase.functions.invoke('sync-firebase-user', {
               body: {

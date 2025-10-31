@@ -102,16 +102,20 @@ serve(async (req) => {
         status: 'Online'  // Always update presence status
       };
 
-      // Only update name if there's a new value AND it's different
-      if (displayName && displayName !== existingProfile.name) {
+      // Always update name if provided (to ensure Google profile changes sync)
+      if (displayName) {
         updateData.name = displayName;
-        console.log(`Updating name: ${existingProfile.name} -> ${displayName}`);
+        if (displayName !== existingProfile.name) {
+          console.log(`Updating name: ${existingProfile.name} -> ${displayName}`);
+        }
       }
 
-      // Only update photo if there's a new value AND it's different
-      if (photoURL && photoURL !== existingProfile.photo_url) {
+      // Always update photo if provided (to ensure Google profile photo changes sync)
+      if (photoURL) {
         updateData.photo_url = photoURL;
-        console.log(`Updating photo_url: ${existingProfile.photo_url} -> ${photoURL}`);
+        if (photoURL !== existingProfile.photo_url) {
+          console.log(`Updating photo_url: ${existingProfile.photo_url} -> ${photoURL}`);
+        }
       }
 
       // Log for debugging
