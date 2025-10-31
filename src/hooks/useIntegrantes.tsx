@@ -55,6 +55,27 @@ export const useIntegrantes = (options?: UseIntegrantesOptions) => {
 
   useEffect(() => {
     fetchIntegrantes();
+
+    // Realtime subscription para detectar mudanças
+    const channel = supabase
+      .channel('integrantes-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'integrantes_portal',
+        },
+        (payload) => {
+          console.log('Integrante changed:', payload);
+          fetchIntegrantes(); // Recarregar lista
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [stableOptions]);
 
   const fetchIntegrantes = async () => {

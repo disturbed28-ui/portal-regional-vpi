@@ -464,10 +464,21 @@ const AdminIntegrantes = () => {
 
         {/* Lista de Integrantes */}
         <Tabs defaultValue="todos">
-          <TabsList>
-            <TabsTrigger value="todos">Todos</TabsTrigger>
-            <TabsTrigger value="vinculados">Vinculados</TabsTrigger>
-            <TabsTrigger value="nao-vinculados">Nao Vinculados</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 gap-1 sm:gap-2">
+            <TabsTrigger value="todos" className="text-xs sm:text-sm px-2">
+              Todos 
+              <span className="hidden sm:inline ml-1">({stats.total})</span>
+            </TabsTrigger>
+            <TabsTrigger value="vinculados" className="text-xs sm:text-sm px-2">
+              <span className="hidden sm:inline">Vinculados</span>
+              <span className="sm:hidden">✓</span>
+              <span className="hidden sm:inline ml-1">({stats.vinculados})</span>
+            </TabsTrigger>
+            <TabsTrigger value="nao-vinculados" className="text-xs sm:text-sm px-2">
+              <span className="hidden sm:inline">Não Vinculados</span>
+              <span className="sm:hidden">✗</span>
+              <span className="hidden sm:inline ml-1">({stats.naoVinculados})</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="todos" className="space-y-4">
