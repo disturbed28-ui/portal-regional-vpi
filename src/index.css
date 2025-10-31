@@ -119,3 +119,21 @@ All colors MUST be HSL.
 .landing-page {
   font-family: 'Carnivalee Freakshow', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
+
+/* Animação pulsante para botão de perfil incompleto */
+@keyframes pulse-warning {
+  0%, 100% {
+    background-color: hsl(var(--destructive));
+    color: hsl(var(--destructive-foreground));
+    border-color: hsl(var(--destructive));
+  }
+  50% {
+    background-color: #eab308;
+    color: black;
+    border-color: #eab308;
+  }
+}
+
+.btn-pulse-warning {
+  animation: pulse-warning 2s ease-in-out infinite;
+}

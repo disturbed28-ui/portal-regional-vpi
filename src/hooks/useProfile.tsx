@@ -83,19 +83,74 @@ export const useProfile = (userId: string | undefined) => {
           table: 'profiles',
           filter: `id=eq.${userId}`,
         },
-        (payload) => {
+        async (payload) => {
           console.log('Profile updated via realtime:', payload);
           if (payload.eventType === 'DELETE') {
             setProfile(null);
           } else {
-            // Processar integrante do payload também
-            const newData = payload.new as any;
-            const integranteData = Array.isArray(newData.integrante) 
-              ? newData.integrante[0] 
-              : newData.integrante;
+            // Fazer novo fetch completo para pegar dados do JOIN
+            const { data, error } = await supabase
+              .from('profiles')
+              .select(`
+                *,
+                integrante:integrantes_portal!integrantes_portal_profile_id_fkey(
+                  vinculado,
+                  cargo_nome,
+                  grau
+                )
+              `)
+              .eq('id', userId)
+              .maybeSingle();
+            
+            if (!error && data) {
+              const integranteData = Array.isArray(data.integrante) 
+                ? data.integrante[0] 
+                : data.integrante;
+              
+              setProfile({
+                ...data,
+                integrante: integranteData || null
+              } as Profile);
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    // Subscribe to integrantes_portal changes
+    const integranteChannel = supabase
+      .channel(`integrante-changes-${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'integrantes_portal',
+          filter: `profile_id=eq.${userId}`,
+        },
+        async (payload) => {
+          console.log('Integrante updated via realtime:', payload);
+          // Fazer novo fetch completo
+          const { data, error } = await supabase
+            .from('profiles')
+            .select(`
+              *,
+              integrante:integrantes_portal!integrantes_portal_profile_id_fkey(
+                vinculado,
+                cargo_nome,
+                grau
+              )
+            `)
+            .eq('id', userId)
+            .maybeSingle();
+          
+          if (!error && data) {
+            const integranteData = Array.isArray(data.integrante) 
+              ? data.integrante[0] 
+              : data.integrante;
             
             setProfile({
-              ...newData,
+              ...data,
               integrante: integranteData || null
             } as Profile);
           }
@@ -105,6 +160,7 @@ export const useProfile = (userId: string | undefined) => {
 
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(integranteChannel);
     };
   }, [userId]);
 

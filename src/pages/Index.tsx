@@ -53,6 +53,7 @@ const Index = () => {
   const isAdmin = hasRole('admin');
   const isDiretorRegional = hasRole('diretor_regional');
   const isActive = profile?.profile_status === 'Ativo';
+  const isProfileIncomplete = isLoggedIn && !profile?.nome_colete;
 
   const handleConnect = () => {
     signInWithGoogle();
@@ -178,9 +179,13 @@ const Index = () => {
             <Button 
               onClick={handlePerfil}
               disabled={!isLoggedIn}
-              className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`w-full h-12 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed ${
+                isProfileIncomplete 
+                  ? 'btn-pulse-warning font-bold' 
+                  : 'bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border'
+              }`}
             >
-              Perfil do Usuario
+              {isProfileIncomplete ? '⚠️ Complete seu Perfil!' : 'Perfil do Usuario'}
             </Button>
             
             {isAdmin && (
