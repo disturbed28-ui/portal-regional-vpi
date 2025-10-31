@@ -153,25 +153,32 @@ const Admin = () => {
           funcoes:funcao_id (nome),
           integrante:integrantes_portal!integrantes_portal_profile_id_fkey(
             vinculado
-          ),
-          roles:user_roles(role)
+          )
         `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       
-      // Processar integrantes e roles (podem ser arrays)
+      // Processar integrantes e buscar roles separadamente
       if (data) {
-        const processedData = data.map(profile => ({
-          ...profile,
-          integrante: Array.isArray(profile.integrante) 
-            ? profile.integrante[0] 
-            : profile.integrante,
-          roles: Array.isArray(profile.roles) 
-            ? profile.roles.map((r: any) => r.role)
-            : []
-        }));
-        setProfiles(processedData as Profile[]);
+        const profilesWithRoles = await Promise.all(
+          data.map(async (profile) => {
+            const { data: rolesData } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', profile.id);
+            
+            return {
+              ...profile,
+              integrante: Array.isArray(profile.integrante) 
+                ? profile.integrante[0] 
+                : profile.integrante,
+              roles: rolesData?.map(r => r.role) || []
+            };
+          })
+        );
+        
+        setProfiles(profilesWithRoles as Profile[]);
       }
     } catch (error) {
       console.error('Error fetching profiles:', error);
@@ -452,19 +459,19 @@ const Admin = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Analise">
-                    Em Análise ({filterByStatus('Analise').length})
+                    Em Análise ({filterByStatusAndRole('Analise').length})
                   </SelectItem>
                   <SelectItem value="Ativo">
-                    Ativos ({filterByStatus('Ativo').length})
+                    Ativos ({filterByStatusAndRole('Ativo').length})
                   </SelectItem>
                   <SelectItem value="Pendente">
-                    Pendentes ({filterByStatus('Pendente').length})
+                    Pendentes ({filterByStatusAndRole('Pendente').length})
                   </SelectItem>
                   <SelectItem value="Recusado">
-                    Recusados ({filterByStatus('Recusado').length})
+                    Recusados ({filterByStatusAndRole('Recusado').length})
                   </SelectItem>
                   <SelectItem value="Inativo">
-                    Inativos ({filterByStatus('Inativo').length})
+                    Inativos ({filterByStatusAndRole('Inativo').length})
                   </SelectItem>
                 </SelectContent>
               </Select>

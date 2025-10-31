@@ -104,7 +104,7 @@ async function sendAdminNotification(profileData: any) {
     console.log(`Enviando email para ${adminEmails.length} admins`);
 
     // URL do portal
-    const portalUrl = `https://portal-regional-vp1.lovable.app/admin`;
+    const portalUrl = `https://48ecd9cb-adf8-4eee-8548-c826c493e103.lovableproject.com/admin`;
 
     // Enviar email
     const info = await transporter.sendMail({
