@@ -141,8 +141,15 @@ const Index = () => {
             {/* Cargo */}
             {isLoggedIn && profile?.integrante?.cargo_nome && (
               <p className="text-sm text-muted-foreground mb-1">
-                {profile.integrante.cargo_nome}
-                {profile.integrante.grau && ` (${profile.integrante.grau})`}
+                {removeAccents(profile.integrante.cargo_nome)}
+                {profile.integrante.grau && ` (${removeAccents(profile.integrante.grau)})`}
+              </p>
+            )}
+            
+            {/* Divisão */}
+            {isLoggedIn && profile?.integrante?.divisao_texto && (
+              <p className="text-sm text-muted-foreground mb-1">
+                {removeAccents(profile.integrante.divisao_texto)}
               </p>
             )}
             

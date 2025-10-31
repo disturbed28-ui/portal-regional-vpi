@@ -14,6 +14,7 @@ interface Profile {
     vinculado: boolean;
     cargo_nome: string;
     grau: string;
+    divisao_texto: string;
   } | null;
 }
 
@@ -38,7 +39,8 @@ export const useProfile = (userId: string | undefined) => {
           integrante:integrantes_portal!integrantes_portal_profile_id_fkey(
             vinculado,
             cargo_nome,
-            grau
+            grau,
+            divisao_texto
           )
         `)
         .eq('id', userId)
@@ -96,7 +98,8 @@ export const useProfile = (userId: string | undefined) => {
                 integrante:integrantes_portal!integrantes_portal_profile_id_fkey(
                   vinculado,
                   cargo_nome,
-                  grau
+                  grau,
+                  divisao_texto
                 )
               `)
               .eq('id', userId)
@@ -138,7 +141,8 @@ export const useProfile = (userId: string | undefined) => {
               integrante:integrantes_portal!integrantes_portal_profile_id_fkey(
                 vinculado,
                 cargo_nome,
-                grau
+                grau,
+                divisao_texto
               )
             `)
             .eq('id', userId)
