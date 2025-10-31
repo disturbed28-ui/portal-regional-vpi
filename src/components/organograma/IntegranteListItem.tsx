@@ -1,6 +1,6 @@
 import { Shield, Skull, HardHat, Bike, Swords } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import skullIcon from '@/assets/skull_icon.png';
 
 interface IntegranteListItemProps {
@@ -55,16 +55,19 @@ export const IntegranteListItem = ({
             {badges.map((badge) => {
               const BadgeIcon = badgeConfig[badge].icon;
               return (
-                <Tooltip key={badge}>
-                  <TooltipTrigger asChild>
-                    <div className="p-1 rounded-full bg-primary/10">
+                <Popover key={badge}>
+                  <PopoverTrigger asChild>
+                    <button 
+                      className="p-1 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <BadgeIcon className="w-3 h-3 text-primary" />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{badgeConfig[badge].label}</p>
-                  </TooltipContent>
-                </Tooltip>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent side="top" className="w-auto p-2">
+                    <p className="text-sm">{badgeConfig[badge].label}</p>
+                  </PopoverContent>
+                </Popover>
               );
             })}
           </div>
