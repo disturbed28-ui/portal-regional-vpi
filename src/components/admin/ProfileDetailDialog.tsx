@@ -104,6 +104,7 @@ export function ProfileDetailDialog({
   const [selectedComandoId, setSelectedComandoId] = useState<string>('');
   const [selectedRegionalId, setSelectedRegionalId] = useState<string>('');
   const [selectedGrau, setSelectedGrau] = useState<string>('');
+  const [integranteParaVincular, setIntegranteParaVincular] = useState<string | null>(null);
 
   // Hooks com filtros
   const { comandos } = useComandos();
@@ -240,21 +241,7 @@ export function ProfileDetailDialog({
       console.log('New form data to set:', newFormData);
       console.log('Current formData before update:', formData);
       setFormData(newFormData);
-
-      // Vincular integrante ao perfil
-      const { error: updateIntegranteError } = await supabase
-        .from('integrantes_portal')
-        .update({
-          profile_id: profile?.id,
-          vinculado: true,
-          data_vinculacao: new Date().toISOString(),
-        })
-        .eq('id', integranteSelecionado.id);
-
-      if (updateIntegranteError) {
-        console.error('Error updating integrante:', updateIntegranteError);
-        throw updateIntegranteError;
-      }
+      setIntegranteParaVincular(integranteSelecionado.id);
 
       toast({
         title: "Dados importados",
@@ -315,6 +302,7 @@ export function ProfileDetailDialog({
           body: JSON.stringify({
             admin_user_id: user.uid,
             profile_id: profile.id,
+            integrante_portal_id: integranteParaVincular,
             // Enviar APENAS IDs e campos básicos
             name: formData.name,
             nome_colete: formData.nome_colete,
@@ -341,6 +329,7 @@ export function ProfileDetailDialog({
         description: "As alteracoes foram salvas com sucesso",
       });
 
+      setIntegranteParaVincular(null);
       onOpenChange(false);
       onSuccess();
     } catch (error: any) {

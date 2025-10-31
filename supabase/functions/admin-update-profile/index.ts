@@ -19,6 +19,7 @@ Deno.serve(async (req) => {
     const {
       admin_user_id,
       profile_id,
+      integrante_portal_id,
       name,
       nome_colete,
       comando_id,
@@ -100,6 +101,27 @@ Deno.serve(async (req) => {
     }
 
     console.log('Profile updated successfully:', updatedProfile);
+
+    // Se foi fornecido integrante_portal_id, vincular
+    if (integrante_portal_id) {
+      console.log('Linking integrante_portal:', integrante_portal_id, 'to profile:', profile_id);
+      
+      const { error: linkError } = await supabase
+        .from('integrantes_portal')
+        .update({
+          profile_id: profile_id,
+          vinculado: true,
+          data_vinculacao: new Date().toISOString(),
+        })
+        .eq('id', integrante_portal_id);
+
+      if (linkError) {
+        console.error('Error linking integrante_portal:', linkError);
+        // NÃO retornar erro, apenas logar - o profile já foi atualizado
+      } else {
+        console.log('Integrante linked successfully');
+      }
+    }
 
     return new Response(
       JSON.stringify({ success: true, profile: updatedProfile }),
