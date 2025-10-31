@@ -184,11 +184,31 @@ export const useRelatorioData = (regionalTexto?: string) => {
         }
       });
 
+      // DEBUG: Log para verificar o que está sendo calculado
+      console.log('🔍 Debug devedoresPorDivisao:', {
+        totalMensalidades: mensalidadesData.length,
+        totalIntegrantesAtuais: integrantesAtuais.length,
+        devedoresPorDivisao: Array.from(devedoresPorDivisao.entries()).map(([div, ids]) => ({
+          divisao: div,
+          quantidade: ids.size,
+          ids: Array.from(ids)
+        })),
+        divisoesNoMap: Array.from(divisoesMap.keys())
+      });
+
       // Atualizar contagem de devedores em cada divisão
       devedoresPorDivisao.forEach((devedoresSet, divisao) => {
+        console.log(`🔍 Tentando atualizar divisão "${divisao}":`, {
+          existeNoMap: divisoesMap.has(divisao),
+          quantidade: devedoresSet.size
+        });
+        
         if (divisoesMap.has(divisao)) {
           // .size retorna quantidade de pessoas únicas
           divisoesMap.get(divisao)!.devedores = devedoresSet.size;
+          console.log(`✅ Atualizado: ${divisao} = ${devedoresSet.size} devedores`);
+        } else {
+          console.warn(`❌ DIVISÃO NÃO ENCONTRADA NO MAP: "${divisao}"`);
         }
       });
 

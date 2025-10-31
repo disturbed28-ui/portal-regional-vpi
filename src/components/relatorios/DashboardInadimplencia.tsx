@@ -1,7 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { useMensalidades } from '@/hooks/useMensalidades';
-import { AlertTriangle, TrendingUp, Users, DollarSign } from 'lucide-react';
+import { AlertTriangle, TrendingUp, Users, DollarSign, ChevronDown } from 'lucide-react';
 
 export const DashboardInadimplencia = () => {
   const { ultimaCargaInfo, devedoresAtivos, devedoresCronicos } = useMensalidades();
@@ -120,23 +121,63 @@ export const DashboardInadimplencia = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {Array.from(
-              devedoresAtivos.reduce((acc, d) => {
-                const count = acc.get(d.divisao_texto) || 0;
-                acc.set(d.divisao_texto, count + 1);
+            {(() => {
+              // Agrupar devedores por divisão mantendo os objetos completos
+              const devedoresPorDivisao = devedoresAtivos.reduce((acc, devedor) => {
+                const divisao = devedor.divisao_texto;
+                if (!acc[divisao]) {
+                  acc[divisao] = [];
+                }
+                acc[divisao].push(devedor);
                 return acc;
-              }, new Map<string, number>())
-            )
-              .sort((a, b) => b[1] - a[1])
-              .map(([divisao, count]) => (
-                <div 
-                  key={divisao}
-                  className="flex items-center justify-between p-2 border-l-4 border-orange-500 pl-3"
-                >
-                  <span className="text-sm font-medium">{divisao}</span>
-                  <Badge variant="secondary">{count} {count === 1 ? 'devedor' : 'devedores'}</Badge>
-                </div>
-              ))}
+              }, {} as Record<string, typeof devedoresAtivos>);
+
+              return Object.entries(devedoresPorDivisao)
+                .sort((a, b) => b[1].length - a[1].length)
+                .map(([divisao, devedores]) => (
+                  <Collapsible key={divisao}>
+                    <div className="border rounded-lg overflow-hidden">
+                      <CollapsibleTrigger className="w-full hover:bg-muted/50 transition-colors">
+                        <div className="flex items-center justify-between p-3 border-l-4 border-orange-500">
+                          <div className="flex items-center gap-2">
+                            <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
+                            <span className="text-sm font-medium">{divisao}</span>
+                          </div>
+                          <Badge variant="secondary">
+                            {devedores.length} {devedores.length === 1 ? 'devedor' : 'devedores'}
+                          </Badge>
+                        </div>
+                      </CollapsibleTrigger>
+                      
+                      <CollapsibleContent>
+                        <div className="px-4 py-3 space-y-2 bg-muted/20 border-t">
+                          {devedores.map((devedor) => (
+                            <div 
+                              key={devedor.registro_id} 
+                              className="flex items-center justify-between p-2 bg-background rounded border"
+                            >
+                              <div className="flex flex-col">
+                                <span className="font-medium">{devedor.nome_colete}</span>
+                                <span className="font-mono text-xs text-muted-foreground">
+                                  ID: {devedor.registro_id}
+                                </span>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-sm font-semibold text-red-600">
+                                  R$ {devedor.total_devido?.toFixed(2)}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {devedor.meses_devendo} {devedor.meses_devendo === 1 ? 'mês' : 'meses'}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CollapsibleContent>
+                    </div>
+                  </Collapsible>
+                ));
+            })()}
             {devedoresAtivos.length === 0 && (
               <p className="text-center text-muted-foreground py-8">
                 Nenhum devedor ativo no momento
