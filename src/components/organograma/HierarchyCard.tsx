@@ -1,4 +1,4 @@
-import { Shield, Skull, HardHat, Siren, Swords } from 'lucide-react';
+import { Shield, Skull, HardHat, Bike, Swords } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import skullIcon from '@/assets/skull_icon.png';
@@ -16,7 +16,7 @@ const badgeConfig = {
   sgt_armas: { icon: Shield, label: 'Sargento de Armas' },
   caveira: { icon: Skull, label: 'Caveira' },
   caveira_suplente: { icon: HardHat, label: 'Caveira Suplente' },
-  batedor: { icon: Siren, label: 'Batedor' },
+  batedor: { icon: Bike, label: 'Batedor' },
   combate_insano: { icon: Swords, label: 'Combate Insano' }
 };
 
