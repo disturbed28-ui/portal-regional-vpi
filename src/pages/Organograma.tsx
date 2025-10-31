@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useOrganogramaData } from '@/hooks/useOrganogramaData';
@@ -7,6 +8,7 @@ import { HierarchyCard } from '@/components/organograma/HierarchyCard';
 import { IntegranteListItem } from '@/components/organograma/IntegranteListItem';
 import { BreadcrumbOrganograma } from '@/components/organograma/BreadcrumbOrganograma';
 import { DivisaoGrid } from '@/components/organograma/DivisaoGrid';
+import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import type { IntegranteComFoto } from '@/hooks/useOrganogramaData';
@@ -36,25 +38,28 @@ const Organograma = () => {
 
   const [regionalUsuario, setRegionalUsuario] = useState<string | null>(null);
 
-  // Buscar regional do integrante
+  // Validar acesso e buscar regional do integrante
   useEffect(() => {
-    if (!profile?.id) return;
+    if (!user?.uid) return;
 
-    const fetchRegional = async () => {
-      const { data } = await supabase
+    const validateAccess = async () => {
+      const { data, error } = await supabase
         .from('integrantes_portal')
-        .select('regional_texto')
-        .eq('profile_id', profile.id)
-        .eq('ativo', true)
-        .single();
+        .select('ativo, vinculado, regional_texto')
+        .eq('profile_id', user.uid)
+        .maybeSingle();
       
-      if (data) {
-        setRegionalUsuario(data.regional_texto);
+      if (error || !data || !data.ativo) {
+        toast.error('Acesso negado: apenas integrantes ativos podem acessar');
+        navigate('/');
+        return;
       }
+      
+      setRegionalUsuario(data.regional_texto);
     };
 
-    fetchRegional();
-  }, [profile?.id]);
+    validateAccess();
+  }, [user?.uid, navigate]);
   
   const {
     hierarquiaRegional,
@@ -65,16 +70,6 @@ const Organograma = () => {
     integrantesPorDivisao,
     loading: dataLoading
   } = useOrganogramaData(regionalUsuario);
-
-  useEffect(() => {
-    if (!profileLoading && profile) {
-      const integrante = profile.integrante;
-      if (!integrante || !integrante.vinculado) {
-        toast.error('Acesso negado: apenas integrantes ativos e vinculados');
-        navigate('/');
-      }
-    }
-  }, [profile, profileLoading, navigate]);
 
   const navegarParaLista = (tipo: TipoLista) => {
     if (tipo === 'adms' && admsDivisao.length === 0) {
@@ -145,6 +140,17 @@ const Organograma = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <div className="mb-4">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate('/')}
+            className="gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Voltar ao Menu
+          </Button>
+        </div>
+
         <BreadcrumbOrganograma
           nivel={nivel}
           regionalNome={regionalUsuario}

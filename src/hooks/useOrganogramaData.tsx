@@ -98,14 +98,16 @@ export const useOrganogramaData = (regionalUsuario: string | null) => {
 
         // 4. Ordenar integrantes
         const ordenarIntegrantes = (a: IntegranteComFoto, b: IntegranteComFoto) => {
-          // Por cargo
-          const ordemCargos: Record<string, number> = {
-            'Diretor': 1,
-            'Subdiretor': 2,
-            'Social': 3,
-            'ADM': 4,
-            'Sargento de Armas': 5
-          };
+        // Por cargo
+        const ordemCargos: Record<string, number> = {
+          'Diretor Divisão': 1,
+          'Sub Diretor Divisão': 2,
+          'Social Divisão': 3,
+          'Adm. Divisão': 4,
+          'Sgt.Armas Divisão': 5,
+          'Sgt Armas Full': 6,
+          'Sgt Armas PP': 7
+        };
           const cargoA = ordemCargos[a.cargo_nome || ''] || 99;
           const cargoB = ordemCargos[b.cargo_nome || ''] || 99;
           if (cargoA !== cargoB) return cargoA - cargoB;
@@ -126,24 +128,24 @@ export const useOrganogramaData = (regionalUsuario: string | null) => {
           diretor_regional: integrantesComFoto.find(i => i.cargo_nome === 'Diretor Regional') || null,
           operacional_regional: integrantesComFoto.find(i => i.cargo_nome === 'Operacional Regional') || null,
           social_regional: integrantesComFoto.find(i => i.cargo_nome === 'Social Regional') || null,
-          adm_regional: integrantesComFoto.find(i => i.cargo_nome === 'ADM Regional') || null,
-          comunicacao_regional: integrantesComFoto.find(i => i.cargo_nome === 'Comunicação Regional') || null,
+          adm_regional: integrantesComFoto.find(i => i.cargo_nome === 'Adm. Regional') || null,
+          comunicacao_regional: integrantesComFoto.find(i => i.cargo_nome === 'Comunicação') || null,
         };
 
         const diretores = integrantesComFoto
-          .filter(i => i.cargo_nome === 'Diretor')
+          .filter(i => i.cargo_nome === 'Diretor Divisão')
           .sort(ordenarIntegrantes);
 
         const subs = integrantesComFoto
-          .filter(i => i.cargo_nome === 'Subdiretor')
+          .filter(i => i.cargo_nome === 'Sub Diretor Divisão')
           .sort(ordenarIntegrantes);
 
         const sociais = integrantesComFoto
-          .filter(i => i.cargo_nome === 'Social')
+          .filter(i => i.cargo_nome === 'Social Divisão')
           .sort(ordenarIntegrantes);
 
         const adms = integrantesComFoto
-          .filter(i => i.cargo_nome === 'ADM')
+          .filter(i => i.cargo_nome === 'Adm. Divisão')
           .sort(ordenarIntegrantes);
 
         // 6. Agrupar integrantes por divisão
