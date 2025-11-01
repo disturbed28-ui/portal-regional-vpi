@@ -1,48 +1,20 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useUserRole } from "@/hooks/useUserRole";
 
 export const useCanManagePresenca = () => {
-  const [canManage, setCanManage] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | undefined>(undefined);
+  const { roles, loading } = useUserRole(userId);
 
   useEffect(() => {
-    checkPermissions();
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id);
+    };
+    getUser();
   }, []);
 
-  const checkPermissions = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      setCanManage(false);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('integrantes_portal')
-        .select('cargo_nome, grau')
-        .eq('profile_id', user.id)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Erro ao verificar permissões:', error);
-        setCanManage(false);
-      } else if (data) {
-        const isDiretor = data.cargo_nome === 'Diretor de Divisao' || 
-                         data.cargo_nome === 'Sub Diretor de Divisao';
-        const isGrauV = data.grau === 'V';
-        setCanManage(isDiretor || isGrauV);
-      } else {
-        setCanManage(false);
-      }
-    } catch (error) {
-      console.error('Erro ao verificar permissões:', error);
-      setCanManage(false);
-    }
-
-    setLoading(false);
-  };
+  const canManage = roles.includes('admin') || roles.includes('moderator');
 
   return { canManage, loading };
 };
