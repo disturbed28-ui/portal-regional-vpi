@@ -98,15 +98,18 @@ function detectDivision(title: string): string {
     addDivisao("Divisao Sao Jose dos Campos Extremo Norte - SP");
   }
   
-  // Padrões São José dos Campos
-  if (lower.includes("norte sjc") && !lower.includes("ext.norte")) {
-    addDivisao("Divisao Sao Jose dos Campos Norte - SP");
+  // Padrões São José dos Campos - várias variações
+  if (lower.includes("sjc centro") || lower.includes("sjc.centro") || lower.includes("div. sjc centro") || lower.includes("div.sjc centro") || lower.includes("divesjc centro") || lower.includes("divsjc centro") || lower.includes("centro sjc")) {
+    addDivisao("Divisao Sao Jose dos Campos Centro - SP");
   }
-  if (lower.includes("div.leste") || lower.includes("div leste") || lower.includes("diveleste") || lower.includes("leste sjc")) {
+  if (lower.includes("sjc leste") || lower.includes("sjc.leste") || lower.includes("div. sjc leste") || lower.includes("div.leste") || lower.includes("div leste") || lower.includes("diveleste") || lower.includes("leste sjc")) {
     addDivisao("Divisao Sao Jose dos Campos Leste - SP");
   }
-  if (lower.includes("divesjc centro") || lower.includes("divsjc centro") || lower.includes("centro sjc")) {
-    addDivisao("Divisao Sao Jose dos Campos Centro - SP");
+  if (lower.includes("sjc norte") || lower.includes("sjc.norte") || lower.includes("norte sjc") && !lower.includes("ext")) {
+    addDivisao("Divisao Sao Jose dos Campos Norte - SP");
+  }
+  if (lower.includes("sjc sul") || lower.includes("sjc.sul") || lower.includes("sul sjc") && !lower.includes("ext")) {
+    addDivisao("Divisao Sao Jose dos Campos Sul - SP");
   }
   
   // Caçapava
@@ -115,22 +118,22 @@ function detectDivision(title: string): string {
   }
   
   // Jacareí com suas divisões
-  if (lower.includes("jacarei sul") || lower.includes("jac sul")) {
+  if (lower.includes("jacarei sul") || lower.includes("jac sul") || lower.includes("jac. sul")) {
     addDivisao("Divisao Jacarei Sul - SP");
   }
-  if (lower.includes("jacarei norte") || lower.includes("jac norte")) {
+  if (lower.includes("jacarei norte") || lower.includes("jac norte") || lower.includes("jac. norte")) {
     addDivisao("Divisao Jacarei Norte - SP");
   }
-  if (lower.includes("jacarei leste") || lower.includes("jac leste")) {
+  if (lower.includes("jacarei leste") || lower.includes("jac leste") || lower.includes("jac. leste")) {
     addDivisao("Divisao Jacarei Leste - SP");
   }
-  if (lower.includes("jacarei oeste") || lower.includes("jac oeste")) {
+  if (lower.includes("jacarei oeste") || lower.includes("jac oeste") || lower.includes("jac. oeste")) {
     addDivisao("Divisao Jacarei Oeste - SP");
   }
-  if (lower.includes("jacarei centro") || lower.includes("jac centro")) {
+  if (lower.includes("jacarei centro") || lower.includes("jac centro") || lower.includes("jac. centro")) {
     addDivisao("Divisao Jacarei Centro - SP");
   }
-  if (lower.includes("jacarei") || lower.includes("jac")) {
+  if ((lower.includes("jacarei") || lower.includes("jac ")) && divisoes.length === 0) {
     addDivisao("Divisao Jacarei - SP");
   }
   
