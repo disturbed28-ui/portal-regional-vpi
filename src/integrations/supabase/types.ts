@@ -343,7 +343,6 @@ export type Database = {
           data_entrada: string | null
           data_vinculacao: string | null
           divisao_texto: string
-          firebase_uid: string | null
           grau: string | null
           id: string
           lobo: boolean | null
@@ -373,7 +372,6 @@ export type Database = {
           data_entrada?: string | null
           data_vinculacao?: string | null
           divisao_texto: string
-          firebase_uid?: string | null
           grau?: string | null
           id?: string
           lobo?: boolean | null
@@ -403,7 +401,6 @@ export type Database = {
           data_entrada?: string | null
           data_vinculacao?: string | null
           divisao_texto?: string
-          firebase_uid?: string | null
           grau?: string | null
           id?: string
           lobo?: boolean | null
