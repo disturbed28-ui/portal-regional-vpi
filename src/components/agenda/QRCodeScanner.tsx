@@ -20,20 +20,34 @@ export function QRCodeScanner({ open, onOpenChange, onScan }: QRCodeScannerProps
 
   useEffect(() => {
     if (open) {
-      startScanning();
+      // Aguardar o DOM estar pronto antes de iniciar o scanner
+      const timer = setTimeout(() => {
+        startScanning();
+      }, 100);
+      return () => clearTimeout(timer);
     } else {
       stopScanning();
     }
-
-    return () => {
-      stopScanning();
-    };
   }, [open]);
 
   const startScanning = async () => {
     setLoading(true);
     try {
       console.log("[QRCodeScanner] Iniciando scanner de QR Code...");
+      
+      // Verificar se o elemento existe
+      const element = document.getElementById(scannerId);
+      if (!element) {
+        console.error("[QRCodeScanner] Elemento não encontrado, tentando novamente...");
+        setTimeout(startScanning, 200);
+        return;
+      }
+      
+      // Verificar se já existe um scanner ativo
+      if (scannerRef.current) {
+        console.log("[QRCodeScanner] Scanner já existe, limpando...");
+        await stopScanning();
+      }
       
       scannerRef.current = new Html5Qrcode(scannerId);
       
@@ -67,7 +81,7 @@ export function QRCodeScanner({ open, onOpenChange, onScan }: QRCodeScannerProps
       if (error instanceof Error) {
         if (error.message.includes("NotAllowedError") || error.message.includes("Permission")) {
           errorMessage = "Permissão de câmera negada. Por favor, permita o acesso à câmera nas configurações do navegador.";
-        } else if (error.message.includes("NotFoundError")) {
+        } else if (error.message.includes("NotFoundError") || error.message.includes("not found")) {
           errorMessage = "Nenhuma câmera encontrada no dispositivo.";
         } else if (error.message.includes("NotReadableError")) {
           errorMessage = "Câmera já está em uso por outro aplicativo.";
