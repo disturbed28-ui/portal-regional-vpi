@@ -142,37 +142,47 @@ serve(async (req) => {
       console.log('Auth user metadata updated');
     }
 
-    // Generate session token using Supabase UUID
+    // Generate recovery link (includes tokens in hash fragment)
     const { data: sessionData, error: sessionError } = await supabase.auth.admin.generateLink({
-      type: 'magiclink',
-      email: `firebase_${supabaseUid}@placeholder.local`,
-      options: {
-        redirectTo: `${supabaseUrl}/auth/v1/callback`
-      }
+      type: 'recovery',
+      email: `firebase_${supabaseUid}@placeholder.local`
     });
 
-    if (sessionError) {
-      console.error('Error generating auth link:', sessionError);
+    if (sessionError || !sessionData) {
+      console.error('Error generating recovery link:', sessionError);
       return new Response(
-        JSON.stringify({ error: 'Failed to generate session', details: sessionError }),
+        JSON.stringify({ error: 'Failed to generate recovery link', details: sessionError }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Auth link generated successfully');
+    console.log('Recovery link generated successfully');
 
-    // Extract tokens from the URL
-    const urlParams = new URL(sessionData.properties.action_link).searchParams;
-    const access_token = urlParams.get('access_token');
-    const refresh_token = urlParams.get('refresh_token');
+    // Extract tokens from hash fragment (#access_token=...&refresh_token=...)
+    const actionLink = sessionData.properties.action_link;
+    const hashMatch = actionLink.match(/#(.+)$/);
+    
+    if (!hashMatch) {
+      console.error('Failed to extract hash from recovery link');
+      return new Response(
+        JSON.stringify({ error: 'Failed to extract hash from recovery link' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const hashParams = new URLSearchParams(hashMatch[1]);
+    const access_token = hashParams.get('access_token');
+    const refresh_token = hashParams.get('refresh_token');
 
     if (!access_token || !refresh_token) {
-      console.error('Tokens not found in auth link');
+      console.error('Tokens not found in recovery link hash');
       return new Response(
-        JSON.stringify({ error: 'Failed to extract tokens from auth link' }),
+        JSON.stringify({ error: 'Failed to extract tokens from hash' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log('Tokens extracted successfully from hash');
 
     if (!existingProfile) {
       // Create new profile
