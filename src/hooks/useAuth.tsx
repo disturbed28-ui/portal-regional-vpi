@@ -26,7 +26,7 @@ export const useAuth = () => {
         setLoading(false);
 
         if (event === 'SIGNED_IN' && session?.user) {
-          // Chamar edge function de migração para vincular perfis antigos
+          // Chamar edge function para criar/atualizar perfil
           setTimeout(async () => {
             try {
               const { data, error } = await supabase.functions.invoke('migrate-user-on-login', {
@@ -39,23 +39,23 @@ export const useAuth = () => {
               });
 
               if (error) {
-                console.error('[useAuth] Error migrating user:', error);
+                console.error('[useAuth] Error creating profile:', error);
+                toast({
+                  title: "Erro ao criar perfil",
+                  description: "Tente novamente ou contate o administrador.",
+                  variant: "destructive",
+                });
               } else {
-                console.log('[useAuth] Migration result:', data);
+                console.log('[useAuth] Profile creation result:', data);
                 
-                // Mostrar toast apropriado
+                // Mostrar toast de boas-vindas
                 const hasShownWelcomeToast = sessionStorage.getItem('welcome_toast_shown');
                 
                 if (!hasShownWelcomeToast) {
-                  if (data?.migrated) {
+                  if (data?.new_user) {
                     toast({
-                      title: "Bem-vindo de volta!",
-                      description: "Seu perfil foi migrado com sucesso.",
-                    });
-                  } else if (data?.new_user) {
-                    toast({
-                      title: "Conectado com sucesso!",
-                      description: "Bem-vindo ao Portal Regional",
+                      title: "Bem-vindo!",
+                      description: "Seu perfil foi criado com sucesso.",
                     });
                   } else {
                     toast({
@@ -67,7 +67,12 @@ export const useAuth = () => {
                 }
               }
             } catch (error: any) {
-              console.error('[useAuth] Failed to migrate user:', error);
+              console.error('[useAuth] Failed to create profile:', error);
+              toast({
+                title: "Erro ao criar perfil",
+                description: "Tente novamente ou contate o administrador.",
+                variant: "destructive",
+              });
             }
           }, 500);
         } else if (event === 'SIGNED_OUT') {

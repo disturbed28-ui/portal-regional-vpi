@@ -11,7 +11,6 @@ export interface IntegrantePortal {
   cargo_grau_texto: string;
   cargo_nome: string | null;
   grau: string | null;
-  firebase_uid: string | null;
   profile_id: string | null;
   vinculado: boolean;
   data_vinculacao: string | null;
@@ -29,6 +28,7 @@ export interface IntegrantePortal {
   tem_moto: boolean;
   tem_carro: boolean;
   data_entrada: string | null;
+  combate_insano: boolean;
 }
 
 interface UseIntegrantesOptions {
