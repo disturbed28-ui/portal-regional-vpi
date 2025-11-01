@@ -70,8 +70,16 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
   const getDivisaoIdFromEvent = async (event: CalendarEvent): Promise<string | null> => {
     if (!event.division) return null;
 
-    // Buscar usando normalização para lidar com diferenças de acentuação
-    const divisaoNormalizada = removeAccents(event.division.toLowerCase());
+    // Normalizar e extrair palavras-chave do evento
+    const normalizeText = (text: string) => {
+      return removeAccents(text)
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim();
+    };
+
+    const divisaoEventoNormalizada = normalizeText(event.division);
+    console.log('[getDivisaoIdFromEvent] Buscando divisão para:', event.division, '-> normalizada:', divisaoEventoNormalizada);
     
     const { data: allDivisoes } = await supabase
       .from('divisoes')
@@ -79,13 +87,28 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     
     if (!allDivisoes) return null;
     
-    // Filtrar no cliente com normalização
+    // Extrair palavras-chave principais (remover palavras comuns)
+    const palavrasChave = divisaoEventoNormalizada
+      .split(' ')
+      .filter(p => !['divisao', 'div', 'sp', '-', 'de', 'do', 'da', 'dos'].includes(p) && p.length > 2);
+    
+    console.log('[getDivisaoIdFromEvent] Palavras-chave:', palavrasChave);
+    
+    // Encontrar melhor match
     const divisaoEncontrada = allDivisoes.find(d => {
-      const nomeNormalizado = removeAccents(d.nome.toLowerCase());
-      return nomeNormalizado.includes(divisaoNormalizada) || 
-             divisaoNormalizada.includes(nomeNormalizado);
+      const nomeNormalizado = normalizeText(d.nome);
+      
+      // Verificar se todas as palavras-chave do evento estão no nome da divisão
+      const todasPalavrasPresentes = palavrasChave.every(palavra => 
+        nomeNormalizado.includes(palavra)
+      );
+      
+      console.log('[getDivisaoIdFromEvent] Comparando com:', d.nome, '-> normalizado:', nomeNormalizado, '-> match:', todasPalavrasPresentes);
+      
+      return todasPalavrasPresentes;
     });
 
+    console.log('[getDivisaoIdFromEvent] Divisão encontrada:', divisaoEncontrada);
     return divisaoEncontrada?.id || null;
   };
 
