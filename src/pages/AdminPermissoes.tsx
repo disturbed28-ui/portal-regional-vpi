@@ -1,9 +1,11 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useScreenPermissions } from "@/hooks/useScreenPermissions";
-import { Shield, Loader2 } from "lucide-react";
+import { Shield, Loader2, RefreshCw } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useState } from "react";
 
 const ROLES = [
   { value: 'admin' as const, label: 'Admin', color: 'bg-red-500' },
@@ -13,7 +15,14 @@ const ROLES = [
 ];
 
 export default function AdminPermissoes() {
-  const { screens, loading, togglePermission, hasPermission } = useScreenPermissions();
+  const { screens, loading, togglePermission, hasPermission, isOperationLoading, refetch } = useScreenPermissions();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  };
 
   if (loading) {
     return (
@@ -25,14 +34,25 @@ export default function AdminPermissoes() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center gap-3">
-        <Shield className="h-8 w-8 text-primary" />
-        <div>
-          <h1 className="text-3xl font-bold">Gerenciamento de Permissões</h1>
-          <p className="text-muted-foreground">
-            Controle quais perfis têm acesso a cada tela do sistema
-          </p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Shield className="h-8 w-8 text-primary" />
+          <div>
+            <h1 className="text-3xl font-bold">Gerenciamento de Permissões</h1>
+            <p className="text-muted-foreground">
+              Controle quais perfis têm acesso a cada tela do sistema
+            </p>
+          </div>
         </div>
+        <Button 
+          onClick={handleRefresh} 
+          disabled={refreshing}
+          variant="outline"
+          size="sm"
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+          Recarregar
+        </Button>
       </div>
 
       <Card>
@@ -75,11 +95,23 @@ export default function AdminPermissoes() {
                     </TableCell>
                     {ROLES.map(role => (
                       <TableCell key={role.value} className="text-center">
-                        <div className="flex justify-center">
-                          <Checkbox
-                            checked={hasPermission(screen.id, role.value)}
-                            onCheckedChange={() => togglePermission(screen.id, role.value)}
-                          />
+                        <div className="flex justify-center items-center gap-2">
+                          {isOperationLoading(screen.id, role.value) ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                          ) : (
+                            <Checkbox
+                              checked={hasPermission(screen.id, role.value)}
+                              onCheckedChange={() => {
+                                console.log('[AdminPermissoes] Checkbox clicado:', {
+                                  screen: screen.nome,
+                                  role: role.value,
+                                  currentState: hasPermission(screen.id, role.value)
+                                });
+                                togglePermission(screen.id, role.value);
+                              }}
+                              disabled={isOperationLoading(screen.id, role.value)}
+                            />
+                          )}
                         </div>
                       </TableCell>
                     ))}

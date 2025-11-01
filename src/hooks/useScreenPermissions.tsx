@@ -24,6 +24,7 @@ export const useScreenPermissions = () => {
   const [screens, setScreens] = useState<SystemScreen[]>([]);
   const [permissions, setPermissions] = useState<ScreenPermission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [operationLoading, setOperationLoading] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -66,11 +67,29 @@ export const useScreenPermissions = () => {
   };
 
   const togglePermission = async (screenId: string, role: AppRole) => {
+    const operationKey = `${screenId}-${role}`;
+    console.log('[useScreenPermissions] Iniciando togglePermission:', { screenId, role, operationKey });
+    
+    setOperationLoading(operationKey);
+
     const existing = permissions.find(
       p => p.screen_id === screenId && p.role === role
     );
 
+    const screen = screens.find(s => s.id === screenId);
+    const screenName = screen?.nome || 'Tela';
+
+    console.log('[useScreenPermissions] Estado atual:', { 
+      existing: !!existing, 
+      permissionId: existing?.id,
+      screenName 
+    });
+
     if (existing) {
+      // Atualização otimista - remove da UI primeiro
+      console.log('[useScreenPermissions] Removendo permissão (otimista)...');
+      setPermissions(prev => prev.filter(p => p.id !== existing.id));
+
       // Remover permissão
       const { error } = await supabase
         .from('screen_permissions')
@@ -78,52 +97,78 @@ export const useScreenPermissions = () => {
         .eq('id', existing.id);
 
       if (error) {
-        console.error('Erro ao remover permissão:', error);
+        console.error('[useScreenPermissions] ERRO ao remover permissão:', error);
+        // Reverter atualização otimista
+        setPermissions(prev => [...prev, existing]);
         toast({
-          title: "Erro",
-          description: "Não foi possível remover a permissão",
+          title: "Erro ao remover",
+          description: `${screenName} - ${role}: ${error.message}`,
           variant: "destructive",
         });
       } else {
+        console.log('[useScreenPermissions] Permissão removida com sucesso');
         toast({
-          title: "Sucesso",
-          description: "Permissão removida",
+          title: "Permissão removida",
+          description: `${screenName} - ${role}`,
         });
         fetchData();
       }
     } else {
+      // Atualização otimista - adiciona na UI primeiro
+      const newPermission: ScreenPermission = {
+        id: `temp-${Date.now()}`,
+        screen_id: screenId,
+        role: role,
+      };
+      console.log('[useScreenPermissions] Adicionando permissão (otimista)...', newPermission);
+      setPermissions(prev => [...prev, newPermission]);
+
       // Adicionar permissão
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('screen_permissions')
-        .insert({ screen_id: screenId, role });
+        .insert({ screen_id: screenId, role })
+        .select()
+        .single();
 
       if (error) {
-        console.error('Erro ao adicionar permissão:', error);
+        console.error('[useScreenPermissions] ERRO ao adicionar permissão:', error);
+        // Reverter atualização otimista
+        setPermissions(prev => prev.filter(p => p.id !== newPermission.id));
         toast({
-          title: "Erro",
-          description: "Não foi possível adicionar a permissão",
+          title: "Erro ao adicionar",
+          description: `${screenName} - ${role}: ${error.message}`,
           variant: "destructive",
         });
       } else {
+        console.log('[useScreenPermissions] Permissão adicionada com sucesso:', data);
         toast({
-          title: "Sucesso",
-          description: "Permissão adicionada",
+          title: "Permissão adicionada",
+          description: `${screenName} - ${role}`,
         });
         fetchData();
       }
     }
+
+    setOperationLoading(null);
+    console.log('[useScreenPermissions] togglePermission finalizado');
   };
 
   const hasPermission = (screenId: string, role: AppRole): boolean => {
     return permissions.some(p => p.screen_id === screenId && p.role === role);
   };
 
+  const isOperationLoading = (screenId: string, role: AppRole): boolean => {
+    return operationLoading === `${screenId}-${role}`;
+  };
+
   return {
     screens,
     permissions,
     loading,
+    operationLoading,
     togglePermission,
     hasPermission,
+    isOperationLoading,
     refetch: fetchData,
   };
 };
