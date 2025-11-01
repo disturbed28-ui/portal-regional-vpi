@@ -67,10 +67,10 @@ function detectEventType(title: string): string {
   const lower = title.toLowerCase();
   
   if (lower.includes("pub")) return "Pub";
-  if (lower.includes("acao social")) return "Acao Social";
+  if (lower.includes("acao social") || lower.includes("arrecadacao")) return "Acao Social";
   if (lower.includes("reuniao")) return "Reuniao";
-  if (lower.includes("arrecadacao")) return "Arrecadacao";
   if (lower.includes("bonde")) return "Bonde";
+  if (lower.includes("bate e volta")) return "Bate e Volta";
   if (lower.includes("treino")) return "Treino";
   
   return "Outros";
@@ -79,24 +79,31 @@ function detectEventType(title: string): string {
 function detectDivision(title: string): string {
   const lower = title.toLowerCase();
   
-  // Mapeamento de códigos para divisões
-  if (lower.includes("cacapava") || lower.includes("caçapava")) {
-    return "Divisao Cacapava - SP";
-  }
-  if (lower.includes("estsul")) {
+  // Mapeamento de códigos para divisões - Padrões "ext" (extremo)
+  if (lower.includes("ext sul") || lower.includes("ext.sul") || lower.includes("estsul")) {
     return "Divisao Sao Jose dos Campos Extremo Sul - SP";
   }
-  if (lower.includes("estleste")) {
+  if (lower.includes("ext leste") || lower.includes("ext.leste") || lower.includes("estleste")) {
     return "Divisao Sao Jose dos Campos Extremo Leste - SP";
   }
-  if (lower.includes("estnorte")) {
+  if (lower.includes("ext norte") || lower.includes("ext.norte") || lower.includes("estnorte")) {
     return "Divisao Sao Jose dos Campos Extremo Norte - SP";
   }
-  if (lower.includes("diveleste") || lower.includes("div leste")) {
+  
+  // Padrões São José dos Campos
+  if (lower.includes("norte sjc")) {
+    return "Divisao Sao Jose dos Campos Norte - SP";
+  }
+  if (lower.includes("diveleste") || lower.includes("div leste") || lower.includes("leste sjc")) {
     return "Divisao Sao Jose dos Campos Leste - SP";
   }
-  if (lower.includes("divesjc centro") || lower.includes("divsjc centro")) {
+  if (lower.includes("divesjc centro") || lower.includes("divsjc centro") || lower.includes("centro sjc")) {
     return "Divisao Sao Jose dos Campos Centro - SP";
+  }
+  
+  // Caçapava
+  if (lower.includes("cacapava") || lower.includes("caçapava")) {
+    return "Divisao Cacapava - SP";
   }
   
   // Jacareí com suas divisões
