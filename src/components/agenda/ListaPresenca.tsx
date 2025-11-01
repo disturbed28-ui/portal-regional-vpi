@@ -175,7 +175,15 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
   
   // Separar presentes e ausentes
   const presencasIds = new Set(presencas.map(p => p.integrante_id));
-  const presentes = integrantesDivisao.filter(i => presencasIds.has(i.id));
+  const integrantesDivisaoIds = new Set(integrantesDivisao.map(i => i.id));
+  
+  // Mapear todas as presenças com informação se é visitante
+  const todosPresentes = presencas.map(p => ({
+    ...p.integrante,
+    presencaId: p.id,
+    isVisitante: !integrantesDivisaoIds.has(p.integrante_id)
+  }));
+  
   const ausentes = integrantesDivisao.filter(i => !presencasIds.has(i.id));
 
   return (
@@ -211,7 +219,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
             {/* Contador */}
             <div className="flex items-center justify-center gap-6 p-4 bg-muted rounded-lg">
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{presentes.length}</div>
+                <div className="text-2xl font-bold text-green-600">{todosPresentes.length}</div>
                 <div className="text-sm text-muted-foreground">Presentes</div>
               </div>
               <div className="h-8 w-px bg-border" />
@@ -222,7 +230,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
               <div className="h-8 w-px bg-border" />
               <div className="text-center">
                 <div className="text-2xl font-bold">{integrantesDivisao.length}</div>
-                <div className="text-sm text-muted-foreground">Total</div>
+                <div className="text-sm text-muted-foreground">Total da Divisão</div>
               </div>
             </div>
 
@@ -250,26 +258,42 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
             )}
 
             {/* Lista de Presentes */}
-            {presentes.length > 0 && (
+            {todosPresentes.length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <h3 className="font-semibold text-lg text-green-600">Presentes</h3>
-                  <Badge className="bg-green-600">{presentes.length}</Badge>
+                  <Badge className="bg-green-600">{todosPresentes.length}</Badge>
                 </div>
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nome</TableHead>
+                      <TableHead>Divisão</TableHead>
                       <TableHead>Cargo</TableHead>
                       <TableHead>Grau</TableHead>
                       {canManage && <TableHead className="w-[120px]">Ações</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {presentes.map((integrante) => {
+                    {todosPresentes.map((integrante) => {
                       return (
-                        <TableRow key={integrante.id} className="bg-green-50 dark:bg-green-950/20">
-                          <TableCell className="font-medium">{integrante.nome_colete}</TableCell>
+                        <TableRow 
+                          key={integrante.id} 
+                          className={integrante.isVisitante ? "bg-blue-50 dark:bg-blue-950/20" : "bg-green-50 dark:bg-green-950/20"}
+                        >
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              {integrante.nome_colete}
+                              {integrante.isVisitante && (
+                                <Badge variant="outline" className="text-blue-600 border-blue-600">
+                                  Visitante
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {integrante.divisao_texto}
+                          </TableCell>
                           <TableCell>{integrante.cargo_nome || '-'}</TableCell>
                           <TableCell>{integrante.grau || '-'}</TableCell>
                           {canManage && (
