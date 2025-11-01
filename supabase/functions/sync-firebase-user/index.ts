@@ -53,34 +53,31 @@ serve(async (req) => {
 
     console.log('Existing profile:', existingProfile);
 
-    // Create or update Supabase Auth user
+    // Step 1: Check for existing Firebase UID → Supabase UUID mapping
+    const { data: mapping, error: mappingError } = await supabase
+      .from('firebase_auth_mapping')
+      .select('supabase_uid')
+      .eq('firebase_uid', uid)
+      .maybeSingle();
+
+    if (mappingError) {
+      console.error('Error checking mapping:', mappingError);
+    }
+
+    console.log('Existing mapping:', mapping);
+
+    let supabaseUid: string;
     let supabaseAuthUser;
-    
-    try {
-      // Try to get existing auth user
-      const { data: authData } = await supabase.auth.admin.getUserById(uid);
+
+    if (!mapping) {
+      console.log('No mapping found, creating new Supabase Auth user...');
       
-      if (authData?.user) {
-        console.log('Auth user exists, updating...');
-        supabaseAuthUser = authData.user;
-        
-        // Update metadata if needed
-        await supabase.auth.admin.updateUserById(uid, {
-          user_metadata: {
-            name: displayName || 'Visitante',
-            avatar_url: photoURL || ''
-          }
-        });
-      }
-    } catch (authError) {
-      console.log('Auth user not found, creating new one...');
-      
-      // Create new auth user with Firebase UID
+      // Create new Supabase Auth user WITHOUT specifying ID (let Supabase auto-generate UUID)
       const { data: createData, error: createError } = await supabase.auth.admin.createUser({
-        id: uid,
-        email: `firebase_${uid}@placeholder.local`, // Placeholder email
+        email: `firebase_${uid}@placeholder.local`,
         email_confirm: true,
         user_metadata: {
+          firebase_uid: uid,
           name: displayName || 'Visitante',
           avatar_url: photoURL || '',
           provider: 'firebase'
@@ -96,13 +93,59 @@ serve(async (req) => {
       }
 
       supabaseAuthUser = createData.user;
-      console.log('Auth user created successfully');
+      supabaseUid = createData.user.id;
+      console.log('Auth user created with Supabase UUID:', supabaseUid);
+
+      // Save mapping Firebase UID → Supabase UUID
+      const { error: insertMappingError } = await supabase
+        .from('firebase_auth_mapping')
+        .insert({
+          firebase_uid: uid,
+          supabase_uid: supabaseUid
+        });
+
+      if (insertMappingError) {
+        console.error('Error saving mapping:', insertMappingError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to save mapping', details: insertMappingError }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log('Mapping saved successfully');
+    } else {
+      console.log('Mapping found, using existing Supabase UUID:', mapping.supabase_uid);
+      supabaseUid = mapping.supabase_uid;
+
+      // Get existing auth user
+      const { data: authData, error: authError } = await supabase.auth.admin.getUserById(supabaseUid);
+      
+      if (authError || !authData?.user) {
+        console.error('Error getting auth user:', authError);
+        return new Response(
+          JSON.stringify({ error: 'Auth user not found for existing mapping' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      supabaseAuthUser = authData.user;
+
+      // Update metadata if needed
+      await supabase.auth.admin.updateUserById(supabaseUid, {
+        user_metadata: {
+          firebase_uid: uid,
+          name: displayName || 'Visitante',
+          avatar_url: photoURL || ''
+        }
+      });
+
+      console.log('Auth user metadata updated');
     }
 
-    // Generate session token using admin API
+    // Generate session token using Supabase UUID
     const { data: sessionData, error: sessionError } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
-      email: `firebase_${uid}@placeholder.local`,
+      email: `firebase_${supabaseUid}@placeholder.local`,
       options: {
         redirectTo: `${supabaseUrl}/auth/v1/callback`
       }
