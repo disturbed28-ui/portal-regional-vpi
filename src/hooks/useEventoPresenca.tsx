@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { auth } from "@/lib/firebase";
+import { useAuth } from "@/hooks/useAuth";
 
 interface EventoAgenda {
   id: string;
@@ -33,6 +33,7 @@ export const useEventoPresenca = (eventoId: string | null) => {
   const [presencas, setPresencas] = useState<Presenca[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
     if (eventoId) {
@@ -94,14 +95,14 @@ export const useEventoPresenca = (eventoId: string | null) => {
   const inicializarListaPresenca = async (
     eventoAgendaId: string, 
     divisaoId: string,
-    firebaseUid: string
+    userId: string
   ) => {
     console.log('[inicializarListaPresenca] Inicializando...', { eventoAgendaId, divisaoId });
     
     const { data, error } = await supabase.functions.invoke('manage-presenca', {
       body: {
         action: 'initialize',
-        firebase_uid: firebaseUid,
+        firebase_uid: userId,
         evento_agenda_id: eventoAgendaId,
         divisao_id: divisaoId,
       }
@@ -124,10 +125,8 @@ export const useEventoPresenca = (eventoId: string | null) => {
     divisaoId: string | null,
     tipoEvento: string | null
   ) => {
-    // Pegar Firebase UID
-    const firebaseUser = auth.currentUser;
-    if (!firebaseUser) {
-      console.error('[criarEvento] Usuário não autenticado no Firebase');
+    if (!user) {
+      console.error('[criarEvento] Usuário não autenticado');
       toast({
         title: "Erro",
         description: "Usuário não autenticado",
@@ -136,11 +135,11 @@ export const useEventoPresenca = (eventoId: string | null) => {
       return null;
     }
 
-    const firebase_uid = firebaseUser.uid;
+    const userId = user.id;
     console.log('[criarEvento] Criando evento via edge function...', {
       evento_id: eventoGoogleId,
       titulo,
-      firebase_uid
+      user_id: userId
     });
 
     const { data, error } = await supabase.functions.invoke('manage-evento', {
@@ -151,7 +150,7 @@ export const useEventoPresenca = (eventoId: string | null) => {
         regional_id: regionalId,
         divisao_id: divisaoId,
         tipo_evento: tipoEvento,
-        firebase_uid,
+        firebase_uid: userId,
       }
     });
 
@@ -169,9 +168,9 @@ export const useEventoPresenca = (eventoId: string | null) => {
     setEvento(data.data);
     
     // Inicializar lista de presença após criar evento
-    if (data.data && divisaoId && firebaseUser.uid) {
+    if (data.data && divisaoId && userId) {
       try {
-        await inicializarListaPresenca(data.data.id, divisaoId, firebaseUser.uid);
+        await inicializarListaPresenca(data.data.id, divisaoId, userId);
         await fetchPresencas(data.data.id);
       } catch (error) {
         console.error('[criarEvento] Erro ao inicializar lista:', error);
@@ -182,31 +181,19 @@ export const useEventoPresenca = (eventoId: string | null) => {
   };
 
   const registrarPresenca = async (integranteId: string, profileId: string) => {
-    if (!evento) return;
+    if (!evento || !user) return;
 
-    // Pegar Firebase UID
-    const firebaseUser = auth.currentUser;
-    if (!firebaseUser) {
-      console.error('[registrarPresenca] Usuário não autenticado no Firebase');
-      toast({
-        title: "Erro",
-        description: "Usuário não autenticado",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const firebase_uid = firebaseUser.uid;
+    const userId = user.id;
     console.log('[registrarPresenca] Registrando presença via edge function...', {
       evento_agenda_id: evento.id,
       integrante_id: integranteId,
-      firebase_uid
+      user_id: userId
     });
 
     const { data, error } = await supabase.functions.invoke('manage-presenca', {
       body: {
         action: 'add',
-        firebase_uid,
+        firebase_uid: userId,
         evento_agenda_id: evento.id,
         integrante_id: integranteId,
         profile_id: profileId,
@@ -216,7 +203,6 @@ export const useEventoPresenca = (eventoId: string | null) => {
     if (error) {
       console.error('[registrarPresenca] Erro ao registrar presença:', error);
       
-      // Tratar erro 409 especificamente (presença já registrada)
       if (error.message && error.message.includes('409')) {
         toast({
           title: "Presença já registrada",
@@ -257,30 +243,18 @@ export const useEventoPresenca = (eventoId: string | null) => {
   };
 
   const removerPresenca = async (integranteId: string) => {
-    if (!evento) return;
+    if (!evento || !user) return;
     
-    // Pegar Firebase UID
-    const firebaseUser = auth.currentUser;
-    if (!firebaseUser) {
-      console.error('[removerPresenca] Usuário não autenticado no Firebase');
-      toast({
-        title: "Erro",
-        description: "Usuário não autenticado",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const firebase_uid = firebaseUser.uid;
+    const userId = user.id;
     console.log('[removerPresenca] Marcando como ausente via edge function...', {
       integrante_id: integranteId,
-      firebase_uid
+      user_id: userId
     });
 
     const { data, error } = await supabase.functions.invoke('manage-presenca', {
       body: {
         action: 'remove',
-        firebase_uid,
+        firebase_uid: userId,
         evento_agenda_id: evento.id,
         integrante_id: integranteId,
       }

@@ -16,9 +16,9 @@ const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, loading: authLoading, signInWithGoogle, signOut } = useAuth();
-  const { profile, loading: profileLoading } = useProfile(user?.uid);
-  const { hasRole, loading: roleLoading } = useUserRole(user?.uid);
-  const { onlineUsers, totalOnline } = usePresence(user?.uid, profile?.nome_colete);
+  const { profile, loading: profileLoading } = useProfile(user?.id);
+  const { hasRole, loading: roleLoading } = useUserRole(user?.id);
+  const { onlineUsers, totalOnline } = usePresence(user?.id, profile?.nome_colete);
   const [showQRCode, setShowQRCode] = useState(false);
 
   const isLoggedIn = !!user;
@@ -50,7 +50,7 @@ const Index = () => {
   //   profileLoading,
   //   profile,
   //   userName,
-  //   userId: user?.uid
+  //   userId: user?.id
   // });
   
   // Mapeamento de status com cores e icones
@@ -250,7 +250,7 @@ const Index = () => {
         <div className="mt-auto pt-4 border-t border-border">
           <div className="text-center text-xs text-muted-foreground space-y-2">
             <div>2025 - {new Date().getFullYear()}</div>
-            <div>🔐 Autenticacao segura via Firebase (Google)</div>
+            <div>🔐 Autenticacao segura via Google OAuth</div>
             <div className="flex gap-3 justify-center items-center">
               <a 
                 href="/politica-privacidade" 
