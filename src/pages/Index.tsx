@@ -248,9 +248,24 @@ const Index = () => {
 
           {/* Footer - dentro do card, no bottom */}
         <div className="mt-auto pt-4 border-t border-border">
-          <div className="text-center text-xs text-muted-foreground space-y-1">
+          <div className="text-center text-xs text-muted-foreground space-y-2">
             <div>2025 - {new Date().getFullYear()}</div>
             <div>🔐 Autenticacao segura via Firebase (Google)</div>
+            <div className="flex gap-3 justify-center items-center">
+              <a 
+                href="/politica-privacidade" 
+                className="hover:text-foreground transition-colors underline-offset-4 hover:underline"
+              >
+                Política de Privacidade
+              </a>
+              <span>•</span>
+              <a 
+                href="/termos-servico" 
+                className="hover:text-foreground transition-colors underline-offset-4 hover:underline"
+              >
+                Termos de Serviço
+              </a>
+            </div>
           </div>
         </div>
         </div>
