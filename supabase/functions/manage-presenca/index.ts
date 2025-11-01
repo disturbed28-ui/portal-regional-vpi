@@ -133,6 +133,7 @@ Deno.serve(async (req) => {
         return text
           .normalize('NFD')
           .replace(/[\u0300-\u036f]/g, '')
+          .replace(/\s+/g, ' ') // Normaliza múltiplos espaços em um único
           .toLowerCase()
           .trim();
       };
