@@ -146,14 +146,50 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
 
   const startDate = new Date(event.start);
   
-  // Separar por status
+  // Função para converter grau romano em número para ordenação
+  const romanToNumber = (roman: string | null): number => {
+    if (!roman) return 999; // Sem grau vai para o final
+    const romanMap: { [key: string]: number } = {
+      'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5,
+      'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10,
+      'XI': 11, 'XII': 12
+    };
+    return romanMap[roman.toUpperCase()] || 999;
+  };
+
+  // Função para ordenar por hierarquia
+  const ordenarPorHierarquia = (a: any, b: any) => {
+    // 1. Ordenar por grau (menor número = maior hierarquia)
+    const grauA = romanToNumber(a.grau);
+    const grauB = romanToNumber(b.grau);
+    
+    if (grauA !== grauB) {
+      return grauA - grauB;
+    }
+    
+    // 2. Se grau igual, ordenar por cargo
+    const cargoA = a.cargo_nome || '';
+    const cargoB = b.cargo_nome || '';
+    
+    if (cargoA !== cargoB) {
+      return cargoA.localeCompare(cargoB, 'pt-BR');
+    }
+    
+    // 3. Se cargo igual, ordenar por nome
+    const nomeA = a.nome_colete || '';
+    const nomeB = b.nome_colete || '';
+    return nomeA.localeCompare(nomeB, 'pt-BR');
+  };
+  
+  // Separar por status e ordenar por hierarquia
   const presentes = presencas
     .filter(p => p.status === 'presente')
     .map(p => ({
       ...p.integrante,
       presencaId: p.id,
       isVisitante: false,
-    }));
+    }))
+    .sort(ordenarPorHierarquia);
 
   const visitantes = presencas
     .filter(p => p.status === 'visitante')
@@ -161,7 +197,8 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
       ...p.integrante,
       presencaId: p.id,
       isVisitante: true,
-    }));
+    }))
+    .sort(ordenarPorHierarquia);
 
   const todosPresentes = [...presentes, ...visitantes];
 
@@ -170,7 +207,8 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     .map(p => ({
       ...p.integrante,
       presencaId: p.id,
-    }));
+    }))
+    .sort(ordenarPorHierarquia);
 
   // Total da divisão = presentes + ausentes (excluindo visitantes)
   const totalDivisao = presentes.length + ausentes.length;
