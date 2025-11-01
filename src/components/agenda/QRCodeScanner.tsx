@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Camera, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Html5Qrcode } from "html5-qrcode";
+import { supabase } from "@/integrations/supabase/client";
 
 interface QRCodeScannerProps {
   open: boolean;
@@ -13,6 +14,7 @@ interface QRCodeScannerProps {
 
 export function QRCodeScanner({ open, onOpenChange, onScan }: QRCodeScannerProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const processingRef = useRef<boolean>(false);
   const [scanning, setScanning] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -111,15 +113,54 @@ export function QRCodeScanner({ open, onOpenChange, onScan }: QRCodeScannerProps
     setLoading(false);
   };
 
-  const handleQRCodeDetected = (decodedText: string) => {
+  const handleQRCodeDetected = async (decodedText: string) => {
+    // Evitar processar o mesmo QR Code múltiplas vezes
+    if (processingRef.current) {
+      console.log("[QRCodeScanner] Já processando um QR Code, ignorando...");
+      return;
+    }
+    
+    processingRef.current = true;
     console.log("[QRCodeScanner] Processando QR Code:", decodedText);
     
     // Parar o scanner
-    stopScanning();
+    await stopScanning();
     
-    // Verificar formato: profileId|integranteId
-    if (decodedText.includes('|')) {
-      const [profileId, integranteId] = decodedText.split('|');
+    try {
+      // Verificar formato: profileId|integranteId ou apenas profileId
+      let profileId: string;
+      let integranteId: string;
+      
+      if (decodedText.includes('|')) {
+        [profileId, integranteId] = decodedText.split('|');
+      } else {
+        // Só tem profileId, buscar integranteId no banco
+        profileId = decodedText;
+        
+        console.log("[QRCodeScanner] Buscando integrante com profile_id:", profileId);
+        
+        const { data: integrante, error } = await supabase
+          .from('integrantes_portal')
+          .select('id')
+          .eq('profile_id', profileId)
+          .single();
+        
+        if (error || !integrante) {
+          console.error("[QRCodeScanner] Integrante não encontrado:", error);
+          toast({
+            title: "Integrante não encontrado",
+            description: "Não foi possível localizar este integrante no sistema",
+            variant: "destructive",
+          });
+          processingRef.current = false;
+          onOpenChange(false);
+          return;
+        }
+        
+        integranteId = integrante.id;
+        console.log("[QRCodeScanner] Integrante encontrado:", integranteId);
+      }
+      
       onScan(profileId, integranteId);
       onOpenChange(false);
       
@@ -127,14 +168,15 @@ export function QRCodeScanner({ open, onOpenChange, onScan }: QRCodeScannerProps
         title: "QR Code lido com sucesso",
         description: "Presença será registrada",
       });
-    } else {
+    } catch (error) {
+      console.error("[QRCodeScanner] Erro ao processar QR Code:", error);
       toast({
-        title: "QR Code inválido",
-        description: "O formato do QR Code não é válido",
+        title: "Erro ao processar QR Code",
+        description: "Tente novamente",
         variant: "destructive",
       });
-      // Reiniciar scanner
-      startScanning();
+    } finally {
+      processingRef.current = false;
     }
   };
 
