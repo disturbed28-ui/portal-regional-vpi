@@ -123,7 +123,7 @@ export function QRCodeScanner({ open, onOpenChange, onScan }: QRCodeScannerProps
     processingRef.current = true;
     console.log("[QRCodeScanner] Processando QR Code:", decodedText);
     
-    // Parar o scanner
+    // Parar o scanner imediatamente
     await stopScanning();
     
     try {
@@ -161,13 +161,10 @@ export function QRCodeScanner({ open, onOpenChange, onScan }: QRCodeScannerProps
         console.log("[QRCodeScanner] Integrante encontrado:", integranteId);
       }
       
+      // Chamar onScan e fechar o modal
       onScan(profileId, integranteId);
       onOpenChange(false);
       
-      toast({
-        title: "QR Code lido com sucesso",
-        description: "Presença será registrada",
-      });
     } catch (error) {
       console.error("[QRCodeScanner] Erro ao processar QR Code:", error);
       toast({
@@ -175,6 +172,7 @@ export function QRCodeScanner({ open, onOpenChange, onScan }: QRCodeScannerProps
         description: "Tente novamente",
         variant: "destructive",
       });
+      onOpenChange(false);
     } finally {
       processingRef.current = false;
     }

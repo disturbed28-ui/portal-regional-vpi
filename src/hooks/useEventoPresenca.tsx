@@ -175,18 +175,29 @@ export const useEventoPresenca = (eventoId: string | null) => {
 
     if (error) {
       console.error('[registrarPresenca] Erro ao registrar presença:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível registrar a presença",
-        variant: "destructive",
-      });
-    } else if (data?.error) {
+      
+      // Tratar erro 409 especificamente (presença já registrada)
+      if (error.message && error.message.includes('409')) {
+        toast({
+          title: "Presença já registrada",
+          description: "Este integrante já está na lista de presença",
+        });
+      } else {
+        toast({
+          title: "Erro",
+          description: "Não foi possível registrar a presença",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+    
+    if (data?.error) {
       console.error('[registrarPresenca] Erro retornado:', data.error);
       if (data.error === 'Presença já registrada') {
         toast({
-          title: "Aviso",
-          description: "Este integrante já está registrado na lista",
-          variant: "destructive",
+          title: "Presença já registrada",
+          description: "Este integrante já está na lista de presença",
         });
       } else {
         toast({
@@ -195,13 +206,14 @@ export const useEventoPresenca = (eventoId: string | null) => {
           variant: "destructive",
         });
       }
-    } else {
-      toast({
-        title: "Sucesso",
-        description: "Presença registrada com sucesso!",
-      });
-      fetchPresencas(evento.id);
+      return;
     }
+    
+    toast({
+      title: "Sucesso",
+      description: "Presença registrada com sucesso!",
+    });
+    fetchPresencas(evento.id);
   };
 
   const removerPresenca = async (presencaId: string) => {
