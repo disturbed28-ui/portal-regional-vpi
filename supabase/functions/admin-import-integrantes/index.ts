@@ -251,6 +251,16 @@ Deno.serve(async (req) => {
 
     // Save detailed updates to atualizacoes_carga
     if (atualizados && atualizados.length > 0) {
+      // Create a map of registro_id -> integrante_id for correct ID mapping
+      const registroToIdMap = new Map();
+      
+      for (const atualizado of atualizados) {
+        const antigoIntegrante = dadosAntigos.get(atualizado.id);
+        if (antigoIntegrante) {
+          registroToIdMap.set(antigoIntegrante.registro_id, atualizado.id);
+        }
+      }
+
       const atualizacoesDetalhadas = [];
 
       for (const atualizado of atualizados) {
@@ -262,7 +272,7 @@ Deno.serve(async (req) => {
           for (const mudanca of mudancas) {
             atualizacoesDetalhadas.push({
               carga_historico_id: cargaData.id,
-              integrante_id: atualizado.id,
+              integrante_id: registroToIdMap.get(antigoIntegrante.registro_id) || atualizado.id,
               registro_id: atualizado.registro_id || antigoIntegrante.registro_id,
               nome_colete: atualizado.nome_colete || antigoIntegrante.nome_colete,
               campo_alterado: mudanca.campo,
