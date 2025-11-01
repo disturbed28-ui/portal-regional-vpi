@@ -7,10 +7,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useProfile } from '@/hooks/useProfile';
 import { useRelatorioData } from '@/hooks/useRelatorioData';
+import { useHistoricoCargas } from '@/hooks/useHistoricoCargas';
 import { RelatorioTable } from '@/components/relatorios/RelatorioTable';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DashboardInadimplencia } from '@/components/relatorios/DashboardInadimplencia';
 import { EstatisticasEspeciais } from '@/components/relatorios/EstatisticasEspeciais';
+import { GraficoEvolucao } from '@/components/relatorios/GraficoEvolucao';
+import { TabelaComparativa } from '@/components/relatorios/TabelaComparativa';
 import * as XLSX from 'xlsx';
 import { toast } from '@/hooks/use-toast';
 
@@ -24,6 +27,7 @@ const Relatorios = () => {
   const isAutorizado = hasRole('admin') || hasRole('diretor_regional') || hasRole('moderator');
 
   const { data: relatorioData, isLoading } = useRelatorioData();
+  const { data: historicoData, isLoading: isLoadingHistorico } = useHistoricoCargas();
 
   // Redirecionar para perfil se usuário não tiver nome_colete
   useEffect(() => {
@@ -193,37 +197,67 @@ const Relatorios = () => {
           </div>
         </div>
 
-        {/* Tabela Principal */}
+        {/* Conteúdo Principal */}
         {relatorioData && (
-          <>
-            <div className="overflow-x-auto">
-              <RelatorioTable
-                divisoes={relatorioData.divisoes}
-                totais={relatorioData.totais}
-                regionalNome="REGIONAL VALE DO PARAIBA I"
-              />
-            </div>
-
-            {/* Estatísticas Especiais */}
-            <div className="overflow-x-auto">
-              <EstatisticasEspeciais divisoes={relatorioData.divisoes} totais={relatorioData.totais} />
-            </div>
-            
-            <Tabs defaultValue="relatorio" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+          <Tabs defaultValue="relatorio" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="relatorio">Relatório</TabsTrigger>
+                <TabsTrigger value="evolucao">Evolução Histórica</TabsTrigger>
                 <TabsTrigger value="inadimplencia">Inadimplência</TabsTrigger>
               </TabsList>
               
               <TabsContent value="relatorio">
-                {/* Conteúdo já mostrado acima */}
+                <div className="space-y-6">
+                  <RelatorioTable
+                    divisoes={relatorioData.divisoes}
+                    totais={relatorioData.totais}
+                    regionalNome="REGIONAL VALE DO PARAIBA I"
+                  />
+                  <EstatisticasEspeciais divisoes={relatorioData.divisoes} totais={relatorioData.totais} />
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="evolucao">
+                {isLoadingHistorico ? (
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <p className="text-muted-foreground">Carregando histórico...</p>
+                    </CardContent>
+                  </Card>
+                ) : historicoData && historicoData.cargas.length >= 2 ? (
+                  <div className="space-y-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Evolução do Efetivo - Regional Vale do Paraíba I</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <GraficoEvolucao 
+                          cargas={historicoData.cargas} 
+                          divisoesUnicas={historicoData.divisoesUnicas}
+                        />
+                      </CardContent>
+                    </Card>
+                    
+                    <TabelaComparativa 
+                      cargas={historicoData.cargas}
+                      divisoesUnicas={historicoData.divisoesUnicas}
+                    />
+                  </div>
+                ) : (
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <p className="text-muted-foreground">
+                        Dados históricos insuficientes. São necessárias pelo menos 2 cargas para exibir a evolução.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
               </TabsContent>
               
               <TabsContent value="inadimplencia">
                 <DashboardInadimplencia />
               </TabsContent>
             </Tabs>
-          </>
         )}
 
         {!relatorioData?.divisoes.length && (
