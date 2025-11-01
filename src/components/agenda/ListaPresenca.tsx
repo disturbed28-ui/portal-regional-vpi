@@ -85,19 +85,33 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
   };
 
   const fetchIntegrantesDivisao = async (divisaoTexto: string) => {
-    const { data, error } = await supabase
-      .from('integrantes_portal')
-      .select('id, nome_colete, cargo_nome, grau, divisao_texto, profile_id')
-      .eq('ativo', true)
-      .ilike('divisao_texto', `%${divisaoTexto}%`)
-      .order('cargo_nome', { ascending: false })
-      .order('grau', { ascending: false });
+    // Dividir se houver múltiplas divisões separadas por " / "
+    const divisoes = divisaoTexto.split(' / ').map(d => d.trim());
+    
+    let allIntegrantes: IntegranteDivisao[] = [];
+    
+    for (const divisao of divisoes) {
+      const { data, error } = await supabase
+        .from('integrantes_portal')
+        .select('id, nome_colete, cargo_nome, grau, divisao_texto, profile_id')
+        .eq('ativo', true)
+        .ilike('divisao_texto', `%${divisao}%`)
+        .order('cargo_nome', { ascending: false })
+        .order('grau', { ascending: false });
 
-    if (error) {
-      console.error('Erro ao buscar integrantes:', error);
-    } else {
-      setIntegrantesDivisao(data || []);
+      if (error) {
+        console.error('Erro ao buscar integrantes:', error);
+      } else if (data) {
+        allIntegrantes = [...allIntegrantes, ...data];
+      }
     }
+    
+    // Remover duplicatas (caso um integrante apareça em múltiplas consultas)
+    const uniqueIntegrantes = Array.from(
+      new Map(allIntegrantes.map(item => [item.id, item])).values()
+    );
+    
+    setIntegrantesDivisao(uniqueIntegrantes);
   };
 
   const handleScan = async (profileId: string, integranteId: string) => {

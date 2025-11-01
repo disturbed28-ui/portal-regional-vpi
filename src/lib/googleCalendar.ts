@@ -78,56 +78,69 @@ function detectEventType(title: string): string {
 
 function detectDivision(title: string): string {
   const lower = title.toLowerCase();
+  const divisoes: string[] = [];
+  
+  // Função auxiliar para adicionar divisão se ainda não foi adicionada
+  const addDivisao = (divisao: string) => {
+    if (!divisoes.includes(divisao)) {
+      divisoes.push(divisao);
+    }
+  };
   
   // Mapeamento de códigos para divisões - Padrões "ext" (extremo)
   if (lower.includes("ext sul") || lower.includes("ext.sul") || lower.includes("estsul")) {
-    return "Divisao Sao Jose dos Campos Extremo Sul - SP";
+    addDivisao("Divisao Sao Jose dos Campos Extremo Sul - SP");
   }
   if (lower.includes("ext leste") || lower.includes("ext.leste") || lower.includes("estleste")) {
-    return "Divisao Sao Jose dos Campos Extremo Leste - SP";
+    addDivisao("Divisao Sao Jose dos Campos Extremo Leste - SP");
   }
-  if (lower.includes("ext norte") || lower.includes("ext.norte") || lower.includes("estnorte")) {
-    return "Divisao Sao Jose dos Campos Extremo Norte - SP";
+  if (lower.includes("ext norte") || lower.includes("ext.norte") || lower.includes("estnorte") || lower.includes("ext.norte sjc")) {
+    addDivisao("Divisao Sao Jose dos Campos Extremo Norte - SP");
   }
   
   // Padrões São José dos Campos
-  if (lower.includes("norte sjc")) {
-    return "Divisao Sao Jose dos Campos Norte - SP";
+  if (lower.includes("norte sjc") && !lower.includes("ext.norte")) {
+    addDivisao("Divisao Sao Jose dos Campos Norte - SP");
   }
-  if (lower.includes("diveleste") || lower.includes("div leste") || lower.includes("leste sjc")) {
-    return "Divisao Sao Jose dos Campos Leste - SP";
+  if (lower.includes("div.leste") || lower.includes("div leste") || lower.includes("diveleste") || lower.includes("leste sjc")) {
+    addDivisao("Divisao Sao Jose dos Campos Leste - SP");
   }
   if (lower.includes("divesjc centro") || lower.includes("divsjc centro") || lower.includes("centro sjc")) {
-    return "Divisao Sao Jose dos Campos Centro - SP";
+    addDivisao("Divisao Sao Jose dos Campos Centro - SP");
   }
   
   // Caçapava
   if (lower.includes("cacapava") || lower.includes("caçapava")) {
-    return "Divisao Cacapava - SP";
+    addDivisao("Divisao Cacapava - SP");
   }
   
   // Jacareí com suas divisões
   if (lower.includes("jacarei sul") || lower.includes("jac sul")) {
-    return "Divisao Jacarei Sul - SP";
+    addDivisao("Divisao Jacarei Sul - SP");
   }
   if (lower.includes("jacarei norte") || lower.includes("jac norte")) {
-    return "Divisao Jacarei Norte - SP";
+    addDivisao("Divisao Jacarei Norte - SP");
   }
   if (lower.includes("jacarei leste") || lower.includes("jac leste")) {
-    return "Divisao Jacarei Leste - SP";
+    addDivisao("Divisao Jacarei Leste - SP");
   }
   if (lower.includes("jacarei oeste") || lower.includes("jac oeste")) {
-    return "Divisao Jacarei Oeste - SP";
+    addDivisao("Divisao Jacarei Oeste - SP");
   }
   if (lower.includes("jacarei centro") || lower.includes("jac centro")) {
-    return "Divisao Jacarei Centro - SP";
+    addDivisao("Divisao Jacarei Centro - SP");
   }
   if (lower.includes("jacarei") || lower.includes("jac")) {
-    return "Divisao Jacarei - SP";
+    addDivisao("Divisao Jacarei - SP");
   }
   
   if (lower.includes("regional")) {
-    return "Regional";
+    addDivisao("Regional");
+  }
+  
+  // Se encontrou divisões, retornar separadas por " / "
+  if (divisoes.length > 0) {
+    return divisoes.join(" / ");
   }
   
   return "Sem Divisao";
