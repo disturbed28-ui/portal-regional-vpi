@@ -648,6 +648,71 @@ export type Database = {
           },
         ]
       }
+      screen_permissions: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          screen_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          screen_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          screen_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "screen_permissions_screen_id_fkey"
+            columns: ["screen_id"]
+            isOneToOne: false
+            referencedRelation: "system_screens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      system_screens: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          descricao: string | null
+          icone: string | null
+          id: string
+          nome: string
+          ordem: number | null
+          rota: string
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          icone?: string | null
+          id?: string
+          nome: string
+          ordem?: number | null
+          rota: string
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          icone?: string | null
+          id?: string
+          nome?: string
+          ordem?: number | null
+          rota?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null

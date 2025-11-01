@@ -9,6 +9,7 @@ import Admin from "./pages/Admin";
 import AdminEstrutura from "./pages/AdminEstrutura";
 import AdminDados from "./pages/AdminDados";
 import AdminIntegrantes from "./pages/AdminIntegrantes";
+import AdminPermissoes from "./pages/AdminPermissoes";
 import Agenda from "./pages/Agenda";
 import Relatorios from "./pages/Relatorios";
 import Organograma from "./pages/Organograma";
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/admin/estrutura" element={<AdminEstrutura />} />
           <Route path="/admin/dados" element={<AdminDados />} />
           <Route path="/admin/integrantes" element={<AdminIntegrantes />} />
+          <Route path="/admin/permissoes" element={<AdminPermissoes />} />
           <Route path="/agenda" element={<Agenda />} />
           <Route path="/relatorios" element={<Relatorios />} />
           <Route path="/organograma" element={<Organograma />} />
