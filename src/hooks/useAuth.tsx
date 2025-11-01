@@ -1,112 +1,104 @@
-import { useState, useEffect, useRef } from "react";
-import { User } from "firebase/auth";
-import { auth } from "@/lib/firebase";
-import { 
-  signInWithPopup, 
-  GoogleAuthProvider, 
-  signOut as firebaseSignOut,
-  onAuthStateChanged 
-} from "firebase/auth";
+import { useState, useEffect } from "react";
+import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Listen to Firebase auth state changes
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
       setLoading(false);
-
-      // Clear previous timeout if exists
-      if (syncTimeoutRef.current) {
-        clearTimeout(syncTimeoutRef.current);
-        console.log('Debouncing sync call...');
-      }
-
-      if (firebaseUser) {
-        // Wait 2s before syncing (debounce)
-        syncTimeoutRef.current = setTimeout(async () => {
-          try {
-            // Force token refresh to get latest user data from Google
-            const token = await firebaseUser.getIdToken(true);
-            
-            // Reload user data from Firebase
-            await firebaseUser.reload();
-            const refreshedUser = auth.currentUser;
-            
-            console.log('Syncing user with Lovable Cloud:', firebaseUser.uid);
-            console.log('Photo URL from Firebase:', refreshedUser?.photoURL);
-            
-            const { data, error } = await supabase.functions.invoke('sync-firebase-user', {
-              body: {
-                uid: firebaseUser.uid,
-                displayName: refreshedUser?.displayName || firebaseUser.displayName,
-                photoURL: refreshedUser?.photoURL || firebaseUser.photoURL,
-              }
-            });
-
-            if (error) {
-              console.error('Error syncing user:', error);
-              toast({
-                title: "Erro ao sincronizar perfil",
-                description: error.message,
-                variant: "destructive",
-              });
-              return;
-            }
-
-            console.log('User synced successfully:', data);
-            
-            // Usar sessionStorage para controlar toast por sessao
-            const hasShownWelcomeToast = sessionStorage.getItem('welcome_toast_shown');
-            
-            if (!hasShownWelcomeToast) {
-              setTimeout(() => {
-                toast({
-                  title: "Conectado com sucesso!",
-                  description: "Bem-vindo ao Portal Regional",
-                });
-              }, 500);
-              sessionStorage.setItem('welcome_toast_shown', 'true');
-            }
-          } catch (error: any) {
-            console.error('Failed to sync user:', error);
-            toast({
-              title: "Erro ao conectar",
-              description: error.message,
-              variant: "destructive",
-            });
-          }
-        }, 500); // 500ms debounce - suficiente para evitar multiplas chamadas
-      } else {
-        // Limpar flag do sessionStorage no logout
-        sessionStorage.removeItem('welcome_toast_shown');
-        
-        toast({
-          title: "Desconectado",
-          description: "Ate logo!",
-        });
-      }
     });
 
-    return () => {
-      unsubscribe();
-      // Clear timeout on unmount
-      if (syncTimeoutRef.current) {
-        clearTimeout(syncTimeoutRef.current);
+    // Listen to auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('[useAuth] Auth state changed:', event);
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+
+        if (event === 'SIGNED_IN' && session?.user) {
+          // Chamar edge function de migração para vincular perfis antigos
+          setTimeout(async () => {
+            try {
+              const { data, error } = await supabase.functions.invoke('migrate-user-on-login', {
+                body: {
+                  user_id: session.user.id,
+                  email: session.user.email,
+                  full_name: session.user.user_metadata?.full_name,
+                  avatar_url: session.user.user_metadata?.avatar_url,
+                }
+              });
+
+              if (error) {
+                console.error('[useAuth] Error migrating user:', error);
+              } else {
+                console.log('[useAuth] Migration result:', data);
+                
+                // Mostrar toast apropriado
+                const hasShownWelcomeToast = sessionStorage.getItem('welcome_toast_shown');
+                
+                if (!hasShownWelcomeToast) {
+                  if (data?.migrated) {
+                    toast({
+                      title: "Bem-vindo de volta!",
+                      description: "Seu perfil foi migrado com sucesso.",
+                    });
+                  } else if (data?.new_user) {
+                    toast({
+                      title: "Conectado com sucesso!",
+                      description: "Bem-vindo ao Portal Regional",
+                    });
+                  } else {
+                    toast({
+                      title: "Conectado com sucesso!",
+                      description: "Bem-vindo de volta!",
+                    });
+                  }
+                  sessionStorage.setItem('welcome_toast_shown', 'true');
+                }
+              }
+            } catch (error: any) {
+              console.error('[useAuth] Failed to migrate user:', error);
+            }
+          }, 500);
+        } else if (event === 'SIGNED_OUT') {
+          sessionStorage.removeItem('welcome_toast_shown');
+          toast({
+            title: "Desconectado",
+            description: "Até logo!",
+          });
+        }
       }
+    );
+
+    return () => {
+      subscription.unsubscribe();
     };
   }, [toast]);
 
   const signInWithGoogle = async () => {
     try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
+        }
+      });
+
+      if (error) throw error;
     } catch (error: any) {
       toast({
         title: "Erro ao conectar",
@@ -122,10 +114,11 @@ export const useAuth = () => {
       if (user) {
         await supabase.from('profiles').update({
           status: 'Offline'
-        }).eq('id', user.uid);
+        }).eq('id', user.id);
       }
       
-      await firebaseSignOut(auth);
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
     } catch (error: any) {
       toast({
         title: "Erro ao desconectar",
@@ -137,6 +130,7 @@ export const useAuth = () => {
 
   return {
     user,
+    session,
     loading,
     signInWithGoogle,
     signOut,
