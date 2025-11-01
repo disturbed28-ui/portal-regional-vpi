@@ -29,6 +29,17 @@ const Relatorios = () => {
   const { data: relatorioData, isLoading } = useRelatorioData();
   const { data: historicoData, isLoading: isLoadingHistorico } = useHistoricoCargas();
 
+  // Debug logging para histórico
+  useEffect(() => {
+    console.log('📈 [Relatorios] Estado do histórico:', {
+      isLoading: isLoadingHistorico,
+      hasData: !!historicoData,
+      cargasLength: historicoData?.cargas?.length,
+      divisoesUnicasLength: historicoData?.divisoesUnicas?.length,
+      historicoData
+    });
+  }, [historicoData, isLoadingHistorico]);
+
   // Redirecionar para perfil se usuário não tiver nome_colete
   useEffect(() => {
     if (user && !profileLoading && profile && !profile.nome_colete) {
