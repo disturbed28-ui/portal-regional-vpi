@@ -10,7 +10,7 @@ import { removeAccents } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { QRCodeSVG } from "qrcode.react";
 import { QrCode, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -23,6 +23,18 @@ const Index = () => {
 
   const isLoggedIn = !!user;
   const isLoadingProfile = isLoggedIn && profileLoading;
+  
+  // Redirecionar para perfil se usuário não tiver nome_colete
+  useEffect(() => {
+    if (isLoggedIn && !profileLoading && profile && !profile.nome_colete) {
+      console.log('[Index] Usuário sem nome_colete, redirecionando para perfil...');
+      toast({
+        title: "Complete seu cadastro",
+        description: "Por favor, adicione seu nome de colete para continuar.",
+      });
+      navigate("/perfil");
+    }
+  }, [isLoggedIn, profileLoading, profile, navigate, toast]);
   
   const rawUserName = isLoadingProfile 
     ? "Carregando..." 

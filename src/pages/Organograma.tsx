@@ -38,6 +38,16 @@ const Organograma = () => {
 
   const [regionalUsuario, setRegionalUsuario] = useState<string | null>(null);
 
+  // Redirecionar para perfil se usuário não tiver nome_colete
+  useEffect(() => {
+    if (user && !profileLoading && profile && !profile.nome_colete) {
+      toast.error("Complete seu cadastro", {
+        description: "Por favor, adicione seu nome de colete para continuar.",
+      });
+      navigate("/perfil");
+    }
+  }, [user, profileLoading, profile, navigate]);
+
   // Validar acesso e buscar regional do integrante
   useEffect(() => {
     if (!user?.uid) return;

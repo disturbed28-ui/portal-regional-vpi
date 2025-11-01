@@ -10,14 +10,31 @@ import { AlertCircle } from "lucide-react";
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarEvent } from "@/lib/googleCalendar";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
+import { useToast } from "@/hooks/use-toast";
 
 const Agenda = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const { profile, loading: profileLoading } = useProfile(user?.uid);
   const { data: events, isLoading, error } = useCalendarEvents();
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  // Redirecionar para perfil se usuário não tiver nome_colete
+  useEffect(() => {
+    if (user && !profileLoading && profile && !profile.nome_colete) {
+      toast({
+        title: "Complete seu cadastro",
+        description: "Por favor, adicione seu nome de colete para continuar.",
+      });
+      navigate("/perfil");
+    }
+  }, [user, profileLoading, profile, navigate, toast]);
 
   const currentMonth = format(selectedMonth, "MMMM 'de' yyyy", { locale: ptBR });
 

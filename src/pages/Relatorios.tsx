@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, FileDown } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useProfile } from '@/hooks/useProfile';
 import { useRelatorioData } from '@/hooks/useRelatorioData';
 import { RelatorioTable } from '@/components/relatorios/RelatorioTable';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,12 +17,24 @@ import { toast } from '@/hooks/use-toast';
 const Relatorios = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { profile, loading: profileLoading } = useProfile(user?.uid);
   const { hasRole } = useUserRole(user?.uid);
   
   // Verificar permissões
   const isAutorizado = hasRole('admin') || hasRole('diretor_regional') || hasRole('moderator');
 
   const { data: relatorioData, isLoading } = useRelatorioData();
+
+  // Redirecionar para perfil se usuário não tiver nome_colete
+  useEffect(() => {
+    if (user && !profileLoading && profile && !profile.nome_colete) {
+      toast({
+        title: "Complete seu cadastro",
+        description: "Por favor, adicione seu nome de colete para continuar.",
+      });
+      navigate("/perfil");
+    }
+  }, [user, profileLoading, profile, navigate]);
 
   const handleExportExcel = () => {
     if (!relatorioData) return;
