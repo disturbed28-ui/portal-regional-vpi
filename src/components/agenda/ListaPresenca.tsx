@@ -31,7 +31,6 @@ interface IntegranteDivisao {
 
 export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps) {
   const [scannerOpen, setScannerOpen] = useState(false);
-  const [integrantesDivisao, setIntegrantesDivisao] = useState<IntegranteDivisao[]>([]);
   const { canManage, loading: loadingPermissions } = useCanManagePresenca();
   const { evento, presencas, loading, criarEvento, registrarPresenca, removerPresenca, refetch } = useEventoPresenca(event?.id || null);
   const { toast } = useToast();
@@ -53,28 +52,18 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
       .maybeSingle();
 
     if (!existingEvento) {
-      // Criar evento se não existir
+      // Criar evento se não existir (isso vai chamar initialize automaticamente)
       const divisaoId = await getDivisaoIdFromEvent(event);
       await criarEvento(
         event.id,
         event.title,
         event.start,
-        null, // regionalId - pode ser derivado da divisão
+        null,
         divisaoId,
         event.type || null
       );
-      
-      // Buscar integrantes usando o divisaoId encontrado
-      if (divisaoId) {
-        await fetchIntegrantesByDivisaoId(divisaoId);
-      }
     } else {
       refetch();
-      
-      // Buscar integrantes usando o divisao_id do evento
-      if (existingEvento.divisao_id) {
-        await fetchIntegrantesByDivisaoId(existingEvento.divisao_id);
-      }
     }
   };
 
@@ -100,42 +89,6 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     return divisaoEncontrada?.id || null;
   };
 
-  const fetchIntegrantesByDivisaoId = async (divisaoId: string) => {
-    console.log('[fetchIntegrantesByDivisaoId] Buscando integrantes para divisao_id:', divisaoId);
-    
-    // Primeiro buscar o nome da divisão
-    const { data: divisao } = await supabase
-      .from('divisoes')
-      .select('nome')
-      .eq('id', divisaoId)
-      .single();
-    
-    if (!divisao) {
-      console.error('[fetchIntegrantesByDivisaoId] Divisão não encontrada');
-      setIntegrantesDivisao([]);
-      return;
-    }
-    
-    console.log('[fetchIntegrantesByDivisaoId] Nome da divisão:', divisao.nome);
-    
-    // Buscar integrantes usando o nome exato da divisão
-    const { data, error } = await supabase
-      .from('integrantes_portal')
-      .select('id, nome_colete, cargo_nome, grau, divisao_texto, profile_id')
-      .eq('ativo', true)
-      .ilike('divisao_texto', `%${divisao.nome}%`)
-      .order('cargo_nome', { ascending: false })
-      .order('grau', { ascending: false });
-
-    if (error) {
-      console.error('[fetchIntegrantesByDivisaoId] Erro ao buscar integrantes:', error);
-      setIntegrantesDivisao([]);
-    } else {
-      console.log(`[fetchIntegrantesByDivisaoId] Encontrados ${data?.length || 0} integrantes`);
-      setIntegrantesDivisao(data || []);
-    }
-  };
-
   const handleScan = async (profileId: string, integranteId: string) => {
     if (!evento) {
       toast({
@@ -149,7 +102,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     await registrarPresenca(integranteId, profileId);
   };
 
-  const handleMarcarPresente = async (integrante: IntegranteDivisao) => {
+  const handleMarcarPresente = async (integrante: any) => {
     if (!evento) {
       toast({
         title: "Erro",
@@ -196,6 +149,9 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
       presencaId: p.id,
     }));
 
+  // Total da divisão = presentes + ausentes (excluindo visitantes)
+  const totalDivisao = presentes.length + ausentes.length;
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -239,7 +195,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
               </div>
               <div className="h-8 w-px bg-border" />
               <div className="text-center">
-                <div className="text-2xl font-bold">{integrantesDivisao.length}</div>
+                <div className="text-2xl font-bold">{totalDivisao}</div>
                 <div className="text-sm text-muted-foreground">Total da Divisão</div>
               </div>
             </div>
@@ -257,13 +213,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
 
             {loading && (
               <p className="text-center text-muted-foreground py-4">
-                Carregando integrantes...
-              </p>
-            )}
-
-            {!loading && integrantesDivisao.length === 0 && (
-              <p className="text-center text-muted-foreground py-4">
-                Nenhum integrante encontrado para esta divisão
+                Carregando lista de presença...
               </p>
             )}
 
