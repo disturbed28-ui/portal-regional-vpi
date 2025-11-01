@@ -138,7 +138,7 @@ const Index = () => {
             {isLoggedIn && profile?.id && (
               <button
                 onClick={() => setShowQRCode(true)}
-                className="absolute right-0 translate-x-1/2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground flex items-center justify-center shadow-lg transition-all hover:scale-110"
+                className="absolute right-[-20px] top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground flex items-center justify-center shadow-lg transition-all hover:scale-110"
                 title="Ver QR Code"
               >
                 <QrCode className="w-5 h-5" />
