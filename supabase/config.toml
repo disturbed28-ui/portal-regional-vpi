@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.manage-screen-permissions]
 verify_jwt = false
+
+[functions.manage-evento]
+verify_jwt = false

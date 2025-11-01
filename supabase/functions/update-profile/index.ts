@@ -1,13 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import nodemailer from "npm:nodemailer@6.9.7";
+// import nodemailer from "npm:nodemailer@6.9.7"; // Comentado temporariamente
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Função para enviar notificação por email aos admins
+// Função para enviar notificação por email aos admins - DESABILITADA TEMPORARIAMENTE
+/*
 async function sendAdminNotification(profileData: any) {
   try {
     console.log('Configurando transporter SMTP...');
@@ -198,6 +199,7 @@ Acesse o portal: ${portalUrl}
     // Não lançar erro para não bloquear o update do perfil
   }
 }
+*/
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -250,11 +252,11 @@ serve(async (req) => {
 
     console.log('Profile updated successfully:', data);
 
-    // Enviar notificação para admins (não-bloqueante)
-    console.log('Tentando enviar notificação para admins...');
-    sendAdminNotification(data).catch(err => {
-      console.error('Falha ao enviar notificação (não-crítico):', err);
-    });
+    // Enviar notificação para admins (não-bloqueante) - DESABILITADO TEMPORARIAMENTE
+    // console.log('Tentando enviar notificação para admins...');
+    // sendAdminNotification(data).catch(err => {
+    //   console.error('Falha ao enviar notificação (não-crítico):', err);
+    // });
 
     return new Response(
       JSON.stringify({ success: true, data }),

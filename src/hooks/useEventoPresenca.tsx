@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { auth } from "@/lib/firebase";
 
 interface EventoAgenda {
   id: string;
@@ -94,21 +95,39 @@ export const useEventoPresenca = (eventoId: string | null) => {
     divisaoId: string | null,
     tipoEvento: string | null
   ) => {
-    const { data, error } = await supabase
-      .from('eventos_agenda')
-      .insert({
+    // Pegar Firebase UID
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) {
+      console.error('[criarEvento] Usuário não autenticado no Firebase');
+      toast({
+        title: "Erro",
+        description: "Usuário não autenticado",
+        variant: "destructive",
+      });
+      return null;
+    }
+
+    const firebase_uid = firebaseUser.uid;
+    console.log('[criarEvento] Criando evento via edge function...', {
+      evento_id: eventoGoogleId,
+      titulo,
+      firebase_uid
+    });
+
+    const { data, error } = await supabase.functions.invoke('manage-evento', {
+      body: {
         evento_id: eventoGoogleId,
         titulo,
         data_evento: dataEvento,
         regional_id: regionalId,
         divisao_id: divisaoId,
         tipo_evento: tipoEvento,
-      })
-      .select()
-      .single();
+        firebase_uid,
+      }
+    });
 
     if (error) {
-      console.error('Erro ao criar evento:', error);
+      console.error('[criarEvento] Erro ao criar evento:', error);
       toast({
         title: "Erro",
         description: "Não foi possível criar o evento",
@@ -117,8 +136,9 @@ export const useEventoPresenca = (eventoId: string | null) => {
       return null;
     }
 
-    setEvento(data);
-    return data;
+    console.log('[criarEvento] Evento criado com sucesso:', data);
+    setEvento(data.data);
+    return data.data;
   };
 
   const registrarPresenca = async (integranteId: string, profileId: string) => {
