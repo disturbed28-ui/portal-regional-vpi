@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { auth } from "@/lib/firebase";
 
 type AppRole = 'admin' | 'moderator' | 'user' | 'diretor_regional';
 
@@ -85,16 +86,37 @@ export const useScreenPermissions = () => {
       screenName 
     });
 
+    // Pegar Firebase UID
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) {
+      console.error('[useScreenPermissions] Usuário não autenticado no Firebase');
+      toast({
+        title: "Erro",
+        description: "Usuário não autenticado",
+        variant: "destructive",
+      });
+      setOperationLoading(null);
+      return;
+    }
+
+    const firebase_uid = firebaseUser.uid;
+    console.log('[useScreenPermissions] Firebase UID:', firebase_uid);
+
     if (existing) {
       // Atualização otimista - remove da UI primeiro
       console.log('[useScreenPermissions] Removendo permissão (otimista)...');
       setPermissions(prev => prev.filter(p => p.id !== existing.id));
 
-      // Remover permissão
-      const { error } = await supabase
-        .from('screen_permissions')
-        .delete()
-        .eq('id', existing.id);
+      // Remover permissão via Edge Function
+      console.log('[useScreenPermissions] Chamando edge function para remover...');
+      const { data, error } = await supabase.functions.invoke('manage-screen-permissions', {
+        body: {
+          action: 'remove',
+          screen_id: screenId,
+          role: role,
+          firebase_uid: firebase_uid,
+        }
+      });
 
       if (error) {
         console.error('[useScreenPermissions] ERRO ao remover permissão:', error);
@@ -106,7 +128,7 @@ export const useScreenPermissions = () => {
           variant: "destructive",
         });
       } else {
-        console.log('[useScreenPermissions] Permissão removida com sucesso');
+        console.log('[useScreenPermissions] Permissão removida com sucesso:', data);
         toast({
           title: "Permissão removida",
           description: `${screenName} - ${role}`,
@@ -123,12 +145,16 @@ export const useScreenPermissions = () => {
       console.log('[useScreenPermissions] Adicionando permissão (otimista)...', newPermission);
       setPermissions(prev => [...prev, newPermission]);
 
-      // Adicionar permissão
-      const { data, error } = await supabase
-        .from('screen_permissions')
-        .insert({ screen_id: screenId, role })
-        .select()
-        .single();
+      // Adicionar permissão via Edge Function
+      console.log('[useScreenPermissions] Chamando edge function para adicionar...');
+      const { data, error } = await supabase.functions.invoke('manage-screen-permissions', {
+        body: {
+          action: 'add',
+          screen_id: screenId,
+          role: role,
+          firebase_uid: firebase_uid,
+        }
+      });
 
       if (error) {
         console.error('[useScreenPermissions] ERRO ao adicionar permissão:', error);
