@@ -5,6 +5,7 @@ export function useCalendarEvents() {
   return useQuery({
     queryKey: ["calendar-events"],
     queryFn: fetchCalendarEvents,
-    staleTime: 5 * 60 * 1000, // 5 minutos
+    staleTime: 0, // Sempre buscar eventos atualizados ao abrir a tela
+    refetchOnMount: true, // Sempre refetch ao montar o componente
   });
 }
