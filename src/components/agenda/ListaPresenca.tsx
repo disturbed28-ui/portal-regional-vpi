@@ -157,6 +157,34 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     return romanMap[roman.toUpperCase()] || 999;
   };
 
+  // Função para obter prioridade do cargo dentro do grau
+  const getCargoOrder = (cargo: string | null, grau: string | null): number => {
+    if (!cargo) return 999;
+    
+    const cargoLower = cargo.toLowerCase();
+    
+    // Grau V - Cargos Regionais
+    if (grau === 'V') {
+      if (cargoLower.includes('diretor regional')) return 1;
+      if (cargoLower.includes('operacional regional')) return 2;
+      if (cargoLower.includes('social regional')) return 3;
+      if (cargoLower.includes('adm') && cargoLower.includes('regional')) return 4;
+      if (cargoLower.includes('comunicação') || cargoLower.includes('comunicacao')) return 5;
+    }
+    
+    // Grau VI - Cargos de Divisão
+    if (grau === 'VI') {
+      if (cargoLower.includes('diretor') && cargoLower.includes('divisão')) return 1;
+      if (cargoLower.includes('sub diretor')) return 2;
+      if (cargoLower.includes('social') && cargoLower.includes('divisão')) return 3;
+      if (cargoLower.includes('adm') && cargoLower.includes('divisão')) return 4;
+      if (cargoLower.includes('armas') || cargoLower.includes('sgt')) return 5;
+    }
+    
+    // Para outros graus, retornar 999 para usar ordem alfabética
+    return 999;
+  };
+
   // Função para ordenar por hierarquia
   const ordenarPorHierarquia = (a: any, b: any) => {
     // 1. Ordenar por grau (menor número = maior hierarquia)
@@ -167,7 +195,15 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
       return grauA - grauB;
     }
     
-    // 2. Se grau igual, ordenar por cargo
+    // 2. Se grau igual, ordenar por prioridade de cargo específica
+    const ordemCargoA = getCargoOrder(a.cargo_nome, a.grau);
+    const ordemCargoB = getCargoOrder(b.cargo_nome, b.grau);
+    
+    if (ordemCargoA !== ordemCargoB) {
+      return ordemCargoA - ordemCargoB;
+    }
+    
+    // 3. Se prioridade igual (999), usar ordem alfabética do cargo
     const cargoA = a.cargo_nome || '';
     const cargoB = b.cargo_nome || '';
     
@@ -175,7 +211,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
       return cargoA.localeCompare(cargoB, 'pt-BR');
     }
     
-    // 3. Se cargo igual, ordenar por nome
+    // 4. Se cargo igual, ordenar por nome
     const nomeA = a.nome_colete || '';
     const nomeB = b.nome_colete || '';
     return nomeA.localeCompare(nomeB, 'pt-BR');
