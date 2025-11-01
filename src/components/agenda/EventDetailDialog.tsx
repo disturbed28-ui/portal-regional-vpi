@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { CalendarEvent } from "@/lib/googleCalendar";
 import {
   Dialog,
@@ -9,7 +10,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, MapPin, Tag, ExternalLink } from "lucide-react";
+import { Calendar, Clock, MapPin, Tag, ExternalLink, Users } from "lucide-react";
+import { ListaPresenca } from "./ListaPresenca";
 
 interface EventDetailDialogProps {
   event: CalendarEvent | null;
@@ -18,6 +20,8 @@ interface EventDetailDialogProps {
 }
 
 export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDialogProps) {
+  const [listaPresencaOpen, setListaPresencaOpen] = useState(false);
+  
   if (!event) return null;
 
   const startDate = new Date(event.start);
@@ -94,18 +98,33 @@ export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDial
             </div>
           )}
 
-          {event.htmlLink && (
+          <div className="flex gap-2 mt-4">
             <Button
-              variant="outline"
-              className="w-full mt-4"
-              onClick={() => window.open(event.htmlLink, "_blank")}
+              variant="default"
+              className="flex-1"
+              onClick={() => setListaPresencaOpen(true)}
             >
-              <ExternalLink className="mr-2 h-4 w-4" />
-              Ver no Google Calendar
+              <Users className="mr-2 h-4 w-4" />
+              Lista de Presença
             </Button>
-          )}
+            
+            {event.htmlLink && (
+              <Button
+                variant="outline"
+                onClick={() => window.open(event.htmlLink, "_blank")}
+              >
+                <ExternalLink className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </DialogContent>
+
+      <ListaPresenca
+        event={event}
+        open={listaPresencaOpen}
+        onOpenChange={setListaPresencaOpen}
+      />
     </Dialog>
   );
 }

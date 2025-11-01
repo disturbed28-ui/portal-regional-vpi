@@ -122,6 +122,71 @@ export type Database = {
           },
         ]
       }
+      eventos_agenda: {
+        Row: {
+          created_at: string | null
+          data_evento: string
+          divisao_id: string | null
+          evento_id: string
+          id: string
+          regional_id: string | null
+          tipo_evento: string | null
+          titulo: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          data_evento: string
+          divisao_id?: string | null
+          evento_id: string
+          id?: string
+          regional_id?: string | null
+          tipo_evento?: string | null
+          titulo: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          data_evento?: string
+          divisao_id?: string | null
+          evento_id?: string
+          id?: string
+          regional_id?: string | null
+          tipo_evento?: string | null
+          titulo?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventos_agenda_divisao_id_fkey"
+            columns: ["divisao_id"]
+            isOneToOne: false
+            referencedRelation: "divisoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_agenda_divisao_id_fkey"
+            columns: ["divisao_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["divisao_id"]
+          },
+          {
+            foreignKeyName: "eventos_agenda_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "regionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_agenda_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["regional_id"]
+          },
+        ]
+      }
       funcoes: {
         Row: {
           created_at: string | null
@@ -345,6 +410,48 @@ export type Database = {
           valor?: number | null
         }
         Relationships: []
+      }
+      presencas: {
+        Row: {
+          confirmado_em: string | null
+          confirmado_por: string | null
+          evento_agenda_id: string
+          id: string
+          integrante_id: string
+          profile_id: string | null
+        }
+        Insert: {
+          confirmado_em?: string | null
+          confirmado_por?: string | null
+          evento_agenda_id: string
+          id?: string
+          integrante_id: string
+          profile_id?: string | null
+        }
+        Update: {
+          confirmado_em?: string | null
+          confirmado_por?: string | null
+          evento_agenda_id?: string
+          id?: string
+          integrante_id?: string
+          profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "presencas_evento_agenda_id_fkey"
+            columns: ["evento_agenda_id"]
+            isOneToOne: false
+            referencedRelation: "eventos_agenda"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "presencas_integrante_id_fkey"
+            columns: ["integrante_id"]
+            isOneToOne: false
+            referencedRelation: "integrantes_portal"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profile_history: {
         Row: {
