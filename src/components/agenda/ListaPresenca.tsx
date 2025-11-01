@@ -96,12 +96,6 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     for (const divisao of divisoes) {
       console.log('[fetchIntegrantesDivisao] Buscando divisão:', divisao);
       
-      // Normalizar texto removendo acentos
-      const divisaoNormalizada = removeAccents(divisao.toLowerCase());
-      
-      // Extrair palavras-chave (palavras com mais de 3 caracteres)
-      const keywords = divisao.split(' ').filter(w => w.length > 3);
-      
       // Estratégia 1: Busca exata com ilike
       let { data, error } = await supabase
         .from('integrantes_portal')
@@ -111,9 +105,12 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
         .order('cargo_nome', { ascending: false })
         .order('grau', { ascending: false });
 
-      // Estratégia 2: Se não encontrou, buscar por palavras-chave
-      if ((!data || data.length === 0) && keywords.length > 0) {
-        console.log('[fetchIntegrantesDivisao] Tentando busca por palavras-chave:', keywords);
+      // Estratégia 2: Se não encontrou, buscar removendo acentos de ambos os lados
+      if (!data || data.length === 0) {
+        console.log('[fetchIntegrantesDivisao] Tentando busca com normalização de texto');
+        
+        // Normalizar o texto de busca
+        const divisaoNormalizada = removeAccents(divisao.toLowerCase());
         
         // Buscar todos os integrantes ativos e filtrar no cliente
         const { data: allData, error: allError } = await supabase
@@ -124,14 +121,13 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
           .order('grau', { ascending: false });
         
         if (!allError && allData) {
-          // Filtrar por palavras-chave no cliente
+          // Filtrar usando a string completa normalizada (não só palavras-chave)
           data = allData.filter(integrante => {
             const divisaoIntegranteNorm = removeAccents(integrante.divisao_texto.toLowerCase());
-            return keywords.every(keyword => 
-              divisaoIntegranteNorm.includes(removeAccents(keyword.toLowerCase()))
-            );
+            // Busca pela string completa normalizada
+            return divisaoIntegranteNorm.includes(divisaoNormalizada);
           });
-          console.log(`[fetchIntegrantesDivisao] Encontrados ${data.length} integrantes com busca por palavras-chave`);
+          console.log(`[fetchIntegrantesDivisao] Encontrados ${data.length} integrantes com busca normalizada`);
         }
       }
 
