@@ -61,6 +61,16 @@ export const useAuth = () => {
             }
 
             console.log('User synced successfully:', data);
+
+            // Set Supabase session with JWT tokens from Edge Function
+            if (data.session) {
+              console.log('Setting Supabase session with tokens');
+              await supabase.auth.setSession({
+                access_token: data.session.access_token,
+                refresh_token: data.session.refresh_token
+              });
+              console.log('Supabase session set successfully');
+            }
             
             // Usar sessionStorage para controlar toast por sessao
             const hasShownWelcomeToast = sessionStorage.getItem('welcome_toast_shown');

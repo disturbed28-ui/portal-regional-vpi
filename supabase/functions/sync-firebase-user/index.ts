@@ -53,6 +53,84 @@ serve(async (req) => {
 
     console.log('Existing profile:', existingProfile);
 
+    // Create or update Supabase Auth user
+    let supabaseAuthUser;
+    
+    try {
+      // Try to get existing auth user
+      const { data: authData } = await supabase.auth.admin.getUserById(uid);
+      
+      if (authData?.user) {
+        console.log('Auth user exists, updating...');
+        supabaseAuthUser = authData.user;
+        
+        // Update metadata if needed
+        await supabase.auth.admin.updateUserById(uid, {
+          user_metadata: {
+            name: displayName || 'Visitante',
+            avatar_url: photoURL || ''
+          }
+        });
+      }
+    } catch (authError) {
+      console.log('Auth user not found, creating new one...');
+      
+      // Create new auth user with Firebase UID
+      const { data: createData, error: createError } = await supabase.auth.admin.createUser({
+        id: uid,
+        email: `firebase_${uid}@placeholder.local`, // Placeholder email
+        email_confirm: true,
+        user_metadata: {
+          name: displayName || 'Visitante',
+          avatar_url: photoURL || '',
+          provider: 'firebase'
+        }
+      });
+
+      if (createError) {
+        console.error('Error creating auth user:', createError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to create auth user', details: createError }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      supabaseAuthUser = createData.user;
+      console.log('Auth user created successfully');
+    }
+
+    // Generate session token using admin API
+    const { data: sessionData, error: sessionError } = await supabase.auth.admin.generateLink({
+      type: 'magiclink',
+      email: `firebase_${uid}@placeholder.local`,
+      options: {
+        redirectTo: `${supabaseUrl}/auth/v1/callback`
+      }
+    });
+
+    if (sessionError) {
+      console.error('Error generating auth link:', sessionError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to generate session', details: sessionError }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Auth link generated successfully');
+
+    // Extract tokens from the URL
+    const urlParams = new URL(sessionData.properties.action_link).searchParams;
+    const access_token = urlParams.get('access_token');
+    const refresh_token = urlParams.get('refresh_token');
+
+    if (!access_token || !refresh_token) {
+      console.error('Tokens not found in auth link');
+      return new Response(
+        JSON.stringify({ error: 'Failed to extract tokens from auth link' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     if (!existingProfile) {
       // Create new profile
       const { error: profileError } = await supabase
@@ -138,7 +216,14 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, message: 'Profile synced successfully' }),
+      JSON.stringify({ 
+        success: true, 
+        message: 'Profile synced successfully',
+        session: {
+          access_token: access_token,
+          refresh_token: refresh_token
+        }
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
