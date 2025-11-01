@@ -15,13 +15,14 @@ interface QRCodeScannerProps {
 export function QRCodeScanner({ open, onOpenChange, onScan }: QRCodeScannerProps) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const processingRef = useRef<boolean>(false);
+  const isClosingRef = useRef<boolean>(false);
   const [scanning, setScanning] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const scannerId = "qr-reader";
 
   useEffect(() => {
-    if (open) {
+    if (open && !isClosingRef.current) {
       // Aguardar o DOM estar pronto antes de iniciar o scanner
       const timer = setTimeout(() => {
         startScanning();
@@ -115,12 +116,13 @@ export function QRCodeScanner({ open, onOpenChange, onScan }: QRCodeScannerProps
 
   const handleQRCodeDetected = async (decodedText: string) => {
     // Evitar processar o mesmo QR Code múltiplas vezes
-    if (processingRef.current) {
-      console.log("[QRCodeScanner] Já processando um QR Code, ignorando...");
+    if (processingRef.current || isClosingRef.current) {
+      console.log("[QRCodeScanner] Já processando ou fechando, ignorando...");
       return;
     }
     
     processingRef.current = true;
+    isClosingRef.current = true;
     console.log("[QRCodeScanner] Processando QR Code:", decodedText);
     
     // Parar o scanner imediatamente
@@ -152,8 +154,6 @@ export function QRCodeScanner({ open, onOpenChange, onScan }: QRCodeScannerProps
             description: "Não foi possível localizar este integrante no sistema",
             variant: "destructive",
           });
-          processingRef.current = false;
-          onOpenChange(false);
           return;
         }
         
@@ -163,7 +163,6 @@ export function QRCodeScanner({ open, onOpenChange, onScan }: QRCodeScannerProps
       
       // Chamar onScan e fechar o modal
       onScan(profileId, integranteId);
-      onOpenChange(false);
       
     } catch (error) {
       console.error("[QRCodeScanner] Erro ao processar QR Code:", error);
@@ -172,9 +171,13 @@ export function QRCodeScanner({ open, onOpenChange, onScan }: QRCodeScannerProps
         description: "Tente novamente",
         variant: "destructive",
       });
-      onOpenChange(false);
     } finally {
-      processingRef.current = false;
+      // Fechar modal e resetar flags após um pequeno delay
+      setTimeout(() => {
+        onOpenChange(false);
+        processingRef.current = false;
+        isClosingRef.current = false;
+      }, 100);
     }
   };
 

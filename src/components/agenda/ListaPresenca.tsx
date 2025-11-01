@@ -12,6 +12,7 @@ import { QRCodeScanner } from "./QRCodeScanner";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { removeAccents } from "@/lib/utils";
 
 interface ListaPresencaProps {
   event: CalendarEvent | null;
@@ -95,7 +96,14 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     for (const divisao of divisoes) {
       console.log('[fetchIntegrantesDivisao] Buscando divisão:', divisao);
       
-      const { data, error } = await supabase
+      // Normalizar texto removendo acentos
+      const divisaoNormalizada = removeAccents(divisao.toLowerCase());
+      
+      // Extrair palavras-chave (palavras com mais de 3 caracteres)
+      const keywords = divisao.split(' ').filter(w => w.length > 3);
+      
+      // Estratégia 1: Busca exata com ilike
+      let { data, error } = await supabase
         .from('integrantes_portal')
         .select('id, nome_colete, cargo_nome, grau, divisao_texto, profile_id')
         .eq('ativo', true)
@@ -103,11 +111,37 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
         .order('cargo_nome', { ascending: false })
         .order('grau', { ascending: false });
 
+      // Estratégia 2: Se não encontrou, buscar por palavras-chave
+      if ((!data || data.length === 0) && keywords.length > 0) {
+        console.log('[fetchIntegrantesDivisao] Tentando busca por palavras-chave:', keywords);
+        
+        // Buscar todos os integrantes ativos e filtrar no cliente
+        const { data: allData, error: allError } = await supabase
+          .from('integrantes_portal')
+          .select('id, nome_colete, cargo_nome, grau, divisao_texto, profile_id')
+          .eq('ativo', true)
+          .order('cargo_nome', { ascending: false })
+          .order('grau', { ascending: false });
+        
+        if (!allError && allData) {
+          // Filtrar por palavras-chave no cliente
+          data = allData.filter(integrante => {
+            const divisaoIntegranteNorm = removeAccents(integrante.divisao_texto.toLowerCase());
+            return keywords.every(keyword => 
+              divisaoIntegranteNorm.includes(removeAccents(keyword.toLowerCase()))
+            );
+          });
+          console.log(`[fetchIntegrantesDivisao] Encontrados ${data.length} integrantes com busca por palavras-chave`);
+        }
+      }
+
       if (error) {
         console.error('[fetchIntegrantesDivisao] Erro ao buscar integrantes:', error);
-      } else if (data) {
+      } else if (data && data.length > 0) {
         console.log(`[fetchIntegrantesDivisao] Encontrados ${data.length} integrantes para ${divisao}`);
         allIntegrantes = [...allIntegrantes, ...data];
+      } else {
+        console.log(`[fetchIntegrantesDivisao] Nenhum integrante encontrado para ${divisao}`);
       }
     }
     
