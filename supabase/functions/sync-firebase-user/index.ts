@@ -69,12 +69,16 @@ serve(async (req) => {
     let supabaseUid: string;
     let supabaseAuthUser;
 
+    // Generate temporary password for session creation
+    const tempPassword = `temp_${uid}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
     if (!mapping) {
       console.log('No mapping found, creating new Supabase Auth user...');
       
-      // Create new Supabase Auth user WITHOUT specifying ID (let Supabase auto-generate UUID)
+      // Create new Supabase Auth user WITH password for session generation
       const { data: createData, error: createError } = await supabase.auth.admin.createUser({
         email: `firebase_${uid}@placeholder.local`,
+        password: tempPassword,
         email_confirm: true,
         user_metadata: {
           firebase_uid: uid,
@@ -130,8 +134,9 @@ serve(async (req) => {
 
       supabaseAuthUser = authData.user;
 
-      // Update metadata if needed
+      // Update metadata AND password for session generation
       await supabase.auth.admin.updateUserById(supabaseUid, {
+        password: tempPassword,
         user_metadata: {
           firebase_uid: uid,
           name: displayName || 'Visitante',
@@ -139,50 +144,36 @@ serve(async (req) => {
         }
       });
 
-      console.log('Auth user metadata updated');
+      console.log('Auth user metadata and password updated');
     }
 
-    // Generate recovery link (includes tokens in hash fragment)
-    const { data: sessionData, error: sessionError } = await supabase.auth.admin.generateLink({
-      type: 'recovery',
-      email: `firebase_${supabaseUid}@placeholder.local`
+    // Generate session by signing in with temporary password
+    console.log('Creating session for Supabase user:', supabaseUid);
+    
+    const tempClient = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
     });
 
-    if (sessionError || !sessionData) {
-      console.error('Error generating recovery link:', sessionError);
+    const { data: signInData, error: signInError } = await tempClient.auth.signInWithPassword({
+      email: `firebase_${supabaseUid}@placeholder.local`,
+      password: tempPassword
+    });
+
+    if (signInError || !signInData.session) {
+      console.error('Error signing in with temp password:', signInError);
       return new Response(
-        JSON.stringify({ error: 'Failed to generate recovery link', details: sessionError }),
+        JSON.stringify({ error: 'Failed to create session', details: signInError }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Recovery link generated successfully');
+    const access_token = signInData.session.access_token;
+    const refresh_token = signInData.session.refresh_token;
 
-    // Extract tokens from hash fragment (#access_token=...&refresh_token=...)
-    const actionLink = sessionData.properties.action_link;
-    const hashMatch = actionLink.match(/#(.+)$/);
-    
-    if (!hashMatch) {
-      console.error('Failed to extract hash from recovery link');
-      return new Response(
-        JSON.stringify({ error: 'Failed to extract hash from recovery link' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const hashParams = new URLSearchParams(hashMatch[1]);
-    const access_token = hashParams.get('access_token');
-    const refresh_token = hashParams.get('refresh_token');
-
-    if (!access_token || !refresh_token) {
-      console.error('Tokens not found in recovery link hash');
-      return new Response(
-        JSON.stringify({ error: 'Failed to extract tokens from hash' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('Tokens extracted successfully from hash');
+    console.log('Session created successfully with valid JWT tokens');
 
     if (!existingProfile) {
       // Create new profile
