@@ -161,82 +161,13 @@ const AdminIntegrantes = () => {
         throw new Error(data.error);
       }
 
-      // Salvar snapshot no histórico de cargas (formato correto agregado por divisão)
-      const integrantesAtualizados = await supabase
-        .from('integrantes_portal')
-        .select('*')
-        .eq('ativo', true);
-
-      if (integrantesAtualizados.data) {
-        console.log('📸 Gerando snapshot agregado por divisão...');
-        
-        // Agrupar por divisão
-        const divisoesMap = new Map<string, { nome: string; total_atual: number }>();
-        
-        integrantesAtualizados.data.forEach(integrante => {
-          const divisao = integrante.divisao_texto;
-          if (!divisoesMap.has(divisao)) {
-            divisoesMap.set(divisao, { nome: divisao, total_atual: 0 });
-          }
-          divisoesMap.get(divisao)!.total_atual++;
+      // Capturar dados da carga retornados pela Edge Function
+      if (data?.carga) {
+        setUltimaCarga({
+          id: data.carga.id,
+          data_carga: data.carga.data_carga,
+          total_atualizados: data.carga.total_atualizados,
         });
-        
-        const snapshot = {
-          divisoes: Array.from(divisoesMap.values())
-        };
-        
-        console.log('📊 Snapshot gerado:', snapshot);
-        
-        const { data: cargaData, error: cargaError } = await supabase
-          .from('cargas_historico')
-          .insert({
-            total_integrantes: integrantesAtualizados.data.length,
-            dados_snapshot: snapshot,
-            realizado_por: user.uid,
-          })
-          .select('id, data_carga')
-          .single();
-        
-        if (cargaError) {
-          console.error('❌ Erro ao salvar histórico:', cargaError);
-        } else if (cargaData) {
-          console.log('✅ Histórico salvo com ID:', cargaData.id);
-          
-          // Salvar detalhamento das atualizações
-          if (delta.atualizados.length > 0) {
-            console.log(`📝 Salvando ${delta.atualizados.length} atualizações detalhadas...`);
-            
-            const atualizacoesDetalhadas = delta.atualizados.flatMap((item: any) => {
-              const alteracoes = compararCampos(item.antigo, item.novo);
-              return alteracoes.map(alt => ({
-                carga_historico_id: cargaData.id,
-                integrante_id: item.antigo.id,
-                registro_id: item.antigo.registro_id,
-                nome_colete: item.novo.nome_colete,
-                campo_alterado: alt.campo,
-                valor_anterior: alt.anterior,
-                valor_novo: alt.novo,
-              }));
-            });
-            
-            const { error: atualizacoesError } = await supabase
-              .from('atualizacoes_carga')
-              .insert(atualizacoesDetalhadas);
-            
-            if (atualizacoesError) {
-              console.error('⚠️ Erro ao salvar atualizações detalhadas:', atualizacoesError);
-            } else {
-              console.log('✅ Atualizações detalhadas salvas!');
-            }
-          }
-          
-          // Atualizar estado para exibir no card
-          setUltimaCarga({
-            id: cargaData.id,
-            data_carga: cargaData.data_carga,
-            total_atualizados: delta.atualizados.length,
-          });
-        }
       }
 
       toast({
