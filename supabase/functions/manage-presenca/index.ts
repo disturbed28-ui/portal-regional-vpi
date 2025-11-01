@@ -128,12 +128,20 @@ Deno.serve(async (req) => {
         );
       }
       
-      // Buscar todos os integrantes ativos da divisão
-      const { data: integrantes, error: integrantesError } = await supabaseAdmin
+      // Função para remover acentos e normalizar texto
+      const normalizeText = (text: string) => {
+        return text
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .trim();
+      };
+      
+      // Buscar TODOS os integrantes ativos
+      const { data: allIntegrantes, error: integrantesError } = await supabaseAdmin
         .from('integrantes_portal')
-        .select('id, profile_id')
-        .eq('ativo', true)
-        .ilike('divisao_texto', `%${divisao.nome}%`);
+        .select('id, profile_id, divisao_texto')
+        .eq('ativo', true);
       
       if (integrantesError) {
         console.error('[manage-presenca] Erro ao buscar integrantes:', integrantesError);
@@ -143,8 +151,19 @@ Deno.serve(async (req) => {
         );
       }
       
-      if (!integrantes || integrantes.length === 0) {
-        console.log('[manage-presenca] Nenhum integrante encontrado');
+      // Filtrar integrantes da divisão usando normalização
+      const divisaoNormalizada = normalizeText(divisao.nome);
+      const integrantes = (allIntegrantes || []).filter(i => {
+        const divisaoIntegranteNormalizada = normalizeText(i.divisao_texto || '');
+        return divisaoIntegranteNormalizada.includes(divisaoNormalizada) ||
+               divisaoNormalizada.includes(divisaoIntegranteNormalizada);
+      });
+      
+      console.log('[manage-presenca] Divisão normalizada:', divisaoNormalizada);
+      console.log('[manage-presenca] Integrantes encontrados:', integrantes.length);
+      
+      if (integrantes.length === 0) {
+        console.log('[manage-presenca] Nenhum integrante encontrado para esta divisão');
         return new Response(
           JSON.stringify({ success: true, count: 0 }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
