@@ -50,17 +50,21 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
 
   const data = await response.json();
   
-  return data.items.map((item: any) => ({
-    id: item.id,
-    title: removeSpecialCharacters(item.summary || "Sem titulo"),
-    description: item.description || "",
-    start: item.start.dateTime || item.start.date,
-    end: item.end.dateTime || item.end.date,
-    location: item.location,
-    type: detectEventType(item.summary || ""),
-    division: detectDivision(item.summary || ""),
-    htmlLink: item.htmlLink,
-  }));
+  return data.items.map((item: any) => {
+    const normalizedTitle = removeSpecialCharacters(item.summary || "Sem titulo");
+    
+    return {
+      id: item.id,
+      title: normalizedTitle,
+      description: item.description || "",
+      start: item.start.dateTime || item.start.date,
+      end: item.end.dateTime || item.end.date,
+      location: item.location,
+      type: detectEventType(normalizedTitle),
+      division: detectDivision(normalizedTitle),
+      htmlLink: item.htmlLink,
+    };
+  });
 }
 
 function detectEventType(title: string): string {
