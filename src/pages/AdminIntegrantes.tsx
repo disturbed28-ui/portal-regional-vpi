@@ -13,10 +13,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { parseExcelFile, processDelta, parseCargoGrau } from "@/lib/excelParser";
 import { parseMensalidadesExcel, formatRef, ParseResult } from "@/lib/mensalidadesParser";
-import { Upload, ArrowLeft, Users, UserCheck, UserX, AlertCircle, FileSpreadsheet, History, Info } from "lucide-react";
+import { Upload, ArrowLeft, Users, UserCheck, UserX, AlertCircle, FileSpreadsheet, History, Info, RefreshCw } from "lucide-react";
 import { HistoricoDevedores } from "@/components/admin/HistoricoDevedores";
 import { useMensalidades } from "@/hooks/useMensalidades";
 import { format } from "date-fns";
+import { DialogAtualizados } from "@/components/admin/DialogAtualizados";
+import type { IntegrantePortal } from "@/hooks/useIntegrantes";
+import type { ExcelIntegrante } from "@/lib/excelParser";
 
 const AdminIntegrantes = () => {
   const navigate = useNavigate();
@@ -32,6 +35,12 @@ const AdminIntegrantes = () => {
   const [processing, setProcessing] = useState(false);
   const [mensalidadesPreview, setMensalidadesPreview] = useState<ParseResult | null>(null);
   const [showHistoricoDialog, setShowHistoricoDialog] = useState(false);
+  const [ultimaCarga, setUltimaCarga] = useState<{
+    id: string;
+    data_carga: string;
+    total_atualizados: number;
+  } | null>(null);
+  const [showAtualizadosDialog, setShowAtualizadosDialog] = useState(false);
   
   const { ultimaCargaInfo, devedoresAtivos } = useMensalidades();
 
@@ -152,37 +161,82 @@ const AdminIntegrantes = () => {
         throw new Error(data.error);
       }
 
-      // Salvar snapshot no histórico de cargas
+      // Salvar snapshot no histórico de cargas (formato correto agregado por divisão)
       const integrantesAtualizados = await supabase
         .from('integrantes_portal')
         .select('*')
         .eq('ativo', true);
 
       if (integrantesAtualizados.data) {
-        const snapshot = {
-          timestamp: new Date().toISOString(),
-          integrantes: integrantesAtualizados.data.map(i => ({
-            registro_id: i.registro_id,
-            nome_colete: i.nome_colete,
-            divisao_texto: i.divisao_texto,
-            comando_texto: i.comando_texto,
-            regional_texto: i.regional_texto,
-            cargo_grau_texto: i.cargo_grau_texto,
-            ativo: i.ativo,
-            tem_moto: i.tem_moto,
-            tem_carro: i.tem_carro,
-            sgt_armas: i.sgt_armas,
-            caveira: i.caveira,
-            caveira_suplente: i.caveira_suplente,
-            batedor: i.batedor,
-          }))
-        };
-
-        await supabase.from('cargas_historico').insert({
-          total_integrantes: integrantesAtualizados.data.length,
-          dados_snapshot: snapshot,
-          realizado_por: user.uid,
+        console.log('📸 Gerando snapshot agregado por divisão...');
+        
+        // Agrupar por divisão
+        const divisoesMap = new Map<string, { nome: string; total_atual: number }>();
+        
+        integrantesAtualizados.data.forEach(integrante => {
+          const divisao = integrante.divisao_texto;
+          if (!divisoesMap.has(divisao)) {
+            divisoesMap.set(divisao, { nome: divisao, total_atual: 0 });
+          }
+          divisoesMap.get(divisao)!.total_atual++;
         });
+        
+        const snapshot = {
+          divisoes: Array.from(divisoesMap.values())
+        };
+        
+        console.log('📊 Snapshot gerado:', snapshot);
+        
+        const { data: cargaData, error: cargaError } = await supabase
+          .from('cargas_historico')
+          .insert({
+            total_integrantes: integrantesAtualizados.data.length,
+            dados_snapshot: snapshot,
+            realizado_por: user.uid,
+          })
+          .select('id, data_carga')
+          .single();
+        
+        if (cargaError) {
+          console.error('❌ Erro ao salvar histórico:', cargaError);
+        } else if (cargaData) {
+          console.log('✅ Histórico salvo com ID:', cargaData.id);
+          
+          // Salvar detalhamento das atualizações
+          if (delta.atualizados.length > 0) {
+            console.log(`📝 Salvando ${delta.atualizados.length} atualizações detalhadas...`);
+            
+            const atualizacoesDetalhadas = delta.atualizados.flatMap((item: any) => {
+              const alteracoes = compararCampos(item.antigo, item.novo);
+              return alteracoes.map(alt => ({
+                carga_historico_id: cargaData.id,
+                integrante_id: item.antigo.id,
+                registro_id: item.antigo.registro_id,
+                nome_colete: item.novo.nome_colete,
+                campo_alterado: alt.campo,
+                valor_anterior: alt.anterior,
+                valor_novo: alt.novo,
+              }));
+            });
+            
+            const { error: atualizacoesError } = await supabase
+              .from('atualizacoes_carga')
+              .insert(atualizacoesDetalhadas);
+            
+            if (atualizacoesError) {
+              console.error('⚠️ Erro ao salvar atualizações detalhadas:', atualizacoesError);
+            } else {
+              console.log('✅ Atualizações detalhadas salvas!');
+            }
+          }
+          
+          // Atualizar estado para exibir no card
+          setUltimaCarga({
+            id: cargaData.id,
+            data_carga: cargaData.data_carga,
+            total_atualizados: delta.atualizados.length,
+          });
+        }
       }
 
       toast({
@@ -284,6 +338,49 @@ const AdminIntegrantes = () => {
     }
   };
 
+  // Função para comparar campos entre integrante antigo e novo
+  const compararCampos = (antigo: IntegrantePortal, novo: ExcelIntegrante) => {
+    const alteracoes: Array<{ campo: string; anterior: string; novo: string }> = [];
+    
+    const campos = [
+      { key: 'nome_colete', antigoKey: 'nome_colete', novoKey: 'nome_colete' },
+      { key: 'comando_texto', antigoKey: 'comando_texto', novoKey: 'comando' },
+      { key: 'regional_texto', antigoKey: 'regional_texto', novoKey: 'regional' },
+      { key: 'divisao_texto', antigoKey: 'divisao_texto', novoKey: 'divisao' },
+      { key: 'cargo_grau_texto', antigoKey: 'cargo_grau_texto', novoKey: 'cargo_grau' },
+      { key: 'cargo_estagio', antigoKey: 'cargo_estagio', novoKey: 'cargo_estagio' },
+      { key: 'tem_moto', antigoKey: 'tem_moto', novoKey: 'tem_moto' },
+      { key: 'tem_carro', antigoKey: 'tem_carro', novoKey: 'tem_carro' },
+      { key: 'sgt_armas', antigoKey: 'sgt_armas', novoKey: 'sgt_armas' },
+      { key: 'caveira', antigoKey: 'caveira', novoKey: 'caveira' },
+      { key: 'caveira_suplente', antigoKey: 'caveira_suplente', novoKey: 'caveira_suplente' },
+      { key: 'batedor', antigoKey: 'batedor', novoKey: 'batedor' },
+      { key: 'ursinho', antigoKey: 'ursinho', novoKey: 'ursinho' },
+      { key: 'lobo', antigoKey: 'lobo', novoKey: 'lobo' },
+      { key: 'combate_insano', antigoKey: 'combate_insano', novoKey: 'combate_insano' },
+      { key: 'data_entrada', antigoKey: 'data_entrada', novoKey: 'data_entrada' },
+    ];
+    
+    campos.forEach(campo => {
+      const valorAntigo = (antigo as any)[campo.antigoKey];
+      const valorNovo = (novo as any)[campo.novoKey] ?? null;
+      
+      // Normalizar valores para comparação
+      const antigoStr = valorAntigo === null ? '' : String(valorAntigo);
+      const novoStr = valorNovo === null ? '' : String(valorNovo);
+      
+      if (antigoStr !== novoStr) {
+        alteracoes.push({
+          campo: campo.key,
+          anterior: antigoStr || '-',
+          novo: novoStr || '-',
+        });
+      }
+    });
+    
+    return alteracoes;
+  };
+
   return (
     <div className="admin-page min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -360,6 +457,24 @@ const AdminIntegrantes = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Inativos</p>
                 <p className="text-2xl font-bold">{stats.inativos}</p>
+              </div>
+            </div>
+          </Card>
+          <Card 
+            className="p-4 cursor-pointer hover:bg-accent transition-colors"
+            onClick={() => ultimaCarga && setShowAtualizadosDialog(true)}
+            title="Clique para ver detalhes das atualizações"
+          >
+            <div className="flex items-center space-x-3">
+              <RefreshCw className="h-8 w-8 text-blue-600" />
+              <div>
+                <p className="text-sm text-muted-foreground">Atualizados</p>
+                <p className="text-2xl font-bold">{ultimaCarga?.total_atualizados || 0}</p>
+                {ultimaCarga && (
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(ultimaCarga.data_carga), 'dd/MM/yyyy HH:mm')}
+                  </p>
+                )}
               </div>
             </div>
           </Card>
@@ -624,6 +739,17 @@ const AdminIntegrantes = () => {
             <HistoricoDevedores />
           </DialogContent>
         </Dialog>
+
+        {/* Diálogo de Atualizados */}
+        {ultimaCarga && (
+          <DialogAtualizados
+            open={showAtualizadosDialog}
+            onOpenChange={setShowAtualizadosDialog}
+            cargaId={ultimaCarga.id}
+            dataCarga={ultimaCarga.data_carga}
+            totalAtualizados={ultimaCarga.total_atualizados}
+          />
+        )}
 
         {/* Dialog de Preview de Upload */}
       <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>

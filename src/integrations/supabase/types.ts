@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      atualizacoes_carga: {
+        Row: {
+          campo_alterado: string
+          carga_historico_id: string | null
+          created_at: string | null
+          id: string
+          integrante_id: string | null
+          nome_colete: string
+          registro_id: number
+          valor_anterior: string | null
+          valor_novo: string | null
+        }
+        Insert: {
+          campo_alterado: string
+          carga_historico_id?: string | null
+          created_at?: string | null
+          id?: string
+          integrante_id?: string | null
+          nome_colete: string
+          registro_id: number
+          valor_anterior?: string | null
+          valor_novo?: string | null
+        }
+        Update: {
+          campo_alterado?: string
+          carga_historico_id?: string | null
+          created_at?: string | null
+          id?: string
+          integrante_id?: string | null
+          nome_colete?: string
+          registro_id?: number
+          valor_anterior?: string | null
+          valor_novo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atualizacoes_carga_carga_historico_id_fkey"
+            columns: ["carga_historico_id"]
+            isOneToOne: false
+            referencedRelation: "cargas_historico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atualizacoes_carga_integrante_id_fkey"
+            columns: ["integrante_id"]
+            isOneToOne: false
+            referencedRelation: "integrantes_portal"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cargas_historico: {
         Row: {
           created_at: string | null

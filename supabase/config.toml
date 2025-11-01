@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.manage-presenca]
 verify_jwt = false
+
+[functions.reprocessar-snapshots]
+verify_jwt = false
