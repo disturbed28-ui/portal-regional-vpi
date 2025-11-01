@@ -18,9 +18,10 @@ interface HistoricoCompleto {
   divisoesUnicas: string[];
 }
 
-export const useHistoricoCargas = () => {
+export const useHistoricoCargas = (options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: ['historico-cargas'],
+    enabled: options?.enabled ?? true,
     queryFn: async (): Promise<HistoricoCompleto | null> => {
       console.log('🔍 [useHistoricoCargas] Iniciando busca...');
       

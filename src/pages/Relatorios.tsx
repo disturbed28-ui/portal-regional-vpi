@@ -21,13 +21,15 @@ const Relatorios = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { profile, loading: profileLoading } = useProfile(user?.uid);
-  const { hasRole } = useUserRole(user?.uid);
+  const { hasRole, loading: rolesLoading } = useUserRole(user?.uid);
   
   // Verificar permissões
   const isAutorizado = hasRole('admin') || hasRole('diretor_regional') || hasRole('moderator');
 
   const { data: relatorioData, isLoading } = useRelatorioData();
-  const { data: historicoData, isLoading: isLoadingHistorico } = useHistoricoCargas();
+  const { data: historicoData, isLoading: isLoadingHistorico } = useHistoricoCargas({
+    enabled: !!user?.uid && isAutorizado && !rolesLoading
+  });
 
   // Debug logging para histórico
   useEffect(() => {
