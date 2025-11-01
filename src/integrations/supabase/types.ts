@@ -419,6 +419,7 @@ export type Database = {
           id: string
           integrante_id: string
           profile_id: string | null
+          status: string
         }
         Insert: {
           confirmado_em?: string | null
@@ -427,6 +428,7 @@ export type Database = {
           id?: string
           integrante_id: string
           profile_id?: string | null
+          status?: string
         }
         Update: {
           confirmado_em?: string | null
@@ -435,6 +437,7 @@ export type Database = {
           id?: string
           integrante_id?: string
           profile_id?: string | null
+          status?: string
         }
         Relationships: [
           {

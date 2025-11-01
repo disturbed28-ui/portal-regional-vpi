@@ -22,15 +22,21 @@ export function QRCodeScanner({ open, onOpenChange, onScan }: QRCodeScannerProps
   const scannerId = "qr-reader";
 
   useEffect(() => {
-    if (open && !isClosingRef.current) {
+    if (open && !scanning && !processingRef.current && !isClosingRef.current) {
       // Aguardar o DOM estar pronto antes de iniciar o scanner
       const timer = setTimeout(() => {
         startScanning();
       }, 100);
       return () => clearTimeout(timer);
-    } else {
+    } else if (!open && scanning) {
       stopScanning();
     }
+    
+    return () => {
+      if (scanning) {
+        stopScanning();
+      }
+    };
   }, [open]);
 
   const startScanning = async () => {
@@ -100,6 +106,7 @@ export function QRCodeScanner({ open, onOpenChange, onScan }: QRCodeScannerProps
   };
 
   const stopScanning = async () => {
+    isClosingRef.current = true;
     console.log("[QRCodeScanner] Parando scanner");
     try {
       if (scannerRef.current && scanning) {
@@ -112,6 +119,9 @@ export function QRCodeScanner({ open, onOpenChange, onScan }: QRCodeScannerProps
     }
     setScanning(false);
     setLoading(false);
+    setTimeout(() => {
+      isClosingRef.current = false;
+    }, 500);
   };
 
   const handleQRCodeDetected = async (decodedText: string) => {
@@ -176,8 +186,7 @@ export function QRCodeScanner({ open, onOpenChange, onScan }: QRCodeScannerProps
       setTimeout(() => {
         onOpenChange(false);
         processingRef.current = false;
-        isClosingRef.current = false;
-      }, 100);
+      }, 300);
     }
   };
 

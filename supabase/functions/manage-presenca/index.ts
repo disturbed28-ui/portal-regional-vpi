@@ -13,15 +13,15 @@ Deno.serve(async (req) => {
 
   try {
     const { 
-      action, // 'add' ou 'remove'
+      action, // 'initialize', 'add' ou 'remove'
       firebase_uid,
       evento_agenda_id,
       integrante_id,
       profile_id,
-      presenca_id, // Para remover
+      divisao_id, // Para initialize
     } = await req.json();
 
-    console.log('[manage-presenca] Recebido:', { action, firebase_uid, evento_agenda_id, integrante_id });
+    console.log('[manage-presenca] Recebido:', { action, firebase_uid, evento_agenda_id, integrante_id, divisao_id });
 
     // Validar campos obrigatórios
     if (!action || !firebase_uid) {
@@ -38,9 +38,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (action === 'remove' && !presenca_id) {
+    if (action === 'remove' && (!evento_agenda_id || !integrante_id)) {
       return new Response(
-        JSON.stringify({ error: 'presenca_id é obrigatório para remover' }),
+        JSON.stringify({ error: 'evento_agenda_id e integrante_id são obrigatórios para remover' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (action === 'initialize' && (!evento_agenda_id || !divisao_id)) {
+      return new Response(
+        JSON.stringify({ error: 'evento_agenda_id e divisao_id são obrigatórios para inicializar' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -103,59 +110,169 @@ Deno.serve(async (req) => {
     }
 
     // Executar ação
-    if (action === 'add') {
-      console.log('[manage-presenca] Adicionando presença...');
-      const { data, error } = await supabaseAdmin
-        .from('presencas')
-        .insert({
-          evento_agenda_id,
-          integrante_id,
-          profile_id: profile_id || null,
-          confirmado_por: user_id,
-        })
-        .select()
+    if (action === 'initialize') {
+      console.log('[manage-presenca] Inicializando lista de presença...');
+      
+      // Buscar nome da divisão
+      const { data: divisao, error: divisaoError } = await supabaseAdmin
+        .from('divisoes')
+        .select('nome')
+        .eq('id', divisao_id)
         .single();
-
-      if (error) {
-        console.error('[manage-presenca] Erro ao adicionar:', error);
-        // Tratar duplicata
-        if (error.code === '23505') {
-          return new Response(
-            JSON.stringify({ error: 'Presença já registrada' }),
-            { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
+      
+      if (divisaoError || !divisao) {
+        console.error('[manage-presenca] Erro ao buscar divisão:', divisaoError);
         return new Response(
-          JSON.stringify({ error: 'Erro ao adicionar presença' }),
+          JSON.stringify({ error: 'Divisão não encontrada' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Buscar todos os integrantes ativos da divisão
+      const { data: integrantes, error: integrantesError } = await supabaseAdmin
+        .from('integrantes_portal')
+        .select('id, profile_id')
+        .eq('ativo', true)
+        .ilike('divisao_texto', `%${divisao.nome}%`);
+      
+      if (integrantesError) {
+        console.error('[manage-presenca] Erro ao buscar integrantes:', integrantesError);
+        return new Response(
+          JSON.stringify({ error: 'Erro ao buscar integrantes' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-
-      console.log('[manage-presenca] Presença adicionada:', data);
+      
+      if (!integrantes || integrantes.length === 0) {
+        console.log('[manage-presenca] Nenhum integrante encontrado');
+        return new Response(
+          JSON.stringify({ success: true, count: 0 }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Criar registros de presença com status='ausente'
+      const presencasParaInserir = integrantes.map(i => ({
+        evento_agenda_id,
+        integrante_id: i.id,
+        profile_id: i.profile_id || null,
+        status: 'ausente',
+        confirmado_por: user_id,
+      }));
+      
+      const { data, error } = await supabaseAdmin
+        .from('presencas')
+        .insert(presencasParaInserir)
+        .select();
+      
+      if (error) {
+        console.error('[manage-presenca] Erro ao inicializar:', error);
+        return new Response(
+          JSON.stringify({ error: 'Erro ao inicializar lista' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      console.log(`[manage-presenca] ${data.length} registros criados`);
       return new Response(
-        JSON.stringify({ success: true, data }),
+        JSON.stringify({ success: true, count: data.length }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    if (action === 'remove') {
-      console.log('[manage-presenca] Removendo presença...');
-      const { error } = await supabaseAdmin
+    if (action === 'add') {
+      console.log('[manage-presenca] Adicionando presença...');
+      
+      // Verificar se já existe registro
+      const { data: existente } = await supabaseAdmin
         .from('presencas')
-        .delete()
-        .eq('id', presenca_id);
-
-      if (error) {
-        console.error('[manage-presenca] Erro ao remover:', error);
+        .select('id, status')
+        .eq('evento_agenda_id', evento_agenda_id)
+        .eq('integrante_id', integrante_id)
+        .maybeSingle();
+      
+      if (existente) {
+        // Atualizar status para 'presente'
+        const { data, error } = await supabaseAdmin
+          .from('presencas')
+          .update({ 
+            status: 'presente',
+            confirmado_em: new Date().toISOString(),
+            confirmado_por: user_id,
+          })
+          .eq('id', existente.id)
+          .select()
+          .single();
+        
+        if (error) {
+          console.error('[manage-presenca] Erro ao atualizar:', error);
+          return new Response(
+            JSON.stringify({ error: 'Erro ao atualizar presença' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        console.log('[manage-presenca] Presença atualizada para presente');
         return new Response(
-          JSON.stringify({ error: 'Erro ao remover presença' }),
+          JSON.stringify({ success: true, data }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } else {
+        // Inserir novo registro com status 'visitante'
+        const { data, error } = await supabaseAdmin
+          .from('presencas')
+          .insert({
+            evento_agenda_id,
+            integrante_id,
+            profile_id: profile_id || null,
+            status: 'visitante',
+            confirmado_por: user_id,
+          })
+          .select()
+          .single();
+        
+        if (error) {
+          console.error('[manage-presenca] Erro ao inserir:', error);
+          return new Response(
+            JSON.stringify({ error: 'Erro ao adicionar visitante' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        console.log('[manage-presenca] Visitante adicionado');
+        return new Response(
+          JSON.stringify({ success: true, data }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    if (action === 'remove') {
+      console.log('[manage-presenca] Marcando como ausente...');
+      
+      const { data, error } = await supabaseAdmin
+        .from('presencas')
+        .update({ 
+          status: 'ausente',
+          confirmado_em: new Date().toISOString(),
+          confirmado_por: user_id,
+        })
+        .eq('evento_agenda_id', evento_agenda_id)
+        .eq('integrante_id', integrante_id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('[manage-presenca] Erro ao marcar ausente:', error);
+        return new Response(
+          JSON.stringify({ error: 'Erro ao marcar como ausente' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-
-      console.log('[manage-presenca] Presença removida');
+      
+      console.log('[manage-presenca] Marcado como ausente');
       return new Response(
-        JSON.stringify({ success: true }),
+        JSON.stringify({ success: true, data }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

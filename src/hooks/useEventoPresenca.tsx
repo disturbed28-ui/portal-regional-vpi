@@ -16,6 +16,7 @@ interface EventoAgenda {
 interface Presenca {
   id: string;
   integrante_id: string;
+  status: string;
   confirmado_em: string;
   integrante: {
     id: string;
@@ -23,6 +24,7 @@ interface Presenca {
     cargo_nome: string | null;
     grau: string | null;
     divisao_texto: string;
+    profile_id: string | null;
   };
 }
 
@@ -69,13 +71,15 @@ export const useEventoPresenca = (eventoId: string | null) => {
       .select(`
         id,
         integrante_id,
+        status,
         confirmado_em,
         integrante:integrantes_portal (
           id,
           nome_colete,
           cargo_nome,
           grau,
-          divisao_texto
+          divisao_texto,
+          profile_id
         )
       `)
       .eq('evento_agenda_id', eventoAgendaId);
@@ -85,6 +89,31 @@ export const useEventoPresenca = (eventoId: string | null) => {
     } else {
       setPresencas(data as any || []);
     }
+  };
+
+  const inicializarListaPresenca = async (
+    eventoAgendaId: string, 
+    divisaoId: string,
+    firebaseUid: string
+  ) => {
+    console.log('[inicializarListaPresenca] Inicializando...', { eventoAgendaId, divisaoId });
+    
+    const { data, error } = await supabase.functions.invoke('manage-presenca', {
+      body: {
+        action: 'initialize',
+        firebase_uid: firebaseUid,
+        evento_agenda_id: eventoAgendaId,
+        divisao_id: divisaoId,
+      }
+    });
+    
+    if (error) {
+      console.error('[inicializarListaPresenca] Erro:', error);
+      throw error;
+    }
+    
+    console.log(`[inicializarListaPresenca] ${data.count} integrantes registrados como ausentes`);
+    return data;
   };
 
   const criarEvento = async (
@@ -138,6 +167,17 @@ export const useEventoPresenca = (eventoId: string | null) => {
 
     console.log('[criarEvento] Evento criado com sucesso:', data);
     setEvento(data.data);
+    
+    // Inicializar lista de presença após criar evento
+    if (data.data && divisaoId && firebaseUser.uid) {
+      try {
+        await inicializarListaPresenca(data.data.id, divisaoId, firebaseUser.uid);
+        await fetchPresencas(data.data.id);
+      } catch (error) {
+        console.error('[criarEvento] Erro ao inicializar lista:', error);
+      }
+    }
+    
     return data.data;
   };
 
@@ -216,7 +256,9 @@ export const useEventoPresenca = (eventoId: string | null) => {
     fetchPresencas(evento.id);
   };
 
-  const removerPresenca = async (presencaId: string) => {
+  const removerPresenca = async (integranteId: string) => {
+    if (!evento) return;
+    
     // Pegar Firebase UID
     const firebaseUser = auth.currentUser;
     if (!firebaseUser) {
@@ -230,8 +272,8 @@ export const useEventoPresenca = (eventoId: string | null) => {
     }
 
     const firebase_uid = firebaseUser.uid;
-    console.log('[removerPresenca] Removendo presença via edge function...', {
-      presenca_id: presencaId,
+    console.log('[removerPresenca] Marcando como ausente via edge function...', {
+      integrante_id: integranteId,
       firebase_uid
     });
 
@@ -239,15 +281,16 @@ export const useEventoPresenca = (eventoId: string | null) => {
       body: {
         action: 'remove',
         firebase_uid,
-        presenca_id: presencaId,
+        evento_agenda_id: evento.id,
+        integrante_id: integranteId,
       }
     });
 
     if (error) {
-      console.error('[removerPresenca] Erro ao remover presença:', error);
+      console.error('[removerPresenca] Erro ao marcar ausente:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível remover a presença",
+        description: "Não foi possível marcar como ausente",
         variant: "destructive",
       });
     } else if (data?.error) {
@@ -260,11 +303,9 @@ export const useEventoPresenca = (eventoId: string | null) => {
     } else {
       toast({
         title: "Sucesso",
-        description: "Presença removida",
+        description: "Marcado como ausente",
       });
-      if (evento) {
-        fetchPresencas(evento.id);
-      }
+      fetchPresencas(evento.id);
     }
   };
 

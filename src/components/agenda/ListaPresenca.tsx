@@ -163,28 +163,38 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
   };
 
   const handleMarcarAusente = async (integranteId: string) => {
-    const presenca = presencas.find(p => p.integrante_id === integranteId);
-    if (!presenca) return;
-    
-    await removerPresenca(presenca.id);
+    await removerPresenca(integranteId);
   };
 
   if (!event) return null;
 
   const startDate = new Date(event.start);
   
-  // Separar presentes e ausentes
-  const presencasIds = new Set(presencas.map(p => p.integrante_id));
-  const integrantesDivisaoIds = new Set(integrantesDivisao.map(i => i.id));
-  
-  // Mapear todas as presenças com informação se é visitante
-  const todosPresentes = presencas.map(p => ({
-    ...p.integrante,
-    presencaId: p.id,
-    isVisitante: !integrantesDivisaoIds.has(p.integrante_id)
-  }));
-  
-  const ausentes = integrantesDivisao.filter(i => !presencasIds.has(i.id));
+  // Separar por status
+  const presentes = presencas
+    .filter(p => p.status === 'presente')
+    .map(p => ({
+      ...p.integrante,
+      presencaId: p.id,
+      isVisitante: false,
+    }));
+
+  const visitantes = presencas
+    .filter(p => p.status === 'visitante')
+    .map(p => ({
+      ...p.integrante,
+      presencaId: p.id,
+      isVisitante: true,
+    }));
+
+  const todosPresentes = [...presentes, ...visitantes];
+
+  const ausentes = presencas
+    .filter(p => p.status === 'ausente')
+    .map(p => ({
+      ...p.integrante,
+      presencaId: p.id,
+    }));
 
   return (
     <>
@@ -267,11 +277,11 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Divisão</TableHead>
-                      <TableHead>Cargo</TableHead>
-                      <TableHead>Grau</TableHead>
-                      {canManage && <TableHead className="w-[120px]">Ações</TableHead>}
+                      <TableHead className="text-gray-900 dark:text-gray-100">Nome</TableHead>
+                      <TableHead className="text-gray-900 dark:text-gray-100">Divisão</TableHead>
+                      <TableHead className="text-gray-900 dark:text-gray-100">Cargo</TableHead>
+                      <TableHead className="text-gray-900 dark:text-gray-100">Grau</TableHead>
+                      {canManage && <TableHead className="w-[120px] text-gray-900 dark:text-gray-100">Ações</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -291,7 +301,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
+                          <TableCell className="text-sm font-medium text-gray-900 dark:text-gray-100">
                             {integrante.divisao_texto}
                           </TableCell>
                           <TableCell>{integrante.cargo_nome || '-'}</TableCell>
@@ -326,10 +336,10 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Cargo</TableHead>
-                      <TableHead>Grau</TableHead>
-                      {canManage && <TableHead className="w-[120px]">Ações</TableHead>}
+                      <TableHead className="text-gray-900 dark:text-gray-100">Nome</TableHead>
+                      <TableHead className="text-gray-900 dark:text-gray-100">Cargo</TableHead>
+                      <TableHead className="text-gray-900 dark:text-gray-100">Grau</TableHead>
+                      {canManage && <TableHead className="w-[120px] text-gray-900 dark:text-gray-100">Ações</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
