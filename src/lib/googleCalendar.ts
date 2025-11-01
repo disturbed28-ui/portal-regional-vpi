@@ -70,9 +70,14 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
 function detectEventType(title: string): string {
   const lower = title.toLowerCase();
   
+  // Reunião (várias variações)
+  if (lower.includes("reuniao") || lower.includes("reunião")) return "Reuniao";
+  
+  // Ação Social
+  if (lower.includes("acao social") || lower.includes("ação social") || lower.includes("arrecadacao") || lower.includes("arrecadação")) return "Acao Social";
+  
+  // Outros tipos
   if (lower.includes("pub")) return "Pub";
-  if (lower.includes("acao social") || lower.includes("arrecadacao")) return "Acao Social";
-  if (lower.includes("reuniao")) return "Reuniao";
   if (lower.includes("bonde")) return "Bonde";
   if (lower.includes("bate e volta")) return "Bate e Volta";
   if (lower.includes("treino")) return "Treino";
