@@ -181,6 +181,12 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
       if (cargoLower.includes('armas') || cargoLower.includes('sgt')) return 5;
     }
     
+    // Grau X - PP vem antes de Camiseta
+    if (grau === 'X') {
+      if (cargoLower === 'pp' || cargoLower.includes('sgt armas pp')) return 1;
+      if (cargoLower.includes('camiseta')) return 2;
+    }
+    
     // Para outros graus, retornar 999 para usar ordem alfabética
     return 999;
   };
