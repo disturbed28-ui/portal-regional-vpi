@@ -300,7 +300,7 @@ export function ProfileDetailDialog({
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            admin_user_id: user.uid,
+            admin_user_id: user.id,
             profile_id: profile.id,
             integrante_portal_id: integranteParaVincular,
             // Enviar APENAS IDs e campos básicos

@@ -147,7 +147,7 @@ const AdminIntegrantes = () => {
       // Chamar edge function
       const { data, error } = await supabase.functions.invoke('admin-import-integrantes', {
         body: {
-          admin_user_id: user.uid,
+          admin_user_id: user.id,
           novos: novosData,
           atualizados: atualizadosData,
         },
@@ -229,9 +229,9 @@ const AdminIntegrantes = () => {
       
       const { data, error } = await supabase.functions.invoke('admin-import-mensalidades', {
         body: {
-          firebase_uid: user.uid,
+          user_id: user.id,
           mensalidades: mensalidadesPreview.mensalidades,
-          realizado_por: user.displayName || user.email || 'Admin'
+          realizado_por: user.user_metadata?.full_name || user.email || 'Admin'
         }
       });
 

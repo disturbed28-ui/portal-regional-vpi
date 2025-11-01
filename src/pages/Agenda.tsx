@@ -19,7 +19,7 @@ const Agenda = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { profile, loading: profileLoading } = useProfile(user?.uid);
+  const { profile, loading: profileLoading } = useProfile(user?.id);
   const { data: events, isLoading, error } = useCalendarEvents();
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);

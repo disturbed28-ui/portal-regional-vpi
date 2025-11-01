@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { auth } from "@/lib/firebase";
+import { useAuth } from "@/hooks/useAuth";
 
 type AppRole = 'admin' | 'moderator' | 'user' | 'diretor_regional';
 
@@ -27,6 +27,7 @@ export const useScreenPermissions = () => {
   const [loading, setLoading] = useState(true);
   const [operationLoading, setOperationLoading] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchData();
@@ -86,10 +87,9 @@ export const useScreenPermissions = () => {
       screenName 
     });
 
-    // Pegar Firebase UID
-    const firebaseUser = auth.currentUser;
-    if (!firebaseUser) {
-      console.error('[useScreenPermissions] Usuário não autenticado no Firebase');
+    // Pegar user ID
+    if (!user) {
+      console.error('[useScreenPermissions] Usuário não autenticado');
       toast({
         title: "Erro",
         description: "Usuário não autenticado",
@@ -99,8 +99,8 @@ export const useScreenPermissions = () => {
       return;
     }
 
-    const firebase_uid = firebaseUser.uid;
-    console.log('[useScreenPermissions] Firebase UID:', firebase_uid);
+    const user_id = user.id;
+    console.log('[useScreenPermissions] User ID:', user_id);
 
     if (existing) {
       // Atualização otimista - remove da UI primeiro
@@ -114,7 +114,7 @@ export const useScreenPermissions = () => {
           action: 'remove',
           screen_id: screenId,
           role: role,
-          firebase_uid: firebase_uid,
+          user_id: user_id,
         }
       });
 
@@ -152,7 +152,7 @@ export const useScreenPermissions = () => {
           action: 'add',
           screen_id: screenId,
           role: role,
-          firebase_uid: firebase_uid,
+          user_id: user_id,
         }
       });
 

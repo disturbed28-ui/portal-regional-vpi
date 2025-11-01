@@ -16,7 +16,7 @@ interface MensalidadeImport {
 }
 
 interface RequestBody {
-  firebase_uid: string;
+  user_id: string;
   mensalidades: MensalidadeImport[];
   realizado_por: string;
 }
@@ -31,17 +31,17 @@ Deno.serve(async (req) => {
     console.log('[admin-import-mensalidades] Request received');
 
     // Parse request body
-    const { firebase_uid, mensalidades, realizado_por }: RequestBody = await req.json();
+    const { user_id, mensalidades, realizado_por }: RequestBody = await req.json();
 
-    if (!firebase_uid || !mensalidades || mensalidades.length === 0) {
+    if (!user_id || !mensalidades || mensalidades.length === 0) {
       console.error('[admin-import-mensalidades] Missing required fields');
       return new Response(
-        JSON.stringify({ error: 'firebase_uid e mensalidades são obrigatórios' }),
+        JSON.stringify({ error: 'user_id e mensalidades são obrigatórios' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`[admin-import-mensalidades] Validating admin: ${firebase_uid}`);
+    console.log(`[admin-import-mensalidades] Validating admin: ${user_id}`);
     console.log(`[admin-import-mensalidades] Mensalidades count: ${mensalidades.length}`);
 
     // Initialize Supabase client with SERVICE_ROLE_KEY to bypass RLS
@@ -53,12 +53,12 @@ Deno.serve(async (req) => {
     const { data: roleData, error: roleError } = await supabase
       .from('user_roles')
       .select('role')
-      .eq('user_id', firebase_uid)
+      .eq('user_id', user_id)
       .eq('role', 'admin')
       .single();
 
     if (roleError || !roleData) {
-      console.error('[admin-import-mensalidades] Unauthorized access attempt:', firebase_uid);
+      console.error('[admin-import-mensalidades] Unauthorized access attempt:', user_id);
       return new Response(
         JSON.stringify({ error: 'Acesso não autorizado. Apenas admins podem importar mensalidades.' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

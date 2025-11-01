@@ -14,19 +14,19 @@ Deno.serve(async (req) => {
   try {
     console.log('[manage-screen-permissions] Requisição recebida');
     
-    const { action, screen_id, role, firebase_uid } = await req.json();
+    const { action, screen_id, role, user_id } = await req.json();
     
     console.log('[manage-screen-permissions] Dados recebidos:', { 
       action, 
       screen_id, 
       role, 
-      firebase_uid 
+      user_id 
     });
 
-    if (!action || !screen_id || !role || !firebase_uid) {
+    if (!action || !screen_id || !role || !user_id) {
       console.error('[manage-screen-permissions] Parâmetros faltando');
       return new Response(
-        JSON.stringify({ error: 'Parâmetros obrigatórios: action, screen_id, role, firebase_uid' }),
+        JSON.stringify({ error: 'Parâmetros obrigatórios: action, screen_id, role, user_id' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -53,11 +53,11 @@ Deno.serve(async (req) => {
 
     console.log('[manage-screen-permissions] Verificando se usuário é admin...');
 
-    // Verificar se o firebase_uid tem role admin
+    // Verificar se o user_id tem role admin
     const { data: userRoles, error: rolesError } = await supabaseAdmin
       .from('user_roles')
       .select('role')
-      .eq('user_id', firebase_uid);
+      .eq('user_id', user_id);
 
     if (rolesError) {
       console.error('[manage-screen-permissions] Erro ao buscar roles:', rolesError);

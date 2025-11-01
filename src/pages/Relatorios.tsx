@@ -20,15 +20,15 @@ import { toast } from '@/hooks/use-toast';
 const Relatorios = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { profile, loading: profileLoading } = useProfile(user?.uid);
-  const { hasRole, loading: rolesLoading } = useUserRole(user?.uid);
+  const { profile, loading: profileLoading } = useProfile(user?.id);
+  const { hasRole, loading: rolesLoading } = useUserRole(user?.id);
   
   // Verificar permissões
   const isAutorizado = hasRole('admin') || hasRole('diretor_regional') || hasRole('moderator');
 
   const { data: relatorioData, isLoading } = useRelatorioData();
   const { data: historicoData, isLoading: isLoadingHistorico } = useHistoricoCargas({
-    enabled: !!user?.uid && isAutorizado && !rolesLoading
+    enabled: !!user?.id && isAutorizado && !rolesLoading
   });
 
   // Debug logging para histórico

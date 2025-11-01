@@ -49,7 +49,7 @@ const AdminDados = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
-  const { hasRole, loading: roleLoading } = useUserRole(user?.uid);
+  const { hasRole, loading: roleLoading } = useUserRole(user?.id);
 
   // Estado dos diálogos
   const [cargoDialogOpen, setCargoDialogOpen] = useState(false);

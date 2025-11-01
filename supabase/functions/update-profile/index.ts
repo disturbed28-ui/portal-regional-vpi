@@ -208,14 +208,14 @@ serve(async (req) => {
 
   try {
     console.log('Received update-profile request');
-    const { userId, nome_colete, telefone, profile_status } = await req.json();
+    const { user_id, nome_colete, telefone, profile_status } = await req.json();
     
-    console.log('Request data:', { userId, nome_colete, telefone, profile_status });
+    console.log('Request data:', { user_id, nome_colete, telefone, profile_status });
 
-    if (!userId || !nome_colete) {
+    if (!user_id || !nome_colete) {
       console.error('Missing required fields');
       return new Response(
-        JSON.stringify({ error: 'userId and nome_colete are required' }),
+        JSON.stringify({ error: 'user_id and nome_colete are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -226,7 +226,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    console.log('Updating profile for userId:', userId);
+    console.log('Updating profile for user_id:', user_id);
 
     const updateData: any = {
       nome_colete: nome_colete.trim(),
@@ -241,7 +241,7 @@ serve(async (req) => {
     const { data, error } = await supabaseAdmin
       .from('profiles')
       .update(updateData)
-      .eq('id', userId)
+      .eq('id', user_id)
       .select()
       .single();
 

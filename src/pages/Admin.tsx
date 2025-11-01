@@ -62,7 +62,7 @@ const Admin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
-  const { roles, hasRole, loading: roleLoading } = useUserRole(user?.uid);
+  const { roles, hasRole, loading: roleLoading } = useUserRole(user?.id);
   
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,7 +79,7 @@ const Admin = () => {
   useEffect(() => {
     console.log('[Admin] Verificacao de acesso iniciada');
     console.log('[Admin] authLoading:', authLoading, 'roleLoading:', roleLoading);
-    console.log('[Admin] user:', user?.uid);
+    console.log('[Admin] user:', user?.id);
     console.log('[Admin] roles:', roles);
     console.log('[Admin] hasRole(admin):', hasRole('admin'));
     
@@ -248,7 +248,7 @@ const Admin = () => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            admin_user_id: user.uid,
+            admin_user_id: user.id,
             profile_id: selectedProfile.id,
             ...updates,
           }),

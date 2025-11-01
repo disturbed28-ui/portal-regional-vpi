@@ -30,7 +30,7 @@ const getBadges = (integrante: IntegranteComFoto | null) => {
 const Organograma = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { profile, loading: profileLoading } = useProfile(user?.uid);
+  const { profile, loading: profileLoading } = useProfile(user?.id);
   
   const [nivel, setNivel] = useState<Nivel>('regional');
   const [tipoLista, setTipoLista] = useState<TipoLista>(null);
@@ -50,13 +50,13 @@ const Organograma = () => {
 
   // Validar acesso e buscar regional do integrante
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!user?.id) return;
 
     const validateAccess = async () => {
       const { data, error } = await supabase
         .from('integrantes_portal')
         .select('ativo, vinculado, regional_texto')
-        .eq('profile_id', user.uid)
+        .eq('profile_id', user.id)
         .maybeSingle();
       
       if (error || !data || !data.ativo) {
@@ -69,7 +69,7 @@ const Organograma = () => {
     };
 
     validateAccess();
-  }, [user?.uid, navigate]);
+  }, [user?.id, navigate]);
   
   const {
     hierarquiaRegional,

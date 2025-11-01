@@ -12,7 +12,7 @@ const Perfil = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, loading } = useAuth();
-  const { profile } = useProfile(user?.uid);
+  const { profile } = useProfile(user?.id);
   const [nomeColete, setNomeColete] = useState("");
   const [telefone, setTelefone] = useState("");
   
@@ -73,9 +73,9 @@ const Perfil = () => {
   }, [user, loading, navigate, toast]);
 
   // Dados reais do usuario
-  const userName = profile?.name || user?.displayName || "Visitante";
+  const userName = profile?.name || user?.user_metadata?.full_name || "Visitante";
   const userEmail = user?.email || "Sem email";
-  const userPhoto = profile?.photo_url || user?.photoURL || "";
+  const userPhoto = profile?.photo_url || user?.user_metadata?.avatar_url || "";
 
   const handleEnviar = async () => {
     if (!nomeColete.trim()) {
@@ -107,7 +107,7 @@ const Perfil = () => {
       // Chamar edge function em vez de UPDATE direto
       const { data, error } = await supabase.functions.invoke('update-profile', {
         body: {
-          userId: user?.uid,
+          user_id: user?.id,
           nome_colete: nomeColete.trim(),
           telefone: telefone.trim(),
           profile_status: newStatus
