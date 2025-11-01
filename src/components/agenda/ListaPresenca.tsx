@@ -63,91 +63,77 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
         divisaoId,
         event.type || null
       );
+      
+      // Buscar integrantes usando o divisaoId encontrado
+      if (divisaoId) {
+        await fetchIntegrantesByDivisaoId(divisaoId);
+      }
     } else {
       refetch();
-    }
-
-    // Buscar integrantes da divisão
-    if (event.division) {
-      fetchIntegrantesDivisao(event.division);
+      
+      // Buscar integrantes usando o divisao_id do evento
+      if (existingEvento.divisao_id) {
+        await fetchIntegrantesByDivisaoId(existingEvento.divisao_id);
+      }
     }
   };
 
   const getDivisaoIdFromEvent = async (event: CalendarEvent): Promise<string | null> => {
     if (!event.division) return null;
 
-    const { data } = await supabase
+    // Buscar usando normalização para lidar com diferenças de acentuação
+    const divisaoNormalizada = removeAccents(event.division.toLowerCase());
+    
+    const { data: allDivisoes } = await supabase
       .from('divisoes')
-      .select('id')
-      .ilike('nome', `%${event.division}%`)
-      .maybeSingle();
+      .select('id, nome');
+    
+    if (!allDivisoes) return null;
+    
+    // Filtrar no cliente com normalização
+    const divisaoEncontrada = allDivisoes.find(d => {
+      const nomeNormalizado = removeAccents(d.nome.toLowerCase());
+      return nomeNormalizado.includes(divisaoNormalizada) || 
+             divisaoNormalizada.includes(nomeNormalizado);
+    });
 
-    return data?.id || null;
+    return divisaoEncontrada?.id || null;
   };
 
-  const fetchIntegrantesDivisao = async (divisaoTexto: string) => {
-    console.log('[fetchIntegrantesDivisao] Buscando integrantes para:', divisaoTexto);
+  const fetchIntegrantesByDivisaoId = async (divisaoId: string) => {
+    console.log('[fetchIntegrantesByDivisaoId] Buscando integrantes para divisao_id:', divisaoId);
     
-    // Dividir se houver múltiplas divisões separadas por " / "
-    const divisoes = divisaoTexto.split(' / ').map(d => d.trim());
+    // Primeiro buscar o nome da divisão
+    const { data: divisao } = await supabase
+      .from('divisoes')
+      .select('nome')
+      .eq('id', divisaoId)
+      .single();
     
-    let allIntegrantes: IntegranteDivisao[] = [];
-    
-    for (const divisao of divisoes) {
-      console.log('[fetchIntegrantesDivisao] Buscando divisão:', divisao);
-      
-      // Estratégia 1: Busca exata com ilike
-      let { data, error } = await supabase
-        .from('integrantes_portal')
-        .select('id, nome_colete, cargo_nome, grau, divisao_texto, profile_id')
-        .eq('ativo', true)
-        .ilike('divisao_texto', `%${divisao}%`)
-        .order('cargo_nome', { ascending: false })
-        .order('grau', { ascending: false });
-
-      // Estratégia 2: Se não encontrou, buscar removendo acentos de ambos os lados
-      if (!data || data.length === 0) {
-        console.log('[fetchIntegrantesDivisao] Tentando busca com normalização de texto');
-        
-        // Normalizar o texto de busca
-        const divisaoNormalizada = removeAccents(divisao.toLowerCase());
-        
-        // Buscar todos os integrantes ativos e filtrar no cliente
-        const { data: allData, error: allError } = await supabase
-          .from('integrantes_portal')
-          .select('id, nome_colete, cargo_nome, grau, divisao_texto, profile_id')
-          .eq('ativo', true)
-          .order('cargo_nome', { ascending: false })
-          .order('grau', { ascending: false });
-        
-        if (!allError && allData) {
-          // Filtrar usando a string completa normalizada (não só palavras-chave)
-          data = allData.filter(integrante => {
-            const divisaoIntegranteNorm = removeAccents(integrante.divisao_texto.toLowerCase());
-            // Busca pela string completa normalizada
-            return divisaoIntegranteNorm.includes(divisaoNormalizada);
-          });
-          console.log(`[fetchIntegrantesDivisao] Encontrados ${data.length} integrantes com busca normalizada`);
-        }
-      }
-
-      if (error) {
-        console.error('[fetchIntegrantesDivisao] Erro ao buscar integrantes:', error);
-      } else if (data && data.length > 0) {
-        console.log(`[fetchIntegrantesDivisao] Encontrados ${data.length} integrantes para ${divisao}`);
-        allIntegrantes = [...allIntegrantes, ...data];
-      } else {
-        console.log(`[fetchIntegrantesDivisao] Nenhum integrante encontrado para ${divisao}`);
-      }
+    if (!divisao) {
+      console.error('[fetchIntegrantesByDivisaoId] Divisão não encontrada');
+      setIntegrantesDivisao([]);
+      return;
     }
     
-    // Remover duplicatas (caso um integrante apareça em múltiplas consultas)
-    const uniqueIntegrantes = Array.from(
-      new Map(allIntegrantes.map(item => [item.id, item])).values()
-    );
+    console.log('[fetchIntegrantesByDivisaoId] Nome da divisão:', divisao.nome);
     
-    console.log(`[fetchIntegrantesDivisao] Total de integrantes únicos: ${uniqueIntegrantes.length}`);
-    setIntegrantesDivisao(uniqueIntegrantes);
+    // Buscar integrantes usando o nome exato da divisão
+    const { data, error } = await supabase
+      .from('integrantes_portal')
+      .select('id, nome_colete, cargo_nome, grau, divisao_texto, profile_id')
+      .eq('ativo', true)
+      .ilike('divisao_texto', `%${divisao.nome}%`)
+      .order('cargo_nome', { ascending: false })
+      .order('grau', { ascending: false });
+
+    if (error) {
+      console.error('[fetchIntegrantesByDivisaoId] Erro ao buscar integrantes:', error);
+      setIntegrantesDivisao([]);
+    } else {
+      console.log(`[fetchIntegrantesByDivisaoId] Encontrados ${data?.length || 0} integrantes`);
+      setIntegrantesDivisao(data || []);
+    }
   };
 
   const handleScan = async (profileId: string, integranteId: string) => {
