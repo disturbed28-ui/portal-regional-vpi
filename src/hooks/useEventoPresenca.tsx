@@ -144,27 +144,54 @@ export const useEventoPresenca = (eventoId: string | null) => {
   const registrarPresenca = async (integranteId: string, profileId: string) => {
     if (!evento) return;
 
-    const { error } = await supabase
-      .from('presencas')
-      .insert({
+    // Pegar Firebase UID
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) {
+      console.error('[registrarPresenca] Usuário não autenticado no Firebase');
+      toast({
+        title: "Erro",
+        description: "Usuário não autenticado",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const firebase_uid = firebaseUser.uid;
+    console.log('[registrarPresenca] Registrando presença via edge function...', {
+      evento_agenda_id: evento.id,
+      integrante_id: integranteId,
+      firebase_uid
+    });
+
+    const { data, error } = await supabase.functions.invoke('manage-presenca', {
+      body: {
+        action: 'add',
+        firebase_uid,
         evento_agenda_id: evento.id,
         integrante_id: integranteId,
         profile_id: profileId,
-        confirmado_por: (await supabase.auth.getUser()).data.user?.id,
-      });
+      }
+    });
 
     if (error) {
-      if (error.code === '23505') {
+      console.error('[registrarPresenca] Erro ao registrar presença:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível registrar a presença",
+        variant: "destructive",
+      });
+    } else if (data?.error) {
+      console.error('[registrarPresenca] Erro retornado:', data.error);
+      if (data.error === 'Presença já registrada') {
         toast({
           title: "Aviso",
           description: "Este integrante já está registrado na lista",
           variant: "destructive",
         });
       } else {
-        console.error('Erro ao registrar presença:', error);
         toast({
           title: "Erro",
-          description: "Não foi possível registrar a presença",
+          description: data.error,
           variant: "destructive",
         });
       }
@@ -178,16 +205,44 @@ export const useEventoPresenca = (eventoId: string | null) => {
   };
 
   const removerPresenca = async (presencaId: string) => {
-    const { error } = await supabase
-      .from('presencas')
-      .delete()
-      .eq('id', presencaId);
+    // Pegar Firebase UID
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser) {
+      console.error('[removerPresenca] Usuário não autenticado no Firebase');
+      toast({
+        title: "Erro",
+        description: "Usuário não autenticado",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const firebase_uid = firebaseUser.uid;
+    console.log('[removerPresenca] Removendo presença via edge function...', {
+      presenca_id: presencaId,
+      firebase_uid
+    });
+
+    const { data, error } = await supabase.functions.invoke('manage-presenca', {
+      body: {
+        action: 'remove',
+        firebase_uid,
+        presenca_id: presencaId,
+      }
+    });
 
     if (error) {
-      console.error('Erro ao remover presença:', error);
+      console.error('[removerPresenca] Erro ao remover presença:', error);
       toast({
         title: "Erro",
         description: "Não foi possível remover a presença",
+        variant: "destructive",
+      });
+    } else if (data?.error) {
+      console.error('[removerPresenca] Erro retornado:', data.error);
+      toast({
+        title: "Erro",
+        description: data.error,
         variant: "destructive",
       });
     } else {
