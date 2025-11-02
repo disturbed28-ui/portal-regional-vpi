@@ -251,21 +251,6 @@ const Index = () => {
           <div className="text-center text-xs text-muted-foreground space-y-2">
             <div>2025 - {new Date().getFullYear()}</div>
             <div>🔐 Autenticacao segura via Google OAuth</div>
-            <div className="flex gap-3 justify-center items-center">
-              <a 
-                href="/politica-privacidade" 
-                className="hover:text-foreground transition-colors underline-offset-4 hover:underline"
-              >
-                Política de Privacidade
-              </a>
-              <span>•</span>
-              <a 
-                href="/termos-servico" 
-                className="hover:text-foreground transition-colors underline-offset-4 hover:underline"
-              >
-                Termos de Serviço
-              </a>
-            </div>
           </div>
         </div>
         </div>
