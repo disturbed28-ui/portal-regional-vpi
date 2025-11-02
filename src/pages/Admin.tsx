@@ -239,12 +239,19 @@ const Admin = () => {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       
+      // Obter token JWT da sessão atual
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Sessão expirada. Faça login novamente.');
+      }
+      
       const response = await fetch(
         `${supabaseUrl}/functions/v1/admin-update-profile`,
         {
           method: 'POST',
           headers: {
             'apikey': supabaseKey,
+            'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
