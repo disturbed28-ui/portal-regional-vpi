@@ -81,6 +81,25 @@ Deno.serve(async (req) => {
     if (!oldProfile) {
       console.log('[migrate-user-on-login] No old Firebase profile found, creating new profile')
       
+      // Verificação secundária para prevenir race conditions
+      const { data: secondCheck } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user_id)
+        .maybeSingle()
+
+      if (secondCheck) {
+        console.log('[migrate-user-on-login] Profile found in secondary check (race condition)')
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            migrated: false,
+            message: 'Profile already exists'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        )
+      }
+      
       // Criar novo profile
       const { error: insertError } = await supabase
         .from('profiles')
@@ -96,6 +115,21 @@ Deno.serve(async (req) => {
 
       if (insertError) {
         console.error('[migrate-user-on-login] Error creating profile:', insertError)
+        
+        // Se for erro de duplicata (race condition), não é fatal
+        if (insertError.code === '23505') {
+          console.log('[migrate-user-on-login] Duplicate key - profile already exists, returning success')
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              migrated: false,
+              message: 'Profile already exists'
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+          )
+        }
+        
+        // Apenas lança se for outro tipo de erro
         throw insertError
       }
 

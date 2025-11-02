@@ -40,11 +40,7 @@ export const useAuth = () => {
 
               if (error) {
                 console.error('[useAuth] Error creating profile:', error);
-                toast({
-                  title: "Erro ao criar perfil",
-                  description: "Tente novamente ou contate o administrador.",
-                  variant: "destructive",
-                });
+                // Não mostrar toast - edge function já trata casos conhecidos
               } else {
                 console.log('[useAuth] Profile creation result:', data);
                 
@@ -68,11 +64,7 @@ export const useAuth = () => {
               }
             } catch (error: any) {
               console.error('[useAuth] Failed to create profile:', error);
-              toast({
-                title: "Erro ao criar perfil",
-                description: "Tente novamente ou contate o administrador.",
-                variant: "destructive",
-              });
+              // Não mostrar toast - edge function já trata casos conhecidos
             }
           }, 500);
         } else if (event === 'SIGNED_OUT') {
