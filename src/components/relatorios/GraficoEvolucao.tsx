@@ -53,6 +53,9 @@ export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps
     acc[divisao] = index + 1;
     return acc;
   }, {} as Record<string, number>);
+  
+  console.log('[GraficoEvolucao] divisoesUnicas recebidas:', divisoesUnicas);
+  console.log('[GraficoEvolucao] divisoesMap criado:', divisoesMap);
 
   // Preparar dados para o gráfico com chaves numéricas
   const dadosGrafico = cargas.map(carga => {
@@ -66,16 +69,24 @@ export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps
     
     // Preencher com dados reais onde existirem
     carga.divisoes.forEach(divisao => {
+      const nomeOriginal = divisao.divisao;
       const nomeNormalizado = normalizarNomeDivisao(divisao.divisao);
+      
+      console.log(`[GraficoEvolucao] ${mes} - Original: "${nomeOriginal}" -> Normalizado: "${nomeNormalizado}"`);
       
       const numero = divisoesMap[nomeNormalizado];
       if (numero) {
+        console.log(`[GraficoEvolucao] ${mes} - Encontrado numero ${numero} para "${nomeNormalizado}"`);
         dados[`divisao_${numero}`] = divisao.total;
+      } else {
+        console.warn(`[GraficoEvolucao] ${mes} - NÃO encontrado mapeamento para "${nomeNormalizado}"`);
       }
     });
     
     return dados;
   });
+  
+  console.log('[GraficoEvolucao] Dados finais do gráfico:', dadosGrafico);
 
   const chartConfig = {
     total_regional: {

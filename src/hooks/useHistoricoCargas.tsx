@@ -92,7 +92,9 @@ export const useHistoricoCargas = (options?: { enabled?: boolean }) => {
         if (carga.divisoes && Array.isArray(carga.divisoes)) {
           carga.divisoes.forEach(divisao => {
             if (divisao && divisao.divisao) {
+              const nomeOriginal = divisao.divisao;
               const nomeNormalizado = normalizarNomeDivisao(divisao.divisao);
+              console.log(`[useHistoricoCargas] Original: "${nomeOriginal}" -> Normalizado: "${nomeNormalizado}"`);
               divisoesSet.add(nomeNormalizado);
             }
           });
