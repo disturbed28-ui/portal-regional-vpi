@@ -424,14 +424,34 @@ Function NormalizaDivisao(divisao As String) As String
         divisao = Replace(divisao, "  ", " ")
     Loop
     
-    ' 5. Adicionar " - SP" se não existir
-    If Right(divisao, 5) <> " - SP" And Right(divisao, 4) <> " -SP" And Right(divisao, 3) <> "-SP" Then
-        divisao = divisao & " - SP"
-    End If
+    ' 5. Remover todos os sufixos possíveis de " - SP" e suas variações
+    divisao = Replace(divisao, " - SP", "")
+    divisao = Replace(divisao, " -SP", "")
+    divisao = Replace(divisao, "-SP", "")
+    divisao = Replace(divisao, " - S", "")
+    divisao = Replace(divisao, " -S", "")
+    divisao = Replace(divisao, "-S", "")
+    divisao = Replace(divisao, "–SP", "")  ' travessão
+    divisao = Replace(divisao, "— SP", "")  ' travessão longo
     
-    ' 6. Padronizar separador
-    divisao = Replace(divisao, " -SP", " - SP")
-    divisao = Replace(divisao, "-SP", " - SP")
+    ' 6. Limpar completamente o final da string
+    ' Remove espaços, hífens, letras S e P soltas
+    divisao = Trim(divisao)
+    
+    Do While Len(divisao) > 0
+        Dim ultimoChar As String
+        ultimoChar = Right(divisao, 1)
+        
+        ' Se o último caractere for espaço, hífen, S ou P, remove
+        If ultimoChar = " " Or ultimoChar = "-" Or ultimoChar = "S" Or ultimoChar = "P" Then
+            divisao = Left(divisao, Len(divisao) - 1)
+        Else
+            Exit Do ' Não é mais um caractere a ser removido
+        End If
+    Loop
+    
+    ' 7. Trim final e adicionar " - SP" padronizado
+    divisao = Trim(divisao) & " - SP"
     
     NormalizaDivisao = divisao
 End Function
