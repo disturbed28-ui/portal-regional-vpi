@@ -2,8 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 interface DivisaoSnapshot {
-  nome: string;
-  total_atual: number;
+  divisao: string;
+  total: number;
 }
 
 interface CargaHistorica {
@@ -73,7 +73,7 @@ export const useHistoricoCargas = (options?: { enabled?: boolean }) => {
       const divisoesSet = new Set<string>();
       cargasProcessadas.forEach(carga => {
         carga.divisoes.forEach(divisao => {
-          divisoesSet.add(divisao.nome);
+          divisoesSet.add(divisao.divisao);
         });
       });
 

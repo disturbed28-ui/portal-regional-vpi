@@ -4,8 +4,8 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 
 interface DivisaoSnapshot {
-  nome: string;
-  total_atual: number;
+  divisao: string;
+  total: number;
 }
 
 interface CargaHistorica {
@@ -44,7 +44,7 @@ export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps
     
     // Adicionar dados de cada divisão
     carga.divisoes.forEach(divisao => {
-      dados[divisao.nome] = divisao.total_atual;
+      dados[divisao.divisao] = divisao.total;
     });
     
     return dados;

@@ -5,8 +5,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ArrowUp, ArrowDown, Minus } from 'lucide-react';
 
 interface DivisaoSnapshot {
-  nome: string;
-  total_atual: number;
+  divisao: string;
+  total: number;
 }
 
 interface CargaHistorica {
@@ -23,10 +23,10 @@ interface TabelaComparativaProps {
 export const TabelaComparativa = ({ cargas, divisoesUnicas }: TabelaComparativaProps) => {
   // Preparar dados da tabela
   const linhasDivisoes = divisoesUnicas.map(nomeDivisao => {
-    const valores = cargas.map(carga => {
-      const divisao = carga.divisoes.find(d => d.nome === nomeDivisao);
-      return divisao?.total_atual || 0;
-    });
+      const valores = cargas.map(carga => {
+        const divisao = carga.divisoes.find(d => d.divisao === nomeDivisao);
+        return divisao?.total || 0;
+      });
     
     const variacaoTotal = valores[valores.length - 1] - valores[0];
     
