@@ -113,7 +113,7 @@ const Admin = () => {
     } else {
       console.log('[Admin] ACESSO PERMITIDO');
     }
-  }, [user, roles, authLoading, roleLoading, navigate, toast]);
+  }, [user, roles, authLoading, roleLoading, hasRole, navigate, toast]);
 
   // Carregar perfis
   useEffect(() => {
@@ -235,7 +235,7 @@ const Admin = () => {
           break;
       }
 
-      // Chamar edge function passando o Firebase UID
+      // Chamar edge function de atualização de perfil
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       

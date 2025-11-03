@@ -15,9 +15,9 @@ export const useUserRole = (userId: string | undefined) => {
     console.log('[useUserRole] Hook iniciado com userId:', userId);
     
     if (!userId) {
-      console.log('[useUserRole] userId e undefined/null, abortando');
+      console.log('[useUserRole] userId e undefined/null, aguardando...');
       setRoles([]);
-      setLoading(false);
+      // NÃO setar loading como false - continuar aguardando até receber userId válido
       return;
     }
 
