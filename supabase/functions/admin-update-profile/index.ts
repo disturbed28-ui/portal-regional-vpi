@@ -20,6 +20,7 @@ Deno.serve(async (req) => {
       admin_user_id,
       profile_id,
       integrante_portal_id,
+      desvincular,
       name,
       nome_colete,
       comando_id,
@@ -102,10 +103,41 @@ Deno.serve(async (req) => {
 
     console.log('Profile updated successfully:', updatedProfile);
 
+    // Se foi solicitado desvinculação
+    if (desvincular === true) {
+      console.log('Desvincular todos os integrantes do profile:', profile_id);
+      
+      const { error: unlinkError } = await supabase
+        .from('integrantes_portal')
+        .update({
+          profile_id: null,
+          vinculado: false,
+          data_vinculacao: null,
+        })
+        .eq('profile_id', profile_id)
+        .eq('vinculado', true);
+
+      if (unlinkError) {
+        console.error('Error unlinking integrante_portal:', unlinkError);
+      } else {
+        console.log('Integrante(s) desvinculado(s) com sucesso');
+      }
+    }
     // Se foi fornecido integrante_portal_id, vincular
-    if (integrante_portal_id) {
+    else if (integrante_portal_id) {
       console.log('Linking integrante_portal:', integrante_portal_id, 'to profile:', profile_id);
       
+      // Primeiro, desvincular qualquer integrante anterior deste profile
+      await supabase
+        .from('integrantes_portal')
+        .update({
+          profile_id: null,
+          vinculado: false,
+          data_vinculacao: null,
+        })
+        .eq('profile_id', profile_id);
+      
+      // Depois, vincular o novo integrante
       const { error: linkError } = await supabase
         .from('integrantes_portal')
         .update({
@@ -117,9 +149,8 @@ Deno.serve(async (req) => {
 
       if (linkError) {
         console.error('Error linking integrante_portal:', linkError);
-        // NÃO retornar erro, apenas logar - o profile já foi atualizado
       } else {
-        console.log('Integrante linked successfully');
+        console.log('Integrante vinculado com sucesso');
       }
     }
 

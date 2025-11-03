@@ -98,7 +98,9 @@ export function ProfileDetailDialog({
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<Partial<Profile>>({});
   const [integranteSelecionado, setIntegranteSelecionado] = useState<IntegrantePortal | null>(null);
+  const [integranteAtualmenteVinculado, setIntegranteAtualmenteVinculado] = useState<IntegrantePortal | null>(null);
   const [showIntegranteLookup, setShowIntegranteLookup] = useState(false);
+  const [desvincularIntegrante, setDesvincularIntegrante] = useState<boolean>(false);
   
   // Estados para cascata
   const [selectedComandoId, setSelectedComandoId] = useState<string>('');
@@ -118,12 +120,29 @@ export function ProfileDetailDialog({
     ? cargos.filter(cargo => cargo.grau === selectedGrau)
     : cargos;
 
+  // Buscar integrante vinculado ao profile
+  const fetchIntegranteVinculado = async (profileId: string) => {
+    const { data, error } = await supabase
+      .from('integrantes_portal')
+      .select('*')
+      .eq('profile_id', profileId)
+      .eq('vinculado', true)
+      .maybeSingle();
+      
+    if (data && !error) {
+      setIntegranteAtualmenteVinculado(data);
+    } else {
+      setIntegranteAtualmenteVinculado(null);
+    }
+  };
+
   // Reset form quando profile muda OU quando dialog abre
   useEffect(() => {
     // Reset integrante selecionado quando dialog abre ou muda de perfil
     if (open) {
       setIntegranteSelecionado(null);
       setShowIntegranteLookup(false);
+      setDesvincularIntegrante(false);
     }
 
     if (profile) {
@@ -149,8 +168,29 @@ export function ProfileDetailDialog({
       if (profile.grau) {
         setSelectedGrau(profile.grau);
       }
+
+      // Buscar vinculação existente
+      if (profile.id && open) {
+        fetchIntegranteVinculado(profile.id);
+      }
     }
   }, [profile, open]);
+
+  const handleDesvincular = () => {
+    if (!integranteAtualmenteVinculado) return;
+
+    if (confirm(`Tem certeza que deseja desvincular ${integranteAtualmenteVinculado.nome_colete}?`)) {
+      setDesvincularIntegrante(true);
+      setIntegranteAtualmenteVinculado(null);
+      setIntegranteSelecionado(null);
+      setIntegranteParaVincular(null);
+      
+      toast({
+        title: "Desvinculação marcada",
+        description: "Clique em 'Salvar' para confirmar a desvinculação",
+      });
+    }
+  };
 
   const handleImportarIntegrante = async () => {
     if (!integranteSelecionado) return;
@@ -310,6 +350,7 @@ export function ProfileDetailDialog({
             admin_user_id: user.id,
             profile_id: profile.id,
             integrante_portal_id: integranteParaVincular,
+            desvincular: desvincularIntegrante,
             // Enviar APENAS IDs e campos básicos
             name: formData.name,
             nome_colete: formData.nome_colete,
@@ -387,7 +428,7 @@ export function ProfileDetailDialog({
                 )}
               </div>
               
-              {!showIntegranteLookup && !integranteSelecionado && (
+              {!showIntegranteLookup && !integranteSelecionado && !integranteAtualmenteVinculado && (
                 <Button
                   type="button"
                   variant="outline"
@@ -446,11 +487,48 @@ export function ProfileDetailDialog({
                 </div>
               )}
 
-              {integranteSelecionado && !showIntegranteLookup && (
+              {integranteAtualmenteVinculado && !showIntegranteLookup && (
+                <div className="space-y-2">
+                  <Card className="p-3 bg-background border-green-500">
+                    <div className="space-y-1 text-sm">
+                      <p><span className="font-semibold">✅ Vinculado:</span> {integranteAtualmenteVinculado.nome_colete}</p>
+                      <p className="text-muted-foreground">Registro: {integranteAtualmenteVinculado.registro_id}</p>
+                      {integranteAtualmenteVinculado.data_vinculacao && (
+                        <p className="text-xs text-green-600">
+                          Vinculado em: {new Date(integranteAtualmenteVinculado.data_vinculacao).toLocaleDateString('pt-BR')}
+                        </p>
+                      )}
+                    </div>
+                  </Card>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowIntegranteLookup(true)}
+                      className="flex-1"
+                    >
+                      🔄 Alterar Vínculo
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleDesvincular}
+                      disabled={loading}
+                      className="flex-1"
+                    >
+                      🔓 Desvincular
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {integranteSelecionado && !showIntegranteLookup && !integranteAtualmenteVinculado && (
                 <div className="space-y-2">
                   <Card className="p-3 bg-background">
                     <div className="space-y-1 text-sm">
-                      <p><span className="font-semibold">Vinculado:</span> {integranteSelecionado.nome_colete}</p>
+                      <p><span className="font-semibold">Selecionado:</span> {integranteSelecionado.nome_colete}</p>
                       <p className="text-muted-foreground">Registro: {integranteSelecionado.registro_id}</p>
                     </div>
                   </Card>
@@ -460,7 +538,7 @@ export function ProfileDetailDialog({
                     size="sm"
                     onClick={() => setShowIntegranteLookup(true)}
                   >
-                    Alterar Vinculo
+                    Alterar Seleção
                   </Button>
                 </div>
               )}
