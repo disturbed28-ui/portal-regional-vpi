@@ -115,7 +115,28 @@ export const useAuth = () => {
       }
       
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      
+      // Tratar erro 403 de forma especial (comum em iframes)
+      if (error) {
+        // Se for erro de sessão não encontrada, limpar estado local mesmo assim
+        if (error.message?.includes('session') || error.status === 403) {
+          console.warn('[useAuth] Sessão não encontrada no servidor, limpando estado local');
+          
+          // Forçar limpeza local
+          setSession(null);
+          setUser(null);
+          sessionStorage.removeItem('welcome_toast_shown');
+          
+          toast({
+            title: "Desconectado",
+            description: "Você foi desconectado com sucesso.",
+          });
+          return; // Não lançar erro
+        }
+        
+        // Para outros erros, lançar normalmente
+        throw error;
+      }
     } catch (error: any) {
       toast({
         title: "Erro ao desconectar",
