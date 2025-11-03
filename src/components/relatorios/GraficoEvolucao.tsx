@@ -73,7 +73,7 @@ export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps
       divisoesUnicas.map((divisao, index) => [
         `divisao_${index + 1}`,
         {
-          label: `Divisão ${index + 1}`,
+          label: `${index + 1}`,
           color: CORES_DIVISOES[index % CORES_DIVISOES.length],
         },
       ])
@@ -142,7 +142,7 @@ export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps
                   dataKey={`divisao_${index + 1}`}
                   stroke={CORES_DIVISOES[index % CORES_DIVISOES.length]}
                   strokeWidth={1.5}
-                  name={`Divisão ${index + 1}`}
+                  name={`${index + 1}`}
                   dot={{ r: 2 }}
                   activeDot={{ r: 4 }}
                 />
