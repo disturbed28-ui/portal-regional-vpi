@@ -60,7 +60,13 @@ export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps
     
     // Usar chaves numéricas para divisões
     carga.divisoes.forEach(divisao => {
-      const numero = divisoesMap[divisao.divisao];
+      // Normalizar o nome antes de buscar no mapa
+      const nomeNormalizado = divisao.divisao
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toUpperCase();
+      
+      const numero = divisoesMap[nomeNormalizado];
       if (numero) {
         dados[`divisao_${numero}`] = divisao.total;
       }
@@ -94,77 +100,42 @@ export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps
 
   // Renderizar linhas do gráfico baseado na seleção
   const renderizarLinhas = () => {
-    const linhas = [];
-    
-    // Sempre renderizar linha do Total Regional
-    linhas.push(
-      <Line
-        key="total_regional"
-        type="monotone"
-        dataKey="total_regional"
-        stroke="hsl(var(--primary))"
-        strokeWidth={3}
-        name="Total Regional"
-        dot={{ r: 4 }}
-        activeDot={{ r: 6 }}
-      />
-    );
-    
-    // Se não for "total", renderizar a divisão selecionada
-    if (visualizacao !== 'total') {
-      const indexDivisao = divisoesUnicas.findIndex(d => d === visualizacao);
-      if (indexDivisao !== -1) {
-        linhas.push(
-          <Line
-            key={visualizacao}
-            type="monotone"
-            dataKey={`divisao_${indexDivisao + 1}`}
-            stroke={CORES_DIVISOES[indexDivisao % CORES_DIVISOES.length]}
-            strokeWidth={2.5}
-            name={formatarNomeDivisao(visualizacao)}
-            dot={{ r: 3 }}
-            activeDot={{ r: 5 }}
-          />
-        );
-      }
+    // Se for "total", renderizar apenas Total Regional
+    if (visualizacao === 'total') {
+      return (
+        <Line
+          key="total_regional"
+          type="monotone"
+          dataKey="total_regional"
+          stroke="hsl(var(--primary))"
+          strokeWidth={3}
+          name="Total Regional"
+          dot={{ r: 4 }}
+          activeDot={{ r: 6 }}
+        />
+      );
     }
     
-    return linhas;
-  };
-
-  // Componente de legenda lateral simplificada
-  const LegendaLateral = () => {
-    if (visualizacao === 'total') return null;
-    
+    // Se for divisão específica, renderizar apenas a divisão
     const indexDivisao = divisoesUnicas.findIndex(d => d === visualizacao);
-    if (indexDivisao === -1) return null;
-
-    return (
-      <div className="ml-4 p-4 border rounded-lg bg-card max-h-[400px] min-w-[250px]">
-        <h4 className="font-semibold mb-3 text-sm">Legenda</h4>
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-xs">
-            <div 
-              className="w-8 h-0.5" 
-              style={{ backgroundColor: 'hsl(var(--primary))' }}
-            />
-            <span className="font-medium">Total Regional</span>
-          </div>
-          <div className="flex items-center gap-2 text-xs">
-            <div 
-              className="w-8 h-0.5" 
-              style={{ 
-                backgroundColor: CORES_DIVISOES[indexDivisao % CORES_DIVISOES.length]
-              }}
-            />
-            <span className="text-muted-foreground">
-              {formatarNomeDivisao(visualizacao)}
-            </span>
-          </div>
-        </div>
-      </div>
-    );
+    if (indexDivisao !== -1) {
+      return (
+        <Line
+          key={visualizacao}
+          type="monotone"
+          dataKey={`divisao_${indexDivisao + 1}`}
+          stroke={CORES_DIVISOES[indexDivisao % CORES_DIVISOES.length]}
+          strokeWidth={3}
+          name={formatarNomeDivisao(visualizacao)}
+          dot={{ r: 4 }}
+          activeDot={{ r: 6 }}
+        />
+      );
+    }
+    
+    return null;
   };
+
 
   return (
     <div className="space-y-4">
@@ -186,39 +157,31 @@ export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps
         </Select>
       </div>
 
-      {/* Gráfico e legenda */}
-      <div className="flex gap-4">
-        {/* Gráfico principal */}
-        <div className="flex-1">
-          <ChartContainer config={chartConfig} className="h-[400px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={dadosGrafico}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis 
-                  dataKey="mes" 
-                  className="text-xs"
-                  tick={{ fill: 'hsl(var(--foreground))' }}
-                />
-                <YAxis 
-                  className="text-xs"
-                  tick={{ fill: 'hsl(var(--foreground))' }}
-                />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Legend 
-                  wrapperStyle={{ fontSize: '12px' }}
-                  iconType="line"
-                />
-                
-                {/* Renderizar linhas dinamicamente */}
-                {renderizarLinhas()}
-              </LineChart>
-            </ResponsiveContainer>
-          </ChartContainer>
-        </div>
-        
-        {/* Legenda lateral - apenas quando divisão selecionada */}
-        <LegendaLateral />
-      </div>
+      {/* Gráfico */}
+      <ChartContainer config={chartConfig} className="h-[400px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={dadosGrafico}>
+            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+            <XAxis 
+              dataKey="mes" 
+              className="text-xs"
+              tick={{ fill: 'hsl(var(--foreground))' }}
+            />
+            <YAxis 
+              className="text-xs"
+              tick={{ fill: 'hsl(var(--foreground))' }}
+            />
+            <ChartTooltip content={<ChartTooltipContent />} />
+            <Legend 
+              wrapperStyle={{ fontSize: '12px' }}
+              iconType="line"
+            />
+            
+            {/* Renderizar linhas dinamicamente */}
+            {renderizarLinhas()}
+          </LineChart>
+        </ResponsiveContainer>
+      </ChartContainer>
     </div>
   );
 };
