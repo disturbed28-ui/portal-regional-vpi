@@ -30,6 +30,29 @@ export interface ProcessDeltaResult {
   removidos: IntegrantePortal[];
 }
 
+// Converter data do formato DD/MM/YYYY para YYYY-MM-DD (formato ISO)
+function convertDateFormat(dateStr: string | undefined | null): string | null {
+  if (!dateStr) return null;
+  
+  const trimmed = String(dateStr).trim();
+  if (trimmed === '') return null;
+  
+  // Se já está no formato ISO (YYYY-MM-DD), retorna direto
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+  
+  // Converter DD/MM/YYYY para YYYY-MM-DD
+  const match = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (match) {
+    const [_, day, month, year] = match;
+    return `${year}-${month}-${day}`;
+  }
+  
+  console.warn('[Excel Parser] ⚠️ Formato de data não reconhecido:', trimmed);
+  return null;
+}
+
 export const parseExcelFile = async (file: File): Promise<ExcelIntegrante[]> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -100,7 +123,8 @@ export const parseExcelFile = async (file: File): Promise<ExcelIntegrante[]> => 
             if (value instanceof Date) {
               return value.toISOString().split('T')[0];
             }
-            return value.toString();
+            // Converter formato brasileiro DD/MM/YYYY para ISO YYYY-MM-DD
+            return convertDateFormat(value.toString()) || undefined;
           };
 
           return {

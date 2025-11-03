@@ -197,7 +197,9 @@ const AdminIntegrantes = () => {
         primeiro_novo: novosData[0],
         primeiro_atualizado: atualizadosData[0],
         todos_novos_tem_cargo_grau: novosData.every((item: any) => item.cargo_grau_texto && item.cargo_grau_texto.trim() !== ''),
-        todos_atualizados_tem_cargo_grau: atualizadosData.every((item: any) => item.cargo_grau_texto && item.cargo_grau_texto.trim() !== '')
+        todos_atualizados_tem_cargo_grau: atualizadosData.every((item: any) => item.cargo_grau_texto && item.cargo_grau_texto.trim() !== ''),
+        formato_data_entrada_novos: novosData.filter((item: any) => item.data_entrada).map((item: any) => ({ id: item.registro_id, data: item.data_entrada })),
+        formato_data_entrada_atualizados: atualizadosData.filter((item: any) => item.data_entrada).slice(0, 3).map((item: any) => ({ id: item.registro_id, data: item.data_entrada }))
       });
 
       // Chamar edge function
