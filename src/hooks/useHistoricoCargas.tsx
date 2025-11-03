@@ -72,13 +72,18 @@ export const useHistoricoCargas = (options?: { enabled?: boolean }) => {
       // Extrair todas as divisões únicas
       const divisoesSet = new Set<string>();
       cargasProcessadas.forEach(carga => {
-        carga.divisoes.forEach(divisao => {
-          divisoesSet.add(divisao.divisao);
-        });
+        if (carga.divisoes && Array.isArray(carga.divisoes)) {
+          carga.divisoes.forEach(divisao => {
+            if (divisao && divisao.divisao) {
+              divisoesSet.add(divisao.divisao);
+            }
+          });
+        }
       });
 
       const divisoesUnicas = Array.from(divisoesSet).sort();
       console.log('📋 [useHistoricoCargas] Divisões únicas:', divisoesUnicas);
+      console.log('📋 [useHistoricoCargas] Divisões Set size:', divisoesSet.size);
 
       const periodo = {
         inicio: cargasProcessadas[0].data_carga,

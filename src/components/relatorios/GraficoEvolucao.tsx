@@ -37,6 +37,19 @@ const CORES_DIVISOES = [
 ];
 
 export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps) => {
+  console.log('[GraficoEvolucao] Props recebidas:', { 
+    cargasLength: cargas?.length,
+    divisoesUnicasLength: divisoesUnicas?.length,
+    divisoesUnicas,
+    primeirasCargasDivisoes: cargas?.[0]?.divisoes
+  });
+
+  // Validação de segurança
+  if (!cargas || cargas.length === 0 || !divisoesUnicas || divisoesUnicas.length === 0) {
+    console.error('[GraficoEvolucao] Dados inválidos recebidos');
+    return <div className="text-center text-muted-foreground py-8">Dados insuficientes para gerar o gráfico</div>;
+  }
+
   // Preparar dados para o gráfico
   const dadosGrafico = cargas.map(carga => {
     const mes = format(new Date(carga.data_carga), "MMM/yy", { locale: ptBR });
