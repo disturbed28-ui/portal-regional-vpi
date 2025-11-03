@@ -1,9 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
+import { corsHeaders } from '../_shared/cors.ts';
+import { handleDatabaseError, logError } from '../_shared/error-handler.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -15,7 +13,28 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Parse request body
+    const requestSchema = z.object({
+      admin_user_id: z.string().uuid('ID de admin inválido'),
+      profile_id: z.string().uuid('ID de perfil inválido'),
+      integrante_portal_id: z.string().uuid().optional().nullable(),
+      desvincular: z.boolean().optional(),
+      name: z.string().max(200).optional(),
+      nome_colete: z.string().max(100).optional(),
+      comando_id: z.string().uuid().optional().nullable(),
+      regional: z.string().max(100).optional(),
+      divisao: z.string().max(100).optional(),
+      cargo: z.string().max(100).optional(),
+      funcao: z.string().max(100).optional(),
+      regional_id: z.string().uuid().optional().nullable(),
+      divisao_id: z.string().uuid().optional().nullable(),
+      cargo_id: z.string().uuid().optional().nullable(),
+      funcao_id: z.string().uuid().optional().nullable(),
+      data_entrada: z.string().optional().nullable(),
+      grau: z.string().max(50).optional(),
+      profile_status: z.string().max(50).optional(),
+      observacao: z.string().max(1000).optional().nullable()
+    });
+
     const {
       admin_user_id,
       profile_id,
@@ -36,14 +55,7 @@ Deno.serve(async (req) => {
       grau,
       profile_status,
       observacao,
-    } = await req.json();
-
-    if (!admin_user_id || !profile_id) {
-      return new Response(
-        JSON.stringify({ error: 'admin_user_id and profile_id are required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    } = requestSchema.parse(await req.json());
 
     console.log('Checking admin role for user:', admin_user_id);
 
@@ -56,9 +68,9 @@ Deno.serve(async (req) => {
     console.log('Roles found:', roles);
 
     if (roleError || !roles?.some(r => r.role === 'admin')) {
-      console.error('Role check failed:', roleError);
+      logError('admin-update-profile', roleError || 'Not an admin', { admin_user_id });
       return new Response(
-        JSON.stringify({ error: 'Forbidden - Admin access required' }),
+        JSON.stringify({ error: 'Acesso negado' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -94,9 +106,9 @@ Deno.serve(async (req) => {
       .single();
 
     if (updateError) {
-      console.error('Update error:', updateError);
+      logError('admin-update-profile', updateError, { profile_id });
       return new Response(
-        JSON.stringify({ error: updateError.message }),
+        JSON.stringify({ error: handleDatabaseError(updateError) }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -159,9 +171,17 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
-    console.error('Error in admin-update-profile:', error);
+    if (error instanceof z.ZodError) {
+      logError('admin-update-profile', 'Validation error', { errors: error.errors });
+      return new Response(
+        JSON.stringify({ error: 'Dados inválidos fornecidos' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    logError('admin-update-profile', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'Erro ao processar solicitação' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

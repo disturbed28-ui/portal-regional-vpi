@@ -23,55 +23,48 @@ export interface CalendarEvent {
 }
 
 export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
-  const API_KEY = import.meta.env.VITE_GOOGLE_CALENDAR_API_KEY;
-  
-  if (!API_KEY) {
-    throw new Error("Google Calendar API Key nao configurada");
-  }
-
-  const now = new Date();
-  const threeMonthsLater = new Date();
-  threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
-
-  const params = new URLSearchParams({
-    key: API_KEY,
-    timeMin: now.toISOString(),
-    timeMax: threeMonthsLater.toISOString(),
-    singleEvents: "true",
-    orderBy: "startTime",
-    maxResults: "100",
-  });
-
-  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(CALENDAR_ID)}/events?${params}`;
-
-  const response = await fetch(url);
-  
-  if (!response.ok) {
-    throw new Error(`Erro ao buscar eventos: ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  
-  const events = data.items.map((item: any) => {
-    const normalizedTitle = removeSpecialCharacters(item.summary || "Sem titulo");
+  try {
+    console.log('[fetchCalendarEvents] Chamando edge function segura');
     
-    return {
-      id: item.id,
-      title: normalizedTitle,
-      description: item.description || "",
-      start: item.start.dateTime || item.start.date,
-      end: item.end.dateTime || item.end.date,
-      location: item.location,
-      type: detectEventType(normalizedTitle),
-      division: detectDivision(normalizedTitle),
-      htmlLink: item.htmlLink,
-    };
-  });
+    // Chamar edge function segura ao invés de fazer requisição direta
+    const { data, error } = await supabase.functions.invoke('get-calendar-events');
 
-  // Sincronizar eventos que já existem no banco de dados
-  await syncEventsWithDatabase(events);
+    if (error) {
+      console.error('[fetchCalendarEvents] Edge function error:', error);
+      throw error;
+    }
 
-  return events;
+    if (!data || !data.items) {
+      console.warn('[fetchCalendarEvents] Nenhum evento retornado');
+      return [];
+    }
+
+    const events = data.items.map((item: any) => {
+      const normalizedTitle = removeSpecialCharacters(item.summary || "Sem titulo");
+      
+      return {
+        id: item.id,
+        title: normalizedTitle,
+        description: item.description || "",
+        start: item.start?.dateTime || item.start?.date || '',
+        end: item.end?.dateTime || item.end?.date || '',
+        location: item.location,
+        type: detectEventType(normalizedTitle),
+        division: detectDivision(normalizedTitle),
+        htmlLink: item.htmlLink || '',
+      };
+    });
+
+    console.log('[fetchCalendarEvents] Processados', events.length, 'eventos');
+
+    // Sincronizar eventos que já existem no banco de dados
+    await syncEventsWithDatabase(events);
+
+    return events;
+  } catch (error) {
+    console.error('[fetchCalendarEvents] Erro:', error);
+    throw new Error("Erro ao buscar eventos do calendário");
+  }
 }
 
 async function syncEventsWithDatabase(events: CalendarEvent[]) {

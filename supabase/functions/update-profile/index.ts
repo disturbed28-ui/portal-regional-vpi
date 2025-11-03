@@ -1,11 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-// import nodemailer from "npm:nodemailer@6.9.7"; // Comentado temporariamente
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
+import { corsHeaders } from '../_shared/cors.ts';
+import { handleDatabaseError, logError } from '../_shared/error-handler.ts';
 
 // Função para enviar notificação por email aos admins - DESABILITADA TEMPORARIAMENTE
 /*
@@ -207,18 +204,16 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Received update-profile request');
-    const { user_id, nome_colete, telefone, profile_status } = await req.json();
+    const requestSchema = z.object({
+      user_id: z.string().uuid('ID de usuário inválido'),
+      nome_colete: z.string().trim().min(1, 'Nome de colete é obrigatório').max(100),
+      telefone: z.string().max(20).optional(),
+      profile_status: z.string().max(50).optional()
+    });
+
+    const { user_id, nome_colete, telefone, profile_status } = requestSchema.parse(await req.json());
     
     console.log('Request data:', { user_id, nome_colete, telefone, profile_status });
-
-    if (!user_id || !nome_colete) {
-      console.error('Missing required fields');
-      return new Response(
-        JSON.stringify({ error: 'user_id and nome_colete are required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     // Usar service role para bypass RLS
     const supabaseAdmin = createClient(
@@ -246,8 +241,11 @@ serve(async (req) => {
       .single();
 
     if (error) {
-      console.error('Supabase error:', error);
-      throw error;
+      logError('update-profile', error, { user_id });
+      return new Response(
+        JSON.stringify({ error: handleDatabaseError(error) }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     console.log('Profile updated successfully:', data);
@@ -263,10 +261,17 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Error in update-profile function:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    if (error instanceof z.ZodError) {
+      logError('update-profile', 'Validation error', { errors: error.errors });
+      return new Response(
+        JSON.stringify({ error: 'Dados inválidos fornecidos' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    logError('update-profile', error);
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: 'Erro ao processar solicitação' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

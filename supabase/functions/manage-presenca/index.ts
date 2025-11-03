@@ -1,9 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
+import { corsHeaders } from '../_shared/cors.ts';
+import { logError } from '../_shared/error-handler.ts';
 
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
@@ -12,45 +10,16 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { 
-      action, // 'initialize', 'add' ou 'remove'
-      user_id,
-      evento_agenda_id,
-      integrante_id,
-      profile_id,
-      divisao_id, // Para initialize
-    } = await req.json();
+    const requestSchema = z.object({
+      action: z.enum(['initialize', 'add', 'remove']),
+      user_id: z.string().uuid('ID de usuário inválido'),
+      evento_agenda_id: z.string().uuid('ID de evento inválido').optional(),
+      integrante_id: z.string().uuid('ID de integrante inválido').optional(),
+      profile_id: z.string().optional().nullable(),
+      divisao_id: z.string().uuid('ID de divisão inválido').optional()
+    });
 
-    console.log('[manage-presenca] Recebido:', { action, user_id, evento_agenda_id, integrante_id, divisao_id });
-
-    // Validar campos obrigatórios
-    if (!action || !user_id) {
-      return new Response(
-        JSON.stringify({ error: 'action e user_id são obrigatórios' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (action === 'add' && (!evento_agenda_id || !integrante_id)) {
-      return new Response(
-        JSON.stringify({ error: 'evento_agenda_id e integrante_id são obrigatórios para adicionar' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (action === 'remove' && (!evento_agenda_id || !integrante_id)) {
-      return new Response(
-        JSON.stringify({ error: 'evento_agenda_id e integrante_id são obrigatórios para remover' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (action === 'initialize' && (!evento_agenda_id || !divisao_id)) {
-      return new Response(
-        JSON.stringify({ error: 'evento_agenda_id e divisao_id são obrigatórios para inicializar' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const { action, user_id, evento_agenda_id, integrante_id, profile_id, divisao_id } = requestSchema.parse(await req.json());
 
     // Criar cliente Supabase com service role (bypassa RLS)
     const supabaseAdmin = createClient(
@@ -73,7 +42,7 @@ Deno.serve(async (req) => {
       .eq('user_id', user_id);
 
     if (rolesError) {
-      console.error('[manage-presenca] Erro ao buscar roles:', rolesError);
+      logError('manage-presenca', rolesError, { user_id });
       return new Response(
         JSON.stringify({ error: 'Erro ao verificar permissões' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -287,9 +256,17 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[manage-presenca] Erro:', error);
+    if (error instanceof z.ZodError) {
+      logError('manage-presenca', 'Validation error', { errors: error.errors });
+      return new Response(
+        JSON.stringify({ error: 'Dados inválidos fornecidos' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    logError('manage-presenca', error);
     return new Response(
-      JSON.stringify({ error: (error as Error).message }),
+      JSON.stringify({ error: 'Erro ao processar solicitação' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

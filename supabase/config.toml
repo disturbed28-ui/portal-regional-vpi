@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.reprocessar-snapshots]
 verify_jwt = false
+
+[functions.get-calendar-events]
+verify_jwt = false

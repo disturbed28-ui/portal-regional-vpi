@@ -1,9 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts'
+import { corsHeaders } from '../_shared/cors.ts'
+import { logError } from '../_shared/error-handler.ts'
 
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
@@ -12,32 +10,14 @@ Deno.serve(async (req) => {
   }
 
   try {
-    console.log('[manage-screen-permissions] Requisição recebida');
-    
-    const { action, screen_id, role, user_id } = await req.json();
-    
-    console.log('[manage-screen-permissions] Dados recebidos:', { 
-      action, 
-      screen_id, 
-      role, 
-      user_id 
+    const requestSchema = z.object({
+      action: z.enum(['add', 'remove'], { errorMap: () => ({ message: 'Ação deve ser "add" ou "remove"' }) }),
+      screen_id: z.string().uuid('ID de tela inválido'),
+      role: z.enum(['admin', 'moderator', 'user', 'diretor_regional']),
+      user_id: z.string().uuid('ID de usuário inválido')
     });
 
-    if (!action || !screen_id || !role || !user_id) {
-      console.error('[manage-screen-permissions] Parâmetros faltando');
-      return new Response(
-        JSON.stringify({ error: 'Parâmetros obrigatórios: action, screen_id, role, user_id' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (action !== 'add' && action !== 'remove') {
-      console.error('[manage-screen-permissions] Ação inválida:', action);
-      return new Response(
-        JSON.stringify({ error: 'Ação deve ser "add" ou "remove"' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const { action, screen_id, role, user_id } = requestSchema.parse(await req.json());
 
     // Criar cliente Supabase com service_role para bypassar RLS
     const supabaseAdmin = createClient(
@@ -60,9 +40,9 @@ Deno.serve(async (req) => {
       .eq('user_id', user_id);
 
     if (rolesError) {
-      console.error('[manage-screen-permissions] Erro ao buscar roles:', rolesError);
+      logError('manage-screen-permissions', rolesError, { user_id });
       return new Response(
-        JSON.stringify({ error: 'Erro ao verificar permissões do usuário' }),
+        JSON.stringify({ error: 'Erro ao verificar permissões' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -91,9 +71,9 @@ Deno.serve(async (req) => {
         .single();
 
       if (error) {
-        console.error('[manage-screen-permissions] Erro ao adicionar permissão:', error);
+        logError('manage-screen-permissions', error, { screen_id, role });
         return new Response(
-          JSON.stringify({ error: `Erro ao adicionar permissão: ${error.message}` }),
+          JSON.stringify({ error: 'Erro ao adicionar permissão' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -128,9 +108,9 @@ Deno.serve(async (req) => {
         .eq('id', existing.id);
 
       if (error) {
-        console.error('[manage-screen-permissions] Erro ao remover permissão:', error);
+        logError('manage-screen-permissions', error, { screen_id, role });
         return new Response(
-          JSON.stringify({ error: `Erro ao remover permissão: ${error.message}` }),
+          JSON.stringify({ error: 'Erro ao remover permissão' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -143,9 +123,17 @@ Deno.serve(async (req) => {
     }
 
   } catch (error) {
-    console.error('[manage-screen-permissions] Erro geral:', error);
+    if (error instanceof z.ZodError) {
+      logError('manage-screen-permissions', 'Validation error', { errors: error.errors });
+      return new Response(
+        JSON.stringify({ error: 'Dados inválidos fornecidos' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    logError('manage-screen-permissions', error);
     return new Response(
-      JSON.stringify({ error: (error as Error).message }),
+      JSON.stringify({ error: 'Erro ao processar solicitação' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

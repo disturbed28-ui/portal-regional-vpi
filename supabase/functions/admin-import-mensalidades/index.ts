@@ -1,9 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
+import { corsHeaders } from '../_shared/cors.ts';
+import { handleDatabaseError, logError } from '../_shared/error-handler.ts';
 
 interface MensalidadeImport {
   registro_id: number;
@@ -30,16 +28,21 @@ Deno.serve(async (req) => {
   try {
     console.log('[admin-import-mensalidades] Request received');
 
-    // Parse request body
-    const { user_id, mensalidades, realizado_por }: RequestBody = await req.json();
+    const requestSchema = z.object({
+      user_id: z.string().uuid('ID de usuário inválido'),
+      mensalidades: z.array(z.object({
+        registro_id: z.number().int().positive(),
+        nome_colete: z.string().trim().min(1).max(100),
+        divisao_texto: z.string().max(100),
+        ref: z.string().max(20),
+        valor: z.number().positive(),
+        data_vencimento: z.string(),
+        situacao: z.string().max(50)
+      })).min(1, 'Pelo menos uma mensalidade é necessária'),
+      realizado_por: z.string().max(100).optional()
+    });
 
-    if (!user_id || !mensalidades || mensalidades.length === 0) {
-      console.error('[admin-import-mensalidades] Missing required fields');
-      return new Response(
-        JSON.stringify({ error: 'user_id e mensalidades são obrigatórios' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const { user_id, mensalidades, realizado_por } = requestSchema.parse(await req.json());
 
     console.log(`[admin-import-mensalidades] Validating admin: ${user_id}`);
     console.log(`[admin-import-mensalidades] Mensalidades count: ${mensalidades.length}`);
@@ -76,8 +79,11 @@ Deno.serve(async (req) => {
       .order('data_carga', { ascending: false });
 
     if (fetchError) {
-      console.error('[admin-import-mensalidades] Error fetching previous load:', fetchError);
-      throw fetchError;
+      logError('admin-import-mensalidades', fetchError);
+      return new Response(
+        JSON.stringify({ error: 'Erro ao buscar registros anteriores' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     console.log(`[admin-import-mensalidades] Previous active load: ${cargaAnterior?.length || 0} records`);
@@ -150,8 +156,11 @@ Deno.serve(async (req) => {
       .insert(dataToInsert);
 
     if (insertError) {
-      console.error('[admin-import-mensalidades] Error inserting records:', insertError);
-      throw insertError;
+      logError('admin-import-mensalidades', insertError, { count: mensalidades.length });
+      return new Response(
+        JSON.stringify({ error: handleDatabaseError(insertError) }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     console.log('[admin-import-mensalidades] ✅ Success');
@@ -168,12 +177,17 @@ Deno.serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('[admin-import-mensalidades] ❌ Unexpected error:', error);
+    if (error instanceof z.ZodError) {
+      logError('admin-import-mensalidades', 'Validation error', { errors: error.errors });
+      return new Response(
+        JSON.stringify({ error: 'Dados inválidos fornecidos' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    logError('admin-import-mensalidades', error);
     return new Response(
-      JSON.stringify({ 
-        error: error.message || 'Erro desconhecido ao importar mensalidades',
-        details: error.toString()
-      }),
+      JSON.stringify({ error: 'Erro ao processar solicitação' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

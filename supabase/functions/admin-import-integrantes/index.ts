@@ -1,9 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.1'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts'
+import { corsHeaders } from '../_shared/cors.ts'
+import { handleDatabaseError, logError } from '../_shared/error-handler.ts'
 
 interface CampoAlterado {
   campo: string;
@@ -52,7 +50,19 @@ Deno.serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-    const { admin_user_id, novos, atualizados } = await req.json();
+    const requestSchema = z.object({
+      admin_user_id: z.string().uuid('ID de admin inválido'),
+      novos: z.array(z.object({
+        registro_id: z.number().int().positive(),
+        nome_colete: z.string().trim().min(1).max(100),
+        comando_texto: z.string().max(100),
+        regional_texto: z.string().max(100),
+        divisao_texto: z.string().max(100)
+      })).optional(),
+      atualizados: z.array(z.any()).optional() // Permite qualquer objeto já que contém múltiplos campos dinâmicos
+    });
+
+    const { admin_user_id, novos, atualizados } = requestSchema.parse(await req.json());
 
     console.log('[admin-import-integrantes] Validating admin:', admin_user_id);
     console.log('[admin-import-integrantes] Novos:', novos?.length || 0);
@@ -73,9 +83,9 @@ Deno.serve(async (req) => {
       .eq('user_id', admin_user_id);
 
     if (roleError) {
-      console.error('[admin-import-integrantes] Error checking roles:', roleError);
+      logError('admin-import-integrantes', roleError, { admin_user_id });
       return new Response(
-        JSON.stringify({ error: 'Error checking admin role', details: roleError.message }),
+        JSON.stringify({ error: 'Erro ao verificar permissões' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -131,9 +141,9 @@ Deno.serve(async (req) => {
         });
 
       if (upsertError) {
-        console.error('[admin-import-integrantes] Error upserting:', upsertError);
+        logError('admin-import-integrantes', upsertError, { count: uniqueNovos.length });
         return new Response(
-          JSON.stringify({ error: 'Erro ao processar integrantes', details: upsertError.message }),
+          JSON.stringify({ error: handleDatabaseError(upsertError) }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -167,9 +177,9 @@ Deno.serve(async (req) => {
           .eq('id', id);
 
         if (updateError) {
-          console.error('[admin-import-integrantes] Error updating:', updateError);
+          logError('admin-import-integrantes', updateError, { id });
           return new Response(
-            JSON.stringify({ error: 'Erro ao atualizar integrante', details: updateError.message }),
+            JSON.stringify({ error: handleDatabaseError(updateError) }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
@@ -312,9 +322,17 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[admin-import-integrantes] Unexpected error:', error);
+    if (error instanceof z.ZodError) {
+      logError('admin-import-integrantes', 'Validation error', { errors: error.errors });
+      return new Response(
+        JSON.stringify({ error: 'Dados inválidos fornecidos' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    logError('admin-import-integrantes', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ error: 'Erro ao processar solicitação' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
