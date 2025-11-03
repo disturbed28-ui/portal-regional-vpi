@@ -238,24 +238,6 @@ export type Database = {
           },
         ]
       }
-      firebase_auth_mapping: {
-        Row: {
-          created_at: string | null
-          firebase_uid: string
-          supabase_uid: string
-        }
-        Insert: {
-          created_at?: string | null
-          firebase_uid: string
-          supabase_uid?: string
-        }
-        Update: {
-          created_at?: string | null
-          firebase_uid?: string
-          supabase_uid?: string
-        }
-        Relationships: []
-      }
       funcoes: {
         Row: {
           created_at: string | null
@@ -843,7 +825,6 @@ export type Database = {
       }
     }
     Functions: {
-      get_firebase_uid_from_supabase: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
