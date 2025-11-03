@@ -77,7 +77,7 @@ export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps
       const numero = divisoesMap[nomeNormalizado];
       if (numero) {
         console.log(`[GraficoEvolucao] ${mes} - Encontrado numero ${numero} para "${nomeNormalizado}"`);
-        dados[`divisao_${numero}`] = divisao.total;
+        dados[`divisao_${numero}`] = Number(divisao.total); // ✅ Garantir que é número
       } else {
         console.warn(`[GraficoEvolucao] ${mes} - NÃO encontrado mapeamento para "${nomeNormalizado}"`);
       }
@@ -87,6 +87,9 @@ export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps
   });
   
   console.log('[GraficoEvolucao] Dados finais do gráfico:', dadosGrafico);
+  console.log('[GraficoEvolucao] Dados de divisao_5 (Jacareí Oeste) especificamente:', 
+    dadosGrafico.map(d => ({ mes: d.mes, divisao_5: d.divisao_5, tipo: typeof d.divisao_5 }))
+  );
 
   const chartConfig = {
     total_regional: {
@@ -131,12 +134,20 @@ export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps
     
     // Se for divisão específica, renderizar apenas a divisão
     const indexDivisao = divisoesUnicas.findIndex(d => d === visualizacao);
+    console.log('[GraficoEvolucao] Renderizando divisão:', visualizacao, 'index:', indexDivisao);
+    
     if (indexDivisao !== -1) {
+      const dataKey = `divisao_${indexDivisao + 1}`;
+      console.log('[GraficoEvolucao] DataKey:', dataKey);
+      console.log('[GraficoEvolucao] Amostra de dados para essa key:', 
+        dadosGrafico.slice(0, 3).map(d => ({ mes: d.mes, [dataKey]: d[dataKey], tipo: typeof d[dataKey] }))
+      );
+      
       return (
         <Line
           key={visualizacao}
           type="monotone"
-          dataKey={`divisao_${indexDivisao + 1}`}
+          dataKey={dataKey}
           stroke={CORES_DIVISOES[indexDivisao % CORES_DIVISOES.length]}
           strokeWidth={3}
           name={formatarNomeDivisao(visualizacao)}
