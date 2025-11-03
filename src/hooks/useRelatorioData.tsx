@@ -80,7 +80,16 @@ export const useRelatorioData = (regionalTexto?: string) => {
         .eq('liquidado', false);
 
       // Processar dados
-      const integrantesAnteriores = (penultimaCarga?.dados_snapshot as any)?.integrantes || [];
+      const snapshotAnterior = penultimaCarga?.dados_snapshot as any;
+      const integrantesAnteriores = snapshotAnterior?.integrantes || [];
+      
+      // Log de debug para verificar snapshot
+      console.log('[useRelatorioData] 📊 Snapshot anterior:', {
+        tem_penultima_carga: !!penultimaCarga,
+        tipo_snapshot: snapshotAnterior?.tipo,
+        qtd_integrantes: integrantesAnteriores.length,
+        qtd_divisoes: snapshotAnterior?.divisoes?.length
+      });
       
       // Agrupar por divisão
       const divisoesMap = new Map<string, DivisaoRelatorio>();

@@ -258,8 +258,19 @@ Deno.serve(async (req) => {
     }
 
     const snapshot = {
+      tipo: 'completo',
+      integrantes: (integrantesAtivos || []).map(i => ({
+        registro_id: i.registro_id,
+        nome_colete: i.nome_colete,
+        divisao_texto: i.divisao_texto,
+        regional_texto: i.regional_texto,
+        comando_texto: i.comando_texto,
+        vinculado: i.vinculado || false,
+        cargo_grau_texto: i.cargo_grau_texto
+      })),
       divisoes: Array.from(divisoesMap.values()),
-      periodo: new Date().toISOString()
+      periodo: new Date().toISOString(),
+      total_integrantes: integrantesAtivos?.length || 0
     };
 
     // Insert into cargas_historico
