@@ -56,7 +56,7 @@ export const useOrganogramaData = (regionalUsuario: string | null) => {
         const { data: integrantes, error: integrantesError } = await supabase
           .from('integrantes_portal')
           .select('*')
-          .eq('regional_texto', regionalUsuario)
+          .or(`regional_texto.ilike.%${regionalUsuario}%,regional_texto.ilike.%regional ${regionalUsuario}%`)
           .eq('ativo', true);
 
         if (integrantesError) throw integrantesError;
