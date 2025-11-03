@@ -342,9 +342,9 @@ ProximaLinhaA:
     Next j
     
     If colCargoEstagio > 0 Then
-        ' Renomear para cargo_estagio (padrão snake_case do banco)
-        wsB.Cells(3, colCargoEstagio).Value = "cargo_estagio"
-        Debug.Print "  >> Coluna 'CargoEstagio' (coluna " & colCargoEstagio & ") renomeada para 'cargo_estagio'"
+        ' Renomear para Estagio (formato legível para Excel)
+        wsB.Cells(3, colCargoEstagio).Value = "Estagio"
+        Debug.Print "  >> Coluna 'CargoEstagio' (coluna " & colCargoEstagio & ") renomeada para 'Estagio'"
     Else
         Debug.Print "  >> Coluna 'CargoEstagio' não encontrada"
     End If
