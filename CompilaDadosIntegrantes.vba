@@ -155,7 +155,7 @@ ProximaLinhaA:
     
     For j = 1 To 20 ' Procurar nas primeiras 20 colunas
         Dim headerText As String
-        headerText = Trim(CStr(wsB.Cells(1, j).Value))
+        headerText = Trim(CStr(wsB.Cells(3, j).Value))
         
         If InStr(1, headerText, "NomeColete", vbTextCompare) > 0 Or _
            InStr(1, headerText, "Nome", vbTextCompare) > 0 Then
@@ -180,17 +180,17 @@ ProximaLinhaA:
     colData = ultimaColB + 2
     
     ' Cabeçalhos das novas colunas
-    wsB.Cells(1, colID).Value = "id_integrante"
-    wsB.Cells(1, colData).Value = "data_entrada"
+    wsB.Cells(3, colID).Value = "id_integrante"
+    wsB.Cells(3, colData).Value = "data_entrada"
     
     ' Formatar cabeçalhos
-    With wsB.Range(wsB.Cells(1, colID), wsB.Cells(1, colData))
+    With wsB.Range(wsB.Cells(3, colID), wsB.Cells(3, colData))
         .Font.Bold = True
         .Interior.Color = RGB(200, 230, 255)
     End With
     
-    ' Processar cada linha do Arquivo B (começando da linha 2)
-    For i = 2 To ultimaLinhaB
+    ' Processar cada linha do Arquivo B (começando da linha 4)
+    For i = 4 To ultimaLinhaB
         nomeIntegrante = LimpaNome(CStr(wsB.Cells(i, colNome).Value))
         divisaoAtual = LimpaNomeEstrutura(CStr(wsB.Cells(i, colDivisao).Value))
         
