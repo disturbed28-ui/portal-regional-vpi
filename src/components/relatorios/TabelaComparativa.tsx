@@ -34,15 +34,32 @@ export const TabelaComparativa = ({ cargas, divisoesUnicas }: TabelaComparativaP
 
   // Preparar dados da tabela
   const linhasDivisoes = divisoesUnicas.map(nomeDivisao => {
-      const valores = cargas.map(carga => {
-        const divisao = carga.divisoes.find(d => d.divisao === nomeDivisao);
-        return divisao?.total || 0;
+    const valores = cargas.map(carga => {
+      // Normalizar para comparação
+      const divisao = carga.divisoes.find(d => {
+        if (!d.divisao) return false;
+        
+        const nomeNormalizado = d.divisao
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toUpperCase();
+        
+        return nomeNormalizado === nomeDivisao;
       });
+      
+      return divisao?.total || 0;
+    });
     
     const variacaoTotal = valores[valores.length - 1] - valores[0];
     
+    // Formatar nome para exibição
+    let nomeExibicao = nomeDivisao;
+    if (nomeDivisao.startsWith('DIVISAO ')) {
+      nomeExibicao = nomeDivisao.replace('DIVISAO ', 'Divisão ');
+    }
+    
     return {
-      divisao: nomeDivisao,
+      divisao: nomeExibicao,
       valores,
       variacaoTotal
     };

@@ -57,7 +57,26 @@ export const useHistoricoCargas = (options?: { enabled?: boolean }) => {
       // Processar dados filtrados
       const cargasProcessadas: CargaHistorica[] = cargasFiltradas.map((carga) => {
         const snapshot = carga.dados_snapshot as { divisoes?: DivisaoSnapshot[] };
-        const divisoes = snapshot?.divisoes || [];
+        let divisoes = snapshot?.divisoes || [];
+        
+        // Verificar se existe entrada "REGIONAL VALE DO PARAIBA I - SP"
+        const temRegional = divisoes.some(d => 
+          d.divisao && (
+            d.divisao.includes('REGIONAL VALE DO PARAIBA I - SP') ||
+            d.divisao.includes('REGIONAL VALE DO PARAÍBA I - SP')
+          )
+        );
+        
+        // Se não existir, adicionar com valor fixo 5
+        if (!temRegional) {
+          divisoes = [
+            ...divisoes,
+            {
+              divisao: 'REGIONAL VALE DO PARAIBA I - SP',
+              total: 5
+            }
+          ];
+        }
         
         return {
           data_carga: carga.data_carga,
@@ -72,11 +91,20 @@ export const useHistoricoCargas = (options?: { enabled?: boolean }) => {
         if (carga.divisoes && Array.isArray(carga.divisoes)) {
           carga.divisoes.forEach(divisao => {
             if (divisao && divisao.divisao) {
-              divisoesSet.add(divisao.divisao);
+              // Normalizar nome removendo acentos para criar chave única
+              const nomeNormalizado = divisao.divisao
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toUpperCase();
+              
+              divisoesSet.add(nomeNormalizado);
             }
           });
         }
       });
+
+      // Garantir que "REGIONAL VALE DO PARAIBA I - SP" está na lista
+      divisoesSet.add('REGIONAL VALE DO PARAIBA I - SP');
 
       const divisoesUnicas = Array.from(divisoesSet).sort();
 
