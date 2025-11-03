@@ -316,7 +316,39 @@ ProximaLinhaA:
     Next i
     
     ' =========================================================================
-    ' PASSO 4: RELATÓRIO FINAL
+    ' PASSO 4: LIMPEZA E AJUSTES FINAIS
+    ' =========================================================================
+    Debug.Print ""
+    Debug.Print "=========================================="
+    Debug.Print "LIMPEZA E AJUSTES FINAIS"
+    Debug.Print "=========================================="
+    
+    ' Procurar e remover coluna CargoEstagio
+    Dim colCargoEstagio As Long
+    colCargoEstagio = 0
+    
+    For j = 1 To 30
+        Dim headerValue As String
+        headerValue = Trim(CStr(wsB.Cells(3, j).Value))
+        
+        If InStr(1, headerValue, "CargoEstagio", vbTextCompare) > 0 Or _
+           InStr(1, headerValue, "Cargo Estagio", vbTextCompare) > 0 Or _
+           InStr(1, headerValue, "CargoEstágio", vbTextCompare) > 0 Then
+            colCargoEstagio = j
+            Exit For
+        End If
+    Next j
+    
+    If colCargoEstagio > 0 Then
+        wsB.Columns(colCargoEstagio).Delete Shift:=xlToLeft
+        Debug.Print "  >> Coluna 'CargoEstagio' (coluna " & colCargoEstagio & ") removida com sucesso"
+        Debug.Print "  >> Total de colunas após remoção: " & wsB.Cells(3, wsB.Columns.Count).End(xlToLeft).Column
+    Else
+        Debug.Print "  >> Coluna 'CargoEstagio' não encontrada (sem necessidade de remoção)"
+    End If
+    
+    ' =========================================================================
+    ' PASSO 5: RELATÓRIO FINAL
     ' =========================================================================
     Debug.Print ""
     Debug.Print "=========================================="
