@@ -58,7 +58,12 @@ export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps
     const mes = format(new Date(carga.data_carga), "MMM/yy", { locale: ptBR });
     const dados: any = { mes, total_regional: carga.total_integrantes };
     
-    // Usar chaves numéricas para divisões
+    // Inicializar todas as divisões com null primeiro
+    divisoesUnicas.forEach((_, index) => {
+      dados[`divisao_${index + 1}`] = null;
+    });
+    
+    // Preencher com dados reais onde existirem
     carga.divisoes.forEach(divisao => {
       // Normalizar o nome antes de buscar no mapa
       const nomeNormalizado = divisao.divisao
@@ -129,6 +134,7 @@ export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps
           name={formatarNomeDivisao(visualizacao)}
           dot={{ r: 4 }}
           activeDot={{ r: 6 }}
+          connectNulls={true}
         />
       );
     }
