@@ -168,28 +168,48 @@ function detectDivision(title: string): string {
     }
   };
   
-  // Mapeamento de códigos para divisões - Padrões "ext" (extremo)
-  if (lower.includes("ext sul") || lower.includes("ext.sul") || lower.includes("estsul")) {
+  // ===== PRIORIDADE: Divisões "Extremo" =====
+  // Detectar PRIMEIRO as divisões "extremo" para evitar conflitos
+  
+  if (lower.includes("ext sul") || lower.includes("ext.sul") || lower.includes("estsul") || 
+      lower.includes("ext. sul sjc") || lower.includes("ext sul sjc")) {
     addDivisao("Divisao Sao Jose dos Campos Extremo Sul - SP");
   }
-  if (lower.includes("ext leste") || lower.includes("ext.leste") || lower.includes("estleste")) {
+  
+  if (lower.includes("ext leste") || lower.includes("ext.leste") || lower.includes("estleste") || 
+      lower.includes("ext. leste sjc") || lower.includes("ext leste sjc")) {
     addDivisao("Divisao Sao Jose dos Campos Extremo Leste - SP");
   }
-  if (lower.includes("ext norte") || lower.includes("ext.norte") || lower.includes("estnorte") || lower.includes("ext.norte sjc")) {
+  
+  if (lower.includes("ext norte") || lower.includes("ext.norte") || lower.includes("estnorte") || 
+      lower.includes("ext. norte sjc") || lower.includes("ext norte sjc")) {
     addDivisao("Divisao Sao Jose dos Campos Extremo Norte - SP");
   }
   
-  // Padrões São José dos Campos - várias variações
-  if (lower.includes("sjc centro") || lower.includes("sjc.centro") || lower.includes("div. sjc centro") || lower.includes("div.sjc centro") || lower.includes("divesjc centro") || lower.includes("divsjc centro") || lower.includes("centro sjc")) {
+  // ===== Divisões Normais de São José dos Campos =====
+  // Adicionar verificação !lower.includes("ext") para evitar conflitos
+  
+  if ((lower.includes("sjc centro") || lower.includes("sjc.centro") || 
+       lower.includes("div. sjc centro") || lower.includes("div.sjc centro") || 
+       lower.includes("divesjc centro") || lower.includes("divsjc centro") || 
+       lower.includes("centro sjc")) && !lower.includes("ext")) {
     addDivisao("Divisao Sao Jose dos Campos Centro - SP");
   }
-  if (lower.includes("sjc leste") || lower.includes("sjc.leste") || lower.includes("div. sjc leste") || lower.includes("div.leste") || lower.includes("div leste") || lower.includes("diveleste") || lower.includes("leste sjc")) {
+  
+  if ((lower.includes("sjc leste") || lower.includes("sjc.leste") || 
+       lower.includes("div. sjc leste") || lower.includes("div.leste") || 
+       lower.includes("div leste") || lower.includes("diveleste") || 
+       lower.includes("leste sjc")) && !lower.includes("ext")) {
     addDivisao("Divisao Sao Jose dos Campos Leste - SP");
   }
-  if (lower.includes("sjc norte") || lower.includes("sjc.norte") || lower.includes("norte sjc") && !lower.includes("ext")) {
+  
+  if ((lower.includes("sjc norte") || lower.includes("sjc.norte") || 
+       lower.includes("norte sjc")) && !lower.includes("ext")) {
     addDivisao("Divisao Sao Jose dos Campos Norte - SP");
   }
-  if (lower.includes("sjc sul") || lower.includes("sjc.sul") || lower.includes("sul sjc") && !lower.includes("ext")) {
+  
+  if ((lower.includes("sjc sul") || lower.includes("sjc.sul") || 
+       lower.includes("sul sjc")) && !lower.includes("ext")) {
     addDivisao("Divisao Sao Jose dos Campos Sul - SP");
   }
   
