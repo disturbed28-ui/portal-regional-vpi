@@ -182,21 +182,63 @@ ProximaLinhaA:
         GoTo Cleanup
     End If
     
-    ' Adicionar colunas novas no final
+    ' =========================================================================
+    ' PASSO 3.1: INSERIR COLUNA A PARA id_integrante
+    ' =========================================================================
+    ' Inserir nova coluna A - isso empurra todas as colunas existentes para a direita
+    wsB.Columns(1).Insert Shift:=xlToRight
+    
+    ' Agora todas as colunas foram deslocadas em +1
+    ' Coluna A (nova): id_integrante
+    ' Coluna B (era A): comando
+    ' Coluna C (era B): cargo
+    ' ...
+    
+    colID = 1 ' id_integrante agora é a coluna A
+    
+    ' Ajustar referências das colunas que foram deslocadas
+    colNome = colNome + 1
+    colDivisao = colDivisao + 1
+    
+    ' =========================================================================
+    ' PASSO 3.2: RENOMEAR COLUNA "cargo" PARA "cargo_grau"
+    ' =========================================================================
+    ' Procurar a coluna que contém "cargo" e renomear para "cargo_grau"
+    For j = 1 To 20
+        Dim cargoHeader As String
+        cargoHeader = Trim(CStr(wsB.Cells(3, j).Value))
+        
+        If InStr(1, cargoHeader, "cargo", vbTextCompare) > 0 Then
+            wsB.Cells(3, j).Value = "cargo_grau"
+            Debug.Print "  >> Coluna 'cargo' renomeada para 'cargo_grau' na coluna " & j
+            Exit For
+        End If
+    Next j
+    
+    ' =========================================================================
+    ' PASSO 3.3: ADICIONAR COLUNA data_entrada NO FINAL
+    ' =========================================================================
     Dim ultimaColB As Long
-    ultimaColB = wsB.Cells(1, wsB.Columns.Count).End(xlToLeft).Column
-    colID = ultimaColB + 1
-    colData = ultimaColB + 2
+    ultimaColB = wsB.Cells(3, wsB.Columns.Count).End(xlToLeft).Column
+    colData = ultimaColB + 1
     
     ' Cabeçalhos das novas colunas
     wsB.Cells(3, colID).Value = "id_integrante"
     wsB.Cells(3, colData).Value = "data_entrada"
     
     ' Formatar cabeçalhos
-    With wsB.Range(wsB.Cells(3, colID), wsB.Cells(3, colData))
+    With wsB.Range(wsB.Cells(3, colID), wsB.Cells(3, colID))
         .Font.Bold = True
         .Interior.Color = RGB(200, 230, 255)
     End With
+    
+    With wsB.Range(wsB.Cells(3, colData), wsB.Cells(3, colData))
+        .Font.Bold = True
+        .Interior.Color = RGB(200, 230, 255)
+    End With
+    
+    Debug.Print "  >> Coluna 'id_integrante' adicionada na coluna A"
+    Debug.Print "  >> Coluna 'data_entrada' adicionada na coluna " & colData
     
     ' Processar cada linha do Arquivo B (começando da linha 4)
     For i = 4 To ultimaLinhaB
