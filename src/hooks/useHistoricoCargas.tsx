@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
 
 interface DivisaoSnapshot {
   divisao: string;
@@ -36,8 +37,25 @@ export const useHistoricoCargas = (options?: { enabled?: boolean }) => {
         return null;
       }
 
-      // Processar dados
-      const cargasProcessadas: CargaHistorica[] = cargas.map((carga) => {
+      // Filtrar apenas a última carga de cada mês
+      const cargasPorMes = new Map<string, typeof cargas[0]>();
+
+      cargas.forEach(carga => {
+        const mesAno = format(new Date(carga.data_carga), 'yyyy-MM');
+        
+        // Se não existe carga para este mês OU a atual é mais recente
+        if (!cargasPorMes.has(mesAno) || 
+            new Date(carga.data_carga) > new Date(cargasPorMes.get(mesAno)!.data_carga)) {
+          cargasPorMes.set(mesAno, carga);
+        }
+      });
+
+      // Converter Map para array e ordenar por data
+      const cargasFiltradas = Array.from(cargasPorMes.values())
+        .sort((a, b) => new Date(a.data_carga).getTime() - new Date(b.data_carga).getTime());
+
+      // Processar dados filtrados
+      const cargasProcessadas: CargaHistorica[] = cargasFiltradas.map((carga) => {
         const snapshot = carga.dados_snapshot as { divisoes?: DivisaoSnapshot[] };
         const divisoes = snapshot?.divisoes || [];
         

@@ -36,24 +36,31 @@ Deno.serve(async (req) => {
     for (const carga of cargas) {
       const snapshot = carga.dados_snapshot as any;
       
-      // Verificar se precisa reprocessar (formato antigo)
-      if (snapshot.integrantes && !snapshot.divisoes) {
+      // Verificar se precisa reprocessar (formato antigo com "nome" e "total_atual")
+      const temFormatoAntigo = snapshot.divisoes && 
+        Array.isArray(snapshot.divisoes) && 
+        snapshot.divisoes.length > 0 &&
+        'nome' in snapshot.divisoes[0] &&
+        'total_atual' in snapshot.divisoes[0];
+      
+      if (temFormatoAntigo) {
         console.log(`🔧 Reprocessando carga ${carga.id} de ${carga.data_carga}...`);
         
         try {
-          // Agrupar por divisão
-          const divisoesMap = new Map<string, { nome: string; total_atual: number }>();
-          
-          snapshot.integrantes.forEach((integrante: any) => {
-            const divisao = integrante.divisao_texto;
-            if (!divisoesMap.has(divisao)) {
-              divisoesMap.set(divisao, { nome: divisao, total_atual: 0 });
-            }
-            divisoesMap.get(divisao)!.total_atual++;
-          });
+          // Normalizar formato de divisões (antigo → novo)
+          const divisoesNormalizadas = snapshot.divisoes.map((div: any) => ({
+            divisao: div.nome,
+            total: div.total_atual,
+            comando: '',
+            regional: '',
+            vinculados: 0,
+            nao_vinculados: 0
+          }));
           
           const novoSnapshot = {
-            divisoes: Array.from(divisoesMap.values())
+            tipo: 'historico_simplificado',
+            divisoes: divisoesNormalizadas,
+            timestamp: snapshot.timestamp
           };
           
           console.log(`📊 Snapshot reprocessado: ${novoSnapshot.divisoes.length} divisões`);
@@ -75,7 +82,7 @@ Deno.serve(async (req) => {
           console.error(`💥 Erro ao processar carga ${carga.id}:`, error);
           erros++;
         }
-      } else if (snapshot.divisoes) {
+      } else if (snapshot.divisoes && snapshot.divisoes[0] && 'divisao' in snapshot.divisoes[0]) {
         console.log(`⏭️  Carga ${carga.id} já está no formato correto`);
         jaCorretos++;
       } else {
