@@ -102,7 +102,7 @@ export const useEventoPresenca = (eventoId: string | null) => {
     const { data, error } = await supabase.functions.invoke('manage-presenca', {
       body: {
         action: 'initialize',
-        firebase_uid: userId,
+        user_id: userId,
         evento_agenda_id: eventoAgendaId,
         divisao_id: divisaoId,
       }
@@ -150,7 +150,7 @@ export const useEventoPresenca = (eventoId: string | null) => {
         regional_id: regionalId,
         divisao_id: divisaoId,
         tipo_evento: tipoEvento,
-        firebase_uid: userId,
+        user_id: userId,
       }
     });
 
@@ -193,7 +193,7 @@ export const useEventoPresenca = (eventoId: string | null) => {
     const { data, error } = await supabase.functions.invoke('manage-presenca', {
       body: {
         action: 'add',
-        firebase_uid: userId,
+        user_id: userId,
         evento_agenda_id: evento.id,
         integrante_id: integranteId,
         profile_id: profileId,
@@ -254,7 +254,7 @@ export const useEventoPresenca = (eventoId: string | null) => {
     const { data, error } = await supabase.functions.invoke('manage-presenca', {
       body: {
         action: 'remove',
-        firebase_uid: userId,
+        user_id: userId,
         evento_agenda_id: evento.id,
         integrante_id: integranteId,
       }

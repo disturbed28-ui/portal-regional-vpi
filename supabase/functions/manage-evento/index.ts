@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
       regional_id, 
       divisao_id, 
       tipo_evento,
-      firebase_uid 
+      user_id 
     } = await req.json();
     
     console.log('[manage-evento] Dados recebidos:', { 
@@ -31,13 +31,13 @@ Deno.serve(async (req) => {
       regional_id, 
       divisao_id, 
       tipo_evento,
-      firebase_uid 
+      user_id 
     });
 
-    if (!evento_id || !titulo || !data_evento || !firebase_uid) {
+    if (!evento_id || !titulo || !data_evento || !user_id) {
       console.error('[manage-evento] Parâmetros obrigatórios faltando');
       return new Response(
-        JSON.stringify({ error: 'Parâmetros obrigatórios: evento_id, titulo, data_evento, firebase_uid' }),
+        JSON.stringify({ error: 'Parâmetros obrigatórios: evento_id, titulo, data_evento, user_id' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -56,11 +56,11 @@ Deno.serve(async (req) => {
 
     console.log('[manage-evento] Verificando se usuário tem permissão...');
 
-    // Verificar se o firebase_uid tem role admin ou moderator
+    // Verificar se o user_id tem role admin ou moderator
     const { data: userRoles, error: rolesError } = await supabaseAdmin
       .from('user_roles')
       .select('role')
-      .eq('user_id', firebase_uid);
+      .eq('user_id', user_id);
 
     if (rolesError) {
       console.error('[manage-evento] Erro ao buscar roles:', rolesError);

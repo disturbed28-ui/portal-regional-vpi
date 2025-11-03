@@ -14,19 +14,19 @@ Deno.serve(async (req) => {
   try {
     const { 
       action, // 'initialize', 'add' ou 'remove'
-      firebase_uid,
+      user_id,
       evento_agenda_id,
       integrante_id,
       profile_id,
       divisao_id, // Para initialize
     } = await req.json();
 
-    console.log('[manage-presenca] Recebido:', { action, firebase_uid, evento_agenda_id, integrante_id, divisao_id });
+    console.log('[manage-presenca] Recebido:', { action, user_id, evento_agenda_id, integrante_id, divisao_id });
 
     // Validar campos obrigatórios
-    if (!action || !firebase_uid) {
+    if (!action || !user_id) {
       return new Response(
-        JSON.stringify({ error: 'action e firebase_uid são obrigatórios' }),
+        JSON.stringify({ error: 'action e user_id são obrigatórios' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -64,23 +64,7 @@ Deno.serve(async (req) => {
       }
     );
 
-    // Buscar user_id no profiles usando firebase_uid
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('id')
-      .eq('id', firebase_uid)
-      .maybeSingle();
-
-    if (profileError || !profile) {
-      console.error('[manage-presenca] Erro ao buscar profile:', profileError);
-      return new Response(
-        JSON.stringify({ error: 'Usuário não encontrado' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const user_id = profile.id;
-    console.log('[manage-presenca] user_id encontrado:', user_id);
+    console.log('[manage-presenca] user_id recebido:', user_id);
 
     // Verificar se o usuário tem role de admin ou moderator
     const { data: userRoles, error: rolesError } = await supabaseAdmin
