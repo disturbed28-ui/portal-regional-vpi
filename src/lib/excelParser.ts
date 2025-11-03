@@ -42,6 +42,12 @@ export const parseExcelFile = async (file: File): Promise<ExcelIntegrante[]> => 
         const sheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(sheet);
 
+        // DEBUG: Log das colunas encontradas no Excel
+        if (jsonData.length > 0) {
+          console.log('[Excel Parser] 📋 Colunas encontradas:', Object.keys(jsonData[0]));
+          console.log('[Excel Parser] 🔍 Primeira linha (sample):', jsonData[0]);
+        }
+
         const integrantes: ExcelIntegrante[] = jsonData.map((row: any) => {
           // Detectar colunas com nomes variaveis
           const comando = row.comando || row.Comando || row.COMANDO || '';
@@ -51,8 +57,34 @@ export const parseExcelFile = async (file: File): Promise<ExcelIntegrante[]> => 
             row.id_integrante || row.ID_Integrante || row.id__integrante || row.registro || row.Registro || '0'
           );
           const nome_colete = row.nome_colete || row.Nome_Colete || row.NomeColete || row['Nome Colete'] || row.nome || row.Nome || '';
-          const cargo_grau = row.cargo_grau || row.Cargo_Grau || row['Cargo Grau'] || row.cargo || row.Cargo || '';
+          
+          // Ampliar mapeamento de cargo_grau com TODAS as variações possíveis
+          const cargo_grau = 
+            row.cargo_grau || 
+            row.Cargo_Grau || 
+            row['Cargo Grau'] || 
+            row['cargo grau'] ||
+            row['CARGO_GRAU'] ||
+            row.cargo || 
+            row.Cargo ||
+            row.CargoGrau ||
+            row.cargoGrau ||
+            // Buscar com espaços extras ou case-insensitive
+            Object.entries(row).find(([key]) => key.trim().toLowerCase() === 'cargo_grau')?.[1] ||
+            Object.entries(row).find(([key]) => key.trim().toLowerCase() === 'cargo grau')?.[1] ||
+            '';
+          
           const cargo_estagio = row.cargo_estagio || row.Cargo_Estagio || row.CargoEstagio || row.Estagio || row.estagio || '';
+          
+          // DEBUG: Log do mapeamento de cargo_grau para diagnóstico
+          if (!cargo_grau || cargo_grau.trim() === '') {
+            console.warn('[Excel Parser] ⚠️ Cargo vazio detectado:', {
+              id_integrante: row.id_integrante || row.ID_Integrante || row.registro,
+              nome: nome_colete,
+              cargo_grau_raw: row.cargo_grau,
+              todas_colunas: Object.keys(row)
+            });
+          }
           
           // Converter campos S/N para boolean
           const converterBool = (value: any) => value === 'S' || value === 's' || value === true;
@@ -91,16 +123,33 @@ export const parseExcelFile = async (file: File): Promise<ExcelIntegrante[]> => 
           };
         });
 
-        // Validar dados
-        const validos = integrantes.filter(
-          (i) =>
+        // Validar dados com log mais detalhado
+        const validos = integrantes.filter((i) => {
+          const isValid = 
             i.id_integrante > 0 &&
             i.nome_colete &&
+            i.nome_colete.trim().length > 0 &&
             i.comando &&
             i.regional &&
             i.divisao &&
-            i.cargo_grau
-        );
+            i.cargo_grau &&
+            i.cargo_grau.trim().length > 0; // cargo_grau NÃO pode ser vazio
+          
+          if (!isValid) {
+            console.warn('[Excel Parser] ❌ Integrante inválido (falta campo obrigatório):', {
+              id: i.id_integrante,
+              nome: i.nome_colete,
+              cargo_grau: i.cargo_grau,
+              comando: i.comando,
+              regional: i.regional,
+              divisao: i.divisao
+            });
+          }
+          
+          return isValid;
+        });
+        
+        console.log(`[Excel Parser] ✅ Validação concluída: ${validos.length} de ${integrantes.length} registros válidos`);
 
         resolve(validos);
       } catch (error) {

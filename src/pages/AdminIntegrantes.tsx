@@ -93,56 +93,102 @@ const AdminIntegrantes = () => {
       setProcessing(true);
       const { delta } = uploadPreview;
 
-      // Preparar dados para inserção
-      const novosData = delta.novos.map((item: any) => {
-        const { cargo, grau } = parseCargoGrau(item.cargo_grau);
-        return {
-          registro_id: item.id_integrante,
-          nome_colete: item.nome_colete,
-          comando_texto: item.comando,
-          regional_texto: item.regional,
-          divisao_texto: item.divisao,
-          cargo_grau_texto: item.cargo_grau,
-          cargo_nome: cargo,
-          grau: grau,
-          ativo: true,
-          cargo_estagio: item.cargo_estagio || null,
-          sgt_armas: item.sgt_armas || false,
-          caveira: item.caveira || false,
-          caveira_suplente: item.caveira_suplente || false,
-          batedor: item.batedor || false,
-          ursinho: item.ursinho || false,
-          lobo: item.lobo || false,
-          tem_moto: item.tem_moto || false,
-          tem_carro: item.tem_carro || false,
-          data_entrada: item.data_entrada || null,
-        };
-      });
+      // Preparar dados para inserção com validação de cargo_grau
+      const novosData = delta.novos
+        .filter((item: any) => {
+          // Validar campo obrigatório cargo_grau
+          if (!item.cargo_grau || item.cargo_grau.trim() === '') {
+            console.warn('[AdminIntegrantes] ⚠️ Novo registro sem cargo_grau será ignorado:', {
+              id: item.id_integrante,
+              nome: item.nome_colete,
+              cargo_grau_encontrado: item.cargo_grau
+            });
+            return false; // Remove do array
+          }
+          return true;
+        })
+        .map((item: any) => {
+          const { cargo, grau } = parseCargoGrau(item.cargo_grau);
+          return {
+            registro_id: item.id_integrante,
+            nome_colete: item.nome_colete,
+            comando_texto: item.comando,
+            regional_texto: item.regional,
+            divisao_texto: item.divisao,
+            cargo_grau_texto: item.cargo_grau,
+            cargo_nome: cargo,
+            grau: grau,
+            ativo: true,
+            cargo_estagio: item.cargo_estagio || null,
+            sgt_armas: item.sgt_armas || false,
+            caveira: item.caveira || false,
+            caveira_suplente: item.caveira_suplente || false,
+            batedor: item.batedor || false,
+            ursinho: item.ursinho || false,
+            lobo: item.lobo || false,
+            tem_moto: item.tem_moto || false,
+            tem_carro: item.tem_carro || false,
+            data_entrada: item.data_entrada || null,
+          };
+        });
+      
+      // Feedback visual se registros forem filtrados
+      if (delta.novos.length !== novosData.length) {
+        const ignorados = delta.novos.length - novosData.length;
+        toast({
+          title: "⚠️ Registros Ignorados",
+          description: `${ignorados} novo(s) registro(s) sem cargo foram ignorados. Verifique os logs do console.`,
+          variant: "destructive"
+        });
+      }
 
-      // Preparar dados para atualização
-      const atualizadosData = delta.atualizados.map((item: any) => {
-        const { cargo, grau } = parseCargoGrau(item.novo.cargo_grau);
-        return {
-          id: item.antigo.id,
-          nome_colete: item.novo.nome_colete,
-          comando_texto: item.novo.comando,
-          regional_texto: item.novo.regional,
-          divisao_texto: item.novo.divisao,
-          cargo_grau_texto: item.novo.cargo_grau,
-          cargo_nome: cargo,
-          grau: grau,
-          cargo_estagio: item.novo.cargo_estagio || null,
-          sgt_armas: item.novo.sgt_armas || false,
-          caveira: item.novo.caveira || false,
-          caveira_suplente: item.novo.caveira_suplente || false,
-          batedor: item.novo.batedor || false,
-          ursinho: item.novo.ursinho || false,
-          lobo: item.novo.lobo || false,
-          tem_moto: item.novo.tem_moto || false,
-          tem_carro: item.novo.tem_carro || false,
-          data_entrada: item.novo.data_entrada || null,
-        };
-      });
+      // Preparar dados para atualização com validação de cargo_grau
+      const atualizadosData = delta.atualizados
+        .filter((item: any) => {
+          // Validar campo obrigatório cargo_grau
+          if (!item.novo.cargo_grau || item.novo.cargo_grau.trim() === '') {
+            console.warn('[AdminIntegrantes] ⚠️ Atualização sem cargo_grau será ignorada:', {
+              id: item.antigo.registro_id,
+              nome: item.novo.nome_colete,
+              cargo_grau_encontrado: item.novo.cargo_grau
+            });
+            return false; // Remove do array
+          }
+          return true;
+        })
+        .map((item: any) => {
+          const { cargo, grau } = parseCargoGrau(item.novo.cargo_grau);
+          return {
+            id: item.antigo.id,
+            nome_colete: item.novo.nome_colete,
+            comando_texto: item.novo.comando,
+            regional_texto: item.novo.regional,
+            divisao_texto: item.novo.divisao,
+            cargo_grau_texto: item.novo.cargo_grau,
+            cargo_nome: cargo,
+            grau: grau,
+            cargo_estagio: item.novo.cargo_estagio || null,
+            sgt_armas: item.novo.sgt_armas || false,
+            caveira: item.novo.caveira || false,
+            caveira_suplente: item.novo.caveira_suplente || false,
+            batedor: item.novo.batedor || false,
+            ursinho: item.novo.ursinho || false,
+            lobo: item.novo.lobo || false,
+            tem_moto: item.novo.tem_moto || false,
+            tem_carro: item.novo.tem_carro || false,
+            data_entrada: item.novo.data_entrada || null,
+          };
+        });
+      
+      // Feedback visual se atualizações forem filtradas
+      if (delta.atualizados.length !== atualizadosData.length) {
+        const ignorados = delta.atualizados.length - atualizadosData.length;
+        toast({
+          title: "⚠️ Atualizações Ignoradas",
+          description: `${ignorados} atualização(ões) sem cargo foram ignoradas. Verifique os logs do console.`,
+          variant: "destructive"
+        });
+      }
 
       // Chamar edge function
       const { data, error } = await supabase.functions.invoke('admin-import-integrantes', {
