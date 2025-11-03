@@ -21,16 +21,8 @@ interface TabelaComparativaProps {
 }
 
 export const TabelaComparativa = ({ cargas, divisoesUnicas }: TabelaComparativaProps) => {
-  console.log('[TabelaComparativa] Props recebidas:', { 
-    cargasLength: cargas?.length,
-    divisoesUnicasLength: divisoesUnicas?.length,
-    divisoesUnicas,
-    primeirasCargasDivisoes: cargas?.[0]?.divisoes
-  });
-
   // Validação de segurança
   if (!cargas || cargas.length === 0 || !divisoesUnicas || divisoesUnicas.length === 0) {
-    console.error('[TabelaComparativa] Dados inválidos recebidos');
     return (
       <Card>
         <CardContent className="py-8 text-center text-muted-foreground">
