@@ -52,7 +52,7 @@ export const parseExcelFile = async (file: File): Promise<ExcelIntegrante[]> => 
           );
           const nome_colete = row.nome_colete || row.Nome_Colete || row.NomeColete || row['Nome Colete'] || row.nome || row.Nome || '';
           const cargo_grau = row.cargo_grau || row.Cargo_Grau || row['Cargo Grau'] || row.cargo || row.Cargo || '';
-          const cargo_estagio = row.cargo_estagio || row.Cargo_Estagio || row.CargoEstagio || '';
+          const cargo_estagio = row.cargo_estagio || row.Cargo_Estagio || row.CargoEstagio || row.Estagio || row.estagio || '';
           
           // Converter campos S/N para boolean
           const converterBool = (value: any) => value === 'S' || value === 's' || value === true;
