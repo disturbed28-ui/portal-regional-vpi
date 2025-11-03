@@ -323,7 +323,7 @@ ProximaLinhaA:
     Debug.Print "LIMPEZA E AJUSTES FINAIS"
     Debug.Print "=========================================="
     
-    ' Procurar e remover coluna CargoEstagio
+    ' Procurar e renomear coluna CargoEstagio para cargo_estagio
     Dim colCargoEstagio As Long
     colCargoEstagio = 0
     
@@ -333,18 +333,20 @@ ProximaLinhaA:
         
         If InStr(1, headerValue, "CargoEstagio", vbTextCompare) > 0 Or _
            InStr(1, headerValue, "Cargo Estagio", vbTextCompare) > 0 Or _
-           InStr(1, headerValue, "CargoEstágio", vbTextCompare) > 0 Then
+           InStr(1, headerValue, "CargoEstágio", vbTextCompare) > 0 Or _
+           InStr(1, headerValue, "Estagio", vbTextCompare) > 0 Or _
+           InStr(1, headerValue, "Estágio", vbTextCompare) > 0 Then
             colCargoEstagio = j
             Exit For
         End If
     Next j
     
     If colCargoEstagio > 0 Then
-        wsB.Columns(colCargoEstagio).Delete Shift:=xlToLeft
-        Debug.Print "  >> Coluna 'CargoEstagio' (coluna " & colCargoEstagio & ") removida com sucesso"
-        Debug.Print "  >> Total de colunas após remoção: " & wsB.Cells(3, wsB.Columns.Count).End(xlToLeft).Column
+        ' Renomear para cargo_estagio (padrão snake_case do banco)
+        wsB.Cells(3, colCargoEstagio).Value = "cargo_estagio"
+        Debug.Print "  >> Coluna 'CargoEstagio' (coluna " & colCargoEstagio & ") renomeada para 'cargo_estagio'"
     Else
-        Debug.Print "  >> Coluna 'CargoEstagio' não encontrada (sem necessidade de remoção)"
+        Debug.Print "  >> Coluna 'CargoEstagio' não encontrada"
     End If
     
     ' =========================================================================
