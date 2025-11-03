@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
+import { useUserRole } from '@/hooks/useUserRole';
 import { useOrganogramaData } from '@/hooks/useOrganogramaData';
 import { HierarchyCard } from '@/components/organograma/HierarchyCard';
 import { IntegranteListItem } from '@/components/organograma/IntegranteListItem';
@@ -31,6 +32,7 @@ const Organograma = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { profile, loading: profileLoading } = useProfile(user?.id);
+  const { hasRole, loading: roleLoading } = useUserRole(user?.id);
   
   const [nivel, setNivel] = useState<Nivel>('regional');
   const [tipoLista, setTipoLista] = useState<TipoLista>(null);
@@ -50,9 +52,37 @@ const Organograma = () => {
 
   // Validar acesso e buscar regional do integrante
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || roleLoading) return;
 
     const validateAccess = async () => {
+      const isAdmin = hasRole('admin');
+
+      // Se for admin, usar dados do profile
+      if (isAdmin) {
+        if (!profile?.regional_id) {
+          toast.error('Admin sem regional definida no perfil');
+          navigate('/');
+          return;
+        }
+        
+        // Buscar nome da regional pelo ID
+        const { data: regionalData, error: regionalError } = await supabase
+          .from('regionais')
+          .select('nome')
+          .eq('id', profile.regional_id)
+          .maybeSingle();
+        
+        if (regionalError || !regionalData) {
+          toast.error('Erro ao buscar regional do admin');
+          navigate('/');
+          return;
+        }
+        
+        setRegionalUsuario(regionalData.nome);
+        return;
+      }
+
+      // Se não for admin, validar integrantes_portal (lógica atual)
       const { data, error } = await supabase
         .from('integrantes_portal')
         .select('ativo, vinculado, regional_texto')
@@ -69,7 +99,7 @@ const Organograma = () => {
     };
 
     validateAccess();
-  }, [user?.id, navigate]);
+  }, [user?.id, navigate, hasRole, roleLoading, profile]);
   
   const {
     hierarquiaRegional,
@@ -106,7 +136,7 @@ const Organograma = () => {
     setDivisaoSelecionada(null);
   };
 
-  if (profileLoading || dataLoading) {
+  if (profileLoading || dataLoading || roleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

@@ -10,6 +10,17 @@ interface Profile {
   profile_status: string;
   observacao: string | null;
   telefone: string | null;
+  regional_id: string | null;
+  divisao_id: string | null;
+  cargo_id: string | null;
+  funcao_id: string | null;
+  comando_id: string | null;
+  regional: string | null;
+  divisao: string | null;
+  cargo: string | null;
+  funcao: string | null;
+  grau: string | null;
+  data_entrada: string | null;
   integrante?: {
     vinculado: boolean;
     cargo_nome: string;
