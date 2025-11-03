@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
 
   try {
     const API_KEY = Deno.env.get('GOOGLE_CALENDAR_API_KEY');
-    const CALENDAR_ID = 'c_3d0c7d8dc3b651e6e4f35d97d72ba31d1aa20ba1c3ee55adca37faf82f6b2e96@group.calendar.google.com';
+    const CALENDAR_ID = '3db053177f24bf333254be1f501c71880940cc1eb0e319bf3d45830ba4cbea07@group.calendar.google.com';
     
     if (!API_KEY) {
       logError('get-calendar-events', 'Google Calendar API Key not configured');
