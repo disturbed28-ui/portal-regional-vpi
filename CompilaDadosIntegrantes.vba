@@ -18,18 +18,19 @@ Option Explicit
 Sub CompilaDadosIntegrantes()
     Dim wbA As Workbook, wbB As Workbook
     Dim wsA As Worksheet, wsB As Worksheet
-    Dim dictIntegrantes As Object
+    Dim dictIntegrantes As Object, dictDivisoesCompletas As Object
     Dim ultimaLinhaA As Long, ultimaLinhaB As Long
     Dim i As Long, j As Long
-    Dim regionalAtual As String, divisaoAtual As String
+    Dim regionalAtual As String, divisaoAtual As String, divisaoNormalizada As String
     Dim nomeIntegrante As String, idIntegrante As String, dataAdmissao As String
     Dim chave As String
     Dim encontrados As Long, naoEncontrados As Long
     Dim listaNaoEncontrados As String
-    Dim colID As Long, colData As Long
+    Dim colID As Long, colData As Long, colDivisaoCompleta As Long
     
     ' Inicializar variáveis
     Set dictIntegrantes = CreateObject("Scripting.Dictionary")
+    Set dictDivisoesCompletas = CreateObject("Scripting.Dictionary")
     encontrados = 0
     naoEncontrados = 0
     listaNaoEncontrados = ""
@@ -98,9 +99,16 @@ Sub CompilaDadosIntegrantes()
         ' DETECTAR DIVISÃO (linha sem número na coluna A, não é regional)
         ' =====================================================================
         If Not IsNumeric(colA) And colA <> "" And colA <> "Numero" Then
-            ' É uma divisão
-            divisaoAtual = LimpaNomeEstrutura(colA)
-            Debug.Print "  >> DIVISÃO: " & divisaoAtual
+            ' É uma divisão - armazenar nome COMPLETO original
+            divisaoAtual = colA ' Nome completo original
+            divisaoNormalizada = NormalizaDivisao(divisaoAtual)
+            
+            ' Armazenar mapeamento normalizado -> completo
+            If Not dictDivisoesCompletas.Exists(divisaoNormalizada) Then
+                dictDivisoesCompletas.Add divisaoNormalizada, divisaoAtual
+            End If
+            
+            Debug.Print "  >> DIVISÃO: " & divisaoAtual & " -> " & divisaoNormalizada
             GoTo ProximaLinhaA
         End If
         
@@ -119,16 +127,17 @@ Sub CompilaDadosIntegrantes()
                 dataAdmissao = FormatarData(wsA.Cells(i, 5).Value)
             End If
             
-            ' Criar chave única: Nome + "|" + Divisão
-            chave = nomeIntegrante & "|" & divisaoAtual
+            ' Criar chave única: Nome + "|" + Divisão NORMALIZADA
+            divisaoNormalizada = NormalizaDivisao(divisaoAtual)
+            chave = nomeIntegrante & "|" & divisaoNormalizada
             
-            ' Adicionar ao dicionário (se já existe, mantém o primeiro)
+            ' Adicionar ao dicionário
             If Not dictIntegrantes.Exists(chave) Then
-                dictIntegrantes.Add chave, idIntegrante & "|" & dataAdmissao
-                Debug.Print "    - " & nomeIntegrante & " (ID: " & idIntegrante & ") [" & divisaoAtual & "]"
+                dictIntegrantes.Add chave, idIntegrante & "|" & dataAdmissao & "|" & divisaoAtual
+                Debug.Print "    - " & nomeIntegrante & " (ID: " & idIntegrante & ") [" & divisaoNormalizada & "]"
             Else
-                ' Duplicado encontrado - manter o primeiro
-                Debug.Print "    ! DUPLICADO IGNORADO: " & nomeIntegrante & " (ID: " & idIntegrante & ") [" & divisaoAtual & "]"
+                ' Integrante com mesmo nome e divisão já existe
+                Debug.Print "    ! DUPLICADO: " & nomeIntegrante & " (ID: " & idIntegrante & ") [" & divisaoNormalizada & "]"
             End If
         End If
         
@@ -178,13 +187,15 @@ ProximaLinhaA:
     ultimaColB = wsB.Cells(1, wsB.Columns.Count).End(xlToLeft).Column
     colID = ultimaColB + 1
     colData = ultimaColB + 2
+    colDivisaoCompleta = ultimaColB + 3
     
     ' Cabeçalhos das novas colunas
     wsB.Cells(3, colID).Value = "id_integrante"
     wsB.Cells(3, colData).Value = "data_entrada"
+    wsB.Cells(3, colDivisaoCompleta).Value = "divisao_completa"
     
     ' Formatar cabeçalhos
-    With wsB.Range(wsB.Cells(3, colID), wsB.Cells(3, colData))
+    With wsB.Range(wsB.Cells(3, colID), wsB.Cells(3, colDivisaoCompleta))
         .Font.Bold = True
         .Interior.Color = RGB(200, 230, 255)
     End With
@@ -192,14 +203,47 @@ ProximaLinhaA:
     ' Processar cada linha do Arquivo B (começando da linha 4)
     For i = 4 To ultimaLinhaB
         nomeIntegrante = LimpaNome(CStr(wsB.Cells(i, colNome).Value))
-        divisaoAtual = LimpaNomeEstrutura(CStr(wsB.Cells(i, colDivisao).Value))
+        divisaoAtual = CStr(wsB.Cells(i, colDivisao).Value) ' Nome truncado original
+        divisaoNormalizada = NormalizaDivisao(divisaoAtual)
         
-        ' Criar chave de busca
-        chave = nomeIntegrante & "|" & divisaoAtual
+        ' Criar chave de busca com nome normalizado
+        chave = nomeIntegrante & "|" & divisaoNormalizada
         
-        ' Buscar no dicionário
+        Dim encontrou As Boolean
+        encontrou = False
+        Dim divisaoEncontrada As String
+        
+        ' Tentar buscar diretamente
         If dictIntegrantes.Exists(chave) Then
-            ' Encontrado! Extrair ID e Data
+            encontrou = True
+            divisaoEncontrada = divisaoNormalizada
+        Else
+            ' Se divisão termina com "EXTREMO - SP", tentar variações
+            If Right(divisaoNormalizada, 12) = "EXTREMO - SP" Then
+                Dim baseExtremo As String
+                baseExtremo = Left(divisaoNormalizada, Len(divisaoNormalizada) - 12)
+                
+                Dim variantes As Variant
+                variantes = Array("EXTREMO SUL - SP", "EXTREMO NORTE - SP", "EXTREMO LESTE - SP", "EXTREMO OESTE - SP")
+                
+                Dim v As Variant
+                For Each v In variantes
+                    Dim chaveVariante As String
+                    chaveVariante = nomeIntegrante & "|" & baseExtremo & v
+                    
+                    If dictIntegrantes.Exists(chaveVariante) Then
+                        chave = chaveVariante
+                        divisaoEncontrada = baseExtremo & v
+                        encontrou = True
+                        Exit For
+                    End If
+                Next v
+            End If
+        End If
+        
+        ' Processar resultado
+        If encontrou Then
+            ' Encontrado! Extrair ID, Data e Divisão Completa
             Dim dados As String
             dados = dictIntegrantes(chave)
             
@@ -210,19 +254,24 @@ ProximaLinhaA:
             If UBound(partes) >= 1 Then
                 wsB.Cells(i, colData).Value = partes(1) ' Data
             End If
+            If UBound(partes) >= 2 Then
+                wsB.Cells(i, colDivisaoCompleta).Value = partes(2) ' Divisão completa
+            End If
             
             encontrados = encontrados + 1
         Else
             ' Não encontrado
             wsB.Cells(i, colID).Value = "NÃO ENCONTRADO"
             wsB.Cells(i, colData).Value = "NÃO ENCONTRADO"
-            wsB.Cells(i, colID).Interior.Color = RGB(255, 200, 200) ' Destacar em vermelho claro
+            wsB.Cells(i, colDivisaoCompleta).Value = "NÃO ENCONTRADO"
+            wsB.Cells(i, colID).Interior.Color = RGB(255, 200, 200)
             wsB.Cells(i, colData).Interior.Color = RGB(255, 200, 200)
+            wsB.Cells(i, colDivisaoCompleta).Interior.Color = RGB(255, 200, 200)
             
             naoEncontrados = naoEncontrados + 1
-            listaNaoEncontrados = listaNaoEncontrados & vbCrLf & "  - " & nomeIntegrante & " [" & divisaoAtual & "]"
+            listaNaoEncontrados = listaNaoEncontrados & vbCrLf & "  - " & nomeIntegrante & " [" & divisaoNormalizada & "]"
             
-            Debug.Print "  X NÃO ENCONTRADO: " & nomeIntegrante & " [" & divisaoAtual & "]"
+            Debug.Print "  X NÃO ENCONTRADO: " & nomeIntegrante & " [" & divisaoNormalizada & "]"
         End If
     Next i
     
@@ -241,6 +290,7 @@ ProximaLinhaA:
     ' Ajustar largura das colunas
     wsB.Columns(colID).AutoFit
     wsB.Columns(colData).AutoFit
+    wsB.Columns(colDivisaoCompleta).AutoFit
     
     ' Salvar Arquivo B
     Dim novoCaminho As String
@@ -304,6 +354,86 @@ Function LimpaNomeEstrutura(texto As String) As String
     texto = Replace(texto, "  ", " ")
     
     LimpaNomeEstrutura = texto
+End Function
+
+' Remover acentos e caracteres especiais
+Function RemoveAcentos(texto As String) As String
+    texto = Replace(texto, "Á", "A")
+    texto = Replace(texto, "À", "A")
+    texto = Replace(texto, "Ã", "A")
+    texto = Replace(texto, "Â", "A")
+    texto = Replace(texto, "Ä", "A")
+    texto = Replace(texto, "É", "E")
+    texto = Replace(texto, "È", "E")
+    texto = Replace(texto, "Ê", "E")
+    texto = Replace(texto, "Ë", "E")
+    texto = Replace(texto, "Í", "I")
+    texto = Replace(texto, "Ì", "I")
+    texto = Replace(texto, "Î", "I")
+    texto = Replace(texto, "Ï", "I")
+    texto = Replace(texto, "Ó", "O")
+    texto = Replace(texto, "Ò", "O")
+    texto = Replace(texto, "Õ", "O")
+    texto = Replace(texto, "Ô", "O")
+    texto = Replace(texto, "Ö", "O")
+    texto = Replace(texto, "Ú", "U")
+    texto = Replace(texto, "Ù", "U")
+    texto = Replace(texto, "Û", "U")
+    texto = Replace(texto, "Ü", "U")
+    texto = Replace(texto, "Ç", "C")
+    texto = Replace(texto, "á", "a")
+    texto = Replace(texto, "à", "a")
+    texto = Replace(texto, "ã", "a")
+    texto = Replace(texto, "â", "a")
+    texto = Replace(texto, "ä", "a")
+    texto = Replace(texto, "é", "e")
+    texto = Replace(texto, "è", "e")
+    texto = Replace(texto, "ê", "e")
+    texto = Replace(texto, "ë", "e")
+    texto = Replace(texto, "í", "i")
+    texto = Replace(texto, "ì", "i")
+    texto = Replace(texto, "î", "i")
+    texto = Replace(texto, "ï", "i")
+    texto = Replace(texto, "ó", "o")
+    texto = Replace(texto, "ò", "o")
+    texto = Replace(texto, "õ", "o")
+    texto = Replace(texto, "ô", "o")
+    texto = Replace(texto, "ö", "o")
+    texto = Replace(texto, "ú", "u")
+    texto = Replace(texto, "ù", "u")
+    texto = Replace(texto, "û", "u")
+    texto = Replace(texto, "ü", "u")
+    texto = Replace(texto, "ç", "c")
+    
+    RemoveAcentos = texto
+End Function
+
+' Normalizar nome de divisão para matching
+Function NormalizaDivisao(divisao As String) As String
+    ' 1. Limpar e converter para maiúsculas
+    divisao = Trim(UCase(divisao))
+    
+    ' 2. Remover acentos
+    divisao = RemoveAcentos(divisao)
+    
+    ' 3. Padronizar "Divisão" -> "DIVISAO"
+    divisao = Replace(divisao, "DIVISÃO", "DIVISAO")
+    
+    ' 4. Normalizar múltiplos espaços
+    Do While InStr(divisao, "  ") > 0
+        divisao = Replace(divisao, "  ", " ")
+    Loop
+    
+    ' 5. Adicionar " - SP" se não existir
+    If Right(divisao, 5) <> " - SP" And Right(divisao, 4) <> " -SP" And Right(divisao, 3) <> "-SP" Then
+        divisao = divisao & " - SP"
+    End If
+    
+    ' 6. Padronizar separador
+    divisao = Replace(divisao, " -SP", " - SP")
+    divisao = Replace(divisao, "-SP", " - SP")
+    
+    NormalizaDivisao = divisao
 End Function
 
 ' Formatar data
