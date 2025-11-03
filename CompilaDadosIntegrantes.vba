@@ -187,15 +187,13 @@ ProximaLinhaA:
     ultimaColB = wsB.Cells(1, wsB.Columns.Count).End(xlToLeft).Column
     colID = ultimaColB + 1
     colData = ultimaColB + 2
-    colDivisaoCompleta = ultimaColB + 3
     
     ' Cabeçalhos das novas colunas
     wsB.Cells(3, colID).Value = "id_integrante"
     wsB.Cells(3, colData).Value = "data_entrada"
-    wsB.Cells(3, colDivisaoCompleta).Value = "divisao_completa"
     
     ' Formatar cabeçalhos
-    With wsB.Range(wsB.Cells(3, colID), wsB.Cells(3, colDivisaoCompleta))
+    With wsB.Range(wsB.Cells(3, colID), wsB.Cells(3, colData))
         .Font.Bold = True
         .Interior.Color = RGB(200, 230, 255)
     End With
@@ -255,7 +253,7 @@ ProximaLinhaA:
                 wsB.Cells(i, colData).Value = partes(1) ' Data
             End If
             If UBound(partes) >= 2 Then
-                wsB.Cells(i, colDivisaoCompleta).Value = partes(2) ' Divisão completa
+                wsB.Cells(i, colDivisao).Value = partes(2) ' Substituir divisão truncada pela completa
             End If
             
             encontrados = encontrados + 1
@@ -263,10 +261,10 @@ ProximaLinhaA:
             ' Não encontrado
             wsB.Cells(i, colID).Value = "NÃO ENCONTRADO"
             wsB.Cells(i, colData).Value = "NÃO ENCONTRADO"
-            wsB.Cells(i, colDivisaoCompleta).Value = "NÃO ENCONTRADO"
+            wsB.Cells(i, colDivisao).Value = "NÃO ENCONTRADO"
             wsB.Cells(i, colID).Interior.Color = RGB(255, 200, 200)
             wsB.Cells(i, colData).Interior.Color = RGB(255, 200, 200)
-            wsB.Cells(i, colDivisaoCompleta).Interior.Color = RGB(255, 200, 200)
+            wsB.Cells(i, colDivisao).Interior.Color = RGB(255, 200, 200)
             
             naoEncontrados = naoEncontrados + 1
             listaNaoEncontrados = listaNaoEncontrados & vbCrLf & "  - " & nomeIntegrante & " [" & divisaoNormalizada & "]"
@@ -290,7 +288,12 @@ ProximaLinhaA:
     ' Ajustar largura das colunas
     wsB.Columns(colID).AutoFit
     wsB.Columns(colData).AutoFit
-    wsB.Columns(colDivisaoCompleta).AutoFit
+    wsB.Columns(colDivisao).AutoFit
+    
+    ' Remover linhas vazias do topo (linhas 1 e 2)
+    If Application.WorksheetFunction.CountA(wsB.Rows(1)) = 0 Then
+        wsB.Rows("1:2").Delete
+    End If
     
     ' Salvar Arquivo B
     Dim novoCaminho As String
