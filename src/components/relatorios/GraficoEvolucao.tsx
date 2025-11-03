@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface DivisaoSnapshot {
   divisao: string;
@@ -37,6 +39,9 @@ const CORES_DIVISOES = [
 ];
 
 export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps) => {
+  // Estado para controlar qual visualização exibir
+  const [visualizacao, setVisualizacao] = useState<string>('total');
+  
   // Validação de segurança
   if (!cargas || cargas.length === 0 || !divisoesUnicas || divisoesUnicas.length === 0) {
     return <div className="text-center text-muted-foreground py-8">Dados insuficientes para gerar o gráfico</div>;
@@ -80,80 +85,140 @@ export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps
     ),
   };
 
-  // Componente de legenda lateral
-  const LegendaLateral = () => (
-    <div className="ml-4 p-4 border rounded-lg bg-card max-h-[400px] overflow-y-auto min-w-[300px]">
-      <h4 className="font-semibold mb-3 text-sm">Divisões</h4>
-      <div className="space-y-2">
-        {divisoesUnicas.map((divisao, index) => (
-          <div key={divisao} className="flex items-start gap-2 text-xs">
-            <span 
-              className="font-bold min-w-[24px]"
-              style={{ color: CORES_DIVISOES[index % CORES_DIVISOES.length] }}
-            >
-              {index + 1}.
-            </span>
-            <span className="text-muted-foreground leading-tight">{divisao}</span>
+  // Formatar nome de divisão para exibição
+  const formatarNomeDivisao = (nome: string) => {
+    return nome
+      .replace('DIVISAO ', 'Divisão ')
+      .replace('REGIONAL ', '');
+  };
+
+  // Renderizar linhas do gráfico baseado na seleção
+  const renderizarLinhas = () => {
+    const linhas = [];
+    
+    // Sempre renderizar linha do Total Regional
+    linhas.push(
+      <Line
+        key="total_regional"
+        type="monotone"
+        dataKey="total_regional"
+        stroke="hsl(var(--primary))"
+        strokeWidth={3}
+        name="Total Regional"
+        dot={{ r: 4 }}
+        activeDot={{ r: 6 }}
+      />
+    );
+    
+    // Se não for "total", renderizar a divisão selecionada
+    if (visualizacao !== 'total') {
+      const indexDivisao = divisoesUnicas.findIndex(d => d === visualizacao);
+      if (indexDivisao !== -1) {
+        linhas.push(
+          <Line
+            key={visualizacao}
+            type="monotone"
+            dataKey={`divisao_${indexDivisao + 1}`}
+            stroke={CORES_DIVISOES[indexDivisao % CORES_DIVISOES.length]}
+            strokeWidth={2.5}
+            name={formatarNomeDivisao(visualizacao)}
+            dot={{ r: 3 }}
+            activeDot={{ r: 5 }}
+          />
+        );
+      }
+    }
+    
+    return linhas;
+  };
+
+  // Componente de legenda lateral simplificada
+  const LegendaLateral = () => {
+    if (visualizacao === 'total') return null;
+    
+    const indexDivisao = divisoesUnicas.findIndex(d => d === visualizacao);
+    if (indexDivisao === -1) return null;
+
+    return (
+      <div className="ml-4 p-4 border rounded-lg bg-card max-h-[400px] min-w-[250px]">
+        <h4 className="font-semibold mb-3 text-sm">Legenda</h4>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-xs">
+            <div 
+              className="w-8 h-0.5" 
+              style={{ backgroundColor: 'hsl(var(--primary))' }}
+            />
+            <span className="font-medium">Total Regional</span>
           </div>
-        ))}
+          <div className="flex items-center gap-2 text-xs">
+            <div 
+              className="w-8 h-0.5" 
+              style={{ 
+                backgroundColor: CORES_DIVISOES[indexDivisao % CORES_DIVISOES.length]
+              }}
+            />
+            <span className="text-muted-foreground">
+              {formatarNomeDivisao(visualizacao)}
+            </span>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
-    <div className="flex gap-4">
-      {/* Gráfico principal */}
-      <div className="flex-1">
-        <ChartContainer config={chartConfig} className="h-[400px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={dadosGrafico}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis 
-                dataKey="mes" 
-                className="text-xs"
-                tick={{ fill: 'hsl(var(--foreground))' }}
-              />
-              <YAxis 
-                className="text-xs"
-                tick={{ fill: 'hsl(var(--foreground))' }}
-              />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Legend 
-                wrapperStyle={{ fontSize: '12px' }}
-                iconType="line"
-              />
-              
-              {/* Linha do total regional - destaque */}
-              <Line
-                type="monotone"
-                dataKey="total_regional"
-                stroke="hsl(var(--primary))"
-                strokeWidth={3}
-                name="Total Regional"
-                dot={{ r: 4 }}
-                activeDot={{ r: 6 }}
-              />
-              
-              {/* Linhas das divisões com números */}
-              {divisoesUnicas.map((divisao, index) => (
-                <Line
-                  key={divisao}
-                  type="monotone"
-                  dataKey={`divisao_${index + 1}`}
-                  stroke={CORES_DIVISOES[index % CORES_DIVISOES.length]}
-                  strokeWidth={1.5}
-                  name={`${index + 1}`}
-                  dot={{ r: 2 }}
-                  activeDot={{ r: 4 }}
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        </ChartContainer>
+    <div className="space-y-4">
+      {/* Filtro de visualização */}
+      <div className="flex items-center gap-3">
+        <label className="text-sm font-medium">Visualizar:</label>
+        <Select value={visualizacao} onValueChange={setVisualizacao}>
+          <SelectTrigger className="w-[350px]">
+            <SelectValue placeholder="Selecione..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="total">Total Regional</SelectItem>
+            {divisoesUnicas.map((divisao) => (
+              <SelectItem key={divisao} value={divisao}>
+                {formatarNomeDivisao(divisao)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
-      
-      {/* Legenda lateral com nomes completos */}
-      <LegendaLateral />
+
+      {/* Gráfico e legenda */}
+      <div className="flex gap-4">
+        {/* Gráfico principal */}
+        <div className="flex-1">
+          <ChartContainer config={chartConfig} className="h-[400px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={dadosGrafico}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis 
+                  dataKey="mes" 
+                  className="text-xs"
+                  tick={{ fill: 'hsl(var(--foreground))' }}
+                />
+                <YAxis 
+                  className="text-xs"
+                  tick={{ fill: 'hsl(var(--foreground))' }}
+                />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Legend 
+                  wrapperStyle={{ fontSize: '12px' }}
+                  iconType="line"
+                />
+                
+                {/* Renderizar linhas dinamicamente */}
+                {renderizarLinhas()}
+              </LineChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        </div>
+        
+        {/* Legenda lateral - apenas quando divisão selecionada */}
+        <LegendaLateral />
+      </div>
     </div>
   );
 };
