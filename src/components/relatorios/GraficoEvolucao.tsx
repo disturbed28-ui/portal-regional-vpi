@@ -22,22 +22,7 @@ interface GraficoEvolucaoProps {
   divisoesUnicas: string[];
 }
 
-const CORES_DIVISOES = [
-  'hsl(var(--chart-1))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))',
-  'hsl(210, 70%, 50%)',
-  'hsl(280, 70%, 50%)',
-  'hsl(340, 70%, 50%)',
-  'hsl(30, 70%, 50%)',
-  'hsl(150, 70%, 50%)',
-  'hsl(180, 70%, 50%)',
-  'hsl(240, 70%, 50%)',
-  'hsl(300, 70%, 50%)',
-  'hsl(60, 70%, 50%)',
-];
+const COR_DIVISAO = 'hsl(210, 70%, 50%)'; // Azul para todas as divisões
 
 export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps) => {
   // Estado para controlar qual visualização exibir
@@ -48,64 +33,29 @@ export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps
     return <div className="text-center text-muted-foreground py-8">Dados insuficientes para gerar o gráfico</div>;
   }
 
-  // Criar mapeamento de divisões para números
-  const divisoesMap = divisoesUnicas.reduce((acc, divisao, index) => {
-    acc[divisao] = index + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  
-  console.log('[GraficoEvolucao] divisoesUnicas recebidas:', divisoesUnicas);
-  console.log('[GraficoEvolucao] divisoesMap criado:', divisoesMap);
-
-  // Preparar dados para o gráfico com chaves numéricas
+  // Processar apenas os dados necessários baseado na visualização selecionada
   const dadosGrafico = cargas.map(carga => {
     const mes = format(new Date(carga.data_carga), "MMM/yy", { locale: ptBR });
-    const dados: any = { mes, total_regional: carga.total_integrantes };
     
-    // Inicializar todas as divisões com null primeiro
-    divisoesUnicas.forEach((_, index) => {
-      dados[`divisao_${index + 1}`] = null;
+    // Caso 1: Total Regional
+    if (visualizacao === 'total') {
+      return {
+        mes,
+        total_regional: carga.total_integrantes
+      };
+    }
+    
+    // Caso 2: Divisão específica - processar apenas a divisão selecionada
+    const divisaoSelecionada = carga.divisoes.find(div => {
+      const nomeNormalizado = normalizarNomeDivisao(div.divisao);
+      return nomeNormalizado === visualizacao;
     });
     
-    // Preencher com dados reais onde existirem
-    carga.divisoes.forEach(divisao => {
-      const nomeOriginal = divisao.divisao;
-      const nomeNormalizado = normalizarNomeDivisao(divisao.divisao);
-      
-      console.log(`[GraficoEvolucao] ${mes} - Original: "${nomeOriginal}" -> Normalizado: "${nomeNormalizado}"`);
-      
-      const numero = divisoesMap[nomeNormalizado];
-      if (numero) {
-        console.log(`[GraficoEvolucao] ${mes} - Encontrado numero ${numero} para "${nomeNormalizado}"`);
-        dados[`divisao_${numero}`] = Number(divisao.total); // ✅ Garantir que é número
-      } else {
-        console.warn(`[GraficoEvolucao] ${mes} - NÃO encontrado mapeamento para "${nomeNormalizado}"`);
-      }
-    });
-    
-    return dados;
+    return {
+      mes,
+      valor: divisaoSelecionada ? Number(divisaoSelecionada.total) : null
+    };
   });
-  
-  console.log('[GraficoEvolucao] Dados finais do gráfico:', dadosGrafico);
-  console.log('[GraficoEvolucao] Dados de divisao_5 (Jacareí Oeste) especificamente:', 
-    dadosGrafico.map(d => ({ mes: d.mes, divisao_5: d.divisao_5, tipo: typeof d.divisao_5 }))
-  );
-
-  const chartConfig = {
-    total_regional: {
-      label: 'Total Regional',
-      color: 'hsl(var(--primary))',
-    },
-    ...Object.fromEntries(
-      divisoesUnicas.map((divisao, index) => [
-        `divisao_${index + 1}`,
-        {
-          label: `${index + 1}`,
-          color: CORES_DIVISOES[index % CORES_DIVISOES.length],
-        },
-      ])
-    ),
-  };
 
   // Formatar nome de divisão para exibição
   const formatarNomeDivisao = (nome: string) => {
@@ -114,13 +64,25 @@ export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps
       .replace('REGIONAL ', '');
   };
 
-  // Renderizar linhas do gráfico baseado na seleção
+  const chartConfig = visualizacao === 'total'
+    ? {
+        total_regional: {
+          label: 'Total Regional',
+          color: 'hsl(var(--primary))',
+        }
+      }
+    : {
+        valor: {
+          label: formatarNomeDivisao(visualizacao),
+          color: COR_DIVISAO,
+        }
+      };
+
+  // Renderizar linha única baseada na seleção
   const renderizarLinhas = () => {
-    // Se for "total", renderizar apenas Total Regional
     if (visualizacao === 'total') {
       return (
         <Line
-          key="total_regional"
           type="monotone"
           dataKey="total_regional"
           stroke="hsl(var(--primary))"
@@ -132,33 +94,18 @@ export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps
       );
     }
     
-    // Se for divisão específica, renderizar apenas a divisão
-    const indexDivisao = divisoesUnicas.findIndex(d => d === visualizacao);
-    console.log('[GraficoEvolucao] Renderizando divisão:', visualizacao, 'index:', indexDivisao);
-    
-    if (indexDivisao !== -1) {
-      const dataKey = `divisao_${indexDivisao + 1}`;
-      console.log('[GraficoEvolucao] DataKey:', dataKey);
-      console.log('[GraficoEvolucao] Amostra de dados para essa key:', 
-        dadosGrafico.slice(0, 3).map(d => ({ mes: d.mes, [dataKey]: d[dataKey], tipo: typeof d[dataKey] }))
-      );
-      
-      return (
-        <Line
-          key={visualizacao}
-          type="monotone"
-          dataKey={dataKey}
-          stroke={CORES_DIVISOES[indexDivisao % CORES_DIVISOES.length]}
-          strokeWidth={3}
-          name={formatarNomeDivisao(visualizacao)}
-          dot={{ r: 4 }}
-          activeDot={{ r: 6 }}
-          connectNulls={true}
-        />
-      );
-    }
-    
-    return null;
+    return (
+      <Line
+        type="monotone"
+        dataKey="valor"
+        stroke={COR_DIVISAO}
+        strokeWidth={3}
+        name={formatarNomeDivisao(visualizacao)}
+        dot={{ r: 4 }}
+        activeDot={{ r: 6 }}
+        connectNulls={true}
+      />
+    );
   };
 
 
