@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import { normalizarNomeDivisao } from '@/lib/utils';
 
 interface DivisaoSnapshot {
   divisao: string;
@@ -91,12 +92,7 @@ export const useHistoricoCargas = (options?: { enabled?: boolean }) => {
         if (carga.divisoes && Array.isArray(carga.divisoes)) {
           carga.divisoes.forEach(divisao => {
             if (divisao && divisao.divisao) {
-              // Normalizar nome removendo acentos para criar chave única
-              const nomeNormalizado = divisao.divisao
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '')
-                .toUpperCase();
-              
+              const nomeNormalizado = normalizarNomeDivisao(divisao.divisao);
               divisoesSet.add(nomeNormalizado);
             }
           });

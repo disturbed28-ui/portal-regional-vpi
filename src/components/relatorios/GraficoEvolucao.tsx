@@ -4,6 +4,7 @@ import { ptBR } from 'date-fns/locale';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { normalizarNomeDivisao } from '@/lib/utils';
 
 interface DivisaoSnapshot {
   divisao: string;
@@ -65,11 +66,7 @@ export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps
     
     // Preencher com dados reais onde existirem
     carga.divisoes.forEach(divisao => {
-      // Normalizar o nome antes de buscar no mapa
-      const nomeNormalizado = divisao.divisao
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toUpperCase();
+      const nomeNormalizado = normalizarNomeDivisao(divisao.divisao);
       
       const numero = divisoesMap[nomeNormalizado];
       if (numero) {
