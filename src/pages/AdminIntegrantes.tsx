@@ -190,6 +190,16 @@ const AdminIntegrantes = () => {
         });
       }
 
+      // Log do payload antes de enviar
+      console.log('[AdminIntegrantes] 📤 Payload sendo enviado:', {
+        novos_count: novosData.length,
+        atualizados_count: atualizadosData.length,
+        primeiro_novo: novosData[0],
+        primeiro_atualizado: atualizadosData[0],
+        todos_novos_tem_cargo_grau: novosData.every((item: any) => item.cargo_grau_texto && item.cargo_grau_texto.trim() !== ''),
+        todos_atualizados_tem_cargo_grau: atualizadosData.every((item: any) => item.cargo_grau_texto && item.cargo_grau_texto.trim() !== '')
+      });
+
       // Chamar edge function
       const { data, error } = await supabase.functions.invoke('admin-import-integrantes', {
         body: {

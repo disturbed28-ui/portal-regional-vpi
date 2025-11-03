@@ -57,7 +57,21 @@ Deno.serve(async (req) => {
         nome_colete: z.string().trim().min(1).max(100),
         comando_texto: z.string().max(100),
         regional_texto: z.string().max(100),
-        divisao_texto: z.string().max(100)
+        divisao_texto: z.string().max(100),
+        cargo_grau_texto: z.string().trim().min(1, 'cargo_grau_texto é obrigatório').max(100),
+        cargo_nome: z.string().optional().nullable(),
+        grau: z.string().optional().nullable(),
+        cargo_estagio: z.string().optional().nullable(),
+        ativo: z.boolean().optional().default(true),
+        sgt_armas: z.boolean().optional(),
+        caveira: z.boolean().optional(),
+        caveira_suplente: z.boolean().optional(),
+        batedor: z.boolean().optional(),
+        ursinho: z.boolean().optional(),
+        lobo: z.boolean().optional(),
+        tem_moto: z.boolean().optional(),
+        tem_carro: z.boolean().optional(),
+        data_entrada: z.string().optional().nullable()
       })).optional(),
       atualizados: z.array(z.any()).optional() // Permite qualquer objeto já que contém múltiplos campos dinâmicos
     });
@@ -132,6 +146,18 @@ Deno.serve(async (req) => {
       }
       
       console.log('[admin-import-integrantes] Unique novos after dedup:', uniqueNovos.length);
+      
+      // Validar cargo_grau_texto antes de inserir
+      for (const item of uniqueNovos) {
+        if (!item.cargo_grau_texto || item.cargo_grau_texto.trim() === '') {
+          console.error('[admin-import-integrantes] ❌ Registro sem cargo_grau_texto:', {
+            registro_id: item.registro_id,
+            nome_colete: item.nome_colete,
+            cargo_grau_texto: item.cargo_grau_texto,
+            all_fields: Object.keys(item)
+          });
+        }
+      }
       
       const { error: upsertError } = await supabase
         .from('integrantes_portal')
