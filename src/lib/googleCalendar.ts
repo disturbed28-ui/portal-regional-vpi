@@ -47,11 +47,10 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
       const isComandoEvent = normalizedTitle.toUpperCase().includes("CMD");
       const eventType = detectEventType(normalizedTitle);
       const eventDivision = detectDivision(normalizedTitle);
-      const reformattedTitle = reformatEventTitle(normalizedTitle, eventType, eventDivision, isComandoEvent);
       
       return {
         id: item.id,
-        title: reformattedTitle,
+        title: originalTitle,
         originalTitle: normalizedTitle,
         description: item.description || "",
         start: item.start?.dateTime || item.start?.date || '',
@@ -166,99 +165,6 @@ function detectEventType(title: string): string {
   return "Outros";
 }
 
-function simplifyDivision(division: string): string {
-  if (division === "Sem Divisao") return division;
-  if (division === "Regional") return "Regional";
-  
-  // Simplificar nome da divisão
-  const lower = division.toLowerCase();
-  
-  if (lower.includes("extremo sul")) return "Div SJC Ext Sul - SP";
-  if (lower.includes("extremo leste")) return "Div SJC Ext Leste - SP";
-  if (lower.includes("extremo norte")) return "Div SJC Ext Norte - SP";
-  if (lower.includes("centro") && lower.includes("sjc")) return "Div SJC Centro - SP";
-  if (lower.includes("leste") && lower.includes("sjc")) return "Div SJC Leste - SP";
-  if (lower.includes("norte") && lower.includes("sjc")) return "Div SJC Norte - SP";
-  if (lower.includes("sul") && lower.includes("sjc")) return "Div SJC Sul - SP";
-  
-  if (lower.includes("cacapava")) return "Div Cacapava - SP";
-  
-  if (lower.includes("jacarei sul")) return "Div Jacarei Sul - SP";
-  if (lower.includes("jacarei norte")) return "Div Jacarei Norte - SP";
-  if (lower.includes("jacarei leste")) return "Div Jacarei Leste - SP";
-  if (lower.includes("jacarei oeste")) return "Div Jacarei Oeste - SP";
-  if (lower.includes("jacarei centro")) return "Div Jacarei Centro - SP";
-  if (lower.includes("jacarei")) return "Div Jacarei - SP";
-  
-  return division;
-}
-
-function reformatEventTitle(
-  originalTitle: string, 
-  eventType: string, 
-  division: string,
-  isComandoEvent: boolean
-): string {
-  const simplifiedDivision = simplifyDivision(division);
-  
-  // Extrair descrição removendo informações já capturadas
-  let description = originalTitle;
-  
-  // Remover tipo do título
-  const typePatterns = [
-    /pub/gi, /reuniao|reunião/gi, /acao social|ação social/gi,
-    /arrecadacao|arrecadação/gi, /bonde/gi, /bate e volta/gi,
-    /treino/gi, /bate-papo|bate papo/gi
-  ];
-  
-  typePatterns.forEach(pattern => {
-    description = description.replace(pattern, '').trim();
-  });
-  
-  // Remover divisões do título
-  const divisionPatterns = [
-    /div\.?\s*(sjc|cacapava|jacarei|jac)/gi,
-    /divisao\s*(sjc|cacapava|jacarei|jac)/gi,
-    /ext\.?\s*(sul|norte|leste)/gi,
-    /extremo\s*(sul|norte|leste)/gi,
-    /(centro|leste|norte|sul|oeste)\s*(sjc|jac)?/gi,
-  ];
-  
-  divisionPatterns.forEach(pattern => {
-    description = description.replace(pattern, '').trim();
-  });
-  
-  // Remover CMD do description se for evento de comando
-  if (isComandoEvent) {
-    description = description.replace(/cmd/gi, '').trim();
-  }
-  
-  // Limpar pontuação extra
-  description = description.replace(/^[-\s:]+|[-\s:]+$/g, '').trim();
-  description = description.replace(/\s+/g, ' ').trim();
-  
-  // Capitalizar primeira letra
-  if (description) {
-    description = description.charAt(0).toUpperCase() + description.slice(1);
-  }
-  
-  // Montar título final
-  let finalTitle = eventType;
-  
-  if (isComandoEvent) {
-    finalTitle += " - CMD";
-  } else if (simplifiedDivision !== "Sem Divisao" && simplifiedDivision !== "Regional") {
-    finalTitle += ` - ${simplifiedDivision}`;
-  } else if (simplifiedDivision === "Regional") {
-    finalTitle += " - Regional";
-  }
-  
-  if (description) {
-    finalTitle += ` - ${description}`;
-  }
-  
-  return finalTitle;
-}
 
 function detectDivision(title: string): string {
   const lower = title.toLowerCase();
