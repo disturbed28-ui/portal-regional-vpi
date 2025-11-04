@@ -74,8 +74,20 @@ const Index = () => {
   const userPhoto = isLoadingProfile ? "" : (profile?.photo_url || "");
   const isAdmin = hasRole('admin');
   const isDiretorRegional = hasRole('diretor_regional');
+  const isModerator = hasRole('moderator');
   const isActive = profile?.profile_status === 'Ativo';
   const isProfileIncomplete = isLoggedIn && !profile?.nome_colete;
+
+  // DEBUG: Log roles para diagnóstico
+  console.log('🔐 Roles Debug:', {
+    userId: user?.id,
+    roleLoading,
+    isAdmin,
+    isModerator,
+    isDiretorRegional,
+    isActive,
+    profileStatus: profile?.profile_status
+  });
 
   const handleConnect = () => {
     signInWithGoogle();
@@ -239,7 +251,7 @@ const Index = () => {
               </Button>
             )}
             
-            {(isAdmin || isDiretorRegional || hasRole('moderator')) && (
+            {!roleLoading && (isAdmin || isDiretorRegional || isModerator) && (
               <Button 
                 onClick={handleRelatorios}
                 disabled={!isLoggedIn || !isActive}
@@ -249,7 +261,7 @@ const Index = () => {
               </Button>
             )}
             
-            {(isAdmin || hasRole('moderator')) && (
+            {!roleLoading && (isAdmin || isModerator) && (
               <Button 
                 onClick={handleListasPresenca}
                 disabled={!isLoggedIn || !isActive}
