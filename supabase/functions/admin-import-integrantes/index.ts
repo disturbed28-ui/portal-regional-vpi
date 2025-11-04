@@ -258,6 +258,65 @@ Deno.serve(async (req) => {
 
     console.log('[admin-import-integrantes] Success - Inserted:', insertedCount, 'Updated:', updatedCount, 'Inativados:', inativadosCount);
 
+    // Atribuir roles automaticamente aos integrantes novos e atualizados
+    const integrantesParaAtribuirRoles = [
+      ...(novos || []).map(n => ({ registro_id: n.registro_id, cargo_grau_texto: n.cargo_grau_texto })),
+      ...(atualizados || []).map(a => ({ registro_id: a.registro_id, cargo_grau_texto: a.cargo_grau_texto }))
+    ];
+
+    for (const integrante of integrantesParaAtribuirRoles) {
+      try {
+        // Buscar profile_id pelo registro_id
+        const { data: integranteData } = await supabase
+          .from('integrantes_portal')
+          .select('profile_id, cargo_grau_texto')
+          .eq('registro_id', integrante.registro_id)
+          .single();
+        
+        if (integranteData?.profile_id) {
+          const cargoGrauTexto = integranteData.cargo_grau_texto;
+          
+          // Remover roles antigas (exceto admin)
+          await supabase
+            .from('user_roles')
+            .delete()
+            .eq('user_id', integranteData.profile_id)
+            .neq('role', 'admin');
+
+          let novaRole: string | null = null;
+
+          // Prioridade 1: Diretor/Subdiretor
+          if (cargoGrauTexto.includes('Diretor') || cargoGrauTexto.includes('Sub Diretor') || cargoGrauTexto.includes('Sub-Diretor')) {
+            novaRole = 'diretor_divisao';
+          }
+          // Prioridade 2: Grau V (Regional)
+          else if (cargoGrauTexto.includes('Grau V')) {
+            novaRole = 'regional';
+          }
+          // Prioridade 3: Grau VI (Moderador)
+          else if (cargoGrauTexto.includes('Grau VI')) {
+            novaRole = 'moderator';
+          }
+
+          if (novaRole) {
+            await supabase
+              .from('user_roles')
+              .upsert({ 
+                user_id: integranteData.profile_id, 
+                role: novaRole 
+              }, { 
+                onConflict: 'user_id,role' 
+              });
+            
+            console.log(`[admin-import-integrantes] Role ${novaRole} atribuída a ${integranteData.profile_id}`);
+          }
+        }
+      } catch (roleError) {
+        console.error('[admin-import-integrantes] Erro ao atribuir role:', roleError);
+        // Não bloquear a importação por erro de role
+      }
+    }
+
     // Fetch all active integrantes to create snapshot
     const { data: integrantesAtivos, error: fetchError } = await supabase
       .from('integrantes_portal')

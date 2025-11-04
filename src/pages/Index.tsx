@@ -6,6 +6,8 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useToast } from "@/hooks/use-toast";
 import { usePresence } from "@/hooks/usePresence";
 import { OnlineUsersModal } from "@/components/OnlineUsersModal";
+import { PendenciasModal } from "@/components/PendenciasModal";
+import { usePendencias } from "@/hooks/usePendencias";
 import { removeAccents } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { QRCodeSVG } from "qrcode.react";
@@ -20,6 +22,24 @@ const Index = () => {
   const { hasRole, loading: roleLoading } = useUserRole(user?.id);
   const { onlineUsers, totalOnline } = usePresence(user?.id, profile?.nome_colete);
   const [showQRCode, setShowQRCode] = useState(false);
+
+  // Determinar role para pendências
+  const isAdmin = hasRole('admin');
+  const isDiretorDivisao = hasRole('diretor_divisao');
+  const isRegional = hasRole('regional');
+  const isModerator = hasRole('moderator');
+  
+  const pendenciaRole = isAdmin ? 'admin' 
+    : isRegional ? 'regional'
+    : isDiretorDivisao ? 'diretor_divisao'
+    : null;
+
+  const { pendencias, loading: pendenciasLoading, totalPendencias } = usePendencias(
+    user?.id,
+    pendenciaRole,
+    profile?.regional_id,
+    profile?.divisao_id
+  );
 
   const isLoggedIn = !!user;
   const isLoadingProfile = isLoggedIn && profileLoading;
@@ -72,9 +92,6 @@ const Index = () => {
       : "Offline";
   
   const userPhoto = isLoadingProfile ? "" : (profile?.photo_url || "");
-  const isAdmin = hasRole('admin');
-  const isDiretorDivisao = hasRole('diretor_divisao');
-  const isModerator = hasRole('moderator');
   const isActive = profile?.profile_status === 'Ativo';
   const isProfileIncomplete = isLoggedIn && !profile?.nome_colete;
 
@@ -176,9 +193,17 @@ const Index = () => {
 
           {/* Nome e Status */}
           <div className="text-center mb-6">
-            <h3 className="text-xl font-semibold text-foreground mb-1">
-              {userName}
-            </h3>
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <h3 className="text-xl font-semibold text-foreground">
+                {userName}
+              </h3>
+              {isLoggedIn && !pendenciasLoading && pendenciaRole && (
+                <PendenciasModal 
+                  pendencias={pendencias} 
+                  totalPendencias={totalPendencias} 
+                />
+              )}
+            </div>
             
             {/* Cargo */}
             {isLoggedIn && profile?.integrante?.cargo_nome && (
@@ -251,7 +276,7 @@ const Index = () => {
               </Button>
             )}
             
-            {!roleLoading && (isAdmin || isDiretorDivisao || isModerator) && (
+            {!roleLoading && (isAdmin || isDiretorDivisao || isModerator || isRegional) && (
               <Button 
                 onClick={handleRelatorios}
                 disabled={!isLoggedIn || !isActive}

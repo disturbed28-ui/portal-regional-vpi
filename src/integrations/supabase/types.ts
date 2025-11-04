@@ -1001,6 +1001,7 @@ export type Database = {
         | "user"
         | "diretor_regional"
         | "diretor_divisao"
+        | "regional"
       motivo_inativacao:
         | "transferido"
         | "falecido"
@@ -1142,6 +1143,7 @@ export const Constants = {
         "user",
         "diretor_regional",
         "diretor_divisao",
+        "regional",
       ],
       motivo_inativacao: [
         "transferido",

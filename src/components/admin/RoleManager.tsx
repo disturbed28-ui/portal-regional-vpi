@@ -11,7 +11,7 @@ interface RoleManagerProps {
   profileId: string;
 }
 
-type AppRole = 'admin' | 'moderator' | 'user' | 'diretor_divisao';
+type AppRole = 'admin' | 'moderator' | 'user' | 'diretor_divisao' | 'regional';
 
 const ROLES_CONFIG: Record<AppRole, { label: string; icon: React.ReactNode; description: string }> = {
   admin: {
@@ -25,9 +25,14 @@ const ROLES_CONFIG: Record<AppRole, { label: string; icon: React.ReactNode; desc
     description: "Acesso intermediário"
   },
   diretor_divisao: {
-    label: "Diretor / Subdiretor de Divisão",
+    label: "Diretor / Sub Diretor de Divisão",
     icon: <Building className="h-4 w-4" />,
     description: "Gerencia divisão e visualiza relatórios"
+  },
+  regional: {
+    label: "Regional (Grau V)",
+    icon: <Building className="h-4 w-4" />,
+    description: "Acesso a dados da regional"
   },
   user: {
     label: "Usuário",
