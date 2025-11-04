@@ -18,6 +18,7 @@ interface ParsedEvent {
   divisaoId: string | null;  // UUID da divisão no banco
   informacoesExtras?: string;// "Casa do irmao Vinicius"
   isCMD: boolean;            // true se for evento do CMD
+  isRegional: boolean;       // true se for evento Regional
 }
 
 export interface CalendarEvent {
@@ -34,6 +35,7 @@ export interface CalendarEvent {
   divisao_id: string | null;
   htmlLink: string;
   isComandoEvent: boolean;
+  isRegionalEvent: boolean;
 }
 
 // Cache de divisões do banco
@@ -133,9 +135,11 @@ function parseEventComponents(originalTitle: string): ParsedEvent {
   console.log('[parseEventComponents] Original:', originalTitle);
   console.log('[parseEventComponents] Normalized:', normalized);
   
-  // Detectar se é CMD
+  // Detectar se é CMD ou Regional
   const isCMD = upper.includes('CMD');
+  const isRegional = upper.includes('REGIONAL');
   console.log('[parseEventComponents] É CMD?', isCMD);
+  console.log('[parseEventComponents] É Regional?', isRegional);
   
   // Detectar tipo de evento (prioridade)
   let tipoEvento = 'Outros';
@@ -180,7 +184,7 @@ function parseEventComponents(originalTitle: string): ParsedEvent {
   let divisao = 'Sem Divisao';
   let informacoesExtras: string | undefined;
   
-  // Se for CMD, usar título original como informações extras
+  // Se for CMD ou Regional, usar título original como informações extras
   if (isCMD) {
     divisao = 'CMD';
     
@@ -203,6 +207,35 @@ function parseEventComponents(originalTitle: string): ParsedEvent {
       .replace(/cmd\s*[-\s]*/gi, '')
       .replace(/^\(+/, '')
       .replace(/\)+$/, '')
+      .trim();
+    
+    if (tituloParaExtras.length > 0) {
+      informacoesExtras = tituloParaExtras;
+    }
+  } else if (isRegional) {
+    // Para eventos Regionais, manter o texto completo
+    divisao = 'Regional';
+    
+    // Usar o título completo como informações extras, removendo apenas tipo de evento
+    let tituloParaExtras = originalTitle;
+    
+    // Remover tipo de evento do início
+    if (lower.includes('pub')) {
+      tituloParaExtras = originalTitle.replace(/pub\s*[-\s]*/gi, '').trim();
+    }
+    if (lower.includes('reuniao')) {
+      tituloParaExtras = originalTitle.replace(/reuniao\s*[-\s]*/gi, '').trim();
+    }
+    if (lower.includes('acao social')) {
+      tituloParaExtras = originalTitle.replace(/acao\s+social\s*[-\s]*/gi, '').trim();
+    }
+    
+    // Remover "Regional" e parênteses/hífens do início/fim
+    tituloParaExtras = tituloParaExtras
+      .replace(/regional\s*[-\s]*/gi, '')
+      .replace(/^\(+/, '')
+      .replace(/\)+$/, '')
+      .replace(/^[-\s]+/, '')
       .trim();
     
     if (tituloParaExtras.length > 0) {
@@ -234,7 +267,8 @@ function parseEventComponents(originalTitle: string): ParsedEvent {
     divisao,
     divisaoId: null, // Será preenchido depois
     informacoesExtras,
-    isCMD
+    isCMD,
+    isRegional
   };
   
   console.log('[parseEventComponents] ===== RESULTADO FINAL =====');
@@ -364,6 +398,7 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
         divisao_id: divisaoId,
         htmlLink: item.htmlLink || '',
         isComandoEvent: components.isCMD,
+        isRegionalEvent: components.isRegional,
       });
       
       if (!divisaoId && components.divisao !== 'Sem Divisao') {

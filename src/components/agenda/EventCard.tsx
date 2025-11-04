@@ -16,12 +16,13 @@ export function EventCard({ event, onClick }: EventCardProps) {
   const endDate = new Date(event.end);
   const { getColorForType } = useTiposEvento();
   
-  // Cor especial para eventos CMD (laranja vibrante)
-  const borderColor = event.isComandoEvent 
+  // Cor especial para eventos CMD e Regional (laranja vibrante)
+  const isSpecialEvent = event.isComandoEvent || event.isRegionalEvent;
+  const borderColor = isSpecialEvent 
     ? '#fb923c' 
     : getColorForType(event.type);
     
-  const bgColor = event.isComandoEvent
+  const bgColor = isSpecialEvent
     ? 'rgba(251, 146, 60, 0.08)'
     : undefined;
   
@@ -39,11 +40,11 @@ export function EventCard({ event, onClick }: EventCardProps) {
       <Card 
         className="flex-1 p-4 hover:shadow-lg transition-all hover:scale-[1.02] relative overflow-hidden"
         style={{
-          borderLeft: `${event.isComandoEvent ? '5px' : '4px'} solid ${borderColor}`,
+          borderLeft: `${isSpecialEvent ? '5px' : '4px'} solid ${borderColor}`,
           backgroundColor: bgColor,
         }}
       >
-        {event.isComandoEvent && (
+        {isSpecialEvent && (
           <div className="absolute top-2 right-2">
             <Crown className="h-6 w-6 text-orange-500 fill-orange-500/20" />
           </div>
