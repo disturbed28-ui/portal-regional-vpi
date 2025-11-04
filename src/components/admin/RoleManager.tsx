@@ -66,7 +66,13 @@ export function RoleManager({ profileId }: RoleManagerProps) {
   const toggleRole = async (role: AppRole, checked: boolean) => {
     setUpdating(true);
     try {
-      // Usar a anon key - as políticas RLS agora permitem operações
+      // Obter o token de sessão do usuário autenticado
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        throw new Error('Usuário não autenticado');
+      }
+
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
@@ -76,7 +82,7 @@ export function RoleManager({ profileId }: RoleManagerProps) {
           method: 'POST',
           headers: {
             'apikey': supabaseAnonKey,
-            'Authorization': `Bearer ${supabaseAnonKey}`,
+            'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
             'Prefer': 'return=representation'
           },
@@ -101,7 +107,7 @@ export function RoleManager({ profileId }: RoleManagerProps) {
             method: 'DELETE',
             headers: {
               'apikey': supabaseAnonKey,
-              'Authorization': `Bearer ${supabaseAnonKey}`,
+              'Authorization': `Bearer ${session.access_token}`,
             }
           }
         );
