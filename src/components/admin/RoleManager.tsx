@@ -5,13 +5,13 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Shield, User, Users } from "lucide-react";
+import { Shield, User, Users, Building } from "lucide-react";
 
 interface RoleManagerProps {
   profileId: string;
 }
 
-type AppRole = 'admin' | 'moderator' | 'user';
+type AppRole = 'admin' | 'moderator' | 'user' | 'diretor_divisao';
 
 const ROLES_CONFIG: Record<AppRole, { label: string; icon: React.ReactNode; description: string }> = {
   admin: {
@@ -23,6 +23,11 @@ const ROLES_CONFIG: Record<AppRole, { label: string; icon: React.ReactNode; desc
     label: "Colaborador",
     icon: <Users className="h-4 w-4" />,
     description: "Acesso intermediário"
+  },
+  diretor_divisao: {
+    label: "Diretor / Subdiretor de Divisão",
+    icon: <Building className="h-4 w-4" />,
+    description: "Gerencia divisão e visualiza relatórios"
   },
   user: {
     label: "Usuário",

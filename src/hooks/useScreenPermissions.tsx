@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 
-type AppRole = 'admin' | 'moderator' | 'user' | 'diretor_regional';
+type AppRole = 'admin' | 'moderator' | 'user' | 'diretor_divisao';
 
 interface SystemScreen {
   id: string;
@@ -62,7 +62,14 @@ export const useScreenPermissions = () => {
     if (permissionsError) {
       console.error('Erro ao buscar permissões:', permissionsError);
     } else {
-      setPermissions(permissionsData || []);
+      // Filtrar e mapear para garantir apenas roles válidas
+      const validPermissions = (permissionsData || [])
+        .filter(p => p.role !== 'diretor_regional')
+        .map(p => ({
+          ...p,
+          role: p.role === 'diretor_regional' ? 'diretor_divisao' : p.role
+        })) as ScreenPermission[];
+      setPermissions(validPermissions);
     }
 
     setLoading(false);

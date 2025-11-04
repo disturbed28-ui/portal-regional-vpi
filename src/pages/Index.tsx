@@ -73,7 +73,7 @@ const Index = () => {
   
   const userPhoto = isLoadingProfile ? "" : (profile?.photo_url || "");
   const isAdmin = hasRole('admin');
-  const isDiretorRegional = hasRole('diretor_regional');
+  const isDiretorDivisao = hasRole('diretor_divisao');
   const isModerator = hasRole('moderator');
   const isActive = profile?.profile_status === 'Ativo';
   const isProfileIncomplete = isLoggedIn && !profile?.nome_colete;
@@ -84,7 +84,7 @@ const Index = () => {
     roleLoading,
     isAdmin,
     isModerator,
-    isDiretorRegional,
+    isDiretorDivisao,
     isActive,
     profileStatus: profile?.profile_status
   });
@@ -251,7 +251,7 @@ const Index = () => {
               </Button>
             )}
             
-            {!roleLoading && (isAdmin || isDiretorRegional || isModerator) && (
+            {!roleLoading && (isAdmin || isDiretorDivisao || isModerator) && (
               <Button 
                 onClick={handleRelatorios}
                 disabled={!isLoggedIn || !isActive}

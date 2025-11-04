@@ -355,7 +355,7 @@ const Admin = () => {
                       admin: { label: 'Admin', variant: 'destructive' as const },
                       moderator: { label: 'Moderador', variant: 'default' as const },
                       user: { label: 'Usuário', variant: 'secondary' as const },
-                      diretor_regional: { label: 'Diretor Regional', variant: 'default' as const },
+                      diretor_divisao: { label: 'Diretor / Subdiretor de Divisão', variant: 'default' as const },
                     }[role] || { label: role, variant: 'outline' as const };
                     
                     return (
@@ -501,7 +501,7 @@ const Admin = () => {
                   <SelectItem value="all">Todos os Perfis</SelectItem>
                   <SelectItem value="admin">Administradores</SelectItem>
                   <SelectItem value="moderator">Moderadores</SelectItem>
-                  <SelectItem value="diretor_regional">Diretores Regionais</SelectItem>
+                  <SelectItem value="diretor_divisao">Diretores / Subdiretores de Divisão</SelectItem>
                   <SelectItem value="user">Usuários Comuns</SelectItem>
                 </SelectContent>
               </Select>

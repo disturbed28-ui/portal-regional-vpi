@@ -25,7 +25,7 @@ const Relatorios = () => {
   const { hasRole, loading: rolesLoading } = useUserRole(user?.id);
   
   // Verificar permissões
-  const isAutorizado = hasRole('admin') || hasRole('diretor_regional') || hasRole('moderator');
+  const isAutorizado = hasRole('admin') || hasRole('diretor_divisao') || hasRole('moderator');
 
   const { data: relatorioData, isLoading } = useRelatorioData();
   const { data: historicoData, isLoading: isLoadingHistorico } = useHistoricoCargas({

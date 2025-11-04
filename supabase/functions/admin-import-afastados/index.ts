@@ -89,10 +89,9 @@ Deno.serve(async (req) => {
           .eq('ativo', true)
           .maybeSingle();
 
-        // Verificar se a data de retorno prevista já passou
-        const dataRetorno = new Date(afastado.data_retorno_prevista);
-        const hoje = new Date();
-        const ativo = dataRetorno >= hoje;
+        // Sempre manter como ativo durante a importação
+        // O afastamento só deve ser marcado como inativo quando houver retorno efetivo registrado
+        const ativo = true;
 
         const afastadoData = {
           registro_id: afastado.registro_id,

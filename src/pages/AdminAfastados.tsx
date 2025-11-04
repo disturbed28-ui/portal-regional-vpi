@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,10 +8,11 @@ import { CargaAfastados } from "@/components/admin/CargaAfastados";
 import { useAfastadosAtivos, useAfastadosHistorico, useRetornosProximos, useRegistrarRetorno } from "@/hooks/useAfastados";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Users, AlertCircle, CheckCircle } from "lucide-react";
+import { Calendar, Users, AlertCircle, CheckCircle, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AdminAfastados() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("nova-carga");
   const { afastados: ativos, loading: loadingAtivos, refetch: refetchAtivos } = useAfastadosAtivos();
   const { afastados: historico, loading: loadingHistorico } = useAfastadosHistorico();
@@ -53,11 +55,20 @@ export default function AdminAfastados() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Gestão de Afastamentos</h1>
-        <p className="text-muted-foreground">
-          Controle de integrantes temporariamente afastados
-        </p>
+      <div className="flex items-center gap-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate(-1)}
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold">Gestão de Afastamentos</h1>
+          <p className="text-muted-foreground">
+            Controle de integrantes temporariamente afastados
+          </p>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
