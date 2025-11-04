@@ -244,12 +244,13 @@ function detectDivisionFromTitle(title: string): string {
   const temCentro = normalized.includes('centro');
   const temExtremo = normalized.includes('extremo') || normalized.includes('ext');
   
-  // SJC Extremos (prioridade máxima)
-  if (temSjc && temExtremo && temSul) return 'Div SJC Ext Sul - SP';
-  if (temSjc && temExtremo && temNorte) return 'Div SJC Ext Norte - SP';
-  if (temSjc && temExtremo && temLeste) return 'Div SJC Ext Leste - SP';
+  // PRIORIDADE MÁXIMA: Extremos de SJC (com ou sem mencionar SJC)
+  // Se tem "Ext" + direção, assume SJC por padrão
+  if (temExtremo && temSul) return 'Div SJC Ext Sul - SP';
+  if (temExtremo && temNorte) return 'Div SJC Ext Norte - SP';
+  if (temExtremo && temLeste) return 'Div SJC Ext Leste - SP';
   
-  // SJC Direções
+  // SJC Direções normais (precisa mencionar SJC)
   if (temSjc && temCentro) return 'Div SJC Centro - SP';
   if (temSjc && temLeste) return 'Div SJC Leste - SP';
   if (temSjc && temNorte) return 'Div SJC Norte - SP';
