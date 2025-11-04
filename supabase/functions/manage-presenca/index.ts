@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
     const roles = userRoles?.map(r => r.role) || [];
     console.log('[manage-presenca] Roles do usuário:', roles);
 
-    const isAuthorized = roles.includes('admin') || roles.includes('moderator');
+    const isAuthorized = roles.includes('admin') || roles.includes('moderator') || roles.includes('diretor_divisao');
 
     if (!isAuthorized) {
       console.log('[manage-presenca] Usuário não autorizado');
@@ -61,6 +61,48 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: 'Sem permissão para gerenciar presenças' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Se for diretor_divisao, validar que o evento pertence à sua divisão
+    if (roles.includes('diretor_divisao') && !roles.includes('admin')) {
+      // Buscar divisão do usuário
+      const { data: userProfile, error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .select('divisao_id')
+        .eq('id', user_id)
+        .single();
+      
+      if (profileError || !userProfile?.divisao_id) {
+        console.log('[manage-presenca] Diretor sem divisão atribuída');
+        return new Response(
+          JSON.stringify({ error: 'Você não possui divisão atribuída' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Buscar divisão do evento
+      const { data: evento, error: eventoError } = await supabaseAdmin
+        .from('eventos_agenda')
+        .select('divisao_id')
+        .eq('id', evento_agenda_id)
+        .single();
+      
+      if (eventoError || !evento) {
+        console.log('[manage-presenca] Evento não encontrado');
+        return new Response(
+          JSON.stringify({ error: 'Evento não encontrado' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Validar se o evento é da mesma divisão
+      if (evento.divisao_id !== userProfile.divisao_id) {
+        console.log('[manage-presenca] Diretor tentando editar evento de outra divisão');
+        return new Response(
+          JSON.stringify({ error: 'Você só pode gerenciar presenças de eventos da sua divisão' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Executar ação
