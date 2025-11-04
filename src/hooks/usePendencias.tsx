@@ -56,9 +56,26 @@ export const usePendencias = (
     const cached = localStorage.getItem(cacheKey);
     
     if (cached) {
-      setPendencias(JSON.parse(cached));
-      setLoading(false);
-      return;
+      try {
+        const parsedData = JSON.parse(cached);
+        
+        // Validação: Verificar se tem estrutura correta
+        const isValidStructure = Array.isArray(parsedData) && 
+          (parsedData.length === 0 || parsedData[0]?.detalhes_completos !== undefined);
+        
+        if (isValidStructure) {
+          setPendencias(parsedData);
+          setLoading(false);
+          return;
+        } else {
+          // Cache antigo/inválido: remover e buscar novamente
+          console.log('Cache inválido detectado, buscando dados atualizados...');
+          localStorage.removeItem(cacheKey);
+        }
+      } catch (error) {
+        console.error('Erro ao processar cache:', error);
+        localStorage.removeItem(cacheKey);
+      }
     }
 
     const fetchPendencias = async () => {

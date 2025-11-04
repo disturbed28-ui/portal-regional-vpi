@@ -59,7 +59,7 @@ const MensalidadeDetalhesCard = ({ detalhes }: { detalhes: MensalidadeDetalhes }
         {/* Período */}
         <div className="flex items-center gap-2 p-2 bg-red-50 dark:bg-red-950/20 rounded">
           <Calendar className="h-4 w-4 text-red-600" />
-          <div className="text-xs">
+          <div className="text-xs text-gray-900 dark:text-gray-100">
             <span className="font-medium">Período:</span>{' '}
             {formatarData(detalhes.primeira_divida)} até {formatarData(detalhes.ultima_divida)}
           </div>
@@ -108,7 +108,7 @@ const AfastamentoDetalhesCard = ({ detalhes }: { detalhes: AfastamentoDetalhes }
         {/* Informações do Integrante */}
         <div className="flex items-center gap-2 p-2 bg-orange-50 dark:bg-orange-950/20 rounded">
           <User className="h-4 w-4 text-orange-600" />
-          <div className="text-xs">
+          <div className="text-xs text-gray-900 dark:text-gray-100">
             <span className="font-medium">Cargo:</span>{' '}
             {detalhes.cargo_grau_texto || 'Não informado'}
           </div>
@@ -150,7 +150,7 @@ const AfastamentoDetalhesCard = ({ detalhes }: { detalhes: AfastamentoDetalhes }
         <div className="grid grid-cols-2 gap-3">
           <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-950/20 rounded">
             <Clock className="h-4 w-4 text-blue-600" />
-            <div className="text-xs">
+            <div className="text-xs text-gray-900 dark:text-gray-100">
               <span className="font-medium">Tempo Afastado:</span>{' '}
               <span className="font-semibold">{detalhes.dias_afastado} dias</span>
             </div>
@@ -158,7 +158,7 @@ const AfastamentoDetalhesCard = ({ detalhes }: { detalhes: AfastamentoDetalhes }
           
           <div className="flex items-center gap-2 p-2 bg-red-50 dark:bg-red-950/20 rounded">
             <AlertTriangle className="h-4 w-4 text-red-600" />
-            <div className="text-xs">
+            <div className="text-xs text-gray-900 dark:text-gray-100">
               <span className="font-medium">Atraso:</span>{' '}
               <span className="font-semibold text-red-600">{detalhes.dias_atraso} dias</span>
             </div>
@@ -179,14 +179,19 @@ const AfastamentoDetalhesCard = ({ detalhes }: { detalhes: AfastamentoDetalhes }
   );
 };
 
-const PendenciaItem = ({ pendencia }: { pendencia: Pendencia }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  
+interface PendenciaItemProps {
+  pendencia: Pendencia;
+  itemId: string;
+  isOpen: boolean;
+  onToggle: (id: string) => void;
+}
+
+const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemProps) => {
   const isMensalidade = pendencia.tipo === 'mensalidade';
   const detalhes = pendencia.detalhes_completos;
   
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+    <Collapsible open={isOpen} onOpenChange={() => onToggle(itemId)}>
       <div className="rounded-lg bg-secondary/50 hover:bg-secondary border-l-4 border-red-500">
         {/* Cabeçalho clicável */}
         <CollapsibleTrigger className="w-full">
@@ -234,6 +239,8 @@ const PendenciaItem = ({ pendencia }: { pendencia: Pendencia }) => {
 };
 
 export const PendenciasModal = ({ pendencias, totalPendencias }: PendenciasModalProps) => {
+  const [openItemId, setOpenItemId] = useState<string | null>(null);
+  
   if (totalPendencias === 0) return null;
 
   return (
@@ -253,7 +260,7 @@ export const PendenciasModal = ({ pendencias, totalPendencias }: PendenciasModal
         </Button>
       </DialogTrigger>
       
-      <DialogContent className="sm:max-w-3xl max-h-[85vh]">
+      <DialogContent className="sm:max-w-3xl max-h-[85vh]" aria-describedby="pendencias-description">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertCircle className="h-5 w-5 text-red-600" />
@@ -263,7 +270,13 @@ export const PendenciasModal = ({ pendencias, totalPendencias }: PendenciasModal
         
         <div className="space-y-2 overflow-y-auto max-h-[65vh] pr-2">
           {pendencias.map((p, idx) => (
-            <PendenciaItem key={idx} pendencia={p} />
+            <PendenciaItem 
+              key={idx} 
+              pendencia={p}
+              itemId={`${p.tipo}_${p.registro_id}`}
+              isOpen={openItemId === `${p.tipo}_${p.registro_id}`}
+              onToggle={(id) => setOpenItemId(openItemId === id ? null : id)}
+            />
           ))}
         </div>
       </DialogContent>
