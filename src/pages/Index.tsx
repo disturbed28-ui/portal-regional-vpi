@@ -113,6 +113,10 @@ const Index = () => {
     navigate("/relatorios");
   };
 
+  const handleListasPresenca = () => {
+    navigate("/listas-presenca");
+  };
+
 
   return (
     <div className="landing-page min-h-screen flex items-center justify-center bg-background p-4">
@@ -242,6 +246,16 @@ const Index = () => {
                 className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Relatorios
+              </Button>
+            )}
+            
+            {(isAdmin || hasRole('moderator')) && (
+              <Button 
+                onClick={handleListasPresenca}
+                disabled={!isLoggedIn || !isActive}
+                className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Listas de Presenca
               </Button>
             )}
           </div>
