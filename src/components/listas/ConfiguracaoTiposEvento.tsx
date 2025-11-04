@@ -1,0 +1,64 @@
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
+import { GripVertical } from "lucide-react";
+import { usePesosTiposEvento } from "@/hooks/usePesosTiposEvento";
+
+export const ConfiguracaoTiposEvento = () => {
+  const { tiposEvento, isLoading, update } = usePesosTiposEvento();
+
+  if (isLoading) {
+    return <div>Carregando...</div>;
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Configuração de Pesos - Tipos de Evento</CardTitle>
+        <CardDescription>
+          Defina a importância de cada tipo de evento (0% = pouco importante, 100% = muito importante)
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {tiposEvento.map((tipo) => (
+          <div
+            key={tipo.id}
+            className="flex items-center gap-4 p-4 border rounded-lg"
+          >
+            <GripVertical className="h-5 w-5 text-muted-foreground" />
+            
+            <div className="flex-1 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{tipo.tipo}</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-bold" style={{ color: tipo.cor }}>
+                    {(tipo.peso * 100).toFixed(0)}%
+                  </span>
+                  <Switch
+                    checked={tipo.ativo}
+                    onCheckedChange={(checked) => update({ id: tipo.id, updates: { ativo: checked } })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Slider
+                  value={[tipo.peso * 100]}
+                  onValueChange={([value]) => {
+                    update({ id: tipo.id, updates: { peso: value / 100 } });
+                  }}
+                  max={100}
+                  step={5}
+                  className="w-full"
+                />
+                <p className="text-xs text-muted-foreground">{tipo.descricao}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+};

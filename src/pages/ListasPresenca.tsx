@@ -5,11 +5,14 @@ import { useProfile } from "@/hooks/useProfile";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Calendar, BarChart3 } from "lucide-react";
+import { ArrowLeft, Calendar, BarChart3, User, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FrequenciaDashboard } from "@/components/listas/FrequenciaDashboard";
 import { ListasConsulta } from "@/components/listas/ListasConsulta";
+import { FrequenciaIndividual } from "@/components/listas/FrequenciaIndividual";
+import { ConfiguracaoJustificativas } from "@/components/listas/ConfiguracaoJustificativas";
+import { ConfiguracaoTiposEvento } from "@/components/listas/ConfiguracaoTiposEvento";
 
 const ListasPresenca = () => {
   const navigate = useNavigate();
@@ -66,7 +69,7 @@ const ListasPresenca = () => {
 
         {/* Tabs de Navegação */}
         <Tabs defaultValue="consulta" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsList className={`grid w-full ${isAdmin ? 'max-w-3xl grid-cols-4' : 'max-w-2xl grid-cols-3'}`}>
             <TabsTrigger value="consulta" className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
               Consultar Listas
@@ -75,6 +78,16 @@ const ListasPresenca = () => {
               <BarChart3 className="h-4 w-4" />
               Dashboard
             </TabsTrigger>
+            <TabsTrigger value="individual" className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Frequência Individual
+            </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="config" className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Configurações
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="consulta" className="mt-6">
@@ -90,6 +103,20 @@ const ListasPresenca = () => {
               userDivisaoId={profile?.divisao_id}
             />
           </TabsContent>
+
+          <TabsContent value="individual" className="mt-6">
+            <FrequenciaIndividual 
+              isAdmin={isAdmin}
+              userDivisaoId={profile?.divisao_id}
+            />
+          </TabsContent>
+
+          {isAdmin && (
+            <TabsContent value="config" className="mt-6 space-y-6">
+              <ConfiguracaoJustificativas />
+              <ConfiguracaoTiposEvento />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>
