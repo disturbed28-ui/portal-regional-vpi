@@ -38,7 +38,8 @@ const Index = () => {
     user?.id,
     pendenciaRole,
     profile?.regional_id,
-    profile?.divisao_id
+    profile?.divisao_id,
+    profile?.integrante?.registro_id || undefined
   );
 
   const isLoggedIn = !!user;
@@ -197,7 +198,7 @@ const Index = () => {
               <h3 className="text-xl font-semibold text-foreground">
                 {userName}
               </h3>
-              {isLoggedIn && !pendenciasLoading && pendenciaRole && (
+              {isLoggedIn && !pendenciasLoading && (
                 <PendenciasModal 
                   pendencias={pendencias} 
                   totalPendencias={totalPendencias} 

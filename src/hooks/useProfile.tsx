@@ -39,6 +39,7 @@ interface Profile {
     cargo_estagio: string | null;
     ativo: boolean;
     data_entrada: string | null;
+    registro_id: number | null;
   } | null;
 }
 
@@ -77,7 +78,8 @@ export const useProfile = (userId: string | undefined) => {
             combate_insano,
             cargo_estagio,
             ativo,
-            data_entrada
+            data_entrada,
+            registro_id
           )
         `)
         .eq('id', userId)
@@ -155,7 +157,8 @@ export const useProfile = (userId: string | undefined) => {
                   combate_insano,
                   cargo_estagio,
                   ativo,
-                  data_entrada
+                  data_entrada,
+                  registro_id
                 )
               `)
               .eq('id', userId)
@@ -216,7 +219,8 @@ export const useProfile = (userId: string | undefined) => {
                 combate_insano,
                 cargo_estagio,
                 ativo,
-                data_entrada
+                data_entrada,
+                registro_id
               )
             `)
             .eq('id', userId)

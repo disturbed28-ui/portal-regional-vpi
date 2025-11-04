@@ -11,6 +11,8 @@ import { useNavigate } from "react-router-dom";
 const ROLES = [
   { value: 'admin' as const, label: 'Admin', color: 'bg-red-500' },
   { value: 'moderator' as const, label: 'Moderador', color: 'bg-blue-500' },
+  { value: 'diretor_regional' as const, label: 'Diretor Regional', color: 'bg-green-500' },
+  { value: 'regional' as const, label: 'Regional', color: 'bg-teal-500' },
   { value: 'diretor_divisao' as const, label: 'Diretor / Subdiretor de Divisão', color: 'bg-purple-500' },
   { value: 'user' as const, label: 'Usuário', color: 'bg-gray-500' },
 ];
@@ -144,10 +146,12 @@ export default function AdminPermissoes() {
                   {role.label}
                 </Badge>
                 <span className="text-sm text-muted-foreground">
-                  {role.value === 'admin' && 'Acesso total ao sistema'}
-                  {role.value === 'moderator' && 'Gerencia integrantes e eventos'}
-                  {role.value === 'diretor_divisao' && 'Gerencia divisão e visualiza relatórios'}
-                  {role.value === 'user' && 'Acesso básico'}
+                          {role.value === 'admin' && 'Acesso total ao sistema'}
+                          {role.value === 'moderator' && 'Gerencia integrantes e eventos'}
+                          {role.value === 'diretor_regional' && 'Gerencia regional e visualiza relatórios'}
+                          {role.value === 'regional' && 'Gerencia regional (role legada)'}
+                          {role.value === 'diretor_divisao' && 'Gerencia divisão e visualiza relatórios'}
+                          {role.value === 'user' && 'Acesso básico'}
                 </span>
               </div>
             ))}

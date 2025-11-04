@@ -38,9 +38,10 @@ export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes };
 
 export const usePendencias = (
   userId: string | undefined,
-  userRole: 'admin' | 'regional' | 'diretor_divisao' | null,
+  userRole: 'admin' | 'diretor_regional' | 'diretor_divisao' | 'regional' | 'user' | null,
   regionalId?: string,
-  divisaoId?: string
+  divisaoId?: string,
+  registroId?: number
 ) => {
   const [pendencias, setPendencias] = useState<Pendencia[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,7 +53,7 @@ export const usePendencias = (
     }
 
     // Verificar cache do dia
-    const cacheKey = `pendencias_${userId}_${new Date().toISOString().split('T')[0]}`;
+    const cacheKey = `pendencias_${userId}_${registroId || 'all'}_${new Date().toISOString().split('T')[0]}`;
     const cached = localStorage.getItem(cacheKey);
     
     if (cached) {
@@ -90,27 +91,37 @@ export const usePendencias = (
         .eq('liquidado', false)
         .lt('data_vencimento', hoje);
 
-      // Filtrar por escopo
-      if (userRole === 'regional' && regionalId) {
-        const { data: divisoes } = await supabase
-          .from('divisoes')
-          .select('nome')
-          .eq('regional_id', regionalId);
-        
-        const nomeDivisoes = divisoes?.map(d => d.nome) || [];
-        if (nomeDivisoes.length > 0) {
-          queryMensalidades = queryMensalidades.in('divisao_texto', nomeDivisoes);
+      // Aplicar filtro de escopo
+      if (userRole === 'admin') {
+        // Admin vê todas (não aplica filtro)
+      } else if (userRole === 'diretor_regional' || userRole === 'regional') {
+        // Diretor Regional vê sua regional
+        if (regionalId) {
+          const { data: divisoes } = await supabase
+            .from('divisoes')
+            .select('nome')
+            .eq('regional_id', regionalId);
+          
+          const nomeDivisoes = divisoes?.map(d => d.nome) || [];
+          if (nomeDivisoes.length > 0) {
+            queryMensalidades = queryMensalidades.in('divisao_texto', nomeDivisoes);
+          }
         }
-      } else if (userRole === 'diretor_divisao' && divisaoId) {
-        const { data: divisao } = await supabase
-          .from('divisoes')
-          .select('nome')
-          .eq('id', divisaoId)
-          .single();
-        
-        if (divisao) {
-          queryMensalidades = queryMensalidades.eq('divisao_texto', divisao.nome);
+      } else if (userRole === 'diretor_divisao') {
+        if (divisaoId) {
+          const { data: divisao } = await supabase
+            .from('divisoes')
+            .select('nome')
+            .eq('id', divisaoId)
+            .single();
+          
+          if (divisao) {
+            queryMensalidades = queryMensalidades.eq('divisao_texto', divisao.nome);
+          }
         }
+      } else if (userRole === 'user' && registroId) {
+        // Usuário comum: só vê suas próprias pendências
+        queryMensalidades = queryMensalidades.eq('registro_id', registroId);
       }
 
       const { data: mensalidades } = await queryMensalidades;
@@ -191,27 +202,36 @@ export const usePendencias = (
         .is('data_retorno_efetivo', null)
         .lt('data_retorno_prevista', hoje);
 
-      // Aplicar mesmo filtro de escopo
-      if (userRole === 'regional' && regionalId) {
-        const { data: divisoes } = await supabase
-          .from('divisoes')
-          .select('nome')
-          .eq('regional_id', regionalId);
-        
-        const nomeDivisoes = divisoes?.map(d => d.nome) || [];
-        if (nomeDivisoes.length > 0) {
-          queryAfastados = queryAfastados.in('divisao_texto', nomeDivisoes);
+      // Aplicar filtro de escopo para afastamentos
+      if (userRole === 'admin') {
+        // Admin vê todos
+      } else if (userRole === 'diretor_regional' || userRole === 'regional') {
+        if (regionalId) {
+          const { data: divisoes } = await supabase
+            .from('divisoes')
+            .select('nome')
+            .eq('regional_id', regionalId);
+          
+          const nomeDivisoes = divisoes?.map(d => d.nome) || [];
+          if (nomeDivisoes.length > 0) {
+            queryAfastados = queryAfastados.in('divisao_texto', nomeDivisoes);
+          }
         }
-      } else if (userRole === 'diretor_divisao' && divisaoId) {
-        const { data: divisao } = await supabase
-          .from('divisoes')
-          .select('nome')
-          .eq('id', divisaoId)
-          .single();
-        
-        if (divisao) {
-          queryAfastados = queryAfastados.eq('divisao_texto', divisao.nome);
+      } else if (userRole === 'diretor_divisao') {
+        if (divisaoId) {
+          const { data: divisao } = await supabase
+            .from('divisoes')
+            .select('nome')
+            .eq('id', divisaoId)
+            .single();
+          
+          if (divisao) {
+            queryAfastados = queryAfastados.eq('divisao_texto', divisao.nome);
+          }
         }
+      } else if (userRole === 'user' && registroId) {
+        // Usuário comum: só vê seus próprios afastamentos
+        queryAfastados = queryAfastados.eq('registro_id', registroId);
       }
 
       const { data: afastados } = await queryAfastados;
@@ -259,7 +279,7 @@ export const usePendencias = (
     };
 
     fetchPendencias();
-  }, [userId, userRole, regionalId, divisaoId]);
+  }, [userId, userRole, regionalId, divisaoId, registroId]);
 
   return { pendencias, loading, totalPendencias: pendencias.length };
 };
