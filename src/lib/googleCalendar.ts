@@ -10,25 +10,269 @@ function removeSpecialCharacters(text: string): string {
     .replace(/Ç/g, 'C');
 }
 
+// Interface para componentes parseados do evento
+interface ParsedEvent {
+  tipoEvento: string;        // "Acao Social", "PUB", "Reuniao"
+  subtipo?: string;          // "Arrecadacao", "Entrega de Coletes"
+  divisao: string;           // "Div Cacapava - SP", "CMD V e XX"
+  divisaoId: string | null;  // UUID da divisão no banco
+  informacoesExtras?: string;// "Casa do irmao Vinicius"
+  isCMD: boolean;            // true se for evento do CMD
+}
+
 export interface CalendarEvent {
   id: string;
   title: string;
-  originalTitle: string; // Título original do Google Calendar
+  originalTitle: string;
+  normalizedComponents?: ParsedEvent;
   description: string;
   start: string;
   end: string;
   location?: string;
   type: string;
   division: string;
+  divisao_id: string | null;
   htmlLink: string;
-  isComandoEvent: boolean; // Flag para eventos do Comando
+  isComandoEvent: boolean;
+}
+
+// Cache de divisões do banco
+let divisoesCache: Array<{ id: string; nome: string; normalizado: string }> | null = null;
+
+// Carregar divisões do banco e cachear
+async function loadDivisoesCache() {
+  if (divisoesCache) return divisoesCache;
+  
+  console.log('[loadDivisoesCache] Carregando divisões do banco...');
+  const { data, error } = await supabase
+    .from('divisoes')
+    .select('id, nome');
+  
+  if (error) {
+    console.error('[loadDivisoesCache] Erro ao carregar divisões:', error);
+    return [];
+  }
+  
+  divisoesCache = (data || []).map(d => ({
+    id: d.id,
+    nome: d.nome,
+    normalizado: removeSpecialCharacters(d.nome).toUpperCase()
+  }));
+  
+  console.log('[loadDivisoesCache] Carregadas', divisoesCache.length, 'divisões');
+  return divisoesCache;
+}
+
+// Fazer matching fuzzy de divisão com banco
+async function matchDivisaoToId(divisaoText: string): Promise<string | null> {
+  const divisoes = await loadDivisoesCache();
+  const normalizado = removeSpecialCharacters(divisaoText).toUpperCase();
+  
+  console.log('[matchDivisaoToId] Tentando match para:', divisaoText, '→', normalizado);
+  
+  // 1. Match exato
+  for (const div of divisoes) {
+    if (div.normalizado === normalizado) {
+      console.log('[matchDivisaoToId] ✅ Match exato:', div.nome);
+      return div.id;
+    }
+  }
+  
+  // 2. Match por contains (divisão contém o texto ou vice-versa)
+  for (const div of divisoes) {
+    if (div.normalizado.includes(normalizado) || normalizado.includes(div.normalizado)) {
+      console.log('[matchDivisaoToId] ✅ Match parcial:', div.nome);
+      return div.id;
+    }
+  }
+  
+  // 3. Match por palavras-chave específicas
+  const keywords: Record<string, string[]> = {
+    'CACAPAVA': ['CACAPAVA', 'CAÇAPAVA'],
+    'JACAREI NORTE': ['JAC NORTE', 'JACAREI NORTE', 'JAC. NORTE', 'JACNORTE'],
+    'JACAREI OESTE': ['JAC OESTE', 'JACAREI OESTE', 'JAC. OESTE', 'JACOESTE'],
+    'JACAREI LESTE': ['JAC LESTE', 'JACAREI LESTE', 'JAC. LESTE', 'JACLESTE'],
+    'JACAREI SUL': ['JAC SUL', 'JACAREI SUL', 'JAC. SUL', 'JACSUL'],
+    'JACAREI CENTRO': ['JAC CENTRO', 'JACAREI CENTRO', 'JAC. CENTRO'],
+    'SAO JOSE DOS CAMPOS CENTRO': ['SJC CENTRO', 'SJCCENTRO', 'CENTRO SJC'],
+    'SAO JOSE DOS CAMPOS LESTE': ['SJC LESTE', 'SJCLESTE', 'LESTE SJC', 'DIV LESTE'],
+    'SAO JOSE DOS CAMPOS NORTE': ['SJC NORTE', 'SJCNORTE', 'NORTE SJC'],
+    'SAO JOSE DOS CAMPOS SUL': ['SJC SUL', 'SJCSUL', 'SUL SJC'],
+    'SAO JOSE DOS CAMPOS EXTREMO SUL': ['EXT SUL', 'EXTSUL', 'EXT. SUL SJC', 'EXTREMO SUL'],
+    'SAO JOSE DOS CAMPOS EXTREMO NORTE': ['EXT NORTE', 'EXTNORTE', 'EXT. NORTE SJC', 'EXTREMO NORTE'],
+    'SAO JOSE DOS CAMPOS EXTREMO LESTE': ['EXT LESTE', 'EXTLESTE', 'EXT. LESTE SJC', 'EXTREMO LESTE'],
+    'SAO JOSE DOS CAMPOS OESTE': ['SJC OESTE', 'SJCOESTE', 'OESTE SJC', 'OESTE SAO JOSE']
+  };
+  
+  for (const div of divisoes) {
+    const divNormalizada = div.normalizado;
+    
+    for (const [key, patterns] of Object.entries(keywords)) {
+      if (divNormalizada.includes(key)) {
+        for (const pattern of patterns) {
+          if (normalizado.includes(pattern)) {
+            console.log('[matchDivisaoToId] ✅ Match por keyword:', div.nome, '(pattern:', pattern, ')');
+            return div.id;
+          }
+        }
+      }
+    }
+  }
+  
+  console.log('[matchDivisaoToId] ❌ Nenhum match encontrado para:', divisaoText);
+  return null;
+}
+
+// Parsear componentes do título do evento
+function parseEventComponents(originalTitle: string): ParsedEvent {
+  const normalized = removeSpecialCharacters(originalTitle);
+  const lower = normalized.toLowerCase();
+  const upper = normalized.toUpperCase();
+  
+  console.log('[parseEventComponents] Original:', originalTitle);
+  
+  // Detectar se é CMD
+  const isCMD = upper.includes('CMD');
+  
+  // Detectar tipo de evento (prioridade)
+  let tipoEvento = 'Outros';
+  let subtipo: string | undefined;
+  
+  // PUB tem prioridade
+  if (lower.includes('pub')) {
+    tipoEvento = 'PUB';
+  }
+  // Ação Social / Arrecadação
+  else if (lower.includes('acao social') || lower.includes('arrecadacao')) {
+    tipoEvento = 'Acao Social';
+    if (lower.includes('arrecadacao')) {
+      subtipo = 'Arrecadacao';
+    }
+  }
+  // Reunião
+  else if (lower.includes('reuniao')) {
+    tipoEvento = 'Reuniao';
+  }
+  // Bate e Volta
+  else if (lower.includes('bate e volta')) {
+    tipoEvento = 'Bate e Volta';
+  }
+  // Bonde Insano
+  else if (lower.includes('bonde insano') || lower.includes('bonde')) {
+    tipoEvento = 'Bonde Insano';
+  }
+  
+  // Detectar subtipos específicos
+  if (lower.includes('entrega de coletes')) {
+    subtipo = 'Entrega de Coletes';
+  }
+  
+  // Detectar divisão
+  let divisao = 'Sem Divisao';
+  let informacoesExtras: string | undefined;
+  
+  // Se for CMD, extrair informações do CMD
+  if (isCMD) {
+    // Procurar padrões como "CMD V e XX", "CMD Mundial", etc.
+    const cmdMatch = originalTitle.match(/CMD[\s\-]*([\w\s\+]+?)(?:\s*[-\(]|$)/i);
+    if (cmdMatch) {
+      divisao = 'CMD ' + cmdMatch[1].trim();
+    } else {
+      divisao = 'CMD';
+    }
+  } else {
+    // Detectar divisão normal
+    divisao = detectDivisionFromTitle(normalized);
+  }
+  
+  // Extrair informações extras (texto após a divisão)
+  const divIndex = originalTitle.toLowerCase().indexOf(divisao.toLowerCase());
+  if (divIndex > -1 && divIndex + divisao.length < originalTitle.length) {
+    const extras = originalTitle.substring(divIndex + divisao.length).trim();
+    if (extras && extras.length > 0 && !extras.startsWith('-')) {
+      informacoesExtras = extras.replace(/^[-\s]+/, '').trim();
+    }
+  }
+  
+  const parsed: ParsedEvent = {
+    tipoEvento,
+    subtipo,
+    divisao,
+    divisaoId: null, // Será preenchido depois
+    informacoesExtras,
+    isCMD
+  };
+  
+  console.log('[parseEventComponents] Parsed:', parsed);
+  return parsed;
+}
+
+// Detectar divisão do título (versão simplificada)
+function detectDivisionFromTitle(title: string): string {
+  const lower = title.toLowerCase();
+  
+  // Extremos (prioridade)
+  if (lower.includes('ext sul') || lower.includes('ext.sul') || lower.includes('extremo sul')) {
+    return 'Div SJC Ext Sul - SP';
+  }
+  if (lower.includes('ext norte') || lower.includes('ext.norte') || lower.includes('extremo norte')) {
+    return 'Div SJC Ext Norte - SP';
+  }
+  if (lower.includes('ext leste') || lower.includes('ext.leste') || lower.includes('extremo leste')) {
+    return 'Div SJC Ext Leste - SP';
+  }
+  
+  // SJC
+  if (lower.includes('sjc centro') || lower.includes('centro sjc')) return 'Div SJC Centro - SP';
+  if (lower.includes('sjc leste') || lower.includes('leste sjc') || lower.includes('div leste')) return 'Div SJC Leste - SP';
+  if (lower.includes('sjc norte') || lower.includes('norte sjc')) return 'Div SJC Norte - SP';
+  if (lower.includes('sjc sul') || lower.includes('sul sjc')) return 'Div SJC Sul - SP';
+  if (lower.includes('sjc oeste') || lower.includes('oeste sjc') || lower.includes('oeste sao jose')) return 'Div SJC Oeste - SP';
+  
+  // Caçapava
+  if (lower.includes('cacapava') || lower.includes('caçapava')) return 'Div Cacapava - SP';
+  
+  // Jacareí
+  if (lower.includes('jac norte') || lower.includes('jacarei norte')) return 'Div Jacarei Norte - SP';
+  if (lower.includes('jac oeste') || lower.includes('jacarei oeste')) return 'Div Jacarei Oeste - SP';
+  if (lower.includes('jac leste') || lower.includes('jacarei leste')) return 'Div Jacarei Leste - SP';
+  if (lower.includes('jac sul') || lower.includes('jacarei sul')) return 'Div Jacarei Sul - SP';
+  if (lower.includes('jac centro') || lower.includes('jacarei centro')) return 'Div Jacarei Centro - SP';
+  
+  return 'Sem Divisao';
+}
+
+// Construir título normalizado
+function buildNormalizedTitle(components: ParsedEvent): string {
+  const parts: string[] = [];
+  
+  // Tipo principal
+  parts.push(components.tipoEvento);
+  
+  // Subtipo entre parênteses
+  if (components.subtipo) {
+    parts[0] += ` (${components.subtipo})`;
+  }
+  
+  // Divisão
+  if (components.divisao && components.divisao !== 'Sem Divisao') {
+    parts.push(components.divisao);
+  }
+  
+  // Informações extras
+  if (components.informacoesExtras) {
+    parts.push(components.informacoesExtras);
+  }
+  
+  const normalized = parts.join(' - ');
+  console.log('[buildNormalizedTitle] Título normalizado:', normalized);
+  return normalized;
 }
 
 export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
   try {
     console.log('[fetchCalendarEvents] Chamando edge function segura');
     
-    // Chamar edge function segura ao invés de fazer requisição direta
     const { data, error } = await supabase.functions.invoke('get-calendar-events');
 
     if (error) {
@@ -41,27 +285,46 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
       return [];
     }
 
-    const events = data.items.map((item: any) => {
+    console.log('[fetchCalendarEvents] Processando', data.items.length, 'eventos...');
+
+    const events: CalendarEvent[] = [];
+    
+    for (const item of data.items) {
       const originalTitle = item.summary || "Sem titulo";
-      const normalizedTitle = removeSpecialCharacters(originalTitle);
-      const isComandoEvent = normalizedTitle.toUpperCase().includes("CMD");
-      const eventType = detectEventType(normalizedTitle);
-      const eventDivision = detectDivision(normalizedTitle);
       
-      return {
+      // Parsear componentes do título
+      const components = parseEventComponents(originalTitle);
+      
+      // Fazer matching de divisão com banco
+      const divisaoId = await matchDivisaoToId(components.divisao);
+      components.divisaoId = divisaoId;
+      
+      // Construir título normalizado
+      const normalizedTitle = buildNormalizedTitle(components);
+      
+      events.push({
         id: item.id,
-        title: originalTitle,
-        originalTitle: normalizedTitle,
+        title: normalizedTitle,
+        originalTitle,
+        normalizedComponents: components,
         description: item.description || "",
         start: item.start?.dateTime || item.start?.date || '',
         end: item.end?.dateTime || item.end?.date || '',
         location: item.location,
-        type: eventType,
-        division: eventDivision,
+        type: components.tipoEvento,
+        division: components.divisao,
+        divisao_id: divisaoId,
         htmlLink: item.htmlLink || '',
-        isComandoEvent,
-      };
-    });
+        isComandoEvent: components.isCMD,
+      });
+      
+      if (!divisaoId && components.divisao !== 'Sem Divisao') {
+        console.warn('[fetchCalendarEvents] ⚠️ Divisão não encontrada no banco:', {
+          titulo_original: originalTitle,
+          divisao_detectada: components.divisao
+        });
+      }
+    }
 
     console.log('[fetchCalendarEvents] Processados', events.length, 'eventos');
 
@@ -82,7 +345,7 @@ async function syncEventsWithDatabase(events: CalendarEvent[]) {
     // Buscar todos os eventos que existem no banco
     const { data: existingEvents, error: fetchError } = await supabase
       .from('eventos_agenda')
-      .select('evento_id, titulo, data_evento, tipo_evento');
+      .select('evento_id, titulo, data_evento, tipo_evento, divisao_id');
     
     if (fetchError) {
       console.error('[syncEventsWithDatabase] Erro ao buscar eventos existentes:', fetchError);
@@ -110,7 +373,8 @@ async function syncEventsWithDatabase(events: CalendarEvent[]) {
       const hasChanges = 
         dbEvent.titulo !== calendarEvent.title ||
         dbDate !== calendarDate ||
-        dbEvent.tipo_evento !== calendarEvent.type;
+        dbEvent.tipo_evento !== calendarEvent.type ||
+        dbEvent.divisao_id !== calendarEvent.divisao_id;
 
       if (hasChanges) {
         console.log(`[syncEventsWithDatabase] Atualizando evento ${calendarEvent.title}:`, {
@@ -119,7 +383,9 @@ async function syncEventsWithDatabase(events: CalendarEvent[]) {
           data_antiga: dbDate,
           data_nova: calendarDate,
           tipo_antigo: dbEvent.tipo_evento,
-          tipo_novo: calendarEvent.type
+          tipo_novo: calendarEvent.type,
+          divisao_id_antiga: dbEvent.divisao_id,
+          divisao_id_nova: calendarEvent.divisao_id
         });
 
         // Atualizar evento no banco
@@ -129,6 +395,7 @@ async function syncEventsWithDatabase(events: CalendarEvent[]) {
             titulo: calendarEvent.title,
             data_evento: calendarEvent.start,
             tipo_evento: calendarEvent.type,
+            divisao_id: calendarEvent.divisao_id,
             updated_at: new Date().toISOString()
           })
           .eq('evento_id', calendarEvent.id);
@@ -136,7 +403,7 @@ async function syncEventsWithDatabase(events: CalendarEvent[]) {
         if (updateError) {
           console.error(`[syncEventsWithDatabase] Erro ao atualizar evento ${calendarEvent.id}:`, updateError);
         } else {
-          console.log(`[syncEventsWithDatabase] Evento ${calendarEvent.title} atualizado com sucesso`);
+          console.log(`[syncEventsWithDatabase] ✅ Evento atualizado com sucesso`);
         }
       }
     }
@@ -147,16 +414,12 @@ async function syncEventsWithDatabase(events: CalendarEvent[]) {
   }
 }
 
+// Funções antigas mantidas para compatibilidade (caso sejam usadas em outros lugares)
 function detectEventType(title: string): string {
   const lower = title.toLowerCase();
   
-  // Reunião (várias variações)
-  if (lower.includes("reuniao") || lower.includes("reunião") || lower.includes("bate-papo") || lower.includes("bate papo")) return "Reuniao";
-  
-  // Ação Social
-  if (lower.includes("acao social") || lower.includes("ação social") || lower.includes("arrecadacao") || lower.includes("arrecadação")) return "Acao Social";
-  
-  // Outros tipos
+  if (lower.includes("reuniao") || lower.includes("reunião")) return "Reuniao";
+  if (lower.includes("acao social") || lower.includes("ação social") || lower.includes("arrecadacao")) return "Acao Social";
   if (lower.includes("pub")) return "Pub";
   if (lower.includes("bonde")) return "Bonde";
   if (lower.includes("bate e volta")) return "Bate e Volta";
@@ -165,93 +428,47 @@ function detectEventType(title: string): string {
   return "Outros";
 }
 
-
 function detectDivision(title: string): string {
   const lower = title.toLowerCase();
   const divisoes: string[] = [];
   
-  // Função auxiliar para adicionar divisão se ainda não foi adicionada
   const addDivisao = (divisao: string) => {
     if (!divisoes.includes(divisao)) {
       divisoes.push(divisao);
     }
   };
   
-  // ===== PRIORIDADE: Divisões "Extremo" =====
-  // Detectar PRIMEIRO as divisões "extremo" para evitar conflitos
-  
-  if (lower.includes("ext sul") || lower.includes("ext.sul") || lower.includes("estsul") || 
-      lower.includes("ext. sul sjc") || lower.includes("ext sul sjc")) {
+  if (lower.includes("ext sul") || lower.includes("extremo sul")) {
     addDivisao("Divisao Sao Jose dos Campos Extremo Sul - SP");
   }
-  
-  if (lower.includes("ext leste") || lower.includes("ext.leste") || lower.includes("estleste") || 
-      lower.includes("ext. leste sjc") || lower.includes("ext leste sjc")) {
+  if (lower.includes("ext leste") || lower.includes("extremo leste")) {
     addDivisao("Divisao Sao Jose dos Campos Extremo Leste - SP");
   }
-  
-  if (lower.includes("ext norte") || lower.includes("ext.norte") || lower.includes("estnorte") || 
-      lower.includes("ext. norte sjc") || lower.includes("ext norte sjc")) {
+  if (lower.includes("ext norte") || lower.includes("extremo norte")) {
     addDivisao("Divisao Sao Jose dos Campos Extremo Norte - SP");
   }
-  
-  // ===== Divisões Normais de São José dos Campos =====
-  // Adicionar verificação !lower.includes("ext") para evitar conflitos
-  
-  if ((lower.includes("sjc centro") || lower.includes("sjc.centro") || 
-       lower.includes("div. sjc centro") || lower.includes("div.sjc centro") || 
-       lower.includes("divesjc centro") || lower.includes("divsjc centro") || 
-       lower.includes("centro sjc")) && !lower.includes("ext")) {
+  if ((lower.includes("sjc centro") || lower.includes("centro sjc")) && !lower.includes("ext")) {
     addDivisao("Divisao Sao Jose dos Campos Centro - SP");
   }
-  
-  if ((lower.includes("sjc leste") || lower.includes("sjc.leste") || 
-       lower.includes("div. sjc leste") || lower.includes("div.leste") || 
-       lower.includes("div leste") || lower.includes("diveleste") || 
-       lower.includes("leste sjc")) && !lower.includes("ext")) {
+  if ((lower.includes("sjc leste") || lower.includes("leste sjc")) && !lower.includes("ext")) {
     addDivisao("Divisao Sao Jose dos Campos Leste - SP");
   }
-  
-  if ((lower.includes("sjc norte") || lower.includes("sjc.norte") || 
-       lower.includes("norte sjc")) && !lower.includes("ext")) {
-    addDivisao("Divisao Sao Jose dos Campos Norte - SP");
-  }
-  
-  if ((lower.includes("sjc sul") || lower.includes("sjc.sul") || 
-       lower.includes("sul sjc")) && !lower.includes("ext")) {
-    addDivisao("Divisao Sao Jose dos Campos Sul - SP");
-  }
-  
-  // Caçapava
   if (lower.includes("cacapava") || lower.includes("caçapava")) {
     addDivisao("Divisao Cacapava - SP");
   }
-  
-  // Jacareí com suas divisões
-  if (lower.includes("jacarei sul") || lower.includes("jac sul") || lower.includes("jac. sul")) {
-    addDivisao("Divisao Jacarei Sul - SP");
-  }
-  if (lower.includes("jacarei norte") || lower.includes("jac norte") || lower.includes("jac. norte")) {
+  if (lower.includes("jacarei norte") || lower.includes("jac norte")) {
     addDivisao("Divisao Jacarei Norte - SP");
   }
-  if (lower.includes("jacarei leste") || lower.includes("jac leste") || lower.includes("jac. leste")) {
-    addDivisao("Divisao Jacarei Leste - SP");
-  }
-  if (lower.includes("jacarei oeste") || lower.includes("jac oeste") || lower.includes("jac. oeste")) {
+  if (lower.includes("jacarei oeste") || lower.includes("jac oeste")) {
     addDivisao("Divisao Jacarei Oeste - SP");
   }
-  if (lower.includes("jacarei centro") || lower.includes("jac centro") || lower.includes("jac. centro")) {
-    addDivisao("Divisao Jacarei Centro - SP");
+  if (lower.includes("jacarei leste") || lower.includes("jac leste")) {
+    addDivisao("Divisao Jacarei Leste - SP");
   }
-  if ((lower.includes("jacarei") || lower.includes("jac ")) && divisoes.length === 0) {
-    addDivisao("Divisao Jacarei - SP");
-  }
-  
   if (lower.includes("regional")) {
     addDivisao("Regional");
   }
   
-  // Se encontrou divisões, retornar separadas por " / "
   if (divisoes.length > 0) {
     return divisoes.join(" / ");
   }
