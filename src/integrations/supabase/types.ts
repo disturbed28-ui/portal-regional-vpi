@@ -262,6 +262,65 @@ export type Database = {
         }
         Relationships: []
       }
+      integrantes_afastados: {
+        Row: {
+          ativo: boolean
+          carga_historico_id: string | null
+          cargo_grau_texto: string | null
+          created_at: string
+          data_afastamento: string
+          data_retorno_efetivo: string | null
+          data_retorno_prevista: string
+          divisao_texto: string
+          id: string
+          nome_colete: string
+          observacoes: string | null
+          registro_id: number
+          tipo_afastamento: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          carga_historico_id?: string | null
+          cargo_grau_texto?: string | null
+          created_at?: string
+          data_afastamento: string
+          data_retorno_efetivo?: string | null
+          data_retorno_prevista: string
+          divisao_texto: string
+          id?: string
+          nome_colete: string
+          observacoes?: string | null
+          registro_id: number
+          tipo_afastamento?: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          carga_historico_id?: string | null
+          cargo_grau_texto?: string | null
+          created_at?: string
+          data_afastamento?: string
+          data_retorno_efetivo?: string | null
+          data_retorno_prevista?: string
+          divisao_texto?: string
+          id?: string
+          nome_colete?: string
+          observacoes?: string | null
+          registro_id?: number
+          tipo_afastamento?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integrantes_afastados_carga_historico_id_fkey"
+            columns: ["carga_historico_id"]
+            isOneToOne: false
+            referencedRelation: "cargas_historico"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       integrantes_historico: {
         Row: {
           acao: string

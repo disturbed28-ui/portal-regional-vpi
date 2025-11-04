@@ -10,6 +10,7 @@ import AdminEstrutura from "./pages/AdminEstrutura";
 import AdminDados from "./pages/AdminDados";
 import AdminIntegrantes from "./pages/AdminIntegrantes";
 import AdminPermissoes from "./pages/AdminPermissoes";
+import AdminAfastados from "./pages/AdminAfastados";
 import Agenda from "./pages/Agenda";
 import Relatorios from "./pages/Relatorios";
 import Organograma from "./pages/Organograma";
@@ -34,6 +35,7 @@ const App = () => (
           <Route path="/admin/dados" element={<AdminDados />} />
           <Route path="/admin/integrantes" element={<AdminIntegrantes />} />
           <Route path="/admin/permissoes" element={<AdminPermissoes />} />
+          <Route path="/admin/afastados" element={<AdminAfastados />} />
           <Route path="/agenda" element={<Agenda />} />
           <Route path="/relatorios" element={<Relatorios />} />
           <Route path="/organograma" element={<Organograma />} />
