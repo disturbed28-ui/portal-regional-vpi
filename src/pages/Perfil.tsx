@@ -3,6 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -140,110 +148,258 @@ const Perfil = () => {
     }
   };
 
+  const integrante = profile?.integrante;
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-[360px] flex flex-col">
-        {/* Container com mesmo tamanho do index */}
-        <div className="bg-card border border-border rounded-3xl p-6 flex flex-col min-h-[600px]">
-          {/* Cabecalho */}
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-foreground">
-              Perfil do Integrante
-            </h2>
-            <Button 
-              onClick={() => navigate("/")}
-              variant="outline"
-              size="sm"
-              className="rounded-xl"
-            >
-              Fechar
-            </Button>
-          </div>
-
-          {/* Foto e Nome */}
-          <div className="flex items-center gap-4 mb-6">
-            <div 
-              className="w-14 h-14 rounded-full bg-secondary border border-border bg-cover bg-center flex-shrink-0"
-              style={{
-                backgroundImage: userPhoto 
-                  ? `url(${userPhoto})` 
-                  : `url('/images/skull.png')`
-              }}
-            />
-            <div className="min-w-0 flex-1">
-              <Label className="text-xs text-muted-foreground">Nome</Label>
-              <div className="text-sm text-foreground truncate">{userName}</div>
+    <div className="min-h-screen bg-background p-4">
+      <div className="max-w-2xl mx-auto space-y-4">
+        {/* Cabeçalho com foto, nome e email */}
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-2xl font-semibold text-foreground">Meu Perfil</h1>
+              <Button 
+                onClick={() => navigate("/")}
+                variant="outline"
+                size="sm"
+              >
+                Voltar
+              </Button>
             </div>
-          </div>
+            
+            <div className="flex items-center gap-4">
+              <div 
+                className="w-16 h-16 rounded-full bg-secondary border border-border bg-cover bg-center flex-shrink-0"
+                style={{
+                  backgroundImage: userPhoto 
+                    ? `url(${userPhoto})` 
+                    : `url('/images/skull.png')`
+                }}
+              />
+              <div className="flex-1">
+                <h2 className="text-lg font-medium text-foreground">{userName}</h2>
+                <p className="text-sm text-muted-foreground">{userEmail}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Email */}
-          <div className="mb-4">
-            <Label className="text-xs text-muted-foreground">Email</Label>
-            <div className="text-sm text-foreground truncate">{userEmail}</div>
-          </div>
-
-          {/* Mensagem de Status */}
-          {statusMessage && (
-            <div className={`mb-4 p-3 rounded-lg border ${
-              statusMessage.type === 'success' ? 'bg-green-50 border-green-200' :
-              statusMessage.type === 'warning' ? 'bg-yellow-50 border-yellow-200' :
-              statusMessage.type === 'error' ? 'bg-red-50 border-red-200' :
-              statusMessage.type === 'info' ? 'bg-blue-50 border-blue-200' :
-              'bg-gray-50 border-gray-200'
-            }`}>
+        {/* Mensagem de Status */}
+        {statusMessage && (
+          <Card className={
+            statusMessage.type === 'success' ? 'border-green-500/50 bg-green-50 dark:bg-green-950/20' :
+            statusMessage.type === 'warning' ? 'border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20' :
+            statusMessage.type === 'error' ? 'border-red-500/50 bg-red-50 dark:bg-red-950/20' :
+            statusMessage.type === 'info' ? 'border-blue-500/50 bg-blue-50 dark:bg-blue-950/20' :
+            'border-border'
+          }>
+            <CardContent className="p-4">
               <p className={`text-sm ${
-                statusMessage.type === 'success' ? 'text-green-700' :
-                statusMessage.type === 'warning' ? 'text-yellow-700' :
-                statusMessage.type === 'error' ? 'text-red-700' :
-                statusMessage.type === 'info' ? 'text-blue-700' :
-                'text-gray-700'
+                statusMessage.type === 'success' ? 'text-green-700 dark:text-green-300' :
+                statusMessage.type === 'warning' ? 'text-yellow-700 dark:text-yellow-300' :
+                statusMessage.type === 'error' ? 'text-red-700 dark:text-red-300' :
+                statusMessage.type === 'info' ? 'text-blue-700 dark:text-blue-300' :
+                'text-foreground'
               }`}>
                 {statusMessage.message}
               </p>
-            </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Accordion com seções */}
+        <Accordion type="multiple" defaultValue={["basicos", "estrutura"]} className="space-y-2">
+          
+          {/* 1. DADOS BÁSICOS (editáveis) */}
+          <Card>
+            <AccordionItem value="basicos" className="border-none">
+              <AccordionTrigger className="px-6 hover:no-underline">
+                <span className="text-base font-medium">📧 Dados Básicos</span>
+              </AccordionTrigger>
+              <AccordionContent className="px-6 pb-6">
+                <div className="space-y-4">
+                  {/* Nome de Colete (editável) */}
+                  <div>
+                    <Label htmlFor="nomeColete" className="text-sm font-medium">
+                      Nome de Colete
+                    </Label>
+                    <Input
+                      id="nomeColete"
+                      type="text"
+                      placeholder="Digite seu nome de colete..."
+                      value={nomeColete}
+                      onChange={(e) => setNomeColete(e.target.value)}
+                      disabled={profile?.profile_status === 'Ativo' || profile?.profile_status === 'Inativo'}
+                      className="mt-1"
+                    />
+                  </div>
+                  
+                  {/* Telefone (editável) */}
+                  <div>
+                    <Label htmlFor="telefone" className="text-sm font-medium">
+                      Telefone Celular
+                    </Label>
+                    <Input
+                      id="telefone"
+                      type="tel"
+                      placeholder="(00) 00000-0000"
+                      value={telefone}
+                      onChange={(e) => setTelefone(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                  
+                  {/* Status (somente leitura) */}
+                  <div>
+                    <Label className="text-sm font-medium">Status do Perfil</Label>
+                    <div className="mt-1">
+                      <Badge variant={
+                        profile?.profile_status === 'Ativo' ? 'default' :
+                        profile?.profile_status === 'Pendente' ? 'secondary' :
+                        profile?.profile_status === 'Analise' ? 'secondary' :
+                        'outline'
+                      }>
+                        {profile?.profile_status || 'Pendente'}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Card>
+
+          {/* 2. ESTRUTURA ORGANIZACIONAL */}
+          <Card>
+            <AccordionItem value="estrutura" className="border-none">
+              <AccordionTrigger className="px-6 hover:no-underline">
+                <span className="text-base font-medium">🏢 Estrutura Organizacional</span>
+              </AccordionTrigger>
+              <AccordionContent className="px-6 pb-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Comando</Label>
+                    <p className="text-sm mt-1">{profile?.comando || '—'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Regional</Label>
+                    <p className="text-sm mt-1">{profile?.regional || '—'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Divisão</Label>
+                    <p className="text-sm mt-1">{profile?.divisao || '—'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Cargo</Label>
+                    <p className="text-sm mt-1">{profile?.cargo || '—'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Função</Label>
+                    <p className="text-sm mt-1">{profile?.funcao || '—'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Grau</Label>
+                    <p className="text-sm mt-1">{profile?.grau || '—'}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <Label className="text-xs text-muted-foreground">Data de Entrada</Label>
+                    <p className="text-sm mt-1">
+                      {profile?.data_entrada 
+                        ? new Date(profile.data_entrada).toLocaleDateString('pt-BR')
+                        : '—'
+                      }
+                    </p>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Card>
+
+          {/* 3. DADOS DO INTEGRANTE (só aparece se vinculado) */}
+          {integrante?.vinculado && (
+            <Card>
+              <AccordionItem value="integrante" className="border-none">
+                <AccordionTrigger className="px-6 hover:no-underline">
+                  <span className="text-base font-medium">🏍️ Dados do Integrante</span>
+                </AccordionTrigger>
+                <AccordionContent className="px-6 pb-6">
+                  <div className="space-y-4">
+                    
+                    {/* Veículos */}
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-2 block">Veículos</Label>
+                      <div className="flex gap-2">
+                        <Badge variant={integrante.tem_moto ? "default" : "secondary"}>
+                          {integrante.tem_moto ? '✅' : '❌'} Moto
+                        </Badge>
+                        <Badge variant={integrante.tem_carro ? "default" : "secondary"}>
+                          {integrante.tem_carro ? '✅' : '❌'} Carro
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {/* Funções Especiais (só mostra as que são true) */}
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-2 block">
+                        Funções/Características Especiais
+                      </Label>
+                      <div className="flex flex-wrap gap-2">
+                        {integrante.sgt_armas && <Badge>🎖️ Sgt Armas</Badge>}
+                        {integrante.caveira && <Badge>💀 Caveira</Badge>}
+                        {integrante.caveira_suplente && <Badge>💀 Caveira Suplente</Badge>}
+                        {integrante.batedor && <Badge>🏍️ Batedor</Badge>}
+                        {integrante.ursinho && <Badge>🐻 Ursinho</Badge>}
+                        {integrante.lobo && <Badge>🐺 Lobo</Badge>}
+                        {integrante.combate_insano && <Badge>⚔️ Combate Insano</Badge>}
+                        
+                        {/* Se nenhuma for true */}
+                        {!integrante.sgt_armas && !integrante.caveira && 
+                         !integrante.caveira_suplente && !integrante.batedor && 
+                         !integrante.ursinho && !integrante.lobo && 
+                         !integrante.combate_insano && (
+                          <p className="text-sm text-muted-foreground">
+                            Nenhuma função especial atribuída
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Cargo Estágio */}
+                    {integrante.cargo_estagio && (
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Cargo Estágio</Label>
+                        <p className="text-sm mt-1">{integrante.cargo_estagio}</p>
+                      </div>
+                    )}
+
+                    {/* Status Ativo/Inativo */}
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Status do Integrante</Label>
+                      <div className="mt-1">
+                        <Badge variant={integrante.ativo ? "default" : "secondary"}>
+                          {integrante.ativo ? '✅ Ativo' : '❌ Inativo'}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Card>
           )}
 
-          {/* Nome de Colete */}
-          <div className="mb-4">
-            <Label htmlFor="nomeColete" className="text-xs text-muted-foreground mb-2 block">
-              Nome de Colete
-            </Label>
-            <Input
-              id="nomeColete"
-              type="text"
-              placeholder="digite aqui..."
-              value={nomeColete}
-              onChange={(e) => setNomeColete(e.target.value)}
-              disabled={profile?.profile_status === 'Ativo' || profile?.profile_status === 'Inativo'}
-              className="w-full bg-input border-border text-foreground rounded-xl disabled:opacity-50"
-            />
-          </div>
+        </Accordion>
 
-          {/* Telefone Celular */}
-          <div className="mb-6">
-            <Label htmlFor="telefone" className="text-xs text-muted-foreground mb-2 block">
-              Telefone Celular
-            </Label>
-            <Input
-              id="telefone"
-              type="tel"
-              placeholder="(00) 00000-0000"
-              value={telefone}
-              onChange={(e) => setTelefone(e.target.value)}
-              className="w-full bg-input border-border text-foreground rounded-xl"
-            />
-          </div>
-
-          {/* Botao Enviar */}
-          <div className="flex justify-end">
+        {/* Botão de Salvar */}
+        <Card>
+          <CardContent className="p-4">
             <Button 
               onClick={handleEnviar}
-              className="bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-xl px-6"
+              className="w-full"
             >
-              Enviar
+              💾 Salvar Alterações
             </Button>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
+
       </div>
     </div>
   );

@@ -21,11 +21,24 @@ interface Profile {
   funcao: string | null;
   grau: string | null;
   data_entrada: string | null;
+  comando: string | null;
   integrante?: {
     vinculado: boolean;
     cargo_nome: string;
     grau: string;
     divisao_texto: string;
+    tem_moto: boolean;
+    tem_carro: boolean;
+    sgt_armas: boolean;
+    caveira: boolean;
+    caveira_suplente: boolean;
+    batedor: boolean;
+    ursinho: boolean;
+    lobo: boolean;
+    combate_insano: boolean;
+    cargo_estagio: string | null;
+    ativo: boolean;
+    data_entrada: string | null;
   } | null;
 }
 
@@ -47,11 +60,24 @@ export const useProfile = (userId: string | undefined) => {
         .from('profiles')
         .select(`
           *,
+          comando:comandos(nome),
           integrante:integrantes_portal!integrantes_portal_profile_id_fkey(
             vinculado,
             cargo_nome,
             grau,
-            divisao_texto
+            divisao_texto,
+            tem_moto,
+            tem_carro,
+            sgt_armas,
+            caveira,
+            caveira_suplente,
+            batedor,
+            ursinho,
+            lobo,
+            combate_insano,
+            cargo_estagio,
+            ativo,
+            data_entrada
           )
         `)
         .eq('id', userId)
@@ -73,8 +99,14 @@ export const useProfile = (userId: string | undefined) => {
           ? data.integrante[0] 
           : data.integrante;
         
+        // Processar comando (pode ser array ou objeto)
+        const comandoData = Array.isArray(data.comando)
+          ? data.comando[0]
+          : data.comando;
+        
         setProfile({
           ...data,
+          comando: comandoData?.nome || null,
           integrante: integranteData || null
         } as Profile);
       } else {
@@ -106,11 +138,24 @@ export const useProfile = (userId: string | undefined) => {
               .from('profiles')
               .select(`
                 *,
+                comando:comandos(nome),
                 integrante:integrantes_portal!integrantes_portal_profile_id_fkey(
                   vinculado,
                   cargo_nome,
                   grau,
-                  divisao_texto
+                  divisao_texto,
+                  tem_moto,
+                  tem_carro,
+                  sgt_armas,
+                  caveira,
+                  caveira_suplente,
+                  batedor,
+                  ursinho,
+                  lobo,
+                  combate_insano,
+                  cargo_estagio,
+                  ativo,
+                  data_entrada
                 )
               `)
               .eq('id', userId)
@@ -121,8 +166,13 @@ export const useProfile = (userId: string | undefined) => {
                 ? data.integrante[0] 
                 : data.integrante;
               
+              const comandoData = Array.isArray(data.comando)
+                ? data.comando[0]
+                : data.comando;
+              
               setProfile({
                 ...data,
+                comando: comandoData?.nome || null,
                 integrante: integranteData || null
               } as Profile);
             }
@@ -149,11 +199,24 @@ export const useProfile = (userId: string | undefined) => {
             .from('profiles')
             .select(`
               *,
+              comando:comandos(nome),
               integrante:integrantes_portal!integrantes_portal_profile_id_fkey(
                 vinculado,
                 cargo_nome,
                 grau,
-                divisao_texto
+                divisao_texto,
+                tem_moto,
+                tem_carro,
+                sgt_armas,
+                caveira,
+                caveira_suplente,
+                batedor,
+                ursinho,
+                lobo,
+                combate_insano,
+                cargo_estagio,
+                ativo,
+                data_entrada
               )
             `)
             .eq('id', userId)
@@ -164,8 +227,13 @@ export const useProfile = (userId: string | undefined) => {
               ? data.integrante[0] 
               : data.integrante;
             
+            const comandoData = Array.isArray(data.comando)
+              ? data.comando[0]
+              : data.comando;
+            
             setProfile({
               ...data,
+              comando: comandoData?.nome || null,
               integrante: integranteData || null
             } as Profile);
           }
