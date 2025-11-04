@@ -26,13 +26,13 @@ const Index = () => {
   // Determinar role para pendências
   const isAdmin = hasRole('admin');
   const isDiretorDivisao = hasRole('diretor_divisao');
-  const isRegional = hasRole('regional');
+  const isDiretorRegional = hasRole('diretor_regional') || hasRole('regional');
   const isModerator = hasRole('moderator');
   
   const pendenciaRole = isAdmin ? 'admin' 
-    : isRegional ? 'regional'
+    : isDiretorRegional ? 'regional'
     : isDiretorDivisao ? 'diretor_divisao'
-    : null;
+    : 'user';
 
   const { pendencias, loading: pendenciasLoading, totalPendencias } = usePendencias(
     user?.id,
@@ -102,9 +102,11 @@ const Index = () => {
     roleLoading,
     isAdmin,
     isModerator,
+    isDiretorRegional,
     isDiretorDivisao,
     isActive,
-    profileStatus: profile?.profile_status
+    profileStatus: profile?.profile_status,
+    pendenciaRole
   });
 
   const handleConnect = () => {
@@ -277,7 +279,7 @@ const Index = () => {
               </Button>
             )}
             
-            {!roleLoading && (isAdmin || isDiretorDivisao || isModerator || isRegional) && (
+            {!roleLoading && (isAdmin || isDiretorDivisao || isModerator || isDiretorRegional) && (
               <Button 
                 onClick={handleRelatorios}
                 disabled={!isLoggedIn || !isActive}
