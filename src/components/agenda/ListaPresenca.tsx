@@ -461,7 +461,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                           key={integrante.id} 
                           className={integrante.isVisitante ? "bg-blue-50 dark:bg-blue-950/20" : "bg-green-50 dark:bg-green-950/20"}
                         >
-                          <TableCell className="font-medium">
+                          <TableCell className="font-medium text-gray-900 dark:text-gray-100">
                             <div className="flex items-center gap-2">
                               {integrante.nome_colete}
                               {integrante.isVisitante && (
@@ -471,11 +471,11 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="text-sm font-medium text-foreground">
+                          <TableCell className="text-sm font-medium text-gray-900 dark:text-gray-100">
                             {integrante.divisao_texto}
                           </TableCell>
-                          <TableCell>{integrante.cargo_nome || '-'}</TableCell>
-                          <TableCell>{integrante.grau || '-'}</TableCell>
+                          <TableCell className="text-gray-900 dark:text-gray-100">{integrante.cargo_nome || '-'}</TableCell>
+                          <TableCell className="text-gray-900 dark:text-gray-100">{integrante.grau || '-'}</TableCell>
                           {canManage && (
                             <TableCell>
                               <Button
