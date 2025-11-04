@@ -60,16 +60,6 @@ export const useRelatorioData = (regionalTexto?: string) => {
         .range(1, 1)
         .maybeSingle();
 
-      // Log das cargas buscadas
-      console.log('[useRelatorioData] 🔍 Cargas buscadas:', {
-        tem_ultima_carga: !!ultimaCarga,
-        tem_penultima_carga: !!penultimaCarga,
-        data_ultima: ultimaCarga?.data_carga,
-        data_penultima: penultimaCarga?.data_carga,
-        id_ultima: ultimaCarga?.id,
-        id_penultima: penultimaCarga?.id
-      });
-
       // 3. Buscar integrantes atuais
       let queryAtual = supabase
         .from('integrantes_portal')
@@ -92,17 +82,6 @@ export const useRelatorioData = (regionalTexto?: string) => {
       // Processar dados
       const snapshotAnterior = penultimaCarga?.dados_snapshot as any;
       const integrantesAnteriores = snapshotAnterior?.integrantes || [];
-      
-      // Log de debug para verificar snapshot
-      console.log('[useRelatorioData] 📊 Snapshot anterior completo:', {
-        tem_penultima_carga: !!penultimaCarga,
-        tipo_snapshot: snapshotAnterior?.tipo,
-        qtd_integrantes: integrantesAnteriores.length,
-        qtd_divisoes: snapshotAnterior?.divisoes?.length,
-        total_integrantes_snapshot: snapshotAnterior?.total_integrantes,
-        amostra_3_primeiros: integrantesAnteriores.slice(0, 3),
-        todas_divisoes_anteriores: [...new Set(integrantesAnteriores.map((i: any) => i.divisao_texto))]
-      });
       
       // Agrupar por divisão
       const divisoesMap = new Map<string, DivisaoRelatorio>();
@@ -152,22 +131,7 @@ export const useRelatorioData = (regionalTexto?: string) => {
       const idsAtuais = new Set(integrantesAtuais.map((i) => i.registro_id));
       const idsAnteriores = new Set(integrantesAnteriores.map((i: any) => i.registro_id));
 
-      console.log('[useRelatorioData] 🔄 Processando totais anteriores:', {
-        qtd_atuais: idsAtuais.size,
-        qtd_anteriores: idsAnteriores.size,
-        divisoes_ja_criadas: Array.from(divisoesMap.keys())
-      });
-
-      let contador_anteriores = 0;
       integrantesAnteriores.forEach((integrante: any) => {
-        contador_anteriores++;
-        if (contador_anteriores <= 3) {
-          console.log(`[useRelatorioData] 👤 Processando anterior ${contador_anteriores}:`, {
-            registro_id: integrante.registro_id,
-            nome_colete: integrante.nome_colete,
-            divisao: integrante.divisao_texto
-          });
-        }
         const divisao = integrante.divisao_texto;
         if (!divisoesMap.has(divisao)) {
           divisoesMap.set(divisao, {
@@ -253,17 +217,6 @@ export const useRelatorioData = (regionalTexto?: string) => {
       divisoesMap.forEach((divisao) => {
         divisao.saldo = divisao.entrada - divisao.saida;
       });
-
-      // Log final do estado de cada divisão
-      console.log('[useRelatorioData] 📊 Estado final das divisões:');
-      console.table(Array.from(divisoesMap.values()).map(d => ({
-        Divisão: d.nome,
-        'Anterior': d.total_anterior,
-        'Atual': d.total_atual,
-        'Entrada': d.entrada,
-        'Saída': d.saida,
-        'Saldo': d.saldo
-      })));
 
       // Converter para array e calcular totais
       const divisoes = Array.from(divisoesMap.values()).sort((a, b) =>
