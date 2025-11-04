@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, MapPin, Camera, X, UserCheck, Heart, Briefcase, Users } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Calendar, Clock, MapPin, Camera, X, UserCheck, Heart, Briefcase, Users, Search } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -38,6 +40,9 @@ interface IntegranteDivisao {
 
 export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps) {
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [nomeColeteSearch, setNomeColeteSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [justificativaDialog, setJustificativaDialog] = useState<{ open: boolean; integranteId: string | null }>({
     open: false,
     integranteId: null,
@@ -158,6 +163,49 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     
     await removerPresenca(justificativaDialog.integranteId, justificativa);
     setJustificativaDialog({ open: false, integranteId: null });
+  };
+
+  const handleSearchNomeColete = async () => {
+    if (!nomeColeteSearch.trim()) {
+      toast({
+        title: "Campo vazio",
+        description: "Digite um nome de colete para buscar",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSearching(true);
+    const { data, error } = await supabase
+      .from('integrantes_portal')
+      .select('id, nome_colete, cargo_nome, grau, divisao_texto, profile_id')
+      .eq('ativo', true)
+      .ilike('nome_colete', `%${nomeColeteSearch.trim()}%`)
+      .limit(10);
+
+    if (error) {
+      console.error('Erro ao buscar integrante:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível buscar o integrante",
+        variant: "destructive",
+      });
+    } else if (data && data.length > 0) {
+      setSearchResults(data);
+    } else {
+      toast({
+        title: "Não encontrado",
+        description: "Nenhum integrante encontrado com esse nome",
+      });
+      setSearchResults([]);
+    }
+    setIsSearching(false);
+  };
+
+  const handleSelectSearchResult = async (integrante: any) => {
+    await handleMarcarPresente(integrante);
+    setNomeColeteSearch("");
+    setSearchResults([]);
   };
 
   if (!event) return null;
@@ -322,10 +370,58 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
               </div>
             </div>
 
-            {/* Botão Adicionar Presença */}
+            {/* Campo de Busca por Nome de Colete */}
+            {canManage && (
+              <div className="space-y-3 border rounded-lg p-4 bg-card">
+                <Label htmlFor="nome-colete">Buscar por Nome de Colete</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="nome-colete"
+                    placeholder="Digite o nome do colete..."
+                    value={nomeColeteSearch}
+                    onChange={(e) => setNomeColeteSearch(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSearchNomeColete();
+                      }
+                    }}
+                  />
+                  <Button 
+                    onClick={handleSearchNomeColete}
+                    disabled={isSearching}
+                  >
+                    <Search className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                {/* Resultados da Busca */}
+                {searchResults.length > 0 && (
+                  <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-2">
+                    {searchResults.map((integrante) => (
+                      <div
+                        key={integrante.id}
+                        className="flex items-center justify-between p-2 hover:bg-muted rounded cursor-pointer"
+                        onClick={() => handleSelectSearchResult(integrante)}
+                      >
+                        <div>
+                          <div className="font-medium">{integrante.nome_colete}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {integrante.divisao_texto} • {integrante.cargo_nome || 'Sem cargo'}
+                          </div>
+                        </div>
+                        <UserCheck className="h-5 w-5 text-green-600" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Botão Escanear QR Code */}
             {canManage && (
               <Button
                 onClick={() => setScannerOpen(true)}
+                variant="outline"
                 className="w-full"
               >
                 <Camera className="mr-2 h-4 w-4" />
