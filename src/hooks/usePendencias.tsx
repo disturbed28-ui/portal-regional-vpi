@@ -48,17 +48,33 @@ export const usePendencias = (
 
   useEffect(() => {
     if (!userId || !userRole) {
+      console.log('[usePendencias] Aguardando userId e userRole...');
       setLoading(false);
       return;
     }
 
-    // Verificar cache do dia
-    const cacheKey = `pendencias_${userId}_${registroId || 'all'}_${new Date().toISOString().split('T')[0]}`;
+    console.log('[usePendencias] Iniciando com:', { userId, userRole, regionalId, divisaoId, registroId });
+
+    // Limpar caches antigos (sem _v2)
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('pendencias_') && !key.includes('_v2_')) {
+        console.log('[usePendencias] Removendo cache antigo:', key);
+        localStorage.removeItem(key);
+      }
+    });
+
+    // Verificar cache do dia (nova versão)
+    const data = new Date().toISOString().split('T')[0];
+    const cacheKey = `pendencias_v2_${userId}_${userRole}_${registroId || 'all'}_${data}`;
     const cached = localStorage.getItem(cacheKey);
+    
+    console.log('[usePendencias] Cache key:', cacheKey);
+    console.log('[usePendencias] Cache encontrado:', !!cached);
     
     if (cached) {
       try {
         const parsedData = JSON.parse(cached);
+        console.log('[usePendencias] Cache válido encontrado, total:', parsedData.length);
         
         // Validação: Verificar se tem estrutura correta
         const isValidStructure = Array.isArray(parsedData) && 
@@ -69,12 +85,11 @@ export const usePendencias = (
           setLoading(false);
           return;
         } else {
-          // Cache antigo/inválido: remover e buscar novamente
-          console.log('Cache inválido detectado, buscando dados atualizados...');
+          console.log('[usePendencias] Cache com estrutura inválida, buscando novamente...');
           localStorage.removeItem(cacheKey);
         }
       } catch (error) {
-        console.error('Erro ao processar cache:', error);
+        console.error('[usePendencias] Erro ao processar cache:', error);
         localStorage.removeItem(cacheKey);
       }
     }
@@ -124,7 +139,16 @@ export const usePendencias = (
         queryMensalidades = queryMensalidades.eq('registro_id', registroId);
       }
 
-      const { data: mensalidades } = await queryMensalidades;
+      const { data: mensalidades, error: errorMensalidades } = await queryMensalidades;
+      
+      console.log('[usePendencias] Mensalidades query result:', {
+        count: mensalidades?.length || 0,
+        error: errorMensalidades,
+        userRole,
+        regionalId,
+        divisaoId,
+        registroId
+      });
 
       // Agrupar por integrante e coletar TODAS as parcelas
       const mensalidadesMap = new Map();
@@ -234,7 +258,16 @@ export const usePendencias = (
         queryAfastados = queryAfastados.eq('registro_id', registroId);
       }
 
-      const { data: afastados } = await queryAfastados;
+      const { data: afastados, error: errorAfastados } = await queryAfastados;
+      
+      console.log('[usePendencias] Afastados query result:', {
+        count: afastados?.length || 0,
+        error: errorAfastados,
+        userRole,
+        regionalId,
+        divisaoId,
+        registroId
+      });
 
       afastados?.forEach(a => {
         const hoje = new Date();
@@ -272,6 +305,9 @@ export const usePendencias = (
       todasPendencias.sort((a, b) => 
         a.data_ref.localeCompare(b.data_ref)
       );
+
+      console.log('[usePendencias] Total de pendências encontradas:', todasPendencias.length);
+      console.log('[usePendencias] Salvando no cache:', cacheKey);
 
       setPendencias(todasPendencias);
       localStorage.setItem(cacheKey, JSON.stringify(todasPendencias));
