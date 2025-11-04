@@ -30,7 +30,7 @@ export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDial
   const startDate = new Date(event.start);
   const endDate = new Date(event.end);
   
-  const eventColor = event.isComandoEvent ? '#d97706' : getColorForType(event.type);
+  const eventColor = event.isComandoEvent ? '#fb923c' : getColorForType(event.type);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -50,7 +50,11 @@ export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDial
             {event.isComandoEvent && (
               <Badge 
                 variant="outline"
-                className="border-amber-600 text-amber-600 bg-amber-50"
+                style={{
+                  borderColor: '#fb923c',
+                  color: '#fb923c',
+                  backgroundColor: 'rgba(251, 146, 60, 0.1)',
+                }}
               >
                 <Crown className="h-3 w-3 mr-1" />
                 COMANDO
