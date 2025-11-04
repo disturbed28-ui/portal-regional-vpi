@@ -1,7 +1,10 @@
 import { CalendarEvent } from "@/lib/googleCalendar";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useTiposEvento } from "@/hooks/useTiposEvento";
+import { Crown } from "lucide-react";
 
 interface EventCardProps {
   event: CalendarEvent;
@@ -11,6 +14,16 @@ interface EventCardProps {
 export function EventCard({ event, onClick }: EventCardProps) {
   const startDate = new Date(event.start);
   const endDate = new Date(event.end);
+  const { getColorForType } = useTiposEvento();
+  
+  // Cor especial para eventos CMD (mostarda/dourado)
+  const borderColor = event.isComandoEvent 
+    ? '#d97706' 
+    : getColorForType(event.type);
+    
+  const bgColor = event.isComandoEvent
+    ? 'rgba(217, 119, 6, 0.05)'
+    : undefined;
   
   return (
     <div className="flex gap-4 cursor-pointer" onClick={onClick}>
@@ -23,12 +36,37 @@ export function EventCard({ event, onClick }: EventCardProps) {
         </div>
       </div>
       
-      <Card className="flex-1 p-4 hover:shadow-lg transition-all hover:scale-[1.02]">
-        <h3 className="font-bold text-foreground text-lg mb-2">
+      <Card 
+        className="flex-1 p-4 hover:shadow-lg transition-all hover:scale-[1.02] relative overflow-hidden"
+        style={{
+          borderLeft: `4px solid ${borderColor}`,
+          backgroundColor: bgColor,
+        }}
+      >
+        {event.isComandoEvent && (
+          <div className="absolute top-2 right-2">
+            <Crown className="h-5 w-5 text-amber-600" />
+          </div>
+        )}
+        
+        <div className="flex items-start gap-2 mb-2">
+          <Badge 
+            variant="outline" 
+            style={{ 
+              borderColor,
+              color: borderColor,
+              backgroundColor: `${borderColor}15`,
+            }}
+          >
+            {event.type}
+          </Badge>
+        </div>
+        
+        <h3 className="font-bold text-foreground text-base mb-2">
           {event.title}
         </h3>
         <p className="text-sm text-muted-foreground">
-          {format(startDate, "hh:mm a", { locale: ptBR })} - {format(endDate, "hh:mm a", { locale: ptBR })}
+          {format(startDate, "HH:mm", { locale: ptBR })} - {format(endDate, "HH:mm", { locale: ptBR })}
         </p>
       </Card>
     </div>

@@ -8,10 +8,12 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, MapPin, Tag, ExternalLink, Users } from "lucide-react";
+import { Calendar, Clock, MapPin, Tag, ExternalLink, Users, Crown } from "lucide-react";
 import { ListaPresenca } from "./ListaPresenca";
+import { useTiposEvento } from "@/hooks/useTiposEvento";
 
 interface EventDetailDialogProps {
   event: CalendarEvent | null;
@@ -21,16 +23,40 @@ interface EventDetailDialogProps {
 
 export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDialogProps) {
   const [listaPresencaOpen, setListaPresencaOpen] = useState(false);
+  const { getColorForType } = useTiposEvento();
   
   if (!event) return null;
 
   const startDate = new Date(event.start);
   const endDate = new Date(event.end);
+  
+  const eventColor = event.isComandoEvent ? '#d97706' : getColorForType(event.type);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
+          <div className="flex items-start gap-3 mb-2">
+            <Badge 
+              variant="outline"
+              style={{ 
+                borderColor: eventColor,
+                color: eventColor,
+                backgroundColor: `${eventColor}15`,
+              }}
+            >
+              {event.type}
+            </Badge>
+            {event.isComandoEvent && (
+              <Badge 
+                variant="outline"
+                className="border-amber-600 text-amber-600 bg-amber-50"
+              >
+                <Crown className="h-3 w-3 mr-1" />
+                COMANDO
+              </Badge>
+            )}
+          </div>
           <DialogTitle className="text-2xl">{event.title}</DialogTitle>
           <DialogDescription className="sr-only">
             Detalhes do evento
