@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
       integrante_id: z.string().uuid('ID de integrante inválido').optional(),
       profile_id: z.string().optional().nullable(),
       divisao_id: z.string().uuid('ID de divisão inválido').optional(),
-      justificativa_ausencia: z.enum(['saude', 'trabalho', 'familia']).optional()
+      justificativa_ausencia: z.enum(['saude', 'trabalho', 'familia', 'nao_justificado']).optional()
     });
 
     const { action, user_id, evento_agenda_id, integrante_id, profile_id, divisao_id, justificativa_ausencia } = requestSchema.parse(await req.json());

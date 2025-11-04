@@ -478,6 +478,7 @@ export type Database = {
           evento_agenda_id: string
           id: string
           integrante_id: string
+          justificativa_ausencia: string | null
           profile_id: string | null
           status: string
         }
@@ -487,6 +488,7 @@ export type Database = {
           evento_agenda_id: string
           id?: string
           integrante_id: string
+          justificativa_ausencia?: string | null
           profile_id?: string | null
           status?: string
         }
@@ -496,6 +498,7 @@ export type Database = {
           evento_agenda_id?: string
           id?: string
           integrante_id?: string
+          justificativa_ausencia?: string | null
           profile_id?: string | null
           status?: string
         }

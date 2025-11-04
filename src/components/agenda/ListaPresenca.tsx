@@ -426,6 +426,8 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                             return <Briefcase className="h-4 w-4 text-blue-500" />;
                           case 'familia':
                             return <Users className="h-4 w-4 text-green-500" />;
+                          case 'nao_justificado':
+                            return <X className="h-4 w-4 text-gray-500" />;
                           default:
                             return null;
                         }
@@ -440,6 +442,8 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                             return 'Trabalho';
                           case 'familia':
                             return 'Família';
+                          case 'nao_justificado':
+                            return 'Não Justificado';
                           default:
                             return '-';
                         }
@@ -535,6 +539,17 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
               <div className="text-left">
                 <div className="font-semibold">Família</div>
                 <div className="text-xs text-muted-foreground">Questões familiares</div>
+              </div>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-auto py-4 justify-start gap-3"
+              onClick={() => handleConfirmarAusencia('nao_justificado')}
+            >
+              <X className="h-5 w-5 text-gray-500" />
+              <div className="text-left">
+                <div className="font-semibold">Não Justificado</div>
+                <div className="text-xs text-muted-foreground">Sem justificativa</div>
               </div>
             </Button>
           </div>
