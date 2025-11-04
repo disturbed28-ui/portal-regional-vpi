@@ -16,10 +16,11 @@ Deno.serve(async (req) => {
       evento_agenda_id: z.string().uuid('ID de evento inválido').optional(),
       integrante_id: z.string().uuid('ID de integrante inválido').optional(),
       profile_id: z.string().optional().nullable(),
-      divisao_id: z.string().uuid('ID de divisão inválido').optional()
+      divisao_id: z.string().uuid('ID de divisão inválido').optional(),
+      justificativa_ausencia: z.enum(['saude', 'trabalho', 'familia']).optional()
     });
 
-    const { action, user_id, evento_agenda_id, integrante_id, profile_id, divisao_id } = requestSchema.parse(await req.json());
+    const { action, user_id, evento_agenda_id, integrante_id, profile_id, divisao_id, justificativa_ausencia } = requestSchema.parse(await req.json());
 
     // Criar cliente Supabase com service role (bypassa RLS)
     const supabaseAdmin = createClient(
@@ -221,15 +222,21 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'remove') {
-      console.log('[manage-presenca] Marcando como ausente...');
+      console.log('[manage-presenca] Marcando como ausente...', { justificativa_ausencia });
+      
+      const updateData: any = { 
+        status: 'ausente',
+        confirmado_em: new Date().toISOString(),
+        confirmado_por: user_id,
+      };
+      
+      if (justificativa_ausencia) {
+        updateData.justificativa_ausencia = justificativa_ausencia;
+      }
       
       const { data, error } = await supabaseAdmin
         .from('presencas')
-        .update({ 
-          status: 'ausente',
-          confirmado_em: new Date().toISOString(),
-          confirmado_por: user_id,
-        })
+        .update(updateData)
         .eq('evento_agenda_id', evento_agenda_id)
         .eq('integrante_id', integrante_id)
         .select()

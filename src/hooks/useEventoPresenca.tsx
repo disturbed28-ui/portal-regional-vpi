@@ -18,6 +18,7 @@ interface Presenca {
   integrante_id: string;
   status: string;
   confirmado_em: string;
+  justificativa_ausencia?: string | null;
   integrante: {
     id: string;
     nome_colete: string;
@@ -74,6 +75,7 @@ export const useEventoPresenca = (eventoId: string | null) => {
         integrante_id,
         status,
         confirmado_em,
+        justificativa_ausencia,
         integrante:integrantes_portal (
           id,
           nome_colete,
@@ -242,13 +244,14 @@ export const useEventoPresenca = (eventoId: string | null) => {
     fetchPresencas(evento.id);
   };
 
-  const removerPresenca = async (integranteId: string) => {
+  const removerPresenca = async (integranteId: string, justificativa?: string) => {
     if (!evento || !user) return;
     
     const userId = user.id;
     console.log('[removerPresenca] Marcando como ausente via edge function...', {
       integrante_id: integranteId,
-      user_id: userId
+      user_id: userId,
+      justificativa
     });
 
     const { data, error } = await supabase.functions.invoke('manage-presenca', {
@@ -257,6 +260,7 @@ export const useEventoPresenca = (eventoId: string | null) => {
         user_id: userId,
         evento_agenda_id: evento.id,
         integrante_id: integranteId,
+        justificativa_ausencia: justificativa,
       }
     });
 

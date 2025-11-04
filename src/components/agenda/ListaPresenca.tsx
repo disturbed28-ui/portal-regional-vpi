@@ -2,7 +2,14 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, MapPin, Camera, X, UserCheck } from "lucide-react";
+import { Calendar, Clock, MapPin, Camera, X, UserCheck, Heart, Briefcase, Users } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarEvent } from "@/lib/googleCalendar";
@@ -31,6 +38,10 @@ interface IntegranteDivisao {
 
 export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps) {
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [justificativaDialog, setJustificativaDialog] = useState<{ open: boolean; integranteId: string | null }>({
+    open: false,
+    integranteId: null,
+  });
   const { canManage, loading: loadingPermissions } = useCanManagePresenca();
   const { evento, presencas, loading, criarEvento, registrarPresenca, removerPresenca, refetch } = useEventoPresenca(event?.id || null);
   const { toast } = useToast();
@@ -138,8 +149,15 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     await registrarPresenca(integrante.id, integrante.profile_id || '');
   };
 
-  const handleMarcarAusente = async (integranteId: string) => {
-    await removerPresenca(integranteId);
+  const handleMarcarAusente = (integranteId: string) => {
+    setJustificativaDialog({ open: true, integranteId });
+  };
+
+  const handleConfirmarAusencia = async (justificativa: string) => {
+    if (!justificativaDialog.integranteId) return;
+    
+    await removerPresenca(justificativaDialog.integranteId, justificativa);
+    setJustificativaDialog({ open: false, integranteId: null });
   };
 
   if (!event) return null;
@@ -249,6 +267,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     .map(p => ({
       ...p.integrante,
       presencaId: p.id,
+      justificativa_ausencia: p.justificativa_ausencia,
     }))
     .sort(ordenarPorHierarquia);
 
@@ -392,29 +411,66 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                       <TableHead className="text-gray-900 dark:text-gray-100">Nome</TableHead>
                       <TableHead className="text-gray-900 dark:text-gray-100">Cargo</TableHead>
                       <TableHead className="text-gray-900 dark:text-gray-100">Grau</TableHead>
+                      <TableHead className="text-gray-900 dark:text-gray-100">Justificativa</TableHead>
                       {canManage && <TableHead className="w-[120px] text-gray-900 dark:text-gray-100">Ações</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {ausentes.map((integrante) => (
-                      <TableRow key={integrante.id} className="opacity-60 hover:opacity-100 transition-opacity">
-                        <TableCell className="font-medium">{integrante.nome_colete}</TableCell>
-                        <TableCell>{integrante.cargo_nome || '-'}</TableCell>
-                        <TableCell>{integrante.grau || '-'}</TableCell>
-                        {canManage && (
+                    {ausentes.map((integrante) => {
+                      const getJustificativaIcon = (justificativa: string | null | undefined) => {
+                        if (!justificativa) return null;
+                        switch (justificativa) {
+                          case 'saude':
+                            return <Heart className="h-4 w-4 text-red-500" />;
+                          case 'trabalho':
+                            return <Briefcase className="h-4 w-4 text-blue-500" />;
+                          case 'familia':
+                            return <Users className="h-4 w-4 text-green-500" />;
+                          default:
+                            return null;
+                        }
+                      };
+
+                      const getJustificativaLabel = (justificativa: string | null | undefined) => {
+                        if (!justificativa) return '-';
+                        switch (justificativa) {
+                          case 'saude':
+                            return 'Saúde';
+                          case 'trabalho':
+                            return 'Trabalho';
+                          case 'familia':
+                            return 'Família';
+                          default:
+                            return '-';
+                        }
+                      };
+
+                      return (
+                        <TableRow key={integrante.id} className="opacity-60 hover:opacity-100 transition-opacity">
+                          <TableCell className="font-medium">{integrante.nome_colete}</TableCell>
+                          <TableCell>{integrante.cargo_nome || '-'}</TableCell>
+                          <TableCell>{integrante.grau || '-'}</TableCell>
                           <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleMarcarPresente(integrante)}
-                              title="Marcar como presente"
-                            >
-                              <UserCheck className="h-4 w-4 text-green-600" />
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              {getJustificativaIcon(integrante.justificativa_ausencia)}
+                              <span className="text-sm">{getJustificativaLabel(integrante.justificativa_ausencia)}</span>
+                            </div>
                           </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
+                          {canManage && (
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleMarcarPresente(integrante)}
+                                title="Marcar como presente"
+                              >
+                                <UserCheck className="h-4 w-4 text-green-600" />
+                              </Button>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -434,6 +490,56 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
         onOpenChange={setScannerOpen}
         onScan={handleScan}
       />
+
+      {/* Dialog de Justificativa */}
+      <AlertDialog 
+        open={justificativaDialog.open} 
+        onOpenChange={(open) => setJustificativaDialog({ open, integranteId: null })}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Selecione a Justificativa</AlertDialogTitle>
+            <AlertDialogDescription>
+              Escolha o motivo da ausência
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="grid gap-3 mt-4">
+            <Button
+              variant="outline"
+              className="h-auto py-4 justify-start gap-3"
+              onClick={() => handleConfirmarAusencia('saude')}
+            >
+              <Heart className="h-5 w-5 text-red-500" />
+              <div className="text-left">
+                <div className="font-semibold">Saúde</div>
+                <div className="text-xs text-muted-foreground">Motivos médicos ou de saúde</div>
+              </div>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-auto py-4 justify-start gap-3"
+              onClick={() => handleConfirmarAusencia('trabalho')}
+            >
+              <Briefcase className="h-5 w-5 text-blue-500" />
+              <div className="text-left">
+                <div className="font-semibold">Trabalho</div>
+                <div className="text-xs text-muted-foreground">Compromissos profissionais</div>
+              </div>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-auto py-4 justify-start gap-3"
+              onClick={() => handleConfirmarAusencia('familia')}
+            >
+              <Users className="h-5 w-5 text-green-500" />
+              <div className="text-left">
+                <div className="font-semibold">Família</div>
+                <div className="text-xs text-muted-foreground">Questões familiares</div>
+              </div>
+            </Button>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
