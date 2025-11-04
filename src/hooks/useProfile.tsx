@@ -62,6 +62,10 @@ export const useProfile = (userId: string | undefined) => {
         .select(`
           *,
           comando:comandos(nome),
+          regional:regionais(nome),
+          divisao:divisoes(nome),
+          cargo:cargos(nome),
+          funcao:funcoes(nome),
           integrante:integrantes_portal!integrantes_portal_profile_id_fkey(
             vinculado,
             cargo_nome,
@@ -106,9 +110,33 @@ export const useProfile = (userId: string | undefined) => {
           ? data.comando[0]
           : data.comando;
         
+        // Processar regional (pode ser array ou objeto)
+        const regionalData = Array.isArray(data.regional)
+          ? data.regional[0]
+          : data.regional;
+        
+        // Processar divisao (pode ser array ou objeto)
+        const divisaoData = Array.isArray(data.divisao)
+          ? data.divisao[0]
+          : data.divisao;
+        
+        // Processar cargo (pode ser array ou objeto)
+        const cargoData = Array.isArray(data.cargo)
+          ? data.cargo[0]
+          : data.cargo;
+        
+        // Processar funcao (pode ser array ou objeto)
+        const funcaoData = Array.isArray(data.funcao)
+          ? data.funcao[0]
+          : data.funcao;
+        
         setProfile({
           ...data,
           comando: comandoData?.nome || null,
+          regional: regionalData?.nome || null,
+          divisao: divisaoData?.nome || null,
+          cargo: cargoData?.nome || null,
+          funcao: funcaoData?.nome || null,
           integrante: integranteData || null
         } as Profile);
       } else {
@@ -141,6 +169,10 @@ export const useProfile = (userId: string | undefined) => {
               .select(`
                 *,
                 comando:comandos(nome),
+                regional:regionais(nome),
+                divisao:divisoes(nome),
+                cargo:cargos(nome),
+                funcao:funcoes(nome),
                 integrante:integrantes_portal!integrantes_portal_profile_id_fkey(
                   vinculado,
                   cargo_nome,
@@ -173,9 +205,29 @@ export const useProfile = (userId: string | undefined) => {
                 ? data.comando[0]
                 : data.comando;
               
+              const regionalData = Array.isArray(data.regional)
+                ? data.regional[0]
+                : data.regional;
+              
+              const divisaoData = Array.isArray(data.divisao)
+                ? data.divisao[0]
+                : data.divisao;
+              
+              const cargoData = Array.isArray(data.cargo)
+                ? data.cargo[0]
+                : data.cargo;
+              
+              const funcaoData = Array.isArray(data.funcao)
+                ? data.funcao[0]
+                : data.funcao;
+              
               setProfile({
                 ...data,
                 comando: comandoData?.nome || null,
+                regional: regionalData?.nome || null,
+                divisao: divisaoData?.nome || null,
+                cargo: cargoData?.nome || null,
+                funcao: funcaoData?.nome || null,
                 integrante: integranteData || null
               } as Profile);
             }
@@ -203,6 +255,10 @@ export const useProfile = (userId: string | undefined) => {
             .select(`
               *,
               comando:comandos(nome),
+              regional:regionais(nome),
+              divisao:divisoes(nome),
+              cargo:cargos(nome),
+              funcao:funcoes(nome),
               integrante:integrantes_portal!integrantes_portal_profile_id_fkey(
                 vinculado,
                 cargo_nome,
@@ -235,9 +291,29 @@ export const useProfile = (userId: string | undefined) => {
               ? data.comando[0]
               : data.comando;
             
+            const regionalData = Array.isArray(data.regional)
+              ? data.regional[0]
+              : data.regional;
+            
+            const divisaoData = Array.isArray(data.divisao)
+              ? data.divisao[0]
+              : data.divisao;
+            
+            const cargoData = Array.isArray(data.cargo)
+              ? data.cargo[0]
+              : data.cargo;
+            
+            const funcaoData = Array.isArray(data.funcao)
+              ? data.funcao[0]
+              : data.funcao;
+            
             setProfile({
               ...data,
               comando: comandoData?.nome || null,
+              regional: regionalData?.nome || null,
+              divisao: divisaoData?.nome || null,
+              cargo: cargoData?.nome || null,
+              funcao: funcaoData?.nome || null,
               integrante: integranteData || null
             } as Profile);
           }
