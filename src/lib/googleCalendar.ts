@@ -176,34 +176,53 @@ function parseEventComponents(originalTitle: string): ParsedEvent {
     console.log('[parseEventComponents] Subtipo detectado:', subtipo);
   }
   
-  // Detectar divisão
+  // Detectar divisão e informações extras
   let divisao = 'Sem Divisao';
   let informacoesExtras: string | undefined;
   
-  // Se for CMD, extrair informações do CMD
+  // Se for CMD, usar título original como informações extras
   if (isCMD) {
-    // Procurar padrões como "CMD V e XX", "CMD Mundial", etc.
-    const cmdMatch = originalTitle.match(/CMD[\s\-]*([\w\s\+]+?)(?:\s*[-\(]|$)/i);
-    if (cmdMatch) {
-      divisao = 'CMD ' + cmdMatch[1].trim();
-    } else {
-      divisao = 'CMD';
+    divisao = 'CMD';
+    
+    // Usar o título completo como informações extras, removendo apenas tipo de evento
+    let tituloParaExtras = originalTitle;
+    
+    // Remover tipo de evento do início
+    if (lower.includes('pub')) {
+      tituloParaExtras = originalTitle.replace(/pub\s*[-\s]*/gi, '').trim();
+    }
+    if (lower.includes('reuniao')) {
+      tituloParaExtras = originalTitle.replace(/reuniao\s*[-\s]*/gi, '').trim();
+    }
+    if (lower.includes('acao social')) {
+      tituloParaExtras = originalTitle.replace(/acao\s+social\s*[-\s]*/gi, '').trim();
+    }
+    
+    // Remover "CMD" e parênteses do início/fim
+    tituloParaExtras = tituloParaExtras
+      .replace(/cmd\s*[-\s]*/gi, '')
+      .replace(/^\(+/, '')
+      .replace(/\)+$/, '')
+      .trim();
+    
+    if (tituloParaExtras.length > 0) {
+      informacoesExtras = tituloParaExtras;
     }
   } else {
     // Detectar divisão normal
     divisao = detectDivisionFromTitle(normalized);
+    
+    // Extrair informações extras (texto após a divisão)
+    const divIndex = originalTitle.toLowerCase().indexOf(divisao.toLowerCase());
+    if (divIndex > -1 && divIndex + divisao.length < originalTitle.length) {
+      const extras = originalTitle.substring(divIndex + divisao.length).trim();
+      if (extras && extras.length > 0 && !extras.startsWith('-')) {
+        informacoesExtras = extras.replace(/^[-\s]+/, '').trim();
+      }
+    }
   }
   
   console.log('[parseEventComponents] Divisão detectada:', divisao);
-  
-  // Extrair informações extras (texto após a divisão)
-  const divIndex = originalTitle.toLowerCase().indexOf(divisao.toLowerCase());
-  if (divIndex > -1 && divIndex + divisao.length < originalTitle.length) {
-    const extras = originalTitle.substring(divIndex + divisao.length).trim();
-    if (extras && extras.length > 0 && !extras.startsWith('-')) {
-      informacoesExtras = extras.replace(/^[-\s]+/, '').trim();
-    }
-  }
   
   if (informacoesExtras) {
     console.log('[parseEventComponents] Informações extras:', informacoesExtras);
