@@ -152,13 +152,13 @@ function parseEventComponents(originalTitle: string): ParsedEvent {
       subtipo = 'Arrecadacao';
     }
   }
-  // Reunião
-  else if (lower.includes('reuniao')) {
-    tipoEvento = 'Reuniao';
-  }
-  // Bate e Volta
+  // Bate e Volta (antes de reunião para não confundir com bate-papo)
   else if (lower.includes('bate e volta')) {
     tipoEvento = 'Bate e Volta';
+  }
+  // Reunião (incluindo bate-papo)
+  else if (lower.includes('reuniao') || lower.includes('bate papo') || lower.includes('bate-papo')) {
+    tipoEvento = 'Reuniao';
   }
   // Bonde Insano
   else if (lower.includes('bonde insano') || lower.includes('bonde')) {
