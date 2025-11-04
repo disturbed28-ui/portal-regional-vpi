@@ -88,20 +88,20 @@ async function matchDivisaoToId(divisaoText: string): Promise<string | null> {
   
   // 3. Match por palavras-chave específicas
   const keywords: Record<string, string[]> = {
-    'CACAPAVA': ['CACAPAVA', 'CAÇAPAVA'],
-    'JACAREI NORTE': ['JAC NORTE', 'JACAREI NORTE', 'JAC. NORTE', 'JACNORTE'],
-    'JACAREI OESTE': ['JAC OESTE', 'JACAREI OESTE', 'JAC. OESTE', 'JACOESTE'],
-    'JACAREI LESTE': ['JAC LESTE', 'JACAREI LESTE', 'JAC. LESTE', 'JACLESTE'],
-    'JACAREI SUL': ['JAC SUL', 'JACAREI SUL', 'JAC. SUL', 'JACSUL'],
-    'JACAREI CENTRO': ['JAC CENTRO', 'JACAREI CENTRO', 'JAC. CENTRO'],
-    'SAO JOSE DOS CAMPOS CENTRO': ['SJC CENTRO', 'SJCCENTRO', 'CENTRO SJC'],
-    'SAO JOSE DOS CAMPOS LESTE': ['SJC LESTE', 'SJCLESTE', 'LESTE SJC', 'DIV LESTE'],
-    'SAO JOSE DOS CAMPOS NORTE': ['SJC NORTE', 'SJCNORTE', 'NORTE SJC'],
-    'SAO JOSE DOS CAMPOS SUL': ['SJC SUL', 'SJCSUL', 'SUL SJC'],
-    'SAO JOSE DOS CAMPOS EXTREMO SUL': ['EXT SUL', 'EXTSUL', 'EXT. SUL SJC', 'EXTREMO SUL'],
-    'SAO JOSE DOS CAMPOS EXTREMO NORTE': ['EXT NORTE', 'EXTNORTE', 'EXT. NORTE SJC', 'EXTREMO NORTE'],
-    'SAO JOSE DOS CAMPOS EXTREMO LESTE': ['EXT LESTE', 'EXTLESTE', 'EXT. LESTE SJC', 'EXTREMO LESTE'],
-    'SAO JOSE DOS CAMPOS OESTE': ['SJC OESTE', 'SJCOESTE', 'OESTE SJC', 'OESTE SAO JOSE']
+    'CACAPAVA': ['CACAPAVA', 'CAÇAPAVA', 'CACAPAVA'],
+    'JACAREI NORTE': ['JAC NORTE', 'JACAREI NORTE', 'JAC. NORTE', 'JACNORTE', 'NORTE JACAREI'],
+    'JACAREI OESTE': ['JAC OESTE', 'JACAREI OESTE', 'JAC. OESTE', 'JACOESTE', 'OESTE JACAREI'],
+    'JACAREI LESTE': ['JAC LESTE', 'JACAREI LESTE', 'JAC. LESTE', 'JACLESTE', 'LESTE JACAREI'],
+    'JACAREI SUL': ['JAC SUL', 'JACAREI SUL', 'JAC. SUL', 'JACSUL', 'SUL JACAREI'],
+    'JACAREI CENTRO': ['JAC CENTRO', 'JACAREI CENTRO', 'JAC. CENTRO', 'CENTRO JACAREI', 'CENTRO JAC'],
+    'SAO JOSE DOS CAMPOS CENTRO': ['SJC CENTRO', 'SJCCENTRO', 'CENTRO SJC', 'SAO JOSE CENTRO'],
+    'SAO JOSE DOS CAMPOS LESTE': ['SJC LESTE', 'SJCLESTE', 'LESTE SJC', 'DIV LESTE', 'SAO JOSE LESTE'],
+    'SAO JOSE DOS CAMPOS NORTE': ['SJC NORTE', 'SJCNORTE', 'NORTE SJC', 'SAO JOSE NORTE'],
+    'SAO JOSE DOS CAMPOS SUL': ['SJC SUL', 'SJCSUL', 'SUL SJC', 'SAO JOSE SUL'],
+    'SAO JOSE DOS CAMPOS EXTREMO SUL': ['EXT SUL', 'EXTSUL', 'EXT. SUL SJC', 'EXTREMO SUL', 'EXT. SUL'],
+    'SAO JOSE DOS CAMPOS EXTREMO NORTE': ['EXT NORTE', 'EXTNORTE', 'EXT. NORTE SJC', 'EXTREMO NORTE', 'EXT. NORTE'],
+    'SAO JOSE DOS CAMPOS EXTREMO LESTE': ['EXT LESTE', 'EXTLESTE', 'EXT. LESTE SJC', 'EXTREMO LESTE', 'EXT. LESTE'],
+    'SAO JOSE DOS CAMPOS OESTE': ['SJC OESTE', 'SJCOESTE', 'OESTE SJC', 'OESTE SAO JOSE', 'SAO JOSE OESTE']
   };
   
   for (const div of divisoes) {
@@ -212,32 +212,32 @@ function detectDivisionFromTitle(title: string): string {
   const lower = title.toLowerCase();
   
   // Extremos (prioridade)
-  if (lower.includes('ext sul') || lower.includes('ext.sul') || lower.includes('extremo sul')) {
+  if (lower.includes('ext sul') || lower.includes('ext.sul') || lower.includes('ext. sul') || lower.includes('extremo sul')) {
     return 'Div SJC Ext Sul - SP';
   }
-  if (lower.includes('ext norte') || lower.includes('ext.norte') || lower.includes('extremo norte')) {
+  if (lower.includes('ext norte') || lower.includes('ext.norte') || lower.includes('ext. norte') || lower.includes('extremo norte')) {
     return 'Div SJC Ext Norte - SP';
   }
-  if (lower.includes('ext leste') || lower.includes('ext.leste') || lower.includes('extremo leste')) {
+  if (lower.includes('ext leste') || lower.includes('ext.leste') || lower.includes('ext. leste') || lower.includes('extremo leste')) {
     return 'Div SJC Ext Leste - SP';
   }
   
   // SJC
-  if (lower.includes('sjc centro') || lower.includes('centro sjc')) return 'Div SJC Centro - SP';
-  if (lower.includes('sjc leste') || lower.includes('leste sjc') || lower.includes('div leste')) return 'Div SJC Leste - SP';
-  if (lower.includes('sjc norte') || lower.includes('norte sjc')) return 'Div SJC Norte - SP';
-  if (lower.includes('sjc sul') || lower.includes('sul sjc')) return 'Div SJC Sul - SP';
-  if (lower.includes('sjc oeste') || lower.includes('oeste sjc') || lower.includes('oeste sao jose')) return 'Div SJC Oeste - SP';
+  if (lower.includes('sjc centro') || lower.includes('centro sjc') || lower.includes('sao jose centro')) return 'Div SJC Centro - SP';
+  if (lower.includes('sjc leste') || lower.includes('leste sjc') || lower.includes('div leste') || lower.includes('sao jose leste')) return 'Div SJC Leste - SP';
+  if (lower.includes('sjc norte') || lower.includes('norte sjc') || lower.includes('sao jose norte')) return 'Div SJC Norte - SP';
+  if (lower.includes('sjc sul') || lower.includes('sul sjc') || lower.includes('sao jose sul')) return 'Div SJC Sul - SP';
+  if (lower.includes('sjc oeste') || lower.includes('oeste sjc') || lower.includes('oeste sao jose') || lower.includes('sao jose oeste')) return 'Div SJC Oeste - SP';
   
   // Caçapava
   if (lower.includes('cacapava') || lower.includes('caçapava')) return 'Div Cacapava - SP';
   
-  // Jacareí
-  if (lower.includes('jac norte') || lower.includes('jacarei norte')) return 'Div Jacarei Norte - SP';
-  if (lower.includes('jac oeste') || lower.includes('jacarei oeste')) return 'Div Jacarei Oeste - SP';
-  if (lower.includes('jac leste') || lower.includes('jacarei leste')) return 'Div Jacarei Leste - SP';
-  if (lower.includes('jac sul') || lower.includes('jacarei sul')) return 'Div Jacarei Sul - SP';
-  if (lower.includes('jac centro') || lower.includes('jacarei centro')) return 'Div Jacarei Centro - SP';
+  // Jacareí (mais padrões)
+  if (lower.includes('jac norte') || lower.includes('jac. norte') || lower.includes('jacarei norte') || lower.includes('norte jacarei')) return 'Div Jacarei Norte - SP';
+  if (lower.includes('jac oeste') || lower.includes('jac. oeste') || lower.includes('jacarei oeste') || lower.includes('oeste jacarei')) return 'Div Jacarei Oeste - SP';
+  if (lower.includes('jac leste') || lower.includes('jac. leste') || lower.includes('jacarei leste') || lower.includes('leste jacarei')) return 'Div Jacarei Leste - SP';
+  if (lower.includes('jac sul') || lower.includes('jac. sul') || lower.includes('jacarei sul') || lower.includes('sul jacarei')) return 'Div Jacarei Sul - SP';
+  if (lower.includes('jac centro') || lower.includes('jac. centro') || lower.includes('jacarei centro') || lower.includes('centro jacarei')) return 'Div Jacarei Centro - SP';
   
   return 'Sem Divisao';
 }
