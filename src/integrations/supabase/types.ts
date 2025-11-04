@@ -323,11 +323,15 @@ export type Database = {
           combate_insano: boolean | null
           created_at: string | null
           data_entrada: string | null
+          data_inativacao: string | null
           data_vinculacao: string | null
           divisao_texto: string
           grau: string | null
           id: string
           lobo: boolean | null
+          motivo_inativacao:
+            | Database["public"]["Enums"]["motivo_inativacao"]
+            | null
           nome_colete: string
           observacoes: string | null
           profile_id: string | null
@@ -352,11 +356,15 @@ export type Database = {
           combate_insano?: boolean | null
           created_at?: string | null
           data_entrada?: string | null
+          data_inativacao?: string | null
           data_vinculacao?: string | null
           divisao_texto: string
           grau?: string | null
           id?: string
           lobo?: boolean | null
+          motivo_inativacao?:
+            | Database["public"]["Enums"]["motivo_inativacao"]
+            | null
           nome_colete: string
           observacoes?: string | null
           profile_id?: string | null
@@ -381,11 +389,15 @@ export type Database = {
           combate_insano?: boolean | null
           created_at?: string | null
           data_entrada?: string | null
+          data_inativacao?: string | null
           data_vinculacao?: string | null
           divisao_texto?: string
           grau?: string | null
           id?: string
           lobo?: boolean | null
+          motivo_inativacao?:
+            | Database["public"]["Enums"]["motivo_inativacao"]
+            | null
           nome_colete?: string
           observacoes?: string | null
           profile_id?: string | null
@@ -835,6 +847,14 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user" | "diretor_regional"
+      motivo_inativacao:
+        | "transferido"
+        | "falecido"
+        | "desligado"
+        | "expulso"
+        | "afastado"
+        | "promovido"
+        | "outro"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -963,6 +983,15 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user", "diretor_regional"],
+      motivo_inativacao: [
+        "transferido",
+        "falecido",
+        "desligado",
+        "expulso",
+        "afastado",
+        "promovido",
+        "outro",
+      ],
     },
   },
 } as const

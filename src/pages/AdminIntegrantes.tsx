@@ -13,7 +13,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { parseExcelFile, processDelta, parseCargoGrau } from "@/lib/excelParser";
 import { parseMensalidadesExcel, formatRef, ParseResult } from "@/lib/mensalidadesParser";
-import { Upload, ArrowLeft, Users, UserCheck, UserX, AlertCircle, FileSpreadsheet, History, Info, RefreshCw } from "lucide-react";
+import { Upload, ArrowLeft, Users, UserCheck, UserX, AlertCircle, FileSpreadsheet, History, Info, RefreshCw, XCircle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { HistoricoDevedores } from "@/components/admin/HistoricoDevedores";
 import { useMensalidades } from "@/hooks/useMensalidades";
 import { format } from "date-fns";
@@ -41,6 +43,15 @@ const AdminIntegrantes = () => {
     total_atualizados: number;
   } | null>(null);
   const [showAtualizadosDialog, setShowAtualizadosDialog] = useState(false);
+  const [showRemovidosDialog, setShowRemovidosDialog] = useState(false);
+  const [removidosConfirmados, setRemovidosConfirmados] = useState<Array<{
+    integrante_id: string;
+    registro_id: number;
+    nome_colete: string;
+    divisao_texto: string;
+    motivo_inativacao: string;
+    observacao_inativacao: string;
+  }>>([]);
   
   const { ultimaCargaInfo, devedoresAtivos } = useMensalidades();
 
@@ -62,7 +73,21 @@ const AdminIntegrantes = () => {
         delta,
         excelData,
       });
-      setShowUploadDialog(true);
+      
+      // Se há removidos, abrir dialog de confirmação primeiro
+      if (delta.removidos.length > 0) {
+        setRemovidosConfirmados(delta.removidos.map((r: any) => ({
+          integrante_id: r.id,
+          registro_id: r.registro_id,
+          nome_colete: r.nome_colete,
+          divisao_texto: r.divisao_texto,
+          motivo_inativacao: '',
+          observacao_inativacao: ''
+        })));
+        setShowRemovidosDialog(true);
+      } else {
+        setShowUploadDialog(true);
+      }
     } catch (error) {
       toast({
         title: "Erro ao processar arquivo",
@@ -202,12 +227,24 @@ const AdminIntegrantes = () => {
         formato_data_entrada_atualizados: atualizadosData.filter((item: any) => item.data_entrada).slice(0, 3).map((item: any) => ({ id: item.registro_id, data: item.data_entrada }))
       });
 
+      // Preparar removidos confirmados
+      const removidosData = removidosConfirmados
+        .filter(r => r.motivo_inativacao && r.motivo_inativacao.trim() !== '')
+        .map(r => ({
+          integrante_id: r.integrante_id,
+          registro_id: r.registro_id,
+          nome_colete: r.nome_colete,
+          motivo_inativacao: r.motivo_inativacao,
+          observacao_inativacao: r.observacao_inativacao || ''
+        }));
+
       // Chamar edge function
       const { data, error } = await supabase.functions.invoke('admin-import-integrantes', {
         body: {
           admin_user_id: user.id,
           novos: novosData,
           atualizados: atualizadosData,
+          removidos: removidosData.length > 0 ? removidosData : undefined,
         },
       });
 
@@ -235,6 +272,7 @@ const AdminIntegrantes = () => {
 
       setShowUploadDialog(false);
       setUploadPreview(null);
+      setRemovidosConfirmados([]);
       refetch();
     } catch (error) {
       console.error('Error applying changes:', error);
@@ -737,6 +775,106 @@ const AdminIntegrantes = () => {
           />
         )}
 
+        {/* Dialog de Confirmação de Remoções */}
+        <Dialog open={showRemovidosDialog} onOpenChange={setShowRemovidosDialog}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <XCircle className="h-5 w-5 text-destructive" />
+                Confirmar Inativações Detectadas
+              </DialogTitle>
+              <DialogDescription>
+                Os seguintes integrantes não estão presentes no arquivo Excel. Selecione o motivo da saída para cada um antes de prosseguir.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 max-h-[50vh] overflow-y-auto">
+              {removidosConfirmados.map((removido, index) => (
+                <Card key={removido.integrante_id} className="p-4 border-orange-200">
+                  <div className="space-y-3">
+                    <div>
+                      <p className="font-bold">{removido.nome_colete}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Registro: {removido.registro_id} • {removido.divisao_texto}
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Motivo da Inativação *</label>
+                      <Select
+                        value={removido.motivo_inativacao}
+                        onValueChange={(value) => {
+                          const updated = [...removidosConfirmados];
+                          updated[index].motivo_inativacao = value;
+                          setRemovidosConfirmados(updated);
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o motivo..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="transferido">Transferido</SelectItem>
+                          <SelectItem value="falecido">Falecido</SelectItem>
+                          <SelectItem value="desligado">Desligado</SelectItem>
+                          <SelectItem value="expulso">Expulso</SelectItem>
+                          <SelectItem value="afastado">Afastado</SelectItem>
+                          <SelectItem value="promovido">Promovido</SelectItem>
+                          <SelectItem value="outro">Outro</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Observação (opcional)</label>
+                      <Textarea
+                        placeholder="Adicione detalhes sobre a inativação..."
+                        value={removido.observacao_inativacao}
+                        onChange={(e) => {
+                          const updated = [...removidosConfirmados];
+                          updated[index].observacao_inativacao = e.target.value;
+                          setRemovidosConfirmados(updated);
+                        }}
+                        rows={2}
+                      />
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowRemovidosDialog(false);
+                  setRemovidosConfirmados([]);
+                  setUploadPreview(null);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={() => {
+                  const todosPreenchidos = removidosConfirmados.every(r => r.motivo_inativacao && r.motivo_inativacao.trim() !== '');
+                  if (!todosPreenchidos) {
+                    toast({
+                      title: "Atenção",
+                      description: "Preencha o motivo para todos os integrantes removidos",
+                      variant: "destructive"
+                    });
+                    return;
+                  }
+                  setShowRemovidosDialog(false);
+                  setShowUploadDialog(true);
+                }}
+                disabled={!removidosConfirmados.every(r => r.motivo_inativacao && r.motivo_inativacao.trim() !== '')}
+              >
+                Confirmar e Prosseguir
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Dialog de Preview de Upload */}
       <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -781,27 +919,54 @@ const AdminIntegrantes = () => {
                   </p>
                 </Card>
                 <Card className="p-4">
-                  <p className="text-sm text-muted-foreground">Removidos</p>
-                  <p className="text-3xl font-bold text-red-600">
-                    {uploadPreview.delta.removidos.length}
+                  <p className="text-sm text-muted-foreground">Inativações</p>
+                  <p className="text-3xl font-bold text-orange-600">
+                    {removidosConfirmados.length}
                   </p>
                 </Card>
               </div>
 
-              {uploadPreview.delta.novos.length > 0 && (
-                <div>
-                  <h4 className="font-semibold mb-2">Novos Integrantes (primeiros 5):</h4>
-                  <div className="space-y-2">
-                    {uploadPreview.delta.novos.slice(0, 5).map((item: any, idx: number) => (
-                      <Card key={idx} className="p-2 text-sm">
-                        <p className="font-semibold">{item.nome_colete}</p>
-                        <p className="text-muted-foreground">
-                          {item.cargo_grau} - {item.divisao}
+              {uploadPreview.delta.atualizados.length > 0 && (
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertTitle>Detalhes das Atualizações</AlertTitle>
+                  <AlertDescription>
+                    <div className="mt-2 max-h-48 overflow-y-auto space-y-2">
+                      {uploadPreview.delta.atualizados.slice(0, 5).map((atualizado: any, idx: number) => {
+                        const mudancas = compararCampos(atualizado.antigo, atualizado.novo);
+                        return (
+                          <div key={idx} className="text-xs border-l-2 border-blue-500 pl-2">
+                            <p className="font-semibold">{atualizado.novo.nome_colete}</p>
+                            <p className="text-muted-foreground">
+                              {mudancas.length} campo(s) alterado(s): {mudancas.map(m => m.campo).join(', ')}
+                            </p>
+                          </div>
+                        );
+                      })}
+                      {uploadPreview.delta.atualizados.length > 5 && (
+                        <p className="text-xs text-muted-foreground">
+                          + {uploadPreview.delta.atualizados.length - 5} outros...
                         </p>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
+                      )}
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {removidosConfirmados.length > 0 && (
+                <Alert className="border-orange-200">
+                  <XCircle className="h-4 w-4 text-orange-500" />
+                  <AlertTitle>Inativações Confirmadas</AlertTitle>
+                  <AlertDescription>
+                    <div className="mt-2 space-y-1 text-xs">
+                      {removidosConfirmados.map((r, idx) => (
+                        <p key={idx}>
+                          • {r.nome_colete} - <span className="font-semibold capitalize">{r.motivo_inativacao}</span>
+                        </p>
+                      ))}
+                    </div>
+                  </AlertDescription>
+                </Alert>
               )}
             </div>
           )}

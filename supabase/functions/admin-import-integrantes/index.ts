@@ -73,10 +73,17 @@ Deno.serve(async (req) => {
         tem_carro: z.boolean().optional(),
         data_entrada: z.string().optional().nullable()
       })).optional(),
-      atualizados: z.array(z.any()).optional() // Permite qualquer objeto já que contém múltiplos campos dinâmicos
+      atualizados: z.array(z.any()).optional(),
+      removidos: z.array(z.object({
+        integrante_id: z.string().uuid(),
+        registro_id: z.number(),
+        nome_colete: z.string(),
+        motivo_inativacao: z.enum(['transferido', 'falecido', 'desligado', 'expulso', 'afastado', 'promovido', 'outro']),
+        observacao_inativacao: z.string().optional()
+      })).optional()
     });
 
-    const { admin_user_id, novos, atualizados } = requestSchema.parse(await req.json());
+    const { admin_user_id, novos, atualizados, removidos } = requestSchema.parse(await req.json());
 
     console.log('[admin-import-integrantes] Validating admin:', admin_user_id);
     console.log('[admin-import-integrantes] Novos:', novos?.length || 0);
@@ -118,6 +125,7 @@ Deno.serve(async (req) => {
 
     let insertedCount = 0;
     let updatedCount = 0;
+    let inativadosCount = 0;
 
     // Upsert new integrantes (insert or update if registro_id exists)
     if (novos && novos.length > 0) {
@@ -214,7 +222,41 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log('[admin-import-integrantes] Success - Inserted:', insertedCount, 'Updated:', updatedCount);
+    // Process removals (inactivations)
+    if (removidos && removidos.length > 0) {
+      for (const removido of removidos) {
+        const { error: inactivateError } = await supabase
+          .from('integrantes_portal')
+          .update({
+            ativo: false,
+            motivo_inativacao: removido.motivo_inativacao,
+            data_inativacao: new Date().toISOString(),
+            observacoes: removido.observacao_inativacao || null
+          })
+          .eq('id', removido.integrante_id);
+
+        if (inactivateError) {
+          console.error('[admin-import-integrantes] Error inactivating:', inactivateError);
+        } else {
+          inativadosCount++;
+          
+          // Log to history
+          await supabase.from('integrantes_historico').insert({
+            integrante_id: removido.integrante_id,
+            acao: 'inativacao',
+            dados_anteriores: { ativo: true },
+            dados_novos: { 
+              ativo: false,
+              motivo_inativacao: removido.motivo_inativacao 
+            },
+            observacao: removido.observacao_inativacao,
+            alterado_por: admin_user_id
+          });
+        }
+      }
+    }
+
+    console.log('[admin-import-integrantes] Success - Inserted:', insertedCount, 'Updated:', updatedCount, 'Inativados:', inativadosCount);
 
     // Fetch all active integrantes to create snapshot
     const { data: integrantesAtivos, error: fetchError } = await supabase
@@ -281,7 +323,7 @@ Deno.serve(async (req) => {
         total_integrantes: integrantesAtivos?.length || 0,
         dados_snapshot: snapshot,
         realizado_por: admin_user_id,
-        observacoes: `Importação: ${insertedCount} novos, ${updatedCount} atualizados`
+        observacoes: `Importação: ${insertedCount} novos, ${updatedCount} atualizados, ${inativadosCount} inativados`
       })
       .select('id, data_carga')
       .single();
