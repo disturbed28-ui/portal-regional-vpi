@@ -182,6 +182,7 @@ export type Database = {
           id: string
           regional_id: string | null
           tipo_evento: string | null
+          tipo_evento_peso: string | null
           titulo: string
           updated_at: string | null
         }
@@ -193,6 +194,7 @@ export type Database = {
           id?: string
           regional_id?: string | null
           tipo_evento?: string | null
+          tipo_evento_peso?: string | null
           titulo: string
           updated_at?: string | null
         }
@@ -204,6 +206,7 @@ export type Database = {
           id?: string
           regional_id?: string | null
           tipo_evento?: string | null
+          tipo_evento_peso?: string | null
           titulo?: string
           updated_at?: string | null
         }
@@ -420,6 +423,48 @@ export type Database = {
           },
         ]
       }
+      justificativas_peso: {
+        Row: {
+          ativo: boolean | null
+          bloqueado: boolean | null
+          cor: string | null
+          created_at: string | null
+          descricao: string | null
+          icone: string | null
+          id: string
+          ordem: number | null
+          peso: number
+          tipo: string
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          bloqueado?: boolean | null
+          cor?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          icone?: string | null
+          id?: string
+          ordem?: number | null
+          peso: number
+          tipo: string
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          bloqueado?: boolean | null
+          cor?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          icone?: string | null
+          id?: string
+          ordem?: number | null
+          peso?: number
+          tipo?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       mensalidades_atraso: {
         Row: {
           ativo: boolean | null
@@ -479,6 +524,7 @@ export type Database = {
           id: string
           integrante_id: string
           justificativa_ausencia: string | null
+          justificativa_tipo: string | null
           profile_id: string | null
           status: string
         }
@@ -489,6 +535,7 @@ export type Database = {
           id?: string
           integrante_id: string
           justificativa_ausencia?: string | null
+          justificativa_tipo?: string | null
           profile_id?: string | null
           status?: string
         }
@@ -499,6 +546,7 @@ export type Database = {
           id?: string
           integrante_id?: string
           justificativa_ausencia?: string | null
+          justificativa_tipo?: string | null
           profile_id?: string | null
           status?: string
         }
@@ -775,6 +823,45 @@ export type Database = {
           nome?: string
           ordem?: number | null
           rota?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      tipos_evento_peso: {
+        Row: {
+          ativo: boolean | null
+          cor: string | null
+          created_at: string | null
+          descricao: string | null
+          icone: string | null
+          id: string
+          ordem: number | null
+          peso: number
+          tipo: string
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          cor?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          icone?: string | null
+          id?: string
+          ordem?: number | null
+          peso: number
+          tipo: string
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          cor?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          icone?: string | null
+          id?: string
+          ordem?: number | null
+          peso?: number
+          tipo?: string
           updated_at?: string | null
         }
         Relationships: []
