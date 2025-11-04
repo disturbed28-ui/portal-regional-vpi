@@ -129,10 +129,13 @@ function parseEventComponents(originalTitle: string): ParsedEvent {
   const lower = normalized.toLowerCase();
   const upper = normalized.toUpperCase();
   
+  console.log('[parseEventComponents] ===== INÍCIO DO PARSING =====');
   console.log('[parseEventComponents] Original:', originalTitle);
+  console.log('[parseEventComponents] Normalized:', normalized);
   
   // Detectar se é CMD
   const isCMD = upper.includes('CMD');
+  console.log('[parseEventComponents] É CMD?', isCMD);
   
   // Detectar tipo de evento (prioridade)
   let tipoEvento = 'Outros';
@@ -162,9 +165,15 @@ function parseEventComponents(originalTitle: string): ParsedEvent {
     tipoEvento = 'Bonde Insano';
   }
   
+  console.log('[parseEventComponents] Tipo detectado:', tipoEvento);
+  
   // Detectar subtipos específicos
   if (lower.includes('entrega de coletes')) {
     subtipo = 'Entrega de Coletes';
+  }
+  
+  if (subtipo) {
+    console.log('[parseEventComponents] Subtipo detectado:', subtipo);
   }
   
   // Detectar divisão
@@ -185,6 +194,8 @@ function parseEventComponents(originalTitle: string): ParsedEvent {
     divisao = detectDivisionFromTitle(normalized);
   }
   
+  console.log('[parseEventComponents] Divisão detectada:', divisao);
+  
   // Extrair informações extras (texto após a divisão)
   const divIndex = originalTitle.toLowerCase().indexOf(divisao.toLowerCase());
   if (divIndex > -1 && divIndex + divisao.length < originalTitle.length) {
@@ -192,6 +203,10 @@ function parseEventComponents(originalTitle: string): ParsedEvent {
     if (extras && extras.length > 0 && !extras.startsWith('-')) {
       informacoesExtras = extras.replace(/^[-\s]+/, '').trim();
     }
+  }
+  
+  if (informacoesExtras) {
+    console.log('[parseEventComponents] Informações extras:', informacoesExtras);
   }
   
   const parsed: ParsedEvent = {
@@ -203,42 +218,55 @@ function parseEventComponents(originalTitle: string): ParsedEvent {
     isCMD
   };
   
-  console.log('[parseEventComponents] Parsed:', parsed);
+  console.log('[parseEventComponents] ===== RESULTADO FINAL =====');
+  console.log('[parseEventComponents] Parsed:', JSON.stringify(parsed, null, 2));
   return parsed;
 }
 
-// Detectar divisão do título (versão simplificada)
+// Detectar divisão do título (versão aprimorada)
 function detectDivisionFromTitle(title: string): string {
   const lower = title.toLowerCase();
+  const normalized = removeSpecialCharacters(lower);
   
-  // Extremos (prioridade)
-  if (lower.includes('ext sul') || lower.includes('ext.sul') || lower.includes('ext. sul') || lower.includes('extremo sul')) {
-    return 'Div SJC Ext Sul - SP';
-  }
-  if (lower.includes('ext norte') || lower.includes('ext.norte') || lower.includes('ext. norte') || lower.includes('extremo norte')) {
-    return 'Div SJC Ext Norte - SP';
-  }
-  if (lower.includes('ext leste') || lower.includes('ext.leste') || lower.includes('ext. leste') || lower.includes('extremo leste')) {
-    return 'Div SJC Ext Leste - SP';
-  }
+  console.log('[detectDivisionFromTitle] Input:', title);
+  console.log('[detectDivisionFromTitle] Normalized:', normalized);
   
-  // SJC
-  if (lower.includes('sjc centro') || lower.includes('centro sjc') || lower.includes('sao jose centro')) return 'Div SJC Centro - SP';
-  if (lower.includes('sjc leste') || lower.includes('leste sjc') || lower.includes('div leste') || lower.includes('sao jose leste')) return 'Div SJC Leste - SP';
-  if (lower.includes('sjc norte') || lower.includes('norte sjc') || lower.includes('sao jose norte')) return 'Div SJC Norte - SP';
-  if (lower.includes('sjc sul') || lower.includes('sul sjc') || lower.includes('sao jose sul')) return 'Div SJC Sul - SP';
-  if (lower.includes('sjc oeste') || lower.includes('oeste sjc') || lower.includes('oeste sao jose') || lower.includes('sao jose oeste')) return 'Div SJC Oeste - SP';
+  // Extrair regiões e cidades separadamente
+  const temSjc = normalized.includes('sjc') || normalized.includes('sao jose') || normalized.includes('sao jose dos campos');
+  const temJac = normalized.includes('jac') || normalized.includes('jacarei');
+  const temCacapava = normalized.includes('cacapava');
+  
+  // Extrair direção
+  const temNorte = normalized.includes('norte');
+  const temSul = normalized.includes('sul');
+  const temLeste = normalized.includes('leste');
+  const temOeste = normalized.includes('oeste');
+  const temCentro = normalized.includes('centro');
+  const temExtremo = normalized.includes('extremo') || normalized.includes('ext');
+  
+  // SJC Extremos (prioridade máxima)
+  if (temSjc && temExtremo && temSul) return 'Div SJC Ext Sul - SP';
+  if (temSjc && temExtremo && temNorte) return 'Div SJC Ext Norte - SP';
+  if (temSjc && temExtremo && temLeste) return 'Div SJC Ext Leste - SP';
+  
+  // SJC Direções
+  if (temSjc && temCentro) return 'Div SJC Centro - SP';
+  if (temSjc && temLeste) return 'Div SJC Leste - SP';
+  if (temSjc && temNorte) return 'Div SJC Norte - SP';
+  if (temSjc && temSul) return 'Div SJC Sul - SP';
+  if (temSjc && temOeste) return 'Div SJC Oeste - SP';
+  
+  // Jacareí Direções
+  if (temJac && temNorte) return 'Div Jacarei Norte - SP';
+  if (temJac && temOeste) return 'Div Jacarei Oeste - SP';
+  if (temJac && temLeste) return 'Div Jacarei Leste - SP';
+  if (temJac && temSul) return 'Div Jacarei Sul - SP';
+  if (temJac && temCentro) return 'Div Jacarei Centro - SP';
   
   // Caçapava
-  if (lower.includes('cacapava') || lower.includes('caçapava')) return 'Div Cacapava - SP';
+  if (temCacapava) return 'Div Cacapava - SP';
   
-  // Jacareí (mais padrões)
-  if (lower.includes('jac norte') || lower.includes('jac. norte') || lower.includes('jacarei norte') || lower.includes('norte jacarei')) return 'Div Jacarei Norte - SP';
-  if (lower.includes('jac oeste') || lower.includes('jac. oeste') || lower.includes('jacarei oeste') || lower.includes('oeste jacarei')) return 'Div Jacarei Oeste - SP';
-  if (lower.includes('jac leste') || lower.includes('jac. leste') || lower.includes('jacarei leste') || lower.includes('leste jacarei')) return 'Div Jacarei Leste - SP';
-  if (lower.includes('jac sul') || lower.includes('jac. sul') || lower.includes('jacarei sul') || lower.includes('sul jacarei')) return 'Div Jacarei Sul - SP';
-  if (lower.includes('jac centro') || lower.includes('jac. centro') || lower.includes('jacarei centro') || lower.includes('centro jacarei')) return 'Div Jacarei Centro - SP';
-  
+  console.log('[detectDivisionFromTitle] Nenhuma divisão detectada');
   return 'Sem Divisao';
 }
 
