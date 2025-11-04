@@ -52,11 +52,14 @@ const Organograma = () => {
 
   // Validar acesso e buscar regional do integrante
   useEffect(() => {
-    if (!user?.id || roleLoading) return;
+    // Aguardar todos os loadings completarem e dados necessários estarem disponíveis
+    if (!user?.id || roleLoading || profileLoading) return;
+    
+    // Para admin, aguardar profile estar disponível
+    const isAdmin = hasRole('admin');
+    if (isAdmin && !profile) return;
 
     const validateAccess = async () => {
-      const isAdmin = hasRole('admin');
-
       // Se for admin, usar dados do profile
       if (isAdmin) {
         if (!profile?.regional_id) {
@@ -99,7 +102,7 @@ const Organograma = () => {
     };
 
     validateAccess();
-  }, [user?.id, navigate, hasRole, roleLoading, profile]);
+  }, [user?.id, navigate, hasRole, roleLoading, profile, profileLoading]);
   
   const {
     hierarquiaRegional,
