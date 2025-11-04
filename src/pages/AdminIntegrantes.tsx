@@ -294,7 +294,6 @@ const AdminIntegrantes = () => {
       });
 
       if (error) {
-        console.error('❌ Erro ao importar:', error);
         toast({
           title: "Erro ao importar mensalidades",
           description: error.message,
@@ -302,8 +301,6 @@ const AdminIntegrantes = () => {
         });
         return;
       }
-
-      console.log('✅ Importação concluída:', data);
 
       toast({
         title: "✅ Mensalidades importadas com sucesso!",

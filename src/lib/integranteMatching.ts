@@ -57,11 +57,6 @@ export const matchIntegranteToStructure = async (
     const regionalNormalizado = normalizeText(regionalTexto);
     const divisaoNormalizado = normalizeText(divisaoTexto);
 
-    console.log('🔍 Matching integrante to structure:');
-    console.log('Comando original:', comandoTexto, '→ normalizado:', comandoNormalizado);
-    console.log('Regional original:', regionalTexto, '→ normalizado:', regionalNormalizado);
-    console.log('Divisao original:', divisaoTexto, '→ normalizado:', divisaoNormalizado);
-
     // Buscar TODOS os comandos para fazer matching melhor
     const { data: comandos } = await supabase
       .from('comandos')
@@ -79,10 +74,8 @@ export const matchIntegranteToStructure = async (
       if (comandoMatch) {
         result.comando_id = comandoMatch.id;
         result.matched_fields.push('comando');
-        console.log('✅ Comando matched:', comandoMatch.nome);
       } else {
         result.failed_fields.push('comando');
-        console.log('❌ Comando NOT matched. Available:', comandos.map(c => c.nome));
       }
     }
 
@@ -104,10 +97,8 @@ export const matchIntegranteToStructure = async (
         if (regionalMatch) {
           result.regional_id = regionalMatch.id;
           result.matched_fields.push('regional');
-          console.log('✅ Regional matched:', regionalMatch.nome);
         } else {
           result.failed_fields.push('regional');
-          console.log('❌ Regional NOT matched. Available:', regionais.map(r => r.nome));
         }
       }
     } else {
@@ -132,10 +123,8 @@ export const matchIntegranteToStructure = async (
         if (divisaoMatch) {
           result.divisao_id = divisaoMatch.id;
           result.matched_fields.push('divisao');
-          console.log('✅ Divisao matched:', divisaoMatch.nome);
         } else {
           result.failed_fields.push('divisao');
-          console.log('❌ Divisao NOT matched. Available:', divisoes.map(d => d.nome));
         }
       }
     } else {
@@ -163,19 +152,11 @@ export const matchIntegranteToStructure = async (
         if (cargoMatch) {
           result.cargo_id = cargoMatch.id;
           result.matched_fields.push('cargo');
-          console.log('✅ Cargo matched:', cargoMatch.nome, cargoMatch.grau);
         } else {
           result.failed_fields.push('cargo');
-          console.log('❌ Cargo NOT matched for grau:', grau, 'nome:', cargoNome);
-          console.log('Available cargos:', cargos.map(c => `"${c.nome}"`));
         }
       }
     }
-
-    console.log('📊 Match result:', {
-      matched: result.matched_fields,
-      failed: result.failed_fields
-    });
 
     return result;
   } catch (error) {

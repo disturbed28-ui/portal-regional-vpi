@@ -20,8 +20,6 @@ export const useAtualizacoesCarga = (cargaId?: string) => {
     queryKey: ['atualizacoes-carga', cargaId],
     enabled: !!cargaId,
     queryFn: async (): Promise<IntegranteAtualizado[]> => {
-      console.log('🔍 [useAtualizacoesCarga] Buscando atualizações para carga:', cargaId);
-      
       const { data, error } = await supabase
         .from('atualizacoes_carga')
         .select('*')
@@ -29,11 +27,8 @@ export const useAtualizacoesCarga = (cargaId?: string) => {
         .order('nome_colete');
       
       if (error) {
-        console.error('❌ [useAtualizacoesCarga] Erro:', error);
         throw error;
       }
-      
-      console.log(`📊 [useAtualizacoesCarga] Encontrados ${data?.length || 0} registros de alterações`);
       
       // Agrupar por integrante
       const grouped = (data || []).reduce((acc, item) => {
@@ -55,10 +50,7 @@ export const useAtualizacoesCarga = (cargaId?: string) => {
         return acc;
       }, {} as Record<number, IntegranteAtualizado>);
       
-      const resultado = Object.values(grouped);
-      console.log(`✅ [useAtualizacoesCarga] ${resultado.length} integrantes com alterações`);
-      
-      return resultado;
+      return Object.values(grouped);
     }
   });
 };
