@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertTriangle, CheckCircle } from 'lucide-react';
 import { formatRef } from '@/lib/mensalidadesParser';
-import { format } from 'date-fns';
+import { formatarDataBrasil } from '@/lib/timezone';
 
 export const HistoricoDevedores = () => {
   const [filtroNome, setFiltroNome] = useState('');
@@ -141,7 +141,7 @@ export const HistoricoDevedores = () => {
                         {formatRef(item.ref)}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {format(new Date(item.data_vencimento), 'dd/MM/yyyy')}
+                        {formatarDataBrasil(item.data_vencimento, 'dd/MM/yyyy')}
                       </TableCell>
                       <TableCell className="text-right font-semibold">
                         R$ {item.valor.toFixed(2)}
@@ -162,7 +162,7 @@ export const HistoricoDevedores = () => {
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {item.data_liquidacao 
-                          ? format(new Date(item.data_liquidacao), 'dd/MM/yyyy HH:mm')
+                          ? formatarDataBrasil(item.data_liquidacao)
                           : '-'
                         }
                       </TableCell>

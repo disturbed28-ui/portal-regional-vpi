@@ -11,6 +11,7 @@ export interface DivisaoRelatorio {
   sem_veiculo: number;
   com_moto: number;
   com_carro: number;
+  sgt_armas: number;
   combate_insano: number;
   batedores: number;
   caveiras: number;
@@ -27,6 +28,7 @@ export interface TotaisRelatorio {
   sem_veiculo: number;
   com_moto: number;
   com_carro: number;
+  sgt_armas: number;
   combate_insano: number;
   batedores: number;
   caveiras: number;
@@ -97,10 +99,11 @@ export const useRelatorioData = (regionalTexto?: string) => {
             saldo: 0,
             total_anterior: 0,
             total_atual: 0,
-            sem_veiculo: 0,
-            com_moto: 0,
-            com_carro: 0,
-            combate_insano: 0,
+          sem_veiculo: 0,
+          com_moto: 0,
+          com_carro: 0,
+          sgt_armas: 0,
+          combate_insano: 0,
             batedores: 0,
             caveiras: 0,
             caveiras_suplentes: 0,
@@ -121,6 +124,7 @@ export const useRelatorioData = (regionalTexto?: string) => {
         }
 
         // Times especiais
+        if (integrante.sgt_armas) divisaoData.sgt_armas++;
         if (integrante.combate_insano) divisaoData.combate_insano++;
         if (integrante.batedor) divisaoData.batedores++;
         if (integrante.caveira) divisaoData.caveiras++;
@@ -144,6 +148,7 @@ export const useRelatorioData = (regionalTexto?: string) => {
             sem_veiculo: 0,
             com_moto: 0,
             com_carro: 0,
+            sgt_armas: 0,
             combate_insano: 0,
             batedores: 0,
             caveiras: 0,
@@ -209,10 +214,11 @@ export const useRelatorioData = (regionalTexto?: string) => {
           saldo: acc.saldo + div.saldo,
           total_anterior: acc.total_anterior + div.total_anterior,
           total_atual: acc.total_atual + div.total_atual,
-          sem_veiculo: acc.sem_veiculo + div.sem_veiculo,
-          com_moto: acc.com_moto + div.com_moto,
-          com_carro: acc.com_carro + div.com_carro,
-          combate_insano: acc.combate_insano + div.combate_insano,
+        sem_veiculo: acc.sem_veiculo + div.sem_veiculo,
+        com_moto: acc.com_moto + div.com_moto,
+        com_carro: acc.com_carro + div.com_carro,
+        sgt_armas: acc.sgt_armas + div.sgt_armas,
+        combate_insano: acc.combate_insano + div.combate_insano,
           batedores: acc.batedores + div.batedores,
           caveiras: acc.caveiras + div.caveiras,
           caveiras_suplentes: acc.caveiras_suplentes + div.caveiras_suplentes,
@@ -224,10 +230,11 @@ export const useRelatorioData = (regionalTexto?: string) => {
           saldo: 0,
           total_anterior: 0,
           total_atual: 0,
-          sem_veiculo: 0,
-          com_moto: 0,
-          com_carro: 0,
-          combate_insano: 0,
+        sem_veiculo: 0,
+        com_moto: 0,
+        com_carro: 0,
+        sgt_armas: 0,
+        combate_insano: 0,
           batedores: 0,
           caveiras: 0,
           caveiras_suplentes: 0,

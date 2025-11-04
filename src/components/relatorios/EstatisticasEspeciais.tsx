@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DivisaoRelatorio, TotaisRelatorio } from '@/hooks/useRelatorioData';
-import { Car, Bike, User, Shield, Skull, HardHat } from 'lucide-react';
+import { Car, Bike, User, ShieldCheck, Swords, Skull, HardHat } from 'lucide-react';
 
 interface EstatisticasEspeciaisProps {
   divisoes: DivisaoRelatorio[];
@@ -46,15 +46,53 @@ export const EstatisticasEspeciais = ({ divisoes, totais }: EstatisticasEspeciai
         </CardContent>
       </Card>
 
+      {/* Sargento de Armas */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5" />
+            Sargento de Armas
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-sm text-muted-foreground mb-4">
+            Agentes de Segurança Pública
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Divisão</TableHead>
+                <TableHead className="text-center">Quantidade</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {divisoes.map((divisao) => (
+                <TableRow key={divisao.nome}>
+                  <TableCell>{divisao.nome}</TableCell>
+                  <TableCell className="text-center font-medium">{divisao.sgt_armas}</TableCell>
+                </TableRow>
+              ))}
+              <TableRow className="bg-primary/10 font-bold">
+                <TableCell>TOTAL REGIONAL</TableCell>
+                <TableCell className="text-center">{totais.sgt_armas}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
       {/* Combate Insano */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
+            <Swords className="h-5 w-5" />
             Combate Insano
           </CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="text-sm text-muted-foreground mb-4">
+            Praticantes de Luta / Arte Marcial
+          </div>
           <Table>
             <TableHeader>
               <TableRow>

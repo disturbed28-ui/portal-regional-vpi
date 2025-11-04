@@ -14,6 +14,7 @@ import { DashboardInadimplencia } from '@/components/relatorios/DashboardInadimp
 import { EstatisticasEspeciais } from '@/components/relatorios/EstatisticasEspeciais';
 import { GraficoEvolucao } from '@/components/relatorios/GraficoEvolucao';
 import { TabelaComparativa } from '@/components/relatorios/TabelaComparativa';
+import { formatarDataBrasil } from '@/lib/timezone';
 import * as XLSX from 'xlsx';
 import { toast } from '@/hooks/use-toast';
 
@@ -92,16 +93,26 @@ const Relatorios = () => {
         ['Sem Veículo', relatorioData.totais.sem_veiculo],
         ['Com Moto', relatorioData.totais.com_moto],
         ['Com Carro', relatorioData.totais.com_carro],
-        [],
-        ['COMBATE INSANO (SGT ARMAS)'],
-        ['Divisão', 'Quantidade'],
-      ];
+      [],
+      ['SGT ARMAS'],
+      ['Divisão', 'Quantidade'],
+    ];
 
-      // Combate Insano por divisão
-      relatorioData.divisoes.forEach((div) => {
-        sheet2Data.push([div.nome, div.combate_insano]);
-      });
-      sheet2Data.push(['TOTAL REGIONAL', relatorioData.totais.combate_insano]);
+    // Sgt Armas por divisão
+    relatorioData.divisoes.forEach((div) => {
+      sheet2Data.push([div.nome, div.sgt_armas]);
+    });
+    sheet2Data.push(['TOTAL REGIONAL', relatorioData.totais.sgt_armas]);
+    
+    sheet2Data.push([]);
+    sheet2Data.push(['COMBATE INSANO']);
+    sheet2Data.push(['Divisão', 'Quantidade']);
+    
+    // Combate Insano por divisão
+    relatorioData.divisoes.forEach((div) => {
+      sheet2Data.push([div.nome, div.combate_insano]);
+    });
+    sheet2Data.push(['TOTAL REGIONAL', relatorioData.totais.combate_insano]);
       
       sheet2Data.push([]);
       sheet2Data.push(['BATEDORES']);
@@ -177,13 +188,7 @@ const Relatorios = () => {
             <h1 className="text-3xl font-bold mb-2">Relatório Regional</h1>
             {relatorioData?.dataCarga && (
               <p className="text-sm text-muted-foreground">
-                Última atualização: {new Date(relatorioData.dataCarga).toLocaleDateString('pt-BR', {
-                  day: '2-digit',
-                  month: '2-digit',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+                Última atualização: {formatarDataBrasil(relatorioData.dataCarga)}
               </p>
             )}
           </div>

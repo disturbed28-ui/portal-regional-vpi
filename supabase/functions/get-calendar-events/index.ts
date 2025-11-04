@@ -22,14 +22,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Calcular período de 3 meses
+    // Calcular período de 6 meses (3 passados + 3 futuros)
     const now = new Date();
+    const threeMonthsBefore = new Date();
+    threeMonthsBefore.setMonth(threeMonthsBefore.getMonth() - 3);
     const threeMonthsLater = new Date();
     threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
 
     const params = new URLSearchParams({
       key: API_KEY,
-      timeMin: now.toISOString(),
+      timeMin: threeMonthsBefore.toISOString(),
       timeMax: threeMonthsLater.toISOString(),
       singleEvents: 'true',
       orderBy: 'startTime',
