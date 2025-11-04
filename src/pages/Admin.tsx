@@ -451,9 +451,6 @@ const Admin = () => {
             <Button onClick={() => navigate("/admin/permissoes")} variant="outline" className="flex-1 sm:flex-none">
               Gestao de Permissoes
             </Button>
-            <Button onClick={() => navigate("/admin/afastados")} variant="outline" className="flex-1 sm:flex-none">
-              Integrantes Afastados
-            </Button>
             <Button onClick={() => navigate("/")} variant="outline" className="flex-1 sm:flex-none">
               Voltar
             </Button>

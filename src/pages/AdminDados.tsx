@@ -42,6 +42,7 @@ import {
   updateFuncao,
   deleteFuncao,
 } from "@/lib/adminCrud";
+import { CargaAfastados } from "@/components/admin/CargaAfastados";
 
 const GRAU_OPTIONS = ['X', 'IX', 'VIII', 'VII', 'VI', 'V', 'IV', 'III', 'II', 'I', 'Camiseta'];
 
@@ -212,9 +213,10 @@ const AdminDados = () => {
         </div>
 
         <Tabs defaultValue="cargos" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="cargos">Cargos</TabsTrigger>
             <TabsTrigger value="funcoes">Funcoes</TabsTrigger>
+            <TabsTrigger value="afastados">Afastados</TabsTrigger>
           </TabsList>
 
           {/* Tab Cargos */}
@@ -273,6 +275,11 @@ const AdminDados = () => {
                 </Card>
               ))}
             </div>
+          </TabsContent>
+
+          {/* Tab Afastados */}
+          <TabsContent value="afastados" className="mt-4">
+            <CargaAfastados />
           </TabsContent>
         </Tabs>
 
