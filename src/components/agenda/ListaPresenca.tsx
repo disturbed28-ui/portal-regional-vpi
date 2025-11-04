@@ -365,7 +365,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
               </div>
               <div className="h-8 w-px bg-border" />
               <div className="text-center">
-                <div className="text-2xl font-bold">{totalDivisao}</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalDivisao}</div>
                 <div className="text-sm text-muted-foreground">Total da Divisão</div>
               </div>
             </div>
