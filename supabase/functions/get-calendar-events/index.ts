@@ -1,6 +1,43 @@
 import { corsHeaders } from '../_shared/cors.ts';
 import { logError } from '../_shared/error-handler.ts';
 
+async function fetchAllEvents(
+  calendarId: string,
+  apiKey: string,
+  timeMin: string,
+  timeMax: string
+): Promise<any[]> {
+  let allEvents: any[] = [];
+  let pageToken: string | undefined = undefined;
+  
+  do {
+    const params: URLSearchParams = new URLSearchParams({
+      key: apiKey,
+      timeMin,
+      timeMax,
+      singleEvents: 'true',
+      orderBy: 'startTime',
+      maxResults: '250',
+      ...(pageToken && { pageToken })
+    });
+    
+    const url: string = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params}`;
+    const response: Response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error(`Google API error: ${response.status}`);
+    }
+    
+    const data: any = await response.json();
+    allEvents = allEvents.concat(data.items || []);
+    pageToken = data.nextPageToken;
+    
+    console.log(`[get-calendar-events] Fetched ${data.items?.length || 0} events (total: ${allEvents.length})`);
+  } while (pageToken);
+  
+  return allEvents;
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -29,38 +66,20 @@ Deno.serve(async (req) => {
     const threeMonthsLater = new Date();
     threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
 
-    const params = new URLSearchParams({
-      key: API_KEY,
-      timeMin: threeMonthsBefore.toISOString(),
-      timeMax: threeMonthsLater.toISOString(),
-      singleEvents: 'true',
-      orderBy: 'startTime',
-      maxResults: '100'
-    });
+    console.log('[get-calendar-events] Fetching calendar events with pagination');
+    
+    // Buscar TODOS os eventos do período usando paginação
+    const allEvents = await fetchAllEvents(
+      CALENDAR_ID,
+      API_KEY,
+      threeMonthsBefore.toISOString(),
+      threeMonthsLater.toISOString()
+    );
 
-    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(CALENDAR_ID)}/events?${params}`;
-    
-    console.log('[get-calendar-events] Fetching calendar events');
-    
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      logError('get-calendar-events', `Google API error: ${response.status}`);
-      return new Response(
-        JSON.stringify({ error: 'Erro ao buscar eventos do calendário' }),
-        { 
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-
-    const data = await response.json();
-    
-    console.log('[get-calendar-events] Successfully fetched', data.items?.length || 0, 'events');
+    console.log('[get-calendar-events] Total events fetched:', allEvents.length);
 
     return new Response(
-      JSON.stringify(data),
+      JSON.stringify({ items: allEvents }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
