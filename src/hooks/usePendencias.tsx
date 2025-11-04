@@ -1,13 +1,40 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
+interface MensalidadeDetalhes {
+  total_parcelas: number;
+  valor_total: number;
+  parcelas: Array<{
+    ref: string;
+    data_vencimento: string;
+    valor: number;
+    dias_atraso: number;
+  }>;
+  primeira_divida: string;
+  ultima_divida: string;
+}
+
+interface AfastamentoDetalhes {
+  tipo_afastamento: string;
+  data_afastamento: string;
+  data_retorno_prevista: string;
+  dias_afastado: number;
+  dias_atraso: number;
+  observacoes: string | null;
+  cargo_grau_texto: string | null;
+}
+
 interface Pendencia {
   nome_colete: string;
   divisao_texto: string;
   tipo: 'mensalidade' | 'afastamento';
   detalhe: string;
   data_ref: string;
+  registro_id: number;
+  detalhes_completos: MensalidadeDetalhes | AfastamentoDetalhes;
 }
+
+export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes };
 
 export const usePendencias = (
   userId: string | undefined,
@@ -41,7 +68,7 @@ export const usePendencias = (
       // 1. Mensalidades atrasadas
       let queryMensalidades = supabase
         .from('mensalidades_atraso')
-        .select('nome_colete, divisao_texto, data_vencimento, ref')
+        .select('registro_id, nome_colete, divisao_texto, data_vencimento, ref, valor')
         .eq('ativo', true)
         .eq('liquidado', false)
         .lt('data_vencimento', hoje);
@@ -71,39 +98,78 @@ export const usePendencias = (
 
       const { data: mensalidades } = await queryMensalidades;
 
-      // Agrupar por integrante
+      // Agrupar por integrante e coletar TODAS as parcelas
       const mensalidadesMap = new Map();
       mensalidades?.forEach(m => {
-        const key = `${m.nome_colete}_${m.divisao_texto}`;
+        const key = `${m.registro_id}_${m.nome_colete}_${m.divisao_texto}`;
+        
         if (!mensalidadesMap.has(key)) {
           mensalidadesMap.set(key, {
+            registro_id: m.registro_id,
             nome_colete: m.nome_colete,
             divisao_texto: m.divisao_texto,
-            count: 0,
-            mais_antiga: m.data_vencimento
+            parcelas: [],
+            total_valor: 0,
+            mais_antiga: m.data_vencimento,
+            mais_recente: m.data_vencimento
           });
         }
+        
         const entry = mensalidadesMap.get(key);
-        entry.count++;
+        const vencimento = new Date(m.data_vencimento);
+        const diasAtraso = Math.floor((new Date().getTime() - vencimento.getTime()) / (1000 * 60 * 60 * 24));
+        
+        entry.parcelas.push({
+          ref: m.ref,
+          data_vencimento: m.data_vencimento,
+          valor: m.valor || 0,
+          dias_atraso: diasAtraso
+        });
+        
+        entry.total_valor += (m.valor || 0);
+        
         if (m.data_vencimento < entry.mais_antiga) {
           entry.mais_antiga = m.data_vencimento;
         }
+        if (m.data_vencimento > entry.mais_recente) {
+          entry.mais_recente = m.data_vencimento;
+        }
       });
 
-      mensalidadesMap.forEach(m => {
+      // Ordenar parcelas e criar pendências
+      mensalidadesMap.forEach((entry) => {
+        entry.parcelas.sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento));
+        
         todasPendencias.push({
-          nome_colete: m.nome_colete,
-          divisao_texto: m.divisao_texto,
+          registro_id: entry.registro_id,
+          nome_colete: entry.nome_colete,
+          divisao_texto: entry.divisao_texto,
           tipo: 'mensalidade',
-          detalhe: `${m.count} parcela(s) atrasada(s)`,
-          data_ref: m.mais_antiga
+          detalhe: `${entry.parcelas.length} parcela(s) atrasada(s)`,
+          data_ref: entry.mais_antiga,
+          detalhes_completos: {
+            total_parcelas: entry.parcelas.length,
+            valor_total: entry.total_valor,
+            parcelas: entry.parcelas,
+            primeira_divida: entry.mais_antiga,
+            ultima_divida: entry.mais_recente
+          }
         });
       });
 
       // 2. Afastamentos com retorno atrasado
       let queryAfastados = supabase
         .from('integrantes_afastados')
-        .select('nome_colete, divisao_texto, data_retorno_prevista')
+        .select(`
+          registro_id,
+          nome_colete,
+          divisao_texto,
+          data_retorno_prevista,
+          data_afastamento,
+          tipo_afastamento,
+          observacoes,
+          cargo_grau_texto
+        `)
         .eq('ativo', true)
         .is('data_retorno_efetivo', null)
         .lt('data_retorno_prevista', hoje);
@@ -134,17 +200,34 @@ export const usePendencias = (
       const { data: afastados } = await queryAfastados;
 
       afastados?.forEach(a => {
+        const hoje = new Date();
+        const retornoPrevisto = new Date(a.data_retorno_prevista);
+        const dataAfastamento = new Date(a.data_afastamento);
+        
         const diasAtraso = Math.floor(
-          (new Date().getTime() - new Date(a.data_retorno_prevista).getTime()) 
-          / (1000 * 60 * 60 * 24)
+          (hoje.getTime() - retornoPrevisto.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        
+        const diasAfastado = Math.floor(
+          (hoje.getTime() - dataAfastamento.getTime()) / (1000 * 60 * 60 * 24)
         );
         
         todasPendencias.push({
+          registro_id: a.registro_id,
           nome_colete: a.nome_colete,
           divisao_texto: a.divisao_texto,
           tipo: 'afastamento',
           detalhe: `${diasAtraso} dia(s) de atraso no retorno`,
-          data_ref: a.data_retorno_prevista
+          data_ref: a.data_retorno_prevista,
+          detalhes_completos: {
+            tipo_afastamento: a.tipo_afastamento,
+            data_afastamento: a.data_afastamento,
+            data_retorno_prevista: a.data_retorno_prevista,
+            dias_afastado: diasAfastado,
+            dias_atraso: diasAtraso,
+            observacoes: a.observacoes,
+            cargo_grau_texto: a.cargo_grau_texto
+          }
         });
       });
 
