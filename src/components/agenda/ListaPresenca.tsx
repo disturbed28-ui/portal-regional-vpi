@@ -372,8 +372,10 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
 
             {/* Campo de Busca por Nome de Colete */}
             {canManage && (
-              <div className="space-y-3 border rounded-lg p-4 bg-card">
-                <Label htmlFor="nome-colete">Buscar por Nome de Colete</Label>
+              <div className="space-y-3 border rounded-lg p-4 bg-muted/50">
+                <Label htmlFor="nome-colete" className="text-base font-semibold text-foreground">
+                  🔍 Buscar por Nome de Colete
+                </Label>
                 <div className="flex gap-2">
                   <Input
                     id="nome-colete"
@@ -445,11 +447,11 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-gray-900 dark:text-gray-100">Nome</TableHead>
-                      <TableHead className="text-gray-900 dark:text-gray-100">Divisão</TableHead>
-                      <TableHead className="text-gray-900 dark:text-gray-100">Cargo</TableHead>
-                      <TableHead className="text-gray-900 dark:text-gray-100">Grau</TableHead>
-                      {canManage && <TableHead className="w-[120px] text-gray-900 dark:text-gray-100">Ações</TableHead>}
+                      <TableHead className="font-semibold text-foreground">Nome</TableHead>
+                      <TableHead className="font-semibold text-foreground">Divisão</TableHead>
+                      <TableHead className="font-semibold text-foreground">Cargo</TableHead>
+                      <TableHead className="font-semibold text-foreground">Grau</TableHead>
+                      {canManage && <TableHead className="w-[120px] font-semibold text-foreground">Ações</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -469,7 +471,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          <TableCell className="text-sm font-medium text-foreground">
                             {integrante.divisao_texto}
                           </TableCell>
                           <TableCell>{integrante.cargo_nome || '-'}</TableCell>
@@ -504,11 +506,11 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-gray-900 dark:text-gray-100">Nome</TableHead>
-                      <TableHead className="text-gray-900 dark:text-gray-100">Cargo</TableHead>
-                      <TableHead className="text-gray-900 dark:text-gray-100">Grau</TableHead>
-                      <TableHead className="text-gray-900 dark:text-gray-100">Justificativa</TableHead>
-                      {canManage && <TableHead className="w-[120px] text-gray-900 dark:text-gray-100">Ações</TableHead>}
+                      <TableHead className="font-semibold text-foreground">Nome</TableHead>
+                      <TableHead className="font-semibold text-foreground">Cargo</TableHead>
+                      <TableHead className="font-semibold text-foreground">Grau</TableHead>
+                      <TableHead className="font-semibold text-foreground">Justificativa</TableHead>
+                      {canManage && <TableHead className="w-[120px] font-semibold text-foreground">Ações</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
