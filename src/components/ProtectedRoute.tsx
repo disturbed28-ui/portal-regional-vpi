@@ -12,9 +12,11 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children, screenRoute }: ProtectedRouteProps) => {
-  const { user } = useAuth();
-  const { hasAccess, loading } = useScreenAccess(screenRoute, user?.id);
+  const { user, loading: authLoading } = useAuth();
+  const { hasAccess, loading: accessLoading } = useScreenAccess(screenRoute, user?.id);
   const { toast } = useToast();
+
+  const loading = authLoading || accessLoading;
 
   useEffect(() => {
     if (!loading && !hasAccess) {

@@ -12,7 +12,14 @@ export const useScreenAccess = (screenRoute: string, userId: string | undefined)
   }, [screenRoute, roles, userId]);
 
   const checkAccess = async () => {
-    if (!userId || roles.length === 0) {
+    // Se userId é undefined, ainda está carregando - não tomar decisão
+    if (userId === undefined) {
+      setLoading(true);
+      return;
+    }
+
+    // Se userId é null (não logado) OU não tem roles, bloquear
+    if (userId === null || roles.length === 0) {
       setHasAccess(false);
       setLoading(false);
       return;
