@@ -218,11 +218,61 @@ Deno.serve(async (req) => {
         .maybeSingle();
       
       if (existente) {
-        // Atualizar status para 'presente'
+        // Buscar dados do integrante para verificar sua divisão
+        const { data: integrante } = await supabaseAdmin
+          .from('integrantes_portal')
+          .select('divisao_texto')
+          .eq('id', integrante_id)
+          .single();
+        
+        // Buscar dados do evento para verificar a divisão do evento
+        const { data: evento } = await supabaseAdmin
+          .from('eventos_agenda')
+          .select('divisao_id')
+          .eq('id', evento_agenda_id)
+          .single();
+        
+        // Buscar nome da divisão do evento
+        let divisaoEvento: string | null = null;
+        if (evento?.divisao_id) {
+          const { data: divisaoData } = await supabaseAdmin
+            .from('divisoes')
+            .select('nome')
+            .eq('id', evento.divisao_id)
+            .single();
+          divisaoEvento = divisaoData?.nome || null;
+        }
+        
+        // Determinar o status: presente se for da mesma divisão, visitante se for de outra
+        let novoStatus = 'visitante'; // padrão
+        
+        if (integrante?.divisao_texto && divisaoEvento) {
+          // Normalizar textos para comparação
+          const divisaoIntegranteNorm = integrante.divisao_texto
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .trim();
+          
+          const divisaoEventoNorm = divisaoEvento
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .trim();
+          
+          // Verificar se a divisão do integrante corresponde à divisão do evento
+          if (divisaoIntegranteNorm === divisaoEventoNorm) {
+            novoStatus = 'presente';
+          }
+        }
+        
+        console.log(`[manage-presenca] Integrante divisão: ${integrante?.divisao_texto}, Evento divisão: ${divisaoEvento}, Status: ${novoStatus}`);
+        
+        // Atualizar status baseado na verificação de divisão
         const { data, error } = await supabaseAdmin
           .from('presencas')
           .update({ 
-            status: 'presente',
+            status: novoStatus,
             confirmado_em: new Date().toISOString(),
             confirmado_por: confirmado_por_nome,
             justificativa_ausencia: null,
@@ -240,7 +290,7 @@ Deno.serve(async (req) => {
           );
         }
         
-        console.log('[manage-presenca] Presença atualizada para presente');
+        console.log(`[manage-presenca] Presença atualizada para ${novoStatus}`);
         return new Response(
           JSON.stringify({ success: true, data }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
