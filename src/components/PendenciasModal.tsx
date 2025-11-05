@@ -35,6 +35,17 @@ const MensalidadeDetalhesCard = ({ detalhes }: { detalhes: MensalidadeDetalhes }
   return (
     <Card className="bg-background/50 border-destructive/20">
       <CardContent className="p-4 space-y-3">
+        {/* Cargo do Integrante */}
+        {detalhes.cargo_grau_texto && (
+          <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-950/20 rounded">
+            <User className="h-4 w-4 text-blue-600" />
+            <div className="text-xs text-gray-900 dark:text-gray-100">
+              <span className="font-medium">Cargo:</span>{' '}
+              {detalhes.cargo_grau_texto}
+            </div>
+          </div>
+        )}
+
         {/* Resumo Financeiro */}
         <div className="grid grid-cols-2 gap-3">
           <div className="flex items-center gap-2">
@@ -240,6 +251,17 @@ const DeltaDetalhesCard = ({ detalhes }: { detalhes: DeltaDetalhes }) => {
             <Badge variant="destructive" className="text-xs">Alta Prioridade</Badge>
           )}
         </div>
+
+        {/* Cargo do Integrante */}
+        {detalhes.cargo_grau_texto && (
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <p className="text-xs text-muted-foreground">Cargo</p>
+              <p className="text-sm font-medium">{detalhes.cargo_grau_texto}</p>
+            </div>
+          </div>
+        )}
         
         {/* Data de Detecção */}
         <div className="flex items-center gap-2">

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface MensalidadeDetalhes {
+  cargo_grau_texto: string | null;
   total_parcelas: number;
   valor_total: number;
   parcelas: Array<{
@@ -25,6 +26,7 @@ interface AfastamentoDetalhes {
 }
 
 interface DeltaDetalhes {
+  cargo_grau_texto: string | null;
   tipo_delta: string;
   prioridade: number;
   carga_id: string;
@@ -197,6 +199,21 @@ export const usePendencias = (
         }
       });
 
+      // Buscar cargos dos integrantes das mensalidades
+      const registroIdsMensalidades = Array.from(mensalidadesMap.values()).map(e => e.registro_id);
+      const cargosMensalidadesMap = new Map<number, string | null>();
+      
+      if (registroIdsMensalidades.length > 0) {
+        const { data: integrantesData } = await supabase
+          .from('integrantes_portal')
+          .select('registro_id, cargo_grau_texto')
+          .in('registro_id', registroIdsMensalidades);
+        
+        integrantesData?.forEach(i => {
+          cargosMensalidadesMap.set(i.registro_id, i.cargo_grau_texto);
+        });
+      }
+
       // Ordenar parcelas e criar pendências
       mensalidadesMap.forEach((entry) => {
         entry.parcelas.sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento));
@@ -209,6 +226,7 @@ export const usePendencias = (
           detalhe: `${entry.parcelas.length} parcela(s) atrasada(s)`,
           data_ref: entry.mais_antiga,
           detalhes_completos: {
+            cargo_grau_texto: cargosMensalidadesMap.get(entry.registro_id) || null,
             total_parcelas: entry.parcelas.length,
             valor_total: entry.total_valor,
             parcelas: entry.parcelas,
@@ -356,6 +374,21 @@ export const usePendencias = (
         error: errorDeltas
       });
 
+      // Buscar cargos dos integrantes dos deltas
+      const registroIdsDeltas = deltas?.map(d => d.registro_id) || [];
+      const cargosDeltasMap = new Map<number, string | null>();
+      
+      if (registroIdsDeltas.length > 0) {
+        const { data: integrantesData } = await supabase
+          .from('integrantes_portal')
+          .select('registro_id, cargo_grau_texto')
+          .in('registro_id', registroIdsDeltas);
+        
+        integrantesData?.forEach(i => {
+          cargosDeltasMap.set(i.registro_id, i.cargo_grau_texto);
+        });
+      }
+
       deltas?.forEach(d => {
         const tipoDeltaLabel = {
           'SUMIU_ATIVOS': '🚨 Desapareceu dos ativos',
@@ -373,6 +406,7 @@ export const usePendencias = (
           detalhe: tipoDeltaLabel,
           data_ref: d.created_at,
           detalhes_completos: {
+            cargo_grau_texto: cargosDeltasMap.get(d.registro_id) || null,
             tipo_delta: d.tipo_delta,
             prioridade: d.prioridade,
             carga_id: d.carga_id,
