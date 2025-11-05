@@ -82,6 +82,8 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
     switch (status) {
       case 'presente':
         return <Badge className="bg-green-600 hover:bg-green-700">Presente</Badge>;
+      case 'visitante':
+        return <Badge className="bg-blue-600 hover:bg-blue-700">Visitante</Badge>;
       case 'ausente':
         return <Badge variant="destructive">Ausente</Badge>;
       case 'justificado':
@@ -94,6 +96,7 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
   const estatisticas = presencas ? {
     total: presencas.length,
     presentes: presencas.filter(p => p.status === 'presente').length,
+    visitantes: presencas.filter(p => p.status === 'visitante').length,
     ausentes: presencas.filter(p => p.status === 'ausente').length,
     justificados: presencas.filter(p => p.status === 'justificado').length
   } : null;
@@ -174,6 +177,10 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
               <div className="flex justify-between items-center">
                 <span className="text-green-600">Presentes:</span>
                 <span className="text-xl font-semibold text-green-600">{estatisticas.presentes}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-blue-600">Visitantes:</span>
+                <span className="text-xl font-semibold text-blue-600">{estatisticas.visitantes}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-amber-600">Justificados:</span>
