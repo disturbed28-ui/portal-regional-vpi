@@ -5,15 +5,15 @@ import { useUserRole } from "@/hooks/useUserRole";
 export const useScreenAccess = (screenRoute: string, userId: string | undefined) => {
   const [hasAccess, setHasAccess] = useState(false);
   const [loading, setLoading] = useState(true);
-  const { roles } = useUserRole(userId);
+  const { roles, loading: rolesLoading } = useUserRole(userId);
 
   useEffect(() => {
     checkAccess();
-  }, [screenRoute, roles, userId]);
+  }, [screenRoute, roles, userId, rolesLoading]);
 
   const checkAccess = async () => {
-    // Se userId é undefined, ainda está carregando - não tomar decisão
-    if (userId === undefined) {
+    // Se userId é undefined ou roles ainda está carregando, aguardar
+    if (userId === undefined || rolesLoading) {
       setLoading(true);
       return;
     }
