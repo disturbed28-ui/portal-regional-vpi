@@ -215,6 +215,8 @@ Deno.serve(async (req) => {
             status: 'presente',
             confirmado_em: new Date().toISOString(),
             confirmado_por: user_id,
+            justificativa_ausencia: null,
+            justificativa_tipo: null,
           })
           .eq('id', existente.id)
           .select()

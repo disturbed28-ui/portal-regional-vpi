@@ -220,18 +220,18 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
                     {presencas.map((presenca) => (
                       <TableRow key={presenca.id}>
                         <TableCell className="font-medium">
-                          {presenca.integrantes_portal?.[0]?.nome_colete 
-                            ? removeAccents(presenca.integrantes_portal[0].nome_colete)
+                          {presenca.integrantes_portal?.nome_colete 
+                            ? removeAccents(presenca.integrantes_portal.nome_colete)
                             : '-'}
                         </TableCell>
                         <TableCell>
-                          {presenca.integrantes_portal?.[0]?.divisao_texto 
-                            ? removeAccents(presenca.integrantes_portal[0].divisao_texto)
+                          {presenca.integrantes_portal?.divisao_texto 
+                            ? removeAccents(presenca.integrantes_portal.divisao_texto)
                             : '-'}
                         </TableCell>
                         <TableCell>
-                          {presenca.integrantes_portal?.[0]?.cargo_nome 
-                            ? `${removeAccents(presenca.integrantes_portal[0].cargo_nome)} ${presenca.integrantes_portal[0].grau ? `(${removeAccents(presenca.integrantes_portal[0].grau)})` : ''}`
+                          {presenca.integrantes_portal?.cargo_nome 
+                            ? `${removeAccents(presenca.integrantes_portal.cargo_nome)}${presenca.integrantes_portal.grau ? ` (${removeAccents(presenca.integrantes_portal.grau)})` : ''}`
                             : '-'}
                         </TableCell>
                         <TableCell>{getStatusBadge(presenca.status)}</TableCell>
@@ -242,7 +242,9 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
                             : '-'}
                         </TableCell>
                         <TableCell className="max-w-xs truncate">
-                          {presenca.justificativa_ausencia || '-'}
+                          {presenca.status === 'presente' 
+                            ? '-' 
+                            : (presenca.justificativa_ausencia || 'Não justificado')}
                         </TableCell>
                       </TableRow>
                     ))}
