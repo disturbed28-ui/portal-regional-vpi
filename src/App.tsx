@@ -3,7 +3,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Perfil from "./pages/Perfil";
 import Admin from "./pages/Admin";
@@ -28,61 +27,17 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={
-            <ProtectedRoute screenRoute="/">
-              <Index />
-            </ProtectedRoute>
-          } />
-          <Route path="/perfil" element={
-            <ProtectedRoute screenRoute="/perfil">
-              <Perfil />
-            </ProtectedRoute>
-          } />
-          <Route path="/admin" element={
-            <ProtectedRoute screenRoute="/admin">
-              <Admin />
-            </ProtectedRoute>
-          } />
-          <Route path="/admin/estrutura" element={
-            <ProtectedRoute screenRoute="/admin/estrutura">
-              <AdminEstrutura />
-            </ProtectedRoute>
-          } />
-          <Route path="/admin/dados" element={
-            <ProtectedRoute screenRoute="/admin/dados">
-              <AdminDados />
-            </ProtectedRoute>
-          } />
-          <Route path="/admin/integrantes" element={
-            <ProtectedRoute screenRoute="/admin/integrantes">
-              <AdminIntegrantes />
-            </ProtectedRoute>
-          } />
-          <Route path="/admin/permissoes" element={
-            <ProtectedRoute screenRoute="/admin/permissoes">
-              <AdminPermissoes />
-            </ProtectedRoute>
-          } />
-          <Route path="/agenda" element={
-            <ProtectedRoute screenRoute="/agenda">
-              <Agenda />
-            </ProtectedRoute>
-          } />
-          <Route path="/relatorios" element={
-            <ProtectedRoute screenRoute="/relatorios">
-              <Relatorios />
-            </ProtectedRoute>
-          } />
-          <Route path="/organograma" element={
-            <ProtectedRoute screenRoute="/organograma">
-              <Organograma />
-            </ProtectedRoute>
-          } />
-          <Route path="/listas-presenca" element={
-            <ProtectedRoute screenRoute="/listas-presenca">
-              <ListasPresenca />
-            </ProtectedRoute>
-          } />
+          <Route path="/" element={<Index />} />
+          <Route path="/perfil" element={<Perfil />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/admin/estrutura" element={<AdminEstrutura />} />
+          <Route path="/admin/dados" element={<AdminDados />} />
+          <Route path="/admin/integrantes" element={<AdminIntegrantes />} />
+          <Route path="/admin/permissoes" element={<AdminPermissoes />} />
+          <Route path="/agenda" element={<Agenda />} />
+          <Route path="/relatorios" element={<Relatorios />} />
+          <Route path="/organograma" element={<Organograma />} />
+          <Route path="/listas-presenca" element={<ListasPresenca />} />
           <Route path="/politica-privacidade" element={<PoliticaPrivacidade />} />
           <Route path="/termos-servico" element={<TermosServico />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

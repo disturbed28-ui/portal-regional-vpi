@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserRole } from "@/hooks/useUserRole";
-import { useScreenAccess } from "@/hooks/useScreenAccess";
 import { useToast } from "@/hooks/use-toast";
 import { usePresence } from "@/hooks/usePresence";
 import { OnlineUsersModal } from "@/components/OnlineUsersModal";
@@ -23,13 +22,6 @@ const Index = () => {
   const { hasRole, loading: roleLoading } = useUserRole(user?.id);
   const { onlineUsers, totalOnline } = usePresence(user?.id, profile?.nome_colete);
   const [showQRCode, setShowQRCode] = useState(false);
-
-  // Hooks de permissão para cada tela
-  const { hasAccess: canViewAgenda } = useScreenAccess('/agenda', user?.id);
-  const { hasAccess: canViewOrganograma } = useScreenAccess('/organograma', user?.id);
-  const { hasAccess: canViewRelatorios } = useScreenAccess('/relatorios', user?.id);
-  const { hasAccess: canViewAdmin } = useScreenAccess('/admin', user?.id);
-  const { hasAccess: canViewListas } = useScreenAccess('/listas-presenca', user?.id);
 
   // Determinar role para pendências
   const isAdmin = hasRole('admin');
@@ -249,25 +241,21 @@ const Index = () => {
               {isLoggedIn ? "Desconectar" : "Conectar"}
             </Button>
             
-            {canViewAgenda && (
-              <Button 
-                onClick={handleAgenda}
-                disabled={!isLoggedIn || !isActive}
-                className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Agenda
-              </Button>
-            )}
+            <Button 
+              onClick={handleAgenda}
+              disabled={!isLoggedIn || !isActive}
+              className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Agenda
+            </Button>
             
-            {canViewOrganograma && (
-              <Button 
-                onClick={handleOrganograma}
-                disabled={!isLoggedIn || !isActive}
-                className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Organograma
-              </Button>
-            )}
+            <Button 
+              onClick={handleOrganograma}
+              disabled={!isLoggedIn || !isActive}
+              className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Organograma
+            </Button>
             
             <Button 
               onClick={handlePerfil}
@@ -281,7 +269,7 @@ const Index = () => {
               {isProfileIncomplete ? '⚠️ Complete seu Perfil!' : 'Perfil do Usuario'}
             </Button>
             
-            {canViewAdmin && (
+            {isAdmin && (
               <Button 
                 onClick={handleAdmin}
                 disabled={!isLoggedIn || !isActive}
@@ -291,7 +279,7 @@ const Index = () => {
               </Button>
             )}
             
-            {canViewRelatorios && (
+            {!roleLoading && (isAdmin || isDiretorDivisao || isModerator || isDiretorRegional) && (
               <Button 
                 onClick={handleRelatorios}
                 disabled={!isLoggedIn || !isActive}
@@ -301,7 +289,7 @@ const Index = () => {
               </Button>
             )}
             
-            {canViewListas && (
+            {!roleLoading && (isAdmin || isModerator) && (
               <Button 
                 onClick={handleListasPresenca}
                 disabled={!isLoggedIn || !isActive}
