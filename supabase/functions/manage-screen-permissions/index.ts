@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
     const requestSchema = z.object({
       action: z.enum(['add', 'remove'], { errorMap: () => ({ message: 'Ação deve ser "add" ou "remove"' }) }),
       screen_id: z.string().uuid('ID de tela inválido'),
-      role: z.enum(['admin', 'moderator', 'user', 'diretor_regional']),
+      role: z.enum(['admin', 'moderator', 'user', 'diretor_regional', 'diretor_divisao', 'regional']),
       user_id: z.string().uuid('ID de usuário inválido')
     });
 
