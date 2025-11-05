@@ -198,12 +198,18 @@ export const DeltasAfastados = ({ pendencias, loading, userId, isAdmin }: Deltas
                           <td className="p-3 text-foreground">{getTipoDeltaBadge(detalhes.tipo_delta)}</td>
                           <td className="p-3 font-medium text-foreground">{pendencia.nome_colete}</td>
                           <td className="p-3 text-foreground">
-                            <code className="text-xs bg-muted px-2 py-1 rounded">
+                            <code className="text-xs bg-muted px-2 py-1 rounded text-foreground">
                               {pendencia.registro_id}
                             </code>
                           </td>
                           <td className="p-3 text-foreground">{pendencia.divisao_texto}</td>
-                          <td className="p-3 text-foreground">{detalhes.cargo_grau_texto || '-'}</td>
+                          <td className="p-3 text-foreground">
+                            {detalhes.cargo_grau_texto ? (
+                              <span className="text-foreground">{detalhes.cargo_grau_texto}</span>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </td>
                           <td className="p-3 text-xs text-foreground">{formatDate(detalhes.created_at)}</td>
                           <td className="p-3 text-foreground">
                             <Badge

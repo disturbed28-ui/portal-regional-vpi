@@ -102,10 +102,10 @@ export const ResolverDeltaDialog = ({
 
         <div className="space-y-4 py-4">
           {/* Resumo do Delta */}
-          <div className="bg-muted p-4 rounded-lg space-y-2">
+          <div className="bg-muted/50 border border-border p-4 rounded-lg space-y-2">
             <div className="flex items-center justify-between">
               <span className="font-semibold text-foreground">Tipo:</span>
-              {getTipoDeltaBadge(delta.tipo_delta)}
+              <div className="text-foreground">{getTipoDeltaBadge(delta.tipo_delta)}</div>
             </div>
             <div className="flex items-center justify-between">
               <span className="font-semibold text-foreground">Integrante:</span>

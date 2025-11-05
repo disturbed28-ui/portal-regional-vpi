@@ -140,6 +140,7 @@ export type Database = {
       deltas_pendentes: {
         Row: {
           carga_id: string | null
+          cargo_grau_texto: string | null
           created_at: string
           dados_adicionais: Json | null
           divisao_texto: string
@@ -156,6 +157,7 @@ export type Database = {
         }
         Insert: {
           carga_id?: string | null
+          cargo_grau_texto?: string | null
           created_at?: string
           dados_adicionais?: Json | null
           divisao_texto: string
@@ -172,6 +174,7 @@ export type Database = {
         }
         Update: {
           carga_id?: string | null
+          cargo_grau_texto?: string | null
           created_at?: string
           dados_adicionais?: Json | null
           divisao_texto?: string
