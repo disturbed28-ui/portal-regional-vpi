@@ -375,7 +375,43 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
       <div className={`rounded-lg bg-secondary/50 hover:bg-secondary border-l-4 ${getBorderColor()}`}>
         {/* Cabeçalho clicável */}
         <CollapsibleTrigger className="w-full">
-          <div className="grid grid-cols-[2fr_1.5fr_2fr_auto] gap-3 p-3 items-center">
+          {/* Layout Mobile: Empilhado verticalmente */}
+          <div className="md:hidden p-3 space-y-2">
+            {/* Linha 1: Nome + Divisão */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-sm truncate" title={pendencia.nome_colete}>
+                  {pendencia.nome_colete}
+                </div>
+                <div className="text-xs text-muted-foreground truncate" title={pendencia.divisao_texto}>
+                  {pendencia.divisao_texto}
+                </div>
+              </div>
+              <div className="flex-shrink-0">
+                {isOpen ? (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                )}
+              </div>
+            </div>
+            
+            {/* Linha 2: Badge + Detalhe */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge 
+                variant={isMensalidade ? 'destructive' : isDelta ? 'default' : 'secondary'}
+                className="text-xs"
+              >
+                {getIcon()} {getLabel()}
+              </Badge>
+              <span className="text-xs text-muted-foreground flex-1 min-w-0 truncate" title={pendencia.detalhe}>
+                {pendencia.detalhe}
+              </span>
+            </div>
+          </div>
+          
+          {/* Layout Desktop: Grid horizontal (mantém o atual) */}
+          <div className="hidden md:grid grid-cols-[2fr_1.5fr_2fr_auto] gap-3 p-3 items-center">
             <div className="font-medium truncate text-left" title={pendencia.nome_colete}>
               {pendencia.nome_colete}
             </div>
@@ -438,7 +474,7 @@ export const PendenciasModal = ({ pendencias, totalPendencias }: PendenciasModal
         </Button>
       </DialogTrigger>
       
-      <DialogContent className="sm:max-w-3xl max-h-[85vh]" aria-describedby="pendencias-description">
+      <DialogContent className="sm:max-w-3xl max-h-[85vh] w-[95vw] sm:w-full" aria-describedby="pendencias-description">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertCircle className="h-5 w-5 text-red-600" />
