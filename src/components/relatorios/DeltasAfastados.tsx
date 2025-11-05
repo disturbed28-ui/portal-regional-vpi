@@ -178,16 +178,16 @@ export const DeltasAfastados = ({ pendencias, loading, userId, isAdmin }: Deltas
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-muted">
+                  <thead className="bg-muted text-muted-foreground">
                     <tr>
-                      <th className="text-left p-3">Tipo</th>
-                      <th className="text-left p-3">Integrante</th>
-                      <th className="text-left p-3">Registro</th>
-                      <th className="text-left p-3">Divisão</th>
-                      <th className="text-left p-3">Cargo/Grau</th>
-                      <th className="text-left p-3">Detectado em</th>
-                      <th className="text-left p-3">Prioridade</th>
-                      {isAdmin && <th className="text-left p-3">Ações</th>}
+                      <th className="text-left p-3 text-muted-foreground">Tipo</th>
+                      <th className="text-left p-3 text-muted-foreground">Integrante</th>
+                      <th className="text-left p-3 text-muted-foreground">Registro</th>
+                      <th className="text-left p-3 text-muted-foreground">Divisão</th>
+                      <th className="text-left p-3 text-muted-foreground">Cargo/Grau</th>
+                      <th className="text-left p-3 text-muted-foreground">Detectado em</th>
+                      <th className="text-left p-3 text-muted-foreground">Prioridade</th>
+                      {isAdmin && <th className="text-left p-3 text-muted-foreground">Ações</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -195,17 +195,17 @@ export const DeltasAfastados = ({ pendencias, loading, userId, isAdmin }: Deltas
                       const detalhes = pendencia.detalhes_completos as DeltaDetalhes;
                       return (
                         <tr key={idx} className="border-b hover:bg-muted/50">
-                          <td className="p-3">{getTipoDeltaBadge(detalhes.tipo_delta)}</td>
-                          <td className="p-3 font-medium">{pendencia.nome_colete}</td>
-                          <td className="p-3">
+                          <td className="p-3 text-foreground">{getTipoDeltaBadge(detalhes.tipo_delta)}</td>
+                          <td className="p-3 font-medium text-foreground">{pendencia.nome_colete}</td>
+                          <td className="p-3 text-foreground">
                             <code className="text-xs bg-muted px-2 py-1 rounded">
                               {pendencia.registro_id}
                             </code>
                           </td>
-                          <td className="p-3">{pendencia.divisao_texto}</td>
-                          <td className="p-3">{detalhes.cargo_grau_texto || '-'}</td>
-                          <td className="p-3 text-xs">{formatDate(detalhes.created_at)}</td>
-                          <td className="p-3">
+                          <td className="p-3 text-foreground">{pendencia.divisao_texto}</td>
+                          <td className="p-3 text-foreground">{detalhes.cargo_grau_texto || '-'}</td>
+                          <td className="p-3 text-xs text-foreground">{formatDate(detalhes.created_at)}</td>
+                          <td className="p-3 text-foreground">
                             <Badge
                               variant={detalhes.prioridade > 5 ? 'destructive' : 'secondary'}
                             >
@@ -213,7 +213,7 @@ export const DeltasAfastados = ({ pendencias, loading, userId, isAdmin }: Deltas
                             </Badge>
                           </td>
                           {isAdmin && (
-                            <td className="p-3">
+                            <td className="p-3 text-foreground">
                               <Button
                                 size="sm"
                                 onClick={() => handleResolverClick(pendencia)}

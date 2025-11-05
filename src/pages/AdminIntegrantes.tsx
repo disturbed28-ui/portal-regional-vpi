@@ -22,6 +22,10 @@ import { format } from "date-fns";
 import { DialogAtualizados } from "@/components/admin/DialogAtualizados";
 import type { IntegrantePortal } from "@/hooks/useIntegrantes";
 import type { ExcelIntegrante } from "@/lib/excelParser";
+import { CargaAfastados } from "@/components/admin/CargaAfastados";
+import { DeltasAfastados } from "@/components/relatorios/DeltasAfastados";
+import { usePendencias } from "@/hooks/usePendencias";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const AdminIntegrantes = () => {
   const navigate = useNavigate();
@@ -54,6 +58,13 @@ const AdminIntegrantes = () => {
   }>>([]);
   
   const { ultimaCargaInfo, devedoresAtivos } = useMensalidades();
+  const { hasRole } = useUserRole(user?.id);
+  
+  // Hook para deltas de afastados (admin vê todos)
+  const { pendencias, loading: pendenciasLoading } = usePendencias(
+    user?.id,
+    hasRole('admin') ? 'admin' : 'user'
+  );
 
   const integrantesFiltrados = integrantes.filter((i) =>
     i.nome_colete.toLowerCase().includes(searchTerm.toLowerCase())
@@ -590,6 +601,43 @@ const AdminIntegrantes = () => {
                 </div>
               )}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Card de Afastados */}
+        <Card className="border-purple-200">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <UserX className="h-5 w-5 text-purple-500" />
+              <CardTitle>Gestão de Afastados</CardTitle>
+            </div>
+            <CardDescription>
+              Importe a lista de integrantes temporariamente afastados e gerencie exceções detectadas
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Área de Carga */}
+            <CargaAfastados />
+            
+            {/* Divisor visual */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Deltas Pendentes
+                </span>
+              </div>
+            </div>
+            
+            {/* Deltas Afastados */}
+            <DeltasAfastados 
+              pendencias={pendencias}
+              loading={pendenciasLoading}
+              userId={user?.id}
+              isAdmin={hasRole('admin')}
+            />
           </CardContent>
         </Card>
 

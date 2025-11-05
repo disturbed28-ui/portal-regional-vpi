@@ -104,38 +104,38 @@ export const ResolverDeltaDialog = ({
           {/* Resumo do Delta */}
           <div className="bg-muted p-4 rounded-lg space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-semibold">Tipo:</span>
+              <span className="font-semibold text-foreground">Tipo:</span>
               {getTipoDeltaBadge(delta.tipo_delta)}
             </div>
             <div className="flex items-center justify-between">
-              <span className="font-semibold">Integrante:</span>
-              <span>{delta.nome_colete}</span>
+              <span className="font-semibold text-foreground">Integrante:</span>
+              <span className="text-foreground">{delta.nome_colete}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="font-semibold">Registro:</span>
-              <span className="font-mono text-sm">{delta.registro_id}</span>
+              <span className="font-semibold text-foreground">Registro:</span>
+              <span className="font-mono text-sm text-foreground">{delta.registro_id}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="font-semibold">Divisão:</span>
-              <span>{delta.divisao_texto}</span>
+              <span className="font-semibold text-foreground">Divisão:</span>
+              <span className="text-foreground">{delta.divisao_texto}</span>
             </div>
             {delta.cargo_grau_texto && (
               <div className="flex items-center justify-between">
-                <span className="font-semibold">Cargo/Grau:</span>
-                <span>{delta.cargo_grau_texto}</span>
+                <span className="font-semibold text-foreground">Cargo/Grau:</span>
+                <span className="text-foreground">{delta.cargo_grau_texto}</span>
               </div>
             )}
             <div className="flex items-center justify-between">
-              <span className="font-semibold">Detectado em:</span>
-              <span className="text-sm">{formatDate(delta.created_at)}</span>
+              <span className="font-semibold text-foreground">Detectado em:</span>
+              <span className="text-sm text-foreground">{formatDate(delta.created_at)}</span>
             </div>
           </div>
 
           {/* Informações Adicionais */}
           {delta.dados_adicionais && (
             <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg text-sm">
-              <p className="font-semibold mb-1">Informações adicionais:</p>
-              <pre className="text-xs overflow-auto">
+              <p className="font-semibold mb-1 text-foreground">Informações adicionais:</p>
+              <pre className="text-xs overflow-auto text-foreground">
                 {JSON.stringify(delta.dados_adicionais, null, 2)}
               </pre>
             </div>
