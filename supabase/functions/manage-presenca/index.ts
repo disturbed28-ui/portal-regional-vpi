@@ -105,6 +105,16 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Buscar nome do colete do usuário que está confirmando
+    const { data: userProfile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('nome_colete')
+      .eq('id', user_id)
+      .single();
+    
+    const confirmado_por_nome = userProfile?.nome_colete || user_id;
+    console.log('[manage-presenca] Confirmado por:', confirmado_por_nome);
+
     // Executar ação
     if (action === 'initialize') {
       console.log('[manage-presenca] Inicializando lista de presença...');
@@ -173,7 +183,7 @@ Deno.serve(async (req) => {
         integrante_id: i.id,
         profile_id: i.profile_id || null,
         status: 'ausente',
-        confirmado_por: user_id,
+        confirmado_por: confirmado_por_nome,
       }));
       
       const { data, error } = await supabaseAdmin
@@ -214,7 +224,7 @@ Deno.serve(async (req) => {
           .update({ 
             status: 'presente',
             confirmado_em: new Date().toISOString(),
-            confirmado_por: user_id,
+            confirmado_por: confirmado_por_nome,
             justificativa_ausencia: null,
             justificativa_tipo: null,
           })
@@ -244,7 +254,7 @@ Deno.serve(async (req) => {
             integrante_id,
             profile_id: profile_id || null,
             status: 'visitante',
-            confirmado_por: user_id,
+            confirmado_por: confirmado_por_nome,
           })
           .select()
           .single();
@@ -271,7 +281,7 @@ Deno.serve(async (req) => {
       const updateData: any = { 
         status: 'ausente',
         confirmado_em: new Date().toISOString(),
-        confirmado_por: user_id,
+        confirmado_por: confirmado_por_nome,
       };
       
       if (justificativa_ausencia) {
