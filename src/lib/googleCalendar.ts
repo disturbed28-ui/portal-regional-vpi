@@ -299,26 +299,26 @@ function detectDivisionFromTitle(title: string): string {
   
   // PRIORIDADE MÁXIMA: Extremos de SJC (com ou sem mencionar SJC)
   // Se tem "Ext" + direção, assume SJC por padrão
-  if (temExtremo && temSul) return 'Div SJC Ext Sul - SP';
-  if (temExtremo && temNorte) return 'Div SJC Ext Norte - SP';
-  if (temExtremo && temLeste) return 'Div SJC Ext Leste - SP';
+  if (temExtremo && temSul) return 'Divisao Sao Jose dos Campos Extremo Sul - SP';
+  if (temExtremo && temNorte) return 'Divisao Sao Jose dos Campos Extremo Norte - SP';
+  if (temExtremo && temLeste) return 'Divisao Sao Jose dos Campos Extremo Leste - SP';
   
   // SJC Direções normais (precisa mencionar SJC)
-  if (temSjc && temCentro) return 'Div SJC Centro - SP';
-  if (temSjc && temLeste) return 'Div SJC Leste - SP';
-  if (temSjc && temNorte) return 'Div SJC Norte - SP';
-  if (temSjc && temSul) return 'Div SJC Sul - SP';
-  if (temSjc && temOeste) return 'Div SJC Oeste - SP';
+  if (temSjc && temCentro) return 'Divisao Sao Jose dos Campos Centro - SP';
+  if (temSjc && temLeste) return 'Divisao Sao Jose dos Campos Leste - SP';
+  if (temSjc && temNorte) return 'Divisao Sao Jose dos Campos Norte - SP';
+  if (temSjc && temSul) return 'Divisao Sao Jose dos Campos Sul - SP';
+  if (temSjc && temOeste) return 'Divisao Sao Jose dos Campos Oeste - SP';
   
   // Jacareí Direções
-  if (temJac && temNorte) return 'Div Jacarei Norte - SP';
-  if (temJac && temOeste) return 'Div Jacarei Oeste - SP';
-  if (temJac && temLeste) return 'Div Jacarei Leste - SP';
-  if (temJac && temSul) return 'Div Jacarei Sul - SP';
-  if (temJac && temCentro) return 'Div Jacarei Centro - SP';
+  if (temJac && temNorte) return 'Divisao Jacarei Norte - SP';
+  if (temJac && temOeste) return 'Divisao Jacarei Oeste - SP';
+  if (temJac && temLeste) return 'Divisao Jacarei Leste - SP';
+  if (temJac && temSul) return 'Divisao Jacarei Sul - SP';
+  if (temJac && temCentro) return 'Divisao Jacarei Centro - SP';
   
   // Caçapava
-  if (temCacapava) return 'Div Cacapava - SP';
+  if (temCacapava) return 'Divisao Cacapava - SP';
   
   console.log('[detectDivisionFromTitle] Nenhuma divisão detectada');
   return 'Sem Divisao';
