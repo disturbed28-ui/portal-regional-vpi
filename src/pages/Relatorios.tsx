@@ -24,6 +24,8 @@ import { Calendar, Users, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { CardDescription } from '@/components/ui/card';
 import { toast as sonnerToast } from 'sonner';
+import { usePendencias } from '@/hooks/usePendencias';
+import { DeltasAfastados } from '@/components/relatorios/DeltasAfastados';
 
 const Relatorios = () => {
   const navigate = useNavigate();
@@ -45,6 +47,15 @@ const Relatorios = () => {
   const { afastados: proximos7, loading: loadingProximos7 } = useRetornosProximos(7);
   const { afastados: proximos30, loading: loadingProximos30 } = useRetornosProximos(30);
   const { registrarRetorno } = useRegistrarRetorno();
+  
+  // Hook para deltas de afastados
+  const { pendencias, loading: loadingPendencias } = usePendencias(
+    user?.id,
+    hasRole('admin') ? 'admin' : hasRole('diretor_regional') ? 'diretor_regional' : hasRole('diretor_divisao') ? 'diretor_divisao' : hasRole('moderator') ? 'regional' : 'user',
+    profile?.regional_id,
+    profile?.divisao_id,
+    undefined // registro_id não disponível no Profile
+  );
 
   // Redirecionar para perfil se usuário não tiver nome_colete
   useEffect(() => {
@@ -255,11 +266,12 @@ const Relatorios = () => {
         {/* Conteúdo Principal */}
         {relatorioData && (
           <Tabs defaultValue="relatorio" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="relatorio">Relatório</TabsTrigger>
               <TabsTrigger value="evolucao">Evolução Histórica</TabsTrigger>
               <TabsTrigger value="inadimplencia">Inadimplência</TabsTrigger>
               <TabsTrigger value="afastamentos">Afastamentos</TabsTrigger>
+              <TabsTrigger value="deltas">Deltas Afastados</TabsTrigger>
             </TabsList>
               
               <TabsContent value="relatorio">
@@ -601,6 +613,16 @@ const Relatorios = () => {
                     </div>
                   </TabsContent>
                 </Tabs>
+              </TabsContent>
+              
+              {/* Nova aba Deltas Afastados */}
+              <TabsContent value="deltas">
+                <DeltasAfastados 
+                  pendencias={pendencias}
+                  loading={loadingPendencias}
+                  userId={user?.id}
+                  isAdmin={hasRole('admin')}
+                />
               </TabsContent>
             </Tabs>
         )}

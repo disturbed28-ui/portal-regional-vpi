@@ -26,6 +26,7 @@ interface AfastamentoDetalhes {
 }
 
 interface DeltaDetalhes {
+  id: string; // ID do delta na tabela deltas_pendentes
   cargo_grau_texto: string | null;
   tipo_delta: string;
   prioridade: number;
@@ -406,6 +407,7 @@ export const usePendencias = (
           detalhe: tipoDeltaLabel,
           data_ref: d.created_at,
           detalhes_completos: {
+            id: d.id, // ID do delta
             cargo_grau_texto: cargosDeltasMap.get(d.registro_id) || null,
             tipo_delta: d.tipo_delta,
             prioridade: d.prioridade,
