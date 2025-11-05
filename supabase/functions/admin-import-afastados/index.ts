@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
     // Buscar afastados ativos atuais para detectar deltas
     const { data: afastadosAtuais } = await supabase
       .from('integrantes_afastados')
-      .select('registro_id, nome_colete, divisao_texto')
+      .select('registro_id, nome_colete, divisao_texto, cargo_grau_texto')
       .eq('ativo', true);
     
     const registrosNovaPlanilha = new Set(afastados.map(a => a.registro_id));
@@ -80,6 +80,7 @@ Deno.serve(async (req) => {
           registro_id: atual.registro_id,
           nome_colete: atual.nome_colete,
           divisao_texto: atual.divisao_texto,
+          cargo_grau_texto: atual.cargo_grau_texto,
           tipo_delta: 'SUMIU_AFASTADOS',
           prioridade: 0,
           dados_adicionais: { origem: 'Estava afastado, não está mais na planilha' }
@@ -96,6 +97,7 @@ Deno.serve(async (req) => {
           registro_id: novo.registro_id,
           nome_colete: novo.nome_colete,
           divisao_texto: novo.divisao_texto,
+          cargo_grau_texto: novo.cargo_grau_texto,
           tipo_delta: 'NOVO_AFASTADOS',
           prioridade: 0,
           dados_adicionais: { 
