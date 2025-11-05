@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { removeAccents } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ListaPresencaProps {
   event: CalendarEvent | null;
@@ -50,6 +51,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
   const { canManage, loading: loadingPermissions } = useCanManagePresenca();
   const { evento, presencas, loading, criarEvento, registrarPresenca, removerPresenca, refetch } = useEventoPresenca(event?.id || null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
     if (open && event) {
@@ -80,6 +82,50 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
       );
     } else {
       refetch();
+      
+      // Verificar se o evento tem presenças
+      const { count } = await supabase
+        .from('presencas')
+        .select('*', { count: 'exact', head: true })
+        .eq('evento_agenda_id', existingEvento.id);
+      
+      // Se o evento existe mas não tem presenças E tem uma divisão, inicializar
+      if (count === 0 && existingEvento.divisao_id && user) {
+        console.log('[initializeEvento] Evento sem presenças, inicializando lista...');
+        try {
+          const { data, error } = await supabase.functions.invoke('manage-presenca', {
+            body: {
+              action: 'initialize',
+              user_id: user.id,
+              evento_agenda_id: existingEvento.id,
+              divisao_id: existingEvento.divisao_id,
+            }
+          });
+          
+          if (error) {
+            console.error('[initializeEvento] Erro ao inicializar:', error);
+            toast({
+              title: "Erro ao inicializar lista",
+              description: error.message || "Não foi possível criar a lista de presença",
+              variant: "destructive",
+            });
+          } else {
+            console.log(`[initializeEvento] ${data.count} integrantes registrados`);
+            refetch(); // Atualizar dados após inicialização
+            toast({
+              title: "Lista criada",
+              description: `${data.count} integrantes registrados como ausentes`,
+            });
+          }
+        } catch (error) {
+          console.error('[initializeEvento] Erro:', error);
+          toast({
+            title: "Erro",
+            description: "Não foi possível criar a lista de presença",
+            variant: "destructive",
+          });
+        }
+      }
     }
   };
 
