@@ -148,12 +148,12 @@ Deno.serve(async (req) => {
         );
       }
       
-      // Filtrar integrantes da divisão usando normalização
+      // Filtrar integrantes da divisão usando normalização com match exato
       const divisaoNormalizada = normalizeText(divisao.nome);
       const integrantes = (allIntegrantes || []).filter(i => {
         const divisaoIntegranteNormalizada = normalizeText(i.divisao_texto || '');
-        return divisaoIntegranteNormalizada.includes(divisaoNormalizada) ||
-               divisaoNormalizada.includes(divisaoIntegranteNormalizada);
+        // Match exato para evitar que "SJC Norte" pegue integrantes de "SJC Extremo Norte"
+        return divisaoIntegranteNormalizada === divisaoNormalizada;
       });
       
       console.log('[manage-presenca] Divisão normalizada:', divisaoNormalizada);
