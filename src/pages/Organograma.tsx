@@ -50,7 +50,7 @@ const Organograma = () => {
     }
   }, [user, profileLoading, profile, navigate]);
 
-  // Validar acesso e buscar regional do integrante
+  // Buscar regional do integrante
   useEffect(() => {
     // Aguardar todos os loadings completarem e dados necessários estarem disponíveis
     if (!user?.id || roleLoading || profileLoading) return;
@@ -59,12 +59,12 @@ const Organograma = () => {
     const isAdmin = hasRole('admin');
     if (isAdmin && !profile) return;
 
-    const validateAccess = async () => {
+    const fetchRegional = async () => {
       // Se for admin, usar dados do profile
       if (isAdmin) {
         if (!profile?.regional_id) {
           toast.error('Admin sem regional definida no perfil');
-          navigate('/');
+          setRegionalUsuario(null);
           return;
         }
         
@@ -77,7 +77,7 @@ const Organograma = () => {
         
         if (regionalError || !regionalData) {
           toast.error('Erro ao buscar regional do admin');
-          navigate('/');
+          setRegionalUsuario(null);
           return;
         }
         
@@ -85,24 +85,24 @@ const Organograma = () => {
         return;
       }
 
-      // Se não for admin, validar integrantes_portal (lógica atual)
+      // Se não for admin, buscar de integrantes_portal
       const { data, error } = await supabase
         .from('integrantes_portal')
-        .select('ativo, vinculado, regional_texto')
+        .select('ativo, regional_texto')
         .eq('profile_id', user.id)
         .maybeSingle();
       
-      if (error || !data || !data.ativo) {
-        toast.error('Acesso negado: apenas integrantes ativos podem acessar');
-        navigate('/');
+      if (error || !data) {
+        toast.error('Erro ao buscar dados do integrante');
+        setRegionalUsuario(null);
         return;
       }
       
       setRegionalUsuario(data.regional_texto);
     };
 
-    validateAccess();
-  }, [user?.id, navigate, hasRole, roleLoading, profile, profileLoading]);
+    fetchRegional();
+  }, [user?.id, hasRole, roleLoading, profile, profileLoading, toast]);
   
   const {
     hierarquiaRegional,

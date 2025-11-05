@@ -30,13 +30,10 @@ const Relatorios = () => {
   const { user } = useAuth();
   const { profile, loading: profileLoading } = useProfile(user?.id);
   const { hasRole, loading: rolesLoading } = useUserRole(user?.id);
-  
-  // Verificar permissões
-  const isAutorizado = hasRole('admin') || hasRole('diretor_divisao') || hasRole('moderator');
 
   const { data: relatorioData, isLoading } = useRelatorioData();
   const { data: historicoData, isLoading: isLoadingHistorico } = useHistoricoCargas({
-    enabled: !!user?.id && isAutorizado && !rolesLoading
+    enabled: !!user?.id && !rolesLoading
   });
 
   // Hooks para afastamentos
@@ -202,22 +199,6 @@ const Relatorios = () => {
       });
     }
   };
-
-  if (!isAutorizado) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
-        <Card className="max-w-md w-full">
-          <CardHeader>
-            <CardTitle>Acesso Negado</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="mb-4">Você não tem permissão para acessar esta página.</p>
-            <Button onClick={() => navigate('/')}>Voltar ao Início</Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   if (isLoading) {
     return (

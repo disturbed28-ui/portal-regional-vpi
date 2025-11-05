@@ -24,17 +24,6 @@ const ListasPresenca = () => {
   const isAdmin = hasRole('admin');
   const isModerator = hasRole('moderator');
 
-  // Verificar acesso
-  if (!roleLoading && !isAdmin && !isModerator) {
-    toast({
-      title: "Acesso Negado",
-      description: "Você não tem permissão para acessar esta página.",
-      variant: "destructive",
-    });
-    navigate("/");
-    return null;
-  }
-
   if (roleLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
