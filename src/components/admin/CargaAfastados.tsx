@@ -65,9 +65,30 @@ export const CargaAfastados = () => {
       if (error) throw error;
 
       if (data?.sucesso) {
-        toast.success(
-          `Importação concluída! ${data.novos} novos, ${data.atualizados} atualizados`
-        );
+        // Invalidar cache de pendências
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith('pendencias_v2_')) {
+            localStorage.removeItem(key);
+          }
+        });
+        
+        let message = `Importação concluída! ${data.novos} novos, ${data.atualizados} atualizados`;
+        
+        if (data.deltasGerados > 0) {
+          message += `\n\n⚠️ ${data.deltasGerados} anomalia(s) detectada(s)`;
+          
+          if (data.deltas && data.deltas.length > 0) {
+            message += ':\n';
+            data.deltas.forEach((d: any) => {
+              const label = d.tipo_delta === 'SUMIU_AFASTADOS' ? '↩️ Saiu dos afastados' : '🆕 Novo afastado';
+              message += `• ${label}: ${d.nome_colete}\n`;
+            });
+          }
+          
+          message += '\n\nVerifique as pendências no Index.';
+        }
+        
+        toast.success(message, { duration: 8000 });
         
         if (data.avisos && data.avisos.length > 0) {
           console.warn('Avisos:', data.avisos);

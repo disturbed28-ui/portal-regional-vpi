@@ -60,6 +60,51 @@ Deno.serve(async (req) => {
     let novos = 0;
     let atualizados = 0;
     const avisos: string[] = [];
+    const deltasPendentes: any[] = [];
+
+    // Buscar afastados ativos atuais para detectar deltas
+    const { data: afastadosAtuais } = await supabase
+      .from('integrantes_afastados')
+      .select('registro_id, nome_colete, divisao_texto')
+      .eq('ativo', true);
+    
+    const registrosNovaPlanilha = new Set(afastados.map(a => a.registro_id));
+    const registrosAtuais = new Set(afastadosAtuais?.map(a => a.registro_id) || []);
+
+    // Detectar quem sumiu dos afastados (provavelmente retornou)
+    afastadosAtuais?.forEach(atual => {
+      if (!registrosNovaPlanilha.has(atual.registro_id)) {
+        console.log(`[DELTA] Sumiu dos afastados: ${atual.nome_colete} (${atual.registro_id})`);
+        
+        deltasPendentes.push({
+          registro_id: atual.registro_id,
+          nome_colete: atual.nome_colete,
+          divisao_texto: atual.divisao_texto,
+          tipo_delta: 'SUMIU_AFASTADOS',
+          prioridade: 0,
+          dados_adicionais: { origem: 'Estava afastado, não está mais na planilha' }
+        });
+      }
+    });
+
+    // Detectar novos afastados
+    afastados.forEach(novo => {
+      if (!registrosAtuais.has(novo.registro_id)) {
+        console.log(`[DELTA] Novo afastado: ${novo.nome_colete} (${novo.registro_id})`);
+        
+        deltasPendentes.push({
+          registro_id: novo.registro_id,
+          nome_colete: novo.nome_colete,
+          divisao_texto: novo.divisao_texto,
+          tipo_delta: 'NOVO_AFASTADOS',
+          prioridade: 0,
+          dados_adicionais: { 
+            tipo_afastamento: novo.tipo_afastamento,
+            data_afastamento: novo.data_afastamento 
+          }
+        });
+      }
+    });
 
     // Criar registro em cargas_historico primeiro
     const { data: cargaHistorico, error: cargaError } = await supabase
@@ -150,6 +195,53 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Salvar deltas detectados no banco
+    if (deltasPendentes.length > 0) {
+      console.log(`[admin-import-afastados] Salvando ${deltasPendentes.length} deltas...`);
+      
+      // Buscar relações automáticas com NOVO_ATIVOS nas últimas 24h
+      for (const delta of deltasPendentes) {
+        if (delta.tipo_delta === 'SUMIU_AFASTADOS') {
+          // Verificar se existe NOVO_ATIVOS com mesmo registro_id criado hoje
+          const { data: novoAtivo } = await supabase
+            .from('deltas_pendentes')
+            .select('id')
+            .eq('registro_id', delta.registro_id)
+            .eq('tipo_delta', 'NOVO_ATIVOS')
+            .eq('status', 'PENDENTE')
+            .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+            .maybeSingle();
+          
+          if (novoAtivo) {
+            console.log(`[RELACAO_DETECTADA] ${delta.nome_colete} retornou (sumiu afastados + apareceu ativos)`);
+            
+            // Marcar ambos como RESOLVIDO
+            await supabase
+              .from('deltas_pendentes')
+              .update({ 
+                status: 'RESOLVIDO', 
+                observacao_admin: 'Retorno detectado automaticamente',
+                resolvido_por: 'system',
+                resolvido_em: new Date().toISOString()
+              })
+              .eq('id', novoAtivo.id);
+            
+            // Não criar o delta SUMIU_AFASTADOS
+            continue;
+          }
+        }
+        
+        // Criar delta normal
+        await supabase
+          .from('deltas_pendentes')
+          .insert({
+            ...delta,
+            carga_id: cargaHistorico.id,
+            status: 'PENDENTE'
+          });
+      }
+    }
+
     const resultado = {
       sucesso: true,
       total: afastados.length,
@@ -157,6 +249,8 @@ Deno.serve(async (req) => {
       atualizados,
       avisos,
       carga_id: cargaHistorico.id,
+      deltasGerados: deltasPendentes.length,
+      deltas: deltasPendentes.slice(0, 5) // Preview dos primeiros 5
     };
 
     console.log('[admin-import-afastados] Importação concluída:', resultado);

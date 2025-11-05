@@ -137,6 +137,65 @@ export type Database = {
         }
         Relationships: []
       }
+      deltas_pendentes: {
+        Row: {
+          carga_id: string | null
+          created_at: string
+          dados_adicionais: Json | null
+          divisao_texto: string
+          id: string
+          nome_colete: string
+          observacao_admin: string | null
+          prioridade: number
+          registro_id: number
+          resolvido_em: string | null
+          resolvido_por: string | null
+          status: string
+          tipo_delta: string
+          updated_at: string
+        }
+        Insert: {
+          carga_id?: string | null
+          created_at?: string
+          dados_adicionais?: Json | null
+          divisao_texto: string
+          id?: string
+          nome_colete: string
+          observacao_admin?: string | null
+          prioridade?: number
+          registro_id: number
+          resolvido_em?: string | null
+          resolvido_por?: string | null
+          status?: string
+          tipo_delta: string
+          updated_at?: string
+        }
+        Update: {
+          carga_id?: string | null
+          created_at?: string
+          dados_adicionais?: Json | null
+          divisao_texto?: string
+          id?: string
+          nome_colete?: string
+          observacao_admin?: string | null
+          prioridade?: number
+          registro_id?: number
+          resolvido_em?: string | null
+          resolvido_por?: string | null
+          status?: string
+          tipo_delta?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deltas_pendentes_carga_id_fkey"
+            columns: ["carga_id"]
+            isOneToOne: false
+            referencedRelation: "cargas_historico"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       divisoes: {
         Row: {
           created_at: string | null
@@ -948,6 +1007,35 @@ export type Database = {
       }
     }
     Views: {
+      vw_deltas_resolvidos: {
+        Row: {
+          carga_id: string | null
+          carga_realizada_por: string | null
+          created_at: string | null
+          dados_adicionais: Json | null
+          data_carga: string | null
+          divisao_texto: string | null
+          id: string | null
+          nome_colete: string | null
+          observacao_admin: string | null
+          prioridade: number | null
+          registro_id: number | null
+          resolvido_em: string | null
+          resolvido_por: string | null
+          status: string | null
+          tipo_delta: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deltas_pendentes_carga_id_fkey"
+            columns: ["carga_id"]
+            isOneToOne: false
+            referencedRelation: "cargas_historico"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vw_devedores_ativos: {
         Row: {
           divisao_texto: string | null

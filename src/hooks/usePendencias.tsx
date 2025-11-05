@@ -24,17 +24,26 @@ interface AfastamentoDetalhes {
   cargo_grau_texto: string | null;
 }
 
+interface DeltaDetalhes {
+  tipo_delta: string;
+  prioridade: number;
+  carga_id: string;
+  observacao_admin?: string;
+  created_at: string;
+  dados_adicionais?: any;
+}
+
 interface Pendencia {
   nome_colete: string;
   divisao_texto: string;
-  tipo: 'mensalidade' | 'afastamento';
+  tipo: 'mensalidade' | 'afastamento' | 'delta';
   detalhe: string;
   data_ref: string;
   registro_id: number;
-  detalhes_completos: MensalidadeDetalhes | AfastamentoDetalhes;
+  detalhes_completos: MensalidadeDetalhes | AfastamentoDetalhes | DeltaDetalhes;
 }
 
-export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes };
+export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes };
 
 export const usePendencias = (
   userId: string | undefined,
@@ -301,10 +310,88 @@ export const usePendencias = (
         });
       });
 
-      // Ordenar por data mais antiga
-      todasPendencias.sort((a, b) => 
-        a.data_ref.localeCompare(b.data_ref)
-      );
+      // 3. Deltas pendentes
+      let queryDeltas = supabase
+        .from('deltas_pendentes')
+        .select('*')
+        .eq('status', 'PENDENTE')
+        .order('prioridade', { ascending: false })
+        .order('created_at', { ascending: true });
+
+      // Aplicar filtro de escopo
+      if (userRole === 'admin') {
+        // Admin vê todos
+      } else if (userRole === 'diretor_regional' || userRole === 'regional') {
+        if (regionalId) {
+          const { data: divisoes } = await supabase
+            .from('divisoes')
+            .select('nome')
+            .eq('regional_id', regionalId);
+          
+          const nomeDivisoes = divisoes?.map(d => d.nome) || [];
+          if (nomeDivisoes.length > 0) {
+            queryDeltas = queryDeltas.in('divisao_texto', nomeDivisoes);
+          }
+        }
+      } else if (userRole === 'diretor_divisao') {
+        if (divisaoId) {
+          const { data: divisao } = await supabase
+            .from('divisoes')
+            .select('nome')
+            .eq('id', divisaoId)
+            .single();
+          
+          if (divisao) {
+            queryDeltas = queryDeltas.eq('divisao_texto', divisao.nome);
+          }
+        }
+      } else if (userRole === 'user' && registroId) {
+        queryDeltas = queryDeltas.eq('registro_id', registroId);
+      }
+
+      const { data: deltas, error: errorDeltas } = await queryDeltas;
+      
+      console.log('[usePendencias] Deltas query result:', {
+        count: deltas?.length || 0,
+        error: errorDeltas
+      });
+
+      deltas?.forEach(d => {
+        const tipoDeltaLabel = {
+          'SUMIU_ATIVOS': '🚨 Desapareceu dos ativos',
+          'NOVO_ATIVOS': '🆕 Novo integrante ativo',
+          'SUMIU_AFASTADOS': '↩️ Saiu dos afastados',
+          'NOVO_AFASTADOS': '⏸️ Novo afastamento',
+          'RELACAO_DETECTADA': '🔗 Relação detectada'
+        }[d.tipo_delta] || d.tipo_delta;
+        
+        todasPendencias.push({
+          registro_id: d.registro_id,
+          nome_colete: d.nome_colete,
+          divisao_texto: d.divisao_texto,
+          tipo: 'delta',
+          detalhe: tipoDeltaLabel,
+          data_ref: d.created_at,
+          detalhes_completos: {
+            tipo_delta: d.tipo_delta,
+            prioridade: d.prioridade,
+            carga_id: d.carga_id,
+            observacao_admin: d.observacao_admin,
+            created_at: d.created_at,
+            dados_adicionais: d.dados_adicionais
+          }
+        });
+      });
+
+      // Ordenar: deltas críticos primeiro, depois por data
+      todasPendencias.sort((a, b) => {
+        if (a.tipo === 'delta' && b.tipo === 'delta') {
+          const prioA = (a.detalhes_completos as DeltaDetalhes).prioridade;
+          const prioB = (b.detalhes_completos as DeltaDetalhes).prioridade;
+          if (prioA !== prioB) return prioB - prioA;
+        }
+        return a.data_ref.localeCompare(b.data_ref);
+      });
 
       console.log('[usePendencias] Total de pendências encontradas:', todasPendencias.length);
       console.log('[usePendencias] Salvando no cache:', cacheKey);

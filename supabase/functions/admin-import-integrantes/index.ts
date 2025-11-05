@@ -126,6 +126,54 @@ Deno.serve(async (req) => {
     let insertedCount = 0;
     let updatedCount = 0;
     let inativadosCount = 0;
+    const deltasPendentes: any[] = [];
+
+    // Buscar integrantes ativos atuais para detectar deltas
+    const { data: ativosAtuais } = await supabase
+      .from('integrantes_portal')
+      .select('registro_id, nome_colete, divisao_texto, cargo_grau_texto')
+      .eq('ativo', true);
+    
+    const registrosNovaPlanilha = new Set(novos?.map(n => n.registro_id) || []);
+    const registrosAtuais = new Set(ativosAtuais?.map(a => a.registro_id) || []);
+
+    // Detectar quem sumiu dos ativos (alta prioridade!)
+    ativosAtuais?.forEach(atual => {
+      if (!registrosNovaPlanilha.has(atual.registro_id)) {
+        console.log(`[DELTA] Sumiu dos ativos: ${atual.nome_colete} (${atual.registro_id})`);
+        
+        deltasPendentes.push({
+          registro_id: atual.registro_id,
+          nome_colete: atual.nome_colete,
+          divisao_texto: atual.divisao_texto,
+          tipo_delta: 'SUMIU_ATIVOS',
+          prioridade: 1, // ALTA prioridade
+          dados_adicionais: { 
+            origem: 'Estava ativo, não está mais na planilha',
+            cargo_anterior: atual.cargo_grau_texto
+          }
+        });
+      }
+    });
+
+    // Detectar novos ativos
+    novos?.forEach(novo => {
+      if (!registrosAtuais.has(novo.registro_id)) {
+        console.log(`[DELTA] Novo ativo: ${novo.nome_colete} (${novo.registro_id})`);
+        
+        deltasPendentes.push({
+          registro_id: novo.registro_id,
+          nome_colete: novo.nome_colete,
+          divisao_texto: novo.divisao_texto,
+          tipo_delta: 'NOVO_ATIVOS',
+          prioridade: 0,
+          dados_adicionais: { 
+            cargo: novo.cargo_grau_texto,
+            data_entrada: novo.data_entrada
+          }
+        });
+      }
+    });
 
     // Upsert new integrantes (insert or update if registro_id exists)
     if (novos && novos.length > 0) {
@@ -444,6 +492,53 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Salvar deltas detectados no banco
+    if (deltasPendentes.length > 0) {
+      console.log(`[admin-import-integrantes] Salvando ${deltasPendentes.length} deltas...`);
+      
+      // Buscar relações automáticas com SUMIU_AFASTADOS nas últimas 24h
+      for (const delta of deltasPendentes) {
+        if (delta.tipo_delta === 'NOVO_ATIVOS') {
+          // Verificar se existe SUMIU_AFASTADOS com mesmo registro_id criado hoje
+          const { data: sumiuAfastado } = await supabase
+            .from('deltas_pendentes')
+            .select('id')
+            .eq('registro_id', delta.registro_id)
+            .eq('tipo_delta', 'SUMIU_AFASTADOS')
+            .eq('status', 'PENDENTE')
+            .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+            .maybeSingle();
+          
+          if (sumiuAfastado) {
+            console.log(`[RELACAO_DETECTADA] ${delta.nome_colete} retornou (sumiu afastados + apareceu ativos)`);
+            
+            // Marcar como RESOLVIDO
+            await supabase
+              .from('deltas_pendentes')
+              .update({ 
+                status: 'RESOLVIDO', 
+                observacao_admin: 'Retorno detectado automaticamente',
+                resolvido_por: 'system',
+                resolvido_em: new Date().toISOString()
+              })
+              .eq('id', sumiuAfastado.id);
+            
+            // Não criar o delta NOVO_ATIVOS
+            continue;
+          }
+        }
+        
+        // Criar delta normal
+        await supabase
+          .from('deltas_pendentes')
+          .insert({
+            ...delta,
+            carga_id: cargaData.id,
+            status: 'PENDENTE'
+          });
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
@@ -454,7 +549,9 @@ Deno.serve(async (req) => {
           id: cargaData.id,
           data_carga: cargaData.data_carga,
           total_atualizados: updatedCount
-        }
+        },
+        deltasGerados: deltasPendentes.length,
+        deltas: deltasPendentes.slice(0, 5)
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

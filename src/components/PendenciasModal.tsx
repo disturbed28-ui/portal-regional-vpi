@@ -18,7 +18,7 @@ import {
   User,
   AlertTriangle
 } from "lucide-react";
-import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes } from "@/hooks/usePendencias";
+import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes } from "@/hooks/usePendencias";
 
 interface PendenciasModalProps {
   pendencias: Pendencia[];
@@ -179,6 +179,128 @@ const AfastamentoDetalhesCard = ({ detalhes }: { detalhes: AfastamentoDetalhes }
   );
 };
 
+const DeltaDetalhesCard = ({ detalhes }: { detalhes: DeltaDetalhes }) => {
+  const formatarData = (data: string) => 
+    format(new Date(data), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+  
+  const getTipoDeltaInfo = (tipo: string) => {
+    const info = {
+      'SUMIU_ATIVOS': {
+        icon: '🚨',
+        label: 'Desapareceu dos Ativos',
+        color: 'text-red-600',
+        bgColor: 'bg-red-50 dark:bg-red-950/20',
+        description: 'Integrante não aparece mais na planilha de ativos'
+      },
+      'NOVO_ATIVOS': {
+        icon: '🆕',
+        label: 'Novo Integrante Ativo',
+        color: 'text-blue-600',
+        bgColor: 'bg-blue-50 dark:bg-blue-950/20',
+        description: 'Novo integrante detectado na planilha de ativos'
+      },
+      'SUMIU_AFASTADOS': {
+        icon: '↩️',
+        label: 'Saiu dos Afastados',
+        color: 'text-green-600',
+        bgColor: 'bg-green-50 dark:bg-green-950/20',
+        description: 'Integrante não aparece mais na planilha de afastados'
+      },
+      'NOVO_AFASTADOS': {
+        icon: '⏸️',
+        label: 'Novo Afastamento',
+        color: 'text-orange-600',
+        bgColor: 'bg-orange-50 dark:bg-orange-950/20',
+        description: 'Novo afastamento detectado na planilha'
+      }
+    };
+    
+    return info[tipo as keyof typeof info] || {
+      icon: '❓',
+      label: tipo,
+      color: 'text-gray-600',
+      bgColor: 'bg-gray-50 dark:bg-gray-950/20',
+      description: 'Anomalia detectada'
+    };
+  };
+  
+  const deltaInfo = getTipoDeltaInfo(detalhes.tipo_delta);
+  
+  return (
+    <Card className={`bg-background/50 border-${deltaInfo.color.replace('text-', '')}`}>
+      <CardContent className="p-4 space-y-3">
+        {/* Tipo de Delta */}
+        <div className={`flex items-center gap-2 p-3 ${deltaInfo.bgColor} rounded`}>
+          <span className="text-2xl">{deltaInfo.icon}</span>
+          <div className="flex-1">
+            <p className={`font-semibold ${deltaInfo.color}`}>{deltaInfo.label}</p>
+            <p className="text-xs text-muted-foreground">{deltaInfo.description}</p>
+          </div>
+          {detalhes.prioridade === 1 && (
+            <Badge variant="destructive" className="text-xs">Alta Prioridade</Badge>
+          )}
+        </div>
+        
+        {/* Data de Detecção */}
+        <div className="flex items-center gap-2">
+          <Clock className="h-4 w-4 text-muted-foreground" />
+          <div>
+            <p className="text-xs text-muted-foreground">Detectado em</p>
+            <p className="text-sm font-medium">{formatarData(detalhes.created_at)}</p>
+          </div>
+        </div>
+        
+        {/* Dados Adicionais */}
+        {detalhes.dados_adicionais && (
+          <div className="pt-2 border-t space-y-1">
+            <p className="text-xs font-semibold mb-1 flex items-center gap-1">
+              <FileText className="h-3 w-3" />
+              Informações Adicionais:
+            </p>
+            <div className="text-xs space-y-1 bg-secondary/30 p-2 rounded">
+              {detalhes.dados_adicionais.origem && (
+                <div><span className="font-medium">Origem:</span> {detalhes.dados_adicionais.origem}</div>
+              )}
+              {detalhes.dados_adicionais.tipo_afastamento && (
+                <div><span className="font-medium">Tipo:</span> {detalhes.dados_adicionais.tipo_afastamento}</div>
+              )}
+              {detalhes.dados_adicionais.data_afastamento && (
+                <div>
+                  <span className="font-medium">Data Afastamento:</span>{' '}
+                  {format(new Date(detalhes.dados_adicionais.data_afastamento), 'dd/MM/yyyy', { locale: ptBR })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* Observação Admin */}
+        {detalhes.observacao_admin && (
+          <div className="pt-2 border-t">
+            <p className="text-xs font-semibold mb-1">Observação:</p>
+            <p className="text-xs text-muted-foreground italic">{detalhes.observacao_admin}</p>
+          </div>
+        )}
+        
+        {/* Alerta de Ação */}
+        <div className={`p-2 ${deltaInfo.bgColor} rounded border-l-2 ${deltaInfo.color.replace('text-', 'border-')}`}>
+          <p className="text-xs font-medium">⚠️ Requer Ação</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {detalhes.tipo_delta === 'SUMIU_ATIVOS' && 
+              'Verifique se o integrante foi transferido, desligado ou afastado.'}
+            {detalhes.tipo_delta === 'NOVO_ATIVOS' && 
+              'Confirme se é um novo integrante ou um retorno de afastamento.'}
+            {detalhes.tipo_delta === 'SUMIU_AFASTADOS' && 
+              'Verifique se o integrante retornou ou se houve erro na planilha.'}
+            {detalhes.tipo_delta === 'NOVO_AFASTADOS' && 
+              'Confirme o novo afastamento e verifique a data de retorno.'}
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 interface PendenciaItemProps {
   pendencia: Pendencia;
   itemId: string;
@@ -188,11 +310,47 @@ interface PendenciaItemProps {
 
 const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemProps) => {
   const isMensalidade = pendencia.tipo === 'mensalidade';
+  const isAfastamento = pendencia.tipo === 'afastamento';
+  const isDelta = pendencia.tipo === 'delta';
   const detalhes = pendencia.detalhes_completos;
+  
+  const getBorderColor = () => {
+    if (isMensalidade) return 'border-red-500';
+    if (isAfastamento) return 'border-orange-500';
+    if (isDelta) {
+      const deltaDetalhes = detalhes as DeltaDetalhes;
+      if (deltaDetalhes.prioridade === 1) return 'border-red-600';
+      return 'border-blue-500';
+    }
+    return 'border-gray-500';
+  };
+  
+  const getIcon = () => {
+    if (isMensalidade) return '💰';
+    if (isAfastamento) return '🏥';
+    if (isDelta) {
+      const tipo = (detalhes as DeltaDetalhes).tipo_delta;
+      const icons: Record<string, string> = {
+        'SUMIU_ATIVOS': '🚨',
+        'NOVO_ATIVOS': '🆕',
+        'SUMIU_AFASTADOS': '↩️',
+        'NOVO_AFASTADOS': '⏸️'
+      };
+      return icons[tipo] || '❓';
+    }
+    return '📋';
+  };
+  
+  const getLabel = () => {
+    if (isMensalidade) return 'Mensalidade';
+    if (isAfastamento) return 'Afastamento';
+    if (isDelta) return 'Anomalia';
+    return 'Pendência';
+  };
   
   return (
     <Collapsible open={isOpen} onOpenChange={() => onToggle(itemId)}>
-      <div className="rounded-lg bg-secondary/50 hover:bg-secondary border-l-4 border-red-500">
+      <div className={`rounded-lg bg-secondary/50 hover:bg-secondary border-l-4 ${getBorderColor()}`}>
         {/* Cabeçalho clicável */}
         <CollapsibleTrigger className="w-full">
           <div className="grid grid-cols-[2fr_1.5fr_2fr_auto] gap-3 p-3 items-center">
@@ -204,10 +362,10 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
             </div>
             <div className="flex items-center justify-between gap-2">
               <Badge 
-                variant={isMensalidade ? 'destructive' : 'secondary'}
+                variant={isMensalidade ? 'destructive' : isDelta ? 'default' : 'secondary'}
                 className="text-xs truncate"
               >
-                {isMensalidade ? '💰 Mensalidade' : '🏥 Afastamento'}
+                {getIcon()} {getLabel()}
               </Badge>
               <span className="text-xs text-muted-foreground truncate">
                 {pendencia.detalhe}
@@ -226,11 +384,9 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
         {/* Conteúdo expansível */}
         <CollapsibleContent>
           <div className="px-3 pb-3 pt-0">
-            {isMensalidade ? (
-              <MensalidadeDetalhesCard detalhes={detalhes as MensalidadeDetalhes} />
-            ) : (
-              <AfastamentoDetalhesCard detalhes={detalhes as AfastamentoDetalhes} />
-            )}
+            {isMensalidade && <MensalidadeDetalhesCard detalhes={detalhes as MensalidadeDetalhes} />}
+            {isAfastamento && <AfastamentoDetalhesCard detalhes={detalhes as AfastamentoDetalhes} />}
+            {isDelta && <DeltaDetalhesCard detalhes={detalhes as DeltaDetalhes} />}
           </div>
         </CollapsibleContent>
       </div>
