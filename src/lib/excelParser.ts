@@ -53,6 +53,37 @@ function convertDateFormat(dateStr: string | undefined | null): string | null {
   return null;
 }
 
+// Função auxiliar para normalizar nomes de colunas
+const normalizeColumnName = (name: string): string => {
+  return name
+    .toLowerCase()
+    .replace(/[_\s-]/g, '') // Remove underscores, espaços e hífens
+    .trim();
+};
+
+// Função auxiliar para buscar valor de coluna com variações
+const findColumnValue = (row: any, ...variations: string[]): any => {
+  // Primeiro tenta busca exata
+  for (const variation of variations) {
+    if (row[variation] !== undefined) {
+      return row[variation];
+    }
+  }
+  
+  // Se não encontrou, tenta busca normalizada
+  const rowKeys = Object.keys(row);
+  const normalizedVariations = variations.map(v => normalizeColumnName(v));
+  
+  for (const key of rowKeys) {
+    const normalizedKey = normalizeColumnName(key);
+    if (normalizedVariations.includes(normalizedKey)) {
+      return row[key];
+    }
+  }
+  
+  return undefined;
+};
+
 export const parseExcelFile = async (file: File): Promise<ExcelIntegrante[]> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -65,33 +96,92 @@ export const parseExcelFile = async (file: File): Promise<ExcelIntegrante[]> => 
         const sheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(sheet);
 
-        const integrantes: ExcelIntegrante[] = jsonData.map((row: any) => {
-          // Detectar colunas com nomes variaveis
-          const comando = row.comando || row.Comando || row.COMANDO || '';
-          const regional = row.regional || row.Regional || row.REGIONAL || '';
-          const divisao = row.divisao || row.Divisao || row.Divisão || row.DIVISAO || '';
-          const id_integrante = parseInt(
-            row.id_integrante || row.ID_Integrante || row.id__integrante || row.registro || row.Registro || '0'
+        // Log das colunas disponíveis no Excel
+        if (jsonData.length > 0) {
+          const firstRow = jsonData[0] as any;
+          const availableColumns = Object.keys(firstRow);
+          console.log('[Excel Parser] 📋 Colunas disponíveis no arquivo:', availableColumns);
+          console.log('[Excel Parser] 📋 Colunas normalizadas:', availableColumns.map(c => ({
+            original: c,
+            normalizada: normalizeColumnName(c)
+          })));
+        }
+
+        const integrantes: ExcelIntegrante[] = jsonData.map((row: any, index: number) => {
+          // Buscar colunas com todas as variações possíveis
+          const comando = findColumnValue(row, 'comando', 'Comando', 'COMANDO') || '';
+          const regional = findColumnValue(row, 'regional', 'Regional', 'REGIONAL') || '';
+          const divisao = findColumnValue(row, 'divisao', 'Divisao', 'Divisão', 'DIVISAO') || '';
+          
+          // Buscar ID com TODAS as variações possíveis
+          const idValue = findColumnValue(
+            row,
+            'id_integrante',
+            'ID_Integrante', 
+            'id__integrante',
+            'ID__Integrante',
+            'id integrante',
+            'ID Integrante',
+            'idintegrante',
+            'IdIntegrante',
+            'registro',
+            'Registro',
+            'REGISTRO',
+            'id',
+            'ID',
+            'Id'
           );
-          const nome_colete = row.nome_colete || row.Nome_Colete || row.NomeColete || row['Nome Colete'] || row.nome || row.Nome || '';
+          
+          const id_integrante = parseInt(String(idValue || '0'));
+          
+          const nome_colete = findColumnValue(
+            row,
+            'nome_colete',
+            'Nome_Colete',
+            'NomeColete',
+            'Nome Colete',
+            'nome',
+            'Nome',
+            'NOME'
+          ) || '';
           
           // Ampliar mapeamento de cargo_grau com TODAS as variações possíveis
-          const cargo_grau = 
-            row.cargo_grau || 
-            row.Cargo_Grau || 
-            row['Cargo Grau'] || 
-            row['cargo grau'] ||
-            row['CARGO_GRAU'] ||
-            row.cargo || 
-            row.Cargo ||
-            row.CargoGrau ||
-            row.cargoGrau ||
-            // Buscar com espaços extras ou case-insensitive
-            Object.entries(row).find(([key]) => key.trim().toLowerCase() === 'cargo_grau')?.[1] ||
-            Object.entries(row).find(([key]) => key.trim().toLowerCase() === 'cargo grau')?.[1] ||
-            '';
+          const cargo_grau = findColumnValue(
+            row,
+            'cargo_grau',
+            'Cargo_Grau',
+            'Cargo Grau',
+            'cargo grau',
+            'CARGO_GRAU',
+            'CARGO GRAU',
+            'cargo',
+            'Cargo',
+            'CargoGrau',
+            'cargoGrau'
+          ) || '';
           
-          const cargo_estagio = row.cargo_estagio || row.Cargo_Estagio || row.CargoEstagio || row.Estagio || row.estagio || '';
+          const cargo_estagio = findColumnValue(
+            row,
+            'cargo_estagio',
+            'Cargo_Estagio',
+            'CargoEstagio',
+            'Estagio',
+            'estagio'
+          ) || '';
+          
+          // Log detalhado do primeiro registro
+          if (index === 0) {
+            console.log('[Excel Parser] 🔍 Primeiro registro parseado:', {
+              id_integrante,
+              idValue_bruto: idValue,
+              nome_colete,
+              cargo_grau,
+              comando,
+              regional,
+              divisao,
+              registro_completo: row
+            });
+          }
           
           // Converter campos S/N para boolean
           const converterBool = (value: any) => value === 'S' || value === 's' || value === true;
@@ -112,27 +202,27 @@ export const parseExcelFile = async (file: File): Promise<ExcelIntegrante[]> => 
           };
 
           return {
-            comando: comando.trim(),
-            regional: regional.trim(),
-            divisao: divisao.trim(),
+            comando: String(comando).trim(),
+            regional: String(regional).trim(),
+            divisao: String(divisao).trim(),
             id_integrante,
-            nome_colete: nome_colete.trim(),
-            cargo_grau: cargo_grau.trim(),
-            cargo_estagio: cargo_estagio.trim() || undefined,
-            sgt_armas: converterBool(row.SgtArmas || row.sgt_armas),
-            caveira: converterBool(row.Caveira || row.caveira),
-            caveira_suplente: converterBool(row.CaveiraSuplente || row.caveira_suplente),
-            batedor: converterBool(row.Batedor || row.batedor),
-            ursinho: converterBool(row.Ursinho || row.ursinho),
-            lobo: converterBool(row.Lobo || row.lobo),
-            tem_moto: converterBool(row.TemMoto || row.tem_moto),
-            tem_carro: converterBool(row.TemCarro || row.tem_carro),
-            data_entrada: parseData(row.data_entrada || row.data__entrada),
+            nome_colete: String(nome_colete).trim(),
+            cargo_grau: String(cargo_grau).trim(),
+            cargo_estagio: cargo_estagio ? String(cargo_estagio).trim() : undefined,
+            sgt_armas: converterBool(findColumnValue(row, 'SgtArmas', 'sgt_armas')),
+            caveira: converterBool(findColumnValue(row, 'Caveira', 'caveira')),
+            caveira_suplente: converterBool(findColumnValue(row, 'CaveiraSuplente', 'caveira_suplente')),
+            batedor: converterBool(findColumnValue(row, 'Batedor', 'batedor')),
+            ursinho: converterBool(findColumnValue(row, 'Ursinho', 'ursinho')),
+            lobo: converterBool(findColumnValue(row, 'Lobo', 'lobo')),
+            tem_moto: converterBool(findColumnValue(row, 'TemMoto', 'tem_moto')),
+            tem_carro: converterBool(findColumnValue(row, 'TemCarro', 'tem_carro')),
+            data_entrada: parseData(findColumnValue(row, 'data_entrada', 'data__entrada')),
           };
         });
 
         // Validar dados com log mais detalhado
-        const validos = integrantes.filter((i) => {
+        const validos = integrantes.filter((i, index) => {
           const isValid = 
             i.id_integrante > 0 &&
             i.nome_colete &&
@@ -143,11 +233,47 @@ export const parseExcelFile = async (file: File): Promise<ExcelIntegrante[]> => 
             i.cargo_grau &&
             i.cargo_grau.trim().length > 0;
           
+          if (!isValid && index < 5) {
+            console.warn('[Excel Parser] ⚠️ Registro inválido (linha ' + (index + 2) + '):', {
+              id_integrante: i.id_integrante,
+              nome_colete: i.nome_colete,
+              cargo_grau: i.cargo_grau,
+              problemas: {
+                id_invalido: i.id_integrante <= 0,
+                sem_nome: !i.nome_colete || i.nome_colete.trim().length === 0,
+                sem_comando: !i.comando,
+                sem_regional: !i.regional,
+                sem_divisao: !i.divisao,
+                sem_cargo: !i.cargo_grau || i.cargo_grau.trim().length === 0
+              }
+            });
+          }
+          
           return isValid;
+        });
+
+        // Verificar se todos os IDs são 0 ou inválidos
+        const idsValidos = validos.filter(i => i.id_integrante > 0);
+        const todosIdsZero = validos.length > 0 && idsValidos.length === 0;
+        
+        if (todosIdsZero) {
+          console.error('[Excel Parser] ❌ ERRO CRÍTICO: Todos os IDs são 0 ou inválidos!');
+          console.error('[Excel Parser] 📋 Verifique se a coluna de ID está com o nome correto no Excel');
+          throw new Error('Coluna de ID não encontrada no arquivo. Verifique se existe uma coluna chamada "id_integrante", "registro" ou similar.');
+        }
+
+        // Log de estatísticas
+        console.log('[Excel Parser] ✅ Parse concluído:', {
+          total_linhas: jsonData.length,
+          registros_validos: validos.length,
+          registros_invalidos: jsonData.length - validos.length,
+          ids_unicos: new Set(validos.map(i => i.id_integrante)).size,
+          exemplo_ids: validos.slice(0, 5).map(i => i.id_integrante)
         });
 
         resolve(validos);
       } catch (error) {
+        console.error('[Excel Parser] 💥 Erro ao processar arquivo:', error);
         reject(new Error('Erro ao processar arquivo Excel: ' + error));
       }
     };

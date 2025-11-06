@@ -77,7 +77,43 @@ const AdminIntegrantes = () => {
     try {
       setProcessing(true);
       const excelData = await parseExcelFile(file);
+      
+      // Validação de sanidade: verificar se IDs são válidos
+      if (excelData.length === 0) {
+        throw new Error('Nenhum registro válido encontrado no arquivo. Verifique o formato do Excel.');
+      }
+      
+      const idsValidos = excelData.filter(i => i.id_integrante > 0);
+      if (idsValidos.length === 0) {
+        throw new Error('Nenhum ID válido encontrado. Verifique se a coluna de ID existe e está preenchida corretamente.');
+      }
+      
       const delta = processDelta(excelData, integrantes);
+      
+      // VERIFICAÇÃO DE SANIDADE: Se 100% dos integrantes serão removidos, algo está errado
+      const porcentagemRemocao = integrantes.length > 0 
+        ? (delta.removidos.length / integrantes.length) * 100 
+        : 0;
+      
+      if (porcentagemRemocao > 95 && integrantes.length > 10) {
+        console.error('[AdminIntegrantes] ⚠️ ALERTA: Remoção em massa detectada!', {
+          total_db: integrantes.length,
+          total_excel: excelData.length,
+          removidos: delta.removidos.length,
+          porcentagem: porcentagemRemocao.toFixed(1) + '%',
+          exemplo_ids_db: integrantes.slice(0, 5).map(i => i.registro_id),
+          exemplo_ids_excel: excelData.slice(0, 5).map(i => i.id_integrante)
+        });
+        
+        throw new Error(
+          `⚠️ ATENÇÃO: ${delta.removidos.length} de ${integrantes.length} integrantes (${porcentagemRemocao.toFixed(0)}%) seriam inativados!\n\n` +
+          `Isso sugere um problema na leitura dos IDs do arquivo Excel.\n\n` +
+          `Verifique:\n` +
+          `• Se a coluna de ID está presente no arquivo\n` +
+          `• Se os IDs estão preenchidos corretamente\n` +
+          `• Os logs do console para mais detalhes`
+        );
+      }
       
       setUploadPreview({
         file: file.name,
