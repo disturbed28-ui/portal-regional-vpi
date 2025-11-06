@@ -26,6 +26,7 @@ import { CargaAfastados } from "@/components/admin/CargaAfastados";
 import { DeltasAfastados } from "@/components/relatorios/DeltasAfastados";
 import { usePendencias } from "@/hooks/usePendencias";
 import { useUserRole } from "@/hooks/useUserRole";
+import { LimparDeltasFalsos } from "@/components/admin/LimparDeltasFalsos";
 
 const AdminIntegrantes = () => {
   const navigate = useNavigate();
@@ -674,6 +675,21 @@ const AdminIntegrantes = () => {
               userId={user?.id}
               isAdmin={hasRole('admin')}
             />
+            
+            {/* Divisor visual */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Ferramentas Administrativas
+                </span>
+              </div>
+            </div>
+            
+            {/* Limpar Deltas Falsos - Apenas para Admins */}
+            {hasRole('admin') && <LimparDeltasFalsos />}
           </CardContent>
         </Card>
 
