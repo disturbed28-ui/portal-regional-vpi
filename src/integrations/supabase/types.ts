@@ -73,6 +73,7 @@ export type Database = {
           id: string
           observacoes: string | null
           realizado_por: string | null
+          tipo_carga: string
           total_integrantes: number
         }
         Insert: {
@@ -82,6 +83,7 @@ export type Database = {
           id?: string
           observacoes?: string | null
           realizado_por?: string | null
+          tipo_carga?: string
           total_integrantes: number
         }
         Update: {
@@ -91,6 +93,7 @@ export type Database = {
           id?: string
           observacoes?: string | null
           realizado_por?: string | null
+          tipo_carga?: string
           total_integrantes?: number
         }
         Relationships: []

@@ -114,6 +114,7 @@ Deno.serve(async (req) => {
       .insert({
         dados_snapshot: { afastados },
         total_integrantes: afastados.length,
+        tipo_carga: 'afastados',
         observacoes: observacoes || 'Carga de Integrantes Afastados Temporariamente',
         realizado_por: user.email || user.id,
       })

@@ -27,7 +27,8 @@ export const useHistoricoCargas = (options?: { enabled?: boolean }) => {
     queryFn: async (): Promise<HistoricoCompleto | null> => {
       const { data: cargas, error } = await supabase
         .from('cargas_historico')
-        .select('data_carga, total_integrantes, dados_snapshot')
+        .select('data_carga, total_integrantes, dados_snapshot, tipo_carga')
+        .eq('tipo_carga', 'integrantes')
         .order('data_carga', { ascending: true });
 
       if (error) {
@@ -38,33 +39,10 @@ export const useHistoricoCargas = (options?: { enabled?: boolean }) => {
         return null;
       }
 
-      // Filtrar apenas cargas de integrantes (que contêm divisões válidas)
-      const cargasIntegrantes = cargas.filter(carga => {
-        const snapshot = carga.dados_snapshot as any;
-        const temDivisoes = snapshot?.divisoes && 
-                           Array.isArray(snapshot.divisoes) && 
-                           snapshot.divisoes.length > 0;
-        return temDivisoes;
-      });
-
-      // Logs de debug
-      console.log(`[useHistoricoCargas] Total de cargas no banco: ${cargas.length}`);
-      console.log(`[useHistoricoCargas] Cargas de integrantes (com divisões): ${cargasIntegrantes.length}`);
-      console.log('[useHistoricoCargas] Cargas filtradas:', cargasIntegrantes.map(c => ({
-        data: c.data_carga,
-        total: c.total_integrantes,
-        temDivisoes: !!(c.dados_snapshot as any)?.divisoes
-      })));
-
-      if (cargasIntegrantes.length === 0) {
-        console.warn('[useHistoricoCargas] Nenhuma carga de integrantes encontrada!');
-        return null;
-      }
-
       // Filtrar apenas a última carga de cada mês
       const cargasPorMes = new Map<string, typeof cargas[0]>();
 
-      cargasIntegrantes.forEach(carga => {
+      cargas.forEach(carga => {
         const mesAno = format(new Date(carga.data_carga), 'yyyy-MM');
         
         // Se não existe carga para este mês OU a atual é mais recente

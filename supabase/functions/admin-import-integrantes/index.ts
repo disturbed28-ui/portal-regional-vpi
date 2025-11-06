@@ -429,6 +429,7 @@ Deno.serve(async (req) => {
         data_carga: new Date().toISOString(),
         total_integrantes: integrantesAtivos?.length || 0,
         dados_snapshot: snapshot,
+        tipo_carga: 'integrantes',
         realizado_por: admin_user_id,
         observacoes: `Importação: ${insertedCount} novos, ${updatedCount} atualizados, ${inativadosCount} inativados`
       })
