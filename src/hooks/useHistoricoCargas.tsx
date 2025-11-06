@@ -38,10 +38,33 @@ export const useHistoricoCargas = (options?: { enabled?: boolean }) => {
         return null;
       }
 
+      // Filtrar apenas cargas de integrantes (que contêm divisões válidas)
+      const cargasIntegrantes = cargas.filter(carga => {
+        const snapshot = carga.dados_snapshot as any;
+        const temDivisoes = snapshot?.divisoes && 
+                           Array.isArray(snapshot.divisoes) && 
+                           snapshot.divisoes.length > 0;
+        return temDivisoes;
+      });
+
+      // Logs de debug
+      console.log(`[useHistoricoCargas] Total de cargas no banco: ${cargas.length}`);
+      console.log(`[useHistoricoCargas] Cargas de integrantes (com divisões): ${cargasIntegrantes.length}`);
+      console.log('[useHistoricoCargas] Cargas filtradas:', cargasIntegrantes.map(c => ({
+        data: c.data_carga,
+        total: c.total_integrantes,
+        temDivisoes: !!(c.dados_snapshot as any)?.divisoes
+      })));
+
+      if (cargasIntegrantes.length === 0) {
+        console.warn('[useHistoricoCargas] Nenhuma carga de integrantes encontrada!');
+        return null;
+      }
+
       // Filtrar apenas a última carga de cada mês
       const cargasPorMes = new Map<string, typeof cargas[0]>();
 
-      cargas.forEach(carga => {
+      cargasIntegrantes.forEach(carga => {
         const mesAno = format(new Date(carga.data_carga), 'yyyy-MM');
         
         // Se não existe carga para este mês OU a atual é mais recente
@@ -58,26 +81,7 @@ export const useHistoricoCargas = (options?: { enabled?: boolean }) => {
       // Processar dados filtrados
       const cargasProcessadas: CargaHistorica[] = cargasFiltradas.map((carga) => {
         const snapshot = carga.dados_snapshot as { divisoes?: DivisaoSnapshot[] };
-        let divisoes = snapshot?.divisoes || [];
-        
-        // Verificar se existe entrada "REGIONAL VALE DO PARAIBA I - SP"
-        const temRegional = divisoes.some(d => 
-          d.divisao && (
-            d.divisao.includes('REGIONAL VALE DO PARAIBA I - SP') ||
-            d.divisao.includes('REGIONAL VALE DO PARAÍBA I - SP')
-          )
-        );
-        
-        // Se não existir, adicionar com valor fixo 5
-        if (!temRegional) {
-          divisoes = [
-            ...divisoes,
-            {
-              divisao: 'REGIONAL VALE DO PARAIBA I - SP',
-              total: 5
-            }
-          ];
-        }
+        const divisoes = snapshot?.divisoes || [];
         
         return {
           data_carga: carga.data_carga,
@@ -100,9 +104,6 @@ export const useHistoricoCargas = (options?: { enabled?: boolean }) => {
           });
         }
       });
-
-      // Garantir que "REGIONAL VALE DO PARAIBA I - SP" está na lista
-      divisoesSet.add('REGIONAL VALE DO PARAIBA I - SP');
 
       const divisoesUnicas = Array.from(divisoesSet).sort();
 
