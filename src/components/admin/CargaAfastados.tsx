@@ -238,17 +238,17 @@ export const CargaAfastados = () => {
                   <h3 className="font-semibold text-lg border-b pb-2">{divisao}</h3>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
-                      <thead className="bg-muted">
-                        <tr>
-                          <th className="text-left p-2">Número</th>
-                          <th className="text-left p-2">Apelido</th>
-                          <th className="text-left p-2">Cargo/Função</th>
-                          <th className="text-left p-2">Tipo</th>
-                          <th className="text-left p-2">Dt. Afast.</th>
-                          <th className="text-left p-2">Dt. Retorno</th>
-                          <th className="text-left p-2">Status</th>
-                        </tr>
-                      </thead>
+                            <thead className="bg-muted">
+                              <tr>
+                                <th className="text-left p-2 text-muted-foreground">Número</th>
+                                <th className="text-left p-2 text-muted-foreground">Apelido</th>
+                                <th className="text-left p-2 text-muted-foreground">Cargo/Função</th>
+                                <th className="text-left p-2 text-muted-foreground">Tipo</th>
+                                <th className="text-left p-2 text-muted-foreground">Dt. Afast.</th>
+                                <th className="text-left p-2 text-muted-foreground">Dt. Retorno</th>
+                                <th className="text-left p-2 text-muted-foreground">Status</th>
+                              </tr>
+                            </thead>
                       <tbody>
                         {afastados.map((afastado, idx) => (
                           <tr key={idx} className="border-b">

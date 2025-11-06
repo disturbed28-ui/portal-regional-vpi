@@ -24,23 +24,23 @@ export const EstatisticasEspeciais = ({ divisoes, totais }: EstatisticasEspeciai
             <div className="bg-muted/50 p-4 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <User className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Sem Veículo</span>
+                <span className="text-sm font-medium text-muted-foreground">Sem Veículo</span>
               </div>
-              <p className="text-2xl font-bold">{totais.sem_veiculo}</p>
+              <p className="text-2xl font-bold text-foreground">{totais.sem_veiculo}</p>
             </div>
             <div className="bg-muted/50 p-4 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <Bike className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Com Moto</span>
+                <span className="text-sm font-medium text-muted-foreground">Com Moto</span>
               </div>
-              <p className="text-2xl font-bold">{totais.com_moto}</p>
+              <p className="text-2xl font-bold text-foreground">{totais.com_moto}</p>
             </div>
             <div className="bg-muted/50 p-4 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <Car className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Com Carro</span>
+                <span className="text-sm font-medium text-muted-foreground">Com Carro</span>
               </div>
-              <p className="text-2xl font-bold">{totais.com_carro}</p>
+              <p className="text-2xl font-bold text-foreground">{totais.com_carro}</p>
             </div>
           </div>
         </CardContent>
@@ -73,8 +73,8 @@ export const EstatisticasEspeciais = ({ divisoes, totais }: EstatisticasEspeciai
                 </TableRow>
               ))}
               <TableRow className="bg-primary/10 font-bold">
-                <TableCell>TOTAL REGIONAL</TableCell>
-                <TableCell className="text-center">{totais.sgt_armas}</TableCell>
+                <TableCell className="text-muted-foreground">TOTAL REGIONAL</TableCell>
+                <TableCell className="text-center text-muted-foreground">{totais.sgt_armas}</TableCell>
               </TableRow>
             </TableBody>
           </Table>
@@ -108,8 +108,8 @@ export const EstatisticasEspeciais = ({ divisoes, totais }: EstatisticasEspeciai
                 </TableRow>
               ))}
               <TableRow className="bg-primary/10 font-bold">
-                <TableCell>TOTAL REGIONAL</TableCell>
-                <TableCell className="text-center">{totais.combate_insano}</TableCell>
+                <TableCell className="text-muted-foreground">TOTAL REGIONAL</TableCell>
+                <TableCell className="text-center text-muted-foreground">{totais.combate_insano}</TableCell>
               </TableRow>
             </TableBody>
           </Table>
@@ -140,8 +140,8 @@ export const EstatisticasEspeciais = ({ divisoes, totais }: EstatisticasEspeciai
                 </TableRow>
               ))}
               <TableRow className="bg-primary/10 font-bold">
-                <TableCell>TOTAL REGIONAL</TableCell>
-                <TableCell className="text-center">{totais.batedores}</TableCell>
+                <TableCell className="text-muted-foreground">TOTAL REGIONAL</TableCell>
+                <TableCell className="text-center text-muted-foreground">{totais.batedores}</TableCell>
               </TableRow>
             </TableBody>
           </Table>
@@ -184,9 +184,9 @@ export const EstatisticasEspeciais = ({ divisoes, totais }: EstatisticasEspeciai
                 </TableRow>
               ))}
               <TableRow className="bg-primary/10 font-bold">
-                <TableCell>TOTAL REGIONAL</TableCell>
-                <TableCell className="text-center">{totais.caveiras}</TableCell>
-                <TableCell className="text-center">{totais.caveiras_suplentes}</TableCell>
+                <TableCell className="text-muted-foreground">TOTAL REGIONAL</TableCell>
+                <TableCell className="text-center text-muted-foreground">{totais.caveiras}</TableCell>
+                <TableCell className="text-center text-muted-foreground">{totais.caveiras_suplentes}</TableCell>
               </TableRow>
             </TableBody>
           </Table>

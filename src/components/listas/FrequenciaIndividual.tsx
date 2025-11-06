@@ -289,7 +289,7 @@ export const FrequenciaIndividual = ({ isAdmin, userDivisaoId }: FrequenciaIndiv
                       <TableRow>
                         <TableCell colSpan={7} className="bg-muted/50">
                           <div className="p-4 space-y-2">
-                            <h4 className="font-medium text-sm mb-3">Detalhamento de Eventos</h4>
+                            <h4 className="font-medium text-sm mb-3 text-muted-foreground">Detalhamento de Eventos</h4>
                             <div className="space-y-2">
                               {integrante.eventos.map((evento, idx) => (
                                 <div key={idx} className="flex items-center justify-between text-sm p-2 bg-background rounded border">

@@ -124,9 +124,9 @@ export const TabelaComparativa = ({ cargas, divisoesUnicas }: TabelaComparativaP
               
               {/* Linha de total regional */}
               <TableRow className="bg-muted/50 font-bold">
-                <TableCell>TOTAL REGIONAL</TableCell>
+                <TableCell className="text-muted-foreground">TOTAL REGIONAL</TableCell>
                 {totaisRegionais.map((total, index) => (
-                  <TableCell key={index} className="text-center">
+                  <TableCell key={index} className="text-center text-muted-foreground">
                     {total}
                   </TableCell>
                 ))}

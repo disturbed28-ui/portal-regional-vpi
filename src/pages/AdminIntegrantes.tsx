@@ -610,17 +610,17 @@ const AdminIntegrantes = () => {
               {/* Resumo da última carga */}
               {ultimaCargaInfo && (
                 <div className="p-4 bg-muted rounded-lg space-y-2">
-                  <h4 className="font-semibold">Última Carga Ativa</h4>
+                  <h4 className="font-semibold text-muted-foreground">Última Carga Ativa</h4>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-muted-foreground">Data</p>
-                      <p className="font-medium">
+                      <p className="font-medium text-foreground">
                         {format(new Date(ultimaCargaInfo.data_carga), 'dd/MM/yyyy HH:mm')}
                       </p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Período</p>
-                      <p className="font-medium">
+                      <p className="font-medium text-foreground">
                         {formatRef(ultimaCargaInfo.ref_principal)}
                       </p>
                     </div>

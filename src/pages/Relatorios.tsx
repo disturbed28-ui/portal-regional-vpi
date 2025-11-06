@@ -345,14 +345,14 @@ const Relatorios = () => {
                             <table className="w-full text-sm">
                               <thead className="bg-muted">
                                 <tr>
-                                  <th className="text-left p-3">Número</th>
-                                  <th className="text-left p-3">Nome</th>
-                                  <th className="text-left p-3">Divisão</th>
-                                  <th className="text-left p-3">Tipo</th>
-                                  <th className="text-left p-3">Dt. Afastamento</th>
-                                  <th className="text-left p-3">Dt. Retorno Prevista</th>
-                                  <th className="text-left p-3">Dias Restantes</th>
-                                  <th className="text-left p-3">Ações</th>
+                                  <th className="text-left p-3 text-muted-foreground">Número</th>
+                                  <th className="text-left p-3 text-muted-foreground">Nome</th>
+                                  <th className="text-left p-3 text-muted-foreground">Divisão</th>
+                                  <th className="text-left p-3 text-muted-foreground">Tipo</th>
+                                  <th className="text-left p-3 text-muted-foreground">Dt. Afastamento</th>
+                                  <th className="text-left p-3 text-muted-foreground">Dt. Retorno Prevista</th>
+                                  <th className="text-left p-3 text-muted-foreground">Dias Restantes</th>
+                                  <th className="text-left p-3 text-muted-foreground">Ações</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -421,13 +421,13 @@ const Relatorios = () => {
                             <table className="w-full text-sm">
                               <thead className="bg-muted">
                                 <tr>
-                                  <th className="text-left p-3">Número</th>
-                                  <th className="text-left p-3">Nome</th>
-                                  <th className="text-left p-3">Divisão</th>
-                                  <th className="text-left p-3">Dt. Afastamento</th>
-                                  <th className="text-left p-3">Dt. Retorno Prevista</th>
-                                  <th className="text-left p-3">Dt. Retorno Efetivo</th>
-                                  <th className="text-left p-3">Status</th>
+                                  <th className="text-left p-3 text-muted-foreground">Número</th>
+                                  <th className="text-left p-3 text-muted-foreground">Nome</th>
+                                  <th className="text-left p-3 text-muted-foreground">Divisão</th>
+                                  <th className="text-left p-3 text-muted-foreground">Dt. Afastamento</th>
+                                  <th className="text-left p-3 text-muted-foreground">Dt. Retorno Prevista</th>
+                                  <th className="text-left p-3 text-muted-foreground">Dt. Retorno Efetivo</th>
+                                  <th className="text-left p-3 text-muted-foreground">Status</th>
                                 </tr>
                               </thead>
                               <tbody>

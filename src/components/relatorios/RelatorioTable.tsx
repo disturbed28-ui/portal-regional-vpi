@@ -15,13 +15,13 @@ export const RelatorioTable = ({ divisoes, totais, regionalNome }: RelatorioTabl
         <Table className="min-w-[600px]">
           <TableHeader>
             <TableRow className="bg-muted">
-              <TableHead className="font-bold border-r border-border">DIVISÕES</TableHead>
-              <TableHead className="text-center font-bold border-r border-border">Entrada</TableHead>
-              <TableHead className="text-center font-bold border-r border-border">Saída</TableHead>
-              <TableHead className="text-center font-bold border-r border-border">Saldo</TableHead>
-              <TableHead className="text-center font-bold border-r border-border">Total Integ. Anterior</TableHead>
-              <TableHead className="text-center font-bold border-r border-border">Total Integ. Atual</TableHead>
-              <TableHead className="text-center font-bold">Devedores</TableHead>
+              <TableHead className="font-bold border-r border-border text-muted-foreground">DIVISÕES</TableHead>
+              <TableHead className="text-center font-bold border-r border-border text-muted-foreground">Entrada</TableHead>
+              <TableHead className="text-center font-bold border-r border-border text-muted-foreground">Saída</TableHead>
+              <TableHead className="text-center font-bold border-r border-border text-muted-foreground">Saldo</TableHead>
+              <TableHead className="text-center font-bold border-r border-border text-muted-foreground">Total Integ. Anterior</TableHead>
+              <TableHead className="text-center font-bold border-r border-border text-muted-foreground">Total Integ. Atual</TableHead>
+              <TableHead className="text-center font-bold text-muted-foreground">Devedores</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
