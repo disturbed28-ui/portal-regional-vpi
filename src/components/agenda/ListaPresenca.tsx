@@ -471,20 +471,20 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                 
                 {/* Resultados da Busca */}
                 {searchResults.length > 0 && (
-                  <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-2">
+                  <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-2 bg-card">
                     {searchResults.map((integrante) => (
                       <div
                         key={integrante.id}
-                        className="flex items-center justify-between p-2 hover:bg-muted rounded cursor-pointer"
+                        className="flex items-center justify-between p-2 hover:bg-muted/50 rounded cursor-pointer transition-colors"
                         onClick={() => handleSelectSearchResult(integrante)}
                       >
                         <div>
-                          <div className="font-medium">{integrante.nome_colete}</div>
-                          <div className="text-sm text-muted-foreground">
+                          <div className="font-medium text-foreground">{integrante.nome_colete}</div>
+                          <div className="text-sm text-foreground/70">
                             {integrante.divisao_texto} • {integrante.cargo_nome || 'Sem cargo'}
                           </div>
                         </div>
-                        <UserCheck className="h-5 w-5 text-green-600" />
+                        <UserCheck className="h-5 w-5 text-green-600 dark:text-green-500" />
                       </div>
                     ))}
                   </div>
@@ -532,7 +532,10 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                       return (
                         <TableRow 
                           key={integrante.id} 
-                          className={integrante.isVisitante ? "bg-blue-50 dark:bg-blue-950/20" : "bg-green-50 dark:bg-green-950/20"}
+                          className={integrante.isVisitante 
+                            ? "bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/40" 
+                            : "bg-green-50 dark:bg-green-950/30 hover:bg-green-100 dark:hover:bg-green-950/40"
+                          }
                         >
                           <TableCell className="font-medium text-foreground">
                             <div className="flex items-center gap-2">
@@ -574,7 +577,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <h3 className="font-semibold text-lg text-orange-600 dark:text-orange-500">Ausentes</h3>
-                  <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">{ausentes.length}</Badge>
+                  <Badge className="bg-orange-600 text-white hover:bg-orange-700 dark:bg-orange-600 dark:hover:bg-orange-700">{ausentes.length}</Badge>
                 </div>
                 <Table>
                   <TableHeader>
@@ -621,14 +624,14 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                       };
 
                       return (
-                        <TableRow key={integrante.id} className="opacity-60 hover:opacity-100 transition-opacity">
-                          <TableCell className="font-medium">{integrante.nome_colete}</TableCell>
-                          <TableCell>{integrante.cargo_nome || '-'}</TableCell>
-                          <TableCell>{integrante.grau || '-'}</TableCell>
+                        <TableRow key={integrante.id} className="hover:bg-muted/30 transition-colors">
+                          <TableCell className="font-medium text-foreground">{integrante.nome_colete}</TableCell>
+                          <TableCell className="text-foreground/80">{integrante.cargo_nome || '-'}</TableCell>
+                          <TableCell className="text-foreground/80">{integrante.grau || '-'}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               {getJustificativaIcon(integrante.justificativa_ausencia)}
-                              <span className="text-sm">{getJustificativaLabel(integrante.justificativa_ausencia)}</span>
+                              <span className="text-sm text-foreground/70">{getJustificativaLabel(integrante.justificativa_ausencia)}</span>
                             </div>
                           </TableCell>
                           {canManage && (
