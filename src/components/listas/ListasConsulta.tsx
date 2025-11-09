@@ -74,7 +74,8 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
     queryKey: ['eventos-lista', userDivisaoId],
     queryFn: async () => {
       const hoje = new Date();
-      hoje.setHours(23, 59, 59, 999);
+      // Criar data limite em UTC corretamente (fim do dia de hoje)
+      const dataLimite = new Date(Date.UTC(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 23, 59, 59, 999));
       
       let query = supabase
         .from('eventos_agenda')
@@ -85,7 +86,7 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
           divisao_id,
           divisoes(nome)
         `)
-        .lte('data_evento', hoje.toISOString())
+        .lte('data_evento', dataLimite.toISOString())
         .order('data_evento', { ascending: false })
         .limit(50);
 

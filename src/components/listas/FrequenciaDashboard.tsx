@@ -10,6 +10,8 @@ import { CalendarIcon, TrendingUp, Users, CheckCircle2, XCircle } from "lucide-r
 import { format, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
 
 interface FrequenciaDashboardProps {
   isAdmin: boolean;
@@ -26,28 +28,38 @@ const COLORS = {
 
 export const FrequenciaDashboard = ({ isAdmin, userDivisaoId }: FrequenciaDashboardProps) => {
   const hoje = new Date();
+  const { user } = useAuth();
+  const { profile } = useProfile(user?.id);
+  
   const [periodoPreset, setPeriodoPreset] = useState<PeriodoPreset>('mes_atual');
   const [dataInicio, setDataInicio] = useState<Date>(startOfMonth(hoje));
   const [dataFim, setDataFim] = useState<Date>(endOfMonth(hoje));
   const [divisaoSelecionada, setDivisaoSelecionada] = useState<string>(isAdmin ? 'todas' : userDivisaoId || '');
 
-  // Buscar divisões
+  // Buscar divisões (todas para admin, ou da regional do usuário)
   const { data: divisoes } = useQuery({
-    queryKey: ['divisoes-lista'],
+    queryKey: ['divisoes-lista', isAdmin, profile?.regional_id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('divisoes')
         .select('id, nome')
         .order('nome');
       
+      // Se não for admin e tiver regional_id, filtrar pela regional
+      if (!isAdmin && profile?.regional_id) {
+        query = query.eq('regional_id', profile.regional_id);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data;
-    }
+    },
+    enabled: isAdmin || !!profile?.regional_id
   });
 
   // Buscar eventos e presenças do período (limitado até hoje)
   const { data: dadosFrequencia, isLoading } = useQuery({
-    queryKey: ['frequencia-dashboard', dataInicio, dataFim, divisaoSelecionada],
+    queryKey: ['frequencia-dashboard', dataInicio, dataFim, divisaoSelecionada, divisoes],
     queryFn: async () => {
       const hoje = new Date();
       hoje.setHours(23, 59, 59, 999);
@@ -72,9 +84,17 @@ export const FrequenciaDashboard = ({ isAdmin, userDivisaoId }: FrequenciaDashbo
         .lte('data_evento', dataFimReal.toISOString())
         .order('data_evento', { ascending: true });
 
-      if (!isAdmin && userDivisaoId) {
-        query = query.eq('divisao_id', userDivisaoId);
+      if (!isAdmin) {
+        // Se houver divisões da regional (usuário não-admin), usar todas essas divisões
+        if (divisoes && divisoes.length > 0) {
+          const divisaoIds = divisoes.map(d => d.id);
+          query = query.in('divisao_id', divisaoIds);
+        } else if (userDivisaoId) {
+          // Fallback: usar apenas a divisão do usuário
+          query = query.eq('divisao_id', userDivisaoId);
+        }
       } else if (divisaoSelecionada && divisaoSelecionada !== 'todas') {
+        // Admin: filtrar pela divisão selecionada
         query = query.eq('divisao_id', divisaoSelecionada);
       }
 
@@ -256,15 +276,15 @@ export const FrequenciaDashboard = ({ isAdmin, userDivisaoId }: FrequenciaDashbo
               </>
             )}
 
-            {isAdmin && (
+            {(isAdmin || (divisoes && divisoes.length > 1)) && (
               <div className="space-y-2">
                 <label className="text-sm font-medium">Divisão</label>
                 <Select value={divisaoSelecionada} onValueChange={setDivisaoSelecionada}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Todas as divisões" />
+                    <SelectValue placeholder={isAdmin ? "Todas as divisões" : "Todas da Regional"} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="todas">Todas as Divisões</SelectItem>
+                    <SelectItem value="todas">{isAdmin ? "Todas as Divisões" : "Todas da Regional"}</SelectItem>
                     {divisoes?.map(div => (
                       <SelectItem key={div.id} value={div.id}>{div.nome}</SelectItem>
                     ))}

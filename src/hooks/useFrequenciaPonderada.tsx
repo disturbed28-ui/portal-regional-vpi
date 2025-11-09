@@ -16,6 +16,8 @@ export interface EventoDetalhe {
   pesoEvento: number;
   pesoPresenca: number;
   pontos: number;
+  cargo_nome?: string | null;
+  grau?: string | null;
 }
 
 export interface IntegranteFrequencia {
@@ -100,6 +102,8 @@ export const useFrequenciaPonderada = ({
           integrantes_portal!inner(
             nome_colete,
             divisao_texto,
+            cargo_nome,
+            grau,
             ativo
           )
         `)
@@ -165,6 +169,8 @@ export const useFrequenciaPonderada = ({
           pesoEvento,
           pesoPresenca,
           pontos,
+          cargo_nome: p.integrantes_portal.cargo_nome,
+          grau: p.integrantes_portal.grau,
         });
       });
 

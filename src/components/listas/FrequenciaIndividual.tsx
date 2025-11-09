@@ -92,40 +92,157 @@ export const FrequenciaIndividual = ({ isAdmin, userDivisaoId }: FrequenciaIndiv
   const handleExportExcel = () => {
     if (!dadosFrequencia) return;
 
-    const resumo = dadosFrequencia.map(i => ({
-      'Nome': i.nome_colete,
-      'Divisão': i.divisao,
-      'Total Eventos': i.totalEventos,
-      'Pontos Obtidos': i.pontosObtidos.toFixed(2),
-      'Pontos Máximos': i.pontosMaximos.toFixed(2),
-      'Aproveitamento %': i.percentual.toFixed(1),
-    }));
+    // Funções auxiliares de ordenação
+    const romanToNumber = (roman: string | null): number => {
+      if (!roman) return 999;
+      const romanMap: { [key: string]: number } = {
+        'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5,
+        'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10,
+      };
+      return romanMap[roman.toUpperCase()] || 999;
+    };
 
-    const detalhamento: any[] = [];
-    dadosFrequencia.forEach(i => {
-      i.eventos.forEach(e => {
-        detalhamento.push({
-          'Nome': i.nome_colete,
-          'Divisão': i.divisao,
-          'Evento': e.titulo,
-          'Data': format(new Date(e.data), 'dd/MM/yyyy'),
-          'Status': e.status,
-          'Justificativa': e.justificativa || '-',
-          'Peso Evento': e.pesoEvento.toFixed(2),
-          'Peso Presença': e.pesoPresenca.toFixed(2),
-          'Pontos': e.pontos.toFixed(2),
+    const getStatusOrder = (status: string): number => {
+      switch (status) {
+        case 'presente': return 1;
+        case 'visitante': return 2;
+        case 'ausente': return 3;
+        case 'justificado': return 4;
+        default: return 999;
+      }
+    };
+
+    // 1. Criar estrutura agrupada por evento
+    const eventosPorData = new Map<string, {
+      data: string;
+      titulo: string;
+      integrantes: Array<{
+        nome: string;
+        divisao: string;
+        cargo: string;
+        grau: string;
+        status: string;
+        justificativa: string;
+        peso_evento: number;
+        peso_presenca: number;
+        pontos: number;
+      }>;
+    }>();
+
+    // 2. Percorrer todos os integrantes e seus eventos
+    dadosFrequencia.forEach(integrante => {
+      integrante.eventos.forEach(evento => {
+        const eventoKey = `${evento.data}|${evento.titulo}`;
+        
+        if (!eventosPorData.has(eventoKey)) {
+          eventosPorData.set(eventoKey, {
+            data: evento.data,
+            titulo: evento.titulo,
+            integrantes: []
+          });
+        }
+        
+        const eventoData = eventosPorData.get(eventoKey)!;
+        eventoData.integrantes.push({
+          nome: integrante.nome_colete,
+          divisao: integrante.divisao,
+          cargo: evento.cargo_nome || '-',
+          grau: evento.grau || '-',
+          status: evento.status,
+          justificativa: evento.justificativa || '-',
+          peso_evento: evento.pesoEvento,
+          peso_presenca: evento.pesoPresenca,
+          pontos: evento.pontos
         });
       });
     });
 
+    // 3. Ordenar eventos por data (mais antigo primeiro)
+    const eventosOrdenados = Array.from(eventosPorData.values())
+      .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+
+    // 4. Criar array para Excel com ordenação hierárquica dentro de cada evento
+    const dadosParaExcel: any[] = [];
+    
+    eventosOrdenados.forEach(evento => {
+      // Adicionar linha de cabeçalho do evento
+      dadosParaExcel.push({
+        'Data': format(new Date(evento.data), 'dd/MM/yyyy HH:mm', { locale: ptBR }),
+        'Evento': evento.titulo,
+        'Nome': '',
+        'Divisão': '',
+        'Cargo': '',
+        'Grau': '',
+        'Status': '',
+        'Justificativa': '',
+        'Peso Evento': '',
+        'Peso Presença': '',
+        'Pontos': ''
+      });
+
+      // Ordenar integrantes hierarquicamente
+      const integrantesOrdenados = [...evento.integrantes].sort((a, b) => {
+        // 1. Por Status
+        const statusA = getStatusOrder(a.status);
+        const statusB = getStatusOrder(b.status);
+        if (statusA !== statusB) return statusA - statusB;
+        
+        // 2. Por Grau
+        const grauA = romanToNumber(a.grau);
+        const grauB = romanToNumber(b.grau);
+        if (grauA !== grauB) return grauA - grauB;
+        
+        // 3. Por Nome
+        return a.nome.localeCompare(b.nome, 'pt-BR');
+      });
+
+      // Adicionar integrantes
+      integrantesOrdenados.forEach(int => {
+        dadosParaExcel.push({
+          'Data': '',
+          'Evento': '',
+          'Nome': int.nome,
+          'Divisão': int.divisao,
+          'Cargo': int.cargo,
+          'Grau': int.grau,
+          'Status': int.status,
+          'Justificativa': int.justificativa,
+          'Peso Evento': int.peso_evento.toFixed(2),
+          'Peso Presença': int.peso_presenca.toFixed(2),
+          'Pontos': int.pontos.toFixed(2)
+        });
+      });
+
+      // Adicionar linha em branco entre eventos
+      dadosParaExcel.push({
+        'Data': '', 'Evento': '', 'Nome': '', 'Divisão': '', 'Cargo': '', 
+        'Grau': '', 'Status': '', 'Justificativa': '', 'Peso Evento': '', 
+        'Peso Presença': '', 'Pontos': ''
+      });
+    });
+
+    // 5. Criar e exportar o arquivo Excel
+    const ws = XLSX.utils.json_to_sheet(dadosParaExcel);
+    
+    // Ajustar largura das colunas
+    ws['!cols'] = [
+      { wch: 18 }, // Data
+      { wch: 40 }, // Evento
+      { wch: 25 }, // Nome
+      { wch: 30 }, // Divisão
+      { wch: 30 }, // Cargo
+      { wch: 8 },  // Grau
+      { wch: 12 }, // Status
+      { wch: 20 }, // Justificativa
+      { wch: 12 }, // Peso Evento
+      { wch: 12 }, // Peso Presença
+      { wch: 10 }  // Pontos
+    ];
+
     const wb = XLSX.utils.book_new();
-    const wsResumo = XLSX.utils.json_to_sheet(resumo);
-    const wsDetalhamento = XLSX.utils.json_to_sheet(detalhamento);
+    XLSX.utils.book_append_sheet(wb, ws, 'Frequência por Evento');
     
-    XLSX.utils.book_append_sheet(wb, wsResumo, 'Resumo');
-    XLSX.utils.book_append_sheet(wb, wsDetalhamento, 'Detalhamento');
-    
-    XLSX.writeFile(wb, `frequencia_individual_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+    XLSX.writeFile(wb, `frequencia_por_evento_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
   };
 
   if (isLoading) {
