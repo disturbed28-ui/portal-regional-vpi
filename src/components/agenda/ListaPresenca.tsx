@@ -533,25 +533,25 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                         <TableRow 
                           key={integrante.id} 
                           className={integrante.isVisitante 
-                            ? "bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/40" 
-                            : "bg-green-50 dark:bg-green-950/30 hover:bg-green-100 dark:hover:bg-green-950/40"
+                            ? "bg-blue-100/80 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-colors" 
+                            : "bg-green-100/80 dark:bg-green-950/40 hover:bg-green-100 dark:hover:bg-green-950/50 transition-colors"
                           }
                         >
                           <TableCell className="font-medium text-foreground">
                             <div className="flex items-center gap-2">
                               {integrante.nome_colete}
                               {integrante.isVisitante && (
-                                <Badge variant="outline" className="text-blue-600 border-blue-600 dark:text-blue-400 dark:border-blue-400">
+                                <Badge variant="outline" className="text-blue-700 border-blue-700 dark:text-blue-400 dark:border-blue-400 bg-white/50 dark:bg-transparent">
                                   Visitante
                                 </Badge>
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="text-sm font-medium text-foreground/90">
+                          <TableCell className="text-sm font-medium text-foreground">
                             {integrante.divisao_texto}
                           </TableCell>
-                          <TableCell className="text-foreground/80">{integrante.cargo_nome || '-'}</TableCell>
-                          <TableCell className="text-foreground/80">{integrante.grau || '-'}</TableCell>
+                          <TableCell className="text-foreground">{integrante.cargo_nome || '-'}</TableCell>
+                          <TableCell className="text-foreground">{integrante.grau || '-'}</TableCell>
                           {canManage && (
                             <TableCell>
                               <Button
