@@ -45,7 +45,11 @@ export const useFrequenciaPonderada = ({
         tiposEvento,
       });
 
-      // 1. Buscar eventos do período com peso
+      // 1. Buscar eventos do período com peso (limitado até hoje)
+      const hoje = new Date();
+      hoje.setHours(23, 59, 59, 999);
+      const dataFimReal = dataFim > hoje ? hoje : dataFim;
+      
       let queryEventos = supabase
         .from('eventos_agenda')
         .select(`
@@ -56,7 +60,7 @@ export const useFrequenciaPonderada = ({
           tipo_evento_peso
         `)
         .gte('data_evento', dataInicio.toISOString())
-        .lte('data_evento', dataFim.toISOString());
+        .lte('data_evento', dataFimReal.toISOString());
 
       if (divisaoIds && divisaoIds.length > 0) {
         queryEventos = queryEventos.in('divisao_id', divisaoIds);

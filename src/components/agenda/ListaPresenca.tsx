@@ -211,6 +211,33 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     setJustificativaDialog({ open: false, integranteId: null });
   };
 
+  const handleExcluirDaLista = async (integranteId: string, presencaId: string) => {
+    if (!evento) return;
+    
+    try {
+      const { error } = await supabase
+        .from('presencas')
+        .delete()
+        .eq('id', presencaId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Integrante removido",
+        description: "O integrante foi excluído da lista de presença",
+      });
+      
+      refetch();
+    } catch (error) {
+      console.error('Erro ao excluir:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o integrante da lista",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSearchNomeColete = async () => {
     if (!nomeColeteSearch.trim()) {
       toast({
@@ -399,20 +426,20 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
             </div>
 
             {/* Contador */}
-            <div className="flex items-center justify-center gap-6 p-4 bg-muted rounded-lg">
+            <div className="flex items-center justify-center gap-6 p-4 bg-muted/50 rounded-lg">
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{todosPresentes.length}</div>
-                <div className="text-sm text-muted-foreground">Presentes</div>
+                <div className="text-3xl font-bold text-green-600 dark:text-green-500">{todosPresentes.length}</div>
+                <div className="text-sm font-medium text-foreground/70">Presentes</div>
               </div>
               <div className="h-8 w-px bg-border" />
               <div className="text-center">
-                <div className="text-2xl font-bold text-orange-600">{ausentes.length}</div>
-                <div className="text-sm text-muted-foreground">Ausentes</div>
+                <div className="text-3xl font-bold text-orange-600 dark:text-orange-500">{ausentes.length}</div>
+                <div className="text-sm font-medium text-foreground/70">Ausentes</div>
               </div>
               <div className="h-8 w-px bg-border" />
               <div className="text-center">
-                <div className="text-2xl font-bold text-foreground">{totalDivisao}</div>
-                <div className="text-sm text-muted-foreground">Total da Divisão</div>
+                <div className="text-3xl font-bold text-foreground">{totalDivisao}</div>
+                <div className="text-sm font-medium text-foreground/70">Total da Divisão</div>
               </div>
             </div>
 
@@ -487,8 +514,8 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
             {todosPresentes.length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <h3 className="font-semibold text-lg text-green-600">Presentes</h3>
-                  <Badge className="bg-green-600">{todosPresentes.length}</Badge>
+                  <h3 className="font-semibold text-lg text-green-600 dark:text-green-500">Presentes</h3>
+                  <Badge className="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600">{todosPresentes.length}</Badge>
                 </div>
                 <Table>
                   <TableHeader>
@@ -507,21 +534,21 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                           key={integrante.id} 
                           className={integrante.isVisitante ? "bg-blue-50 dark:bg-blue-950/20" : "bg-green-50 dark:bg-green-950/20"}
                         >
-                          <TableCell className="font-medium text-gray-900 dark:text-gray-100">
+                          <TableCell className="font-medium text-foreground">
                             <div className="flex items-center gap-2">
                               {integrante.nome_colete}
                               {integrante.isVisitante && (
-                                <Badge variant="outline" className="text-blue-600 border-blue-600">
+                                <Badge variant="outline" className="text-blue-600 border-blue-600 dark:text-blue-400 dark:border-blue-400">
                                   Visitante
                                 </Badge>
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          <TableCell className="text-sm font-medium text-foreground/90">
                             {integrante.divisao_texto}
                           </TableCell>
-                          <TableCell className="text-gray-900 dark:text-gray-100">{integrante.cargo_nome || '-'}</TableCell>
-                          <TableCell className="text-gray-900 dark:text-gray-100">{integrante.grau || '-'}</TableCell>
+                          <TableCell className="text-foreground/80">{integrante.cargo_nome || '-'}</TableCell>
+                          <TableCell className="text-foreground/80">{integrante.grau || '-'}</TableCell>
                           {canManage && (
                             <TableCell>
                               <Button
@@ -546,8 +573,8 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
             {ausentes.length > 0 && (
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <h3 className="font-semibold text-lg text-orange-600">Ausentes</h3>
-                  <Badge variant="secondary">{ausentes.length}</Badge>
+                  <h3 className="font-semibold text-lg text-orange-600 dark:text-orange-500">Ausentes</h3>
+                  <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">{ausentes.length}</Badge>
                 </div>
                 <Table>
                   <TableHeader>
@@ -606,14 +633,35 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                           </TableCell>
                           {canManage && (
                             <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleMarcarPresente(integrante)}
-                                title="Marcar como presente"
-                              >
-                                <UserCheck className="h-4 w-4 text-green-600" />
-                              </Button>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleMarcarPresente(integrante)}
+                                  title="Marcar como presente"
+                                >
+                                  <UserCheck className="h-4 w-4 text-green-600" />
+                                </Button>
+                                {(!integrante.justificativa_ausencia || integrante.justificativa_ausencia === 'nao_justificado') && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setJustificativaDialog({ open: true, integranteId: integrante.id })}
+                                    title="Adicionar justificativa"
+                                  >
+                                    <Heart className="h-4 w-4 text-orange-500" />
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleExcluirDaLista(integrante.id, integrante.presencaId)}
+                                  title="Excluir da lista"
+                                  className="hover:bg-red-100 dark:hover:bg-red-950"
+                                >
+                                  <X className="h-4 w-4 text-red-600" />
+                                </Button>
+                              </div>
                             </TableCell>
                           )}
                         </TableRow>

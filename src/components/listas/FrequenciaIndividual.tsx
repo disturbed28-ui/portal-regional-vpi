@@ -47,6 +47,7 @@ export const FrequenciaIndividual = ({ isAdmin, userDivisaoId }: FrequenciaIndiv
   const handlePeriodoChange = (preset: PeriodoPreset) => {
     setPeriodoPreset(preset);
     const hoje = new Date();
+    hoje.setHours(23, 59, 59, 999);
     
     switch (preset) {
       case 'ultimo_mes':
@@ -189,8 +190,15 @@ export const FrequenciaIndividual = ({ isAdmin, userDivisaoId }: FrequenciaIndiv
                       <Calendar
                         mode="single"
                         selected={dataFim}
-                        onSelect={(date) => date && setDataFim(date)}
+                        onSelect={(date) => {
+                          if (date) {
+                            const hoje = new Date();
+                            hoje.setHours(23, 59, 59, 999);
+                            setDataFim(date > hoje ? hoje : date);
+                          }
+                        }}
                         locale={ptBR}
+                        disabled={(date) => date > new Date()}
                       />
                     </PopoverContent>
                   </Popover>

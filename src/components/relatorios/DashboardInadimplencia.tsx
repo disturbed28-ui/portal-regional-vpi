@@ -88,8 +88,8 @@ export const DashboardInadimplencia = () => {
                     {index + 1}
                   </Badge>
                   <div>
-                    <p className="font-semibold">{devedor.nome_colete}</p>
-                    <p className="text-sm text-muted-foreground">{devedor.divisao_texto}</p>
+                    <p className="font-semibold text-foreground">{devedor.nome_colete}</p>
+                    <p className="text-sm text-foreground/80">{devedor.divisao_texto}</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -157,7 +157,7 @@ export const DashboardInadimplencia = () => {
                               className="flex items-center justify-between p-2 bg-background rounded border"
                             >
                               <div className="flex flex-col">
-                                <span className="font-medium">{devedor.nome_colete}</span>
+                                <span className="font-medium text-foreground">{devedor.nome_colete}</span>
                                 <span className="font-mono text-xs text-muted-foreground">
                                   ID: {devedor.registro_id}
                                 </span>
@@ -166,7 +166,7 @@ export const DashboardInadimplencia = () => {
                                 <div className="text-sm font-semibold text-red-600">
                                   R$ {devedor.total_devido?.toFixed(2)}
                                 </div>
-                                <div className="text-xs text-muted-foreground">
+                                <div className="text-xs font-medium text-foreground/70">
                                   {devedor.meses_devendo} {devedor.meses_devendo === 1 ? 'mês' : 'meses'}
                                 </div>
                               </div>

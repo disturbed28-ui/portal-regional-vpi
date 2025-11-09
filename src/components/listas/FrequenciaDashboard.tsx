@@ -45,10 +45,14 @@ export const FrequenciaDashboard = ({ isAdmin, userDivisaoId }: FrequenciaDashbo
     }
   });
 
-  // Buscar eventos e presenças do período
+  // Buscar eventos e presenças do período (limitado até hoje)
   const { data: dadosFrequencia, isLoading } = useQuery({
     queryKey: ['frequencia-dashboard', dataInicio, dataFim, divisaoSelecionada],
     queryFn: async () => {
+      const hoje = new Date();
+      hoje.setHours(23, 59, 59, 999);
+      const dataFimReal = dataFim > hoje ? hoje : dataFim;
+      
       let query = supabase
         .from('eventos_agenda')
         .select(`
@@ -65,7 +69,7 @@ export const FrequenciaDashboard = ({ isAdmin, userDivisaoId }: FrequenciaDashbo
           )
         `)
         .gte('data_evento', dataInicio.toISOString())
-        .lte('data_evento', dataFim.toISOString())
+        .lte('data_evento', dataFimReal.toISOString())
         .order('data_evento', { ascending: true });
 
       if (!isAdmin && userDivisaoId) {
@@ -141,11 +145,13 @@ export const FrequenciaDashboard = ({ isAdmin, userDivisaoId }: FrequenciaDashbo
 
   const handlePeriodoChange = (valor: PeriodoPreset) => {
     setPeriodoPreset(valor);
+    const hoje = new Date();
+    hoje.setHours(23, 59, 59, 999);
     
     switch (valor) {
       case 'mes_atual':
         setDataInicio(startOfMonth(hoje));
-        setDataFim(endOfMonth(hoje));
+        setDataFim(hoje);
         break;
       case 'mes_anterior':
         const mesPassado = subMonths(hoje, 1);
@@ -158,7 +164,7 @@ export const FrequenciaDashboard = ({ isAdmin, userDivisaoId }: FrequenciaDashbo
         break;
       case 'ano':
         setDataInicio(startOfYear(hoje));
-        setDataFim(endOfYear(hoje));
+        setDataFim(hoje);
         break;
     }
   };
@@ -234,8 +240,15 @@ export const FrequenciaDashboard = ({ isAdmin, userDivisaoId }: FrequenciaDashbo
                       <Calendar
                         mode="single"
                         selected={dataFim}
-                        onSelect={(date) => date && setDataFim(date)}
+                        onSelect={(date) => {
+                          if (date) {
+                            const hoje = new Date();
+                            hoje.setHours(23, 59, 59, 999);
+                            setDataFim(date > hoje ? hoje : date);
+                          }
+                        }}
                         locale={ptBR}
+                        disabled={(date) => date > new Date()}
                       />
                     </PopoverContent>
                   </Popover>

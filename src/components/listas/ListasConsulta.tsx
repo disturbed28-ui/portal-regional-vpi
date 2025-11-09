@@ -1,27 +1,81 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Users } from "lucide-react";
+import { Calendar, Users, FileSpreadsheet } from "lucide-react";
 import { removeAccents } from "@/lib/utils";
+import * as XLSX from 'xlsx';
 
 interface ListasConsultaProps {
   isAdmin: boolean;
   userDivisaoId?: string;
 }
 
+// Funções auxiliares para ordenação
+const romanToNumber = (roman: string | null): number => {
+  if (!roman) return 999;
+  const romanMap: { [key: string]: number } = {
+    'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5,
+    'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10,
+    'XI': 11, 'XII': 12
+  };
+  return romanMap[roman.toUpperCase()] || 999;
+};
+
+const getCargoOrder = (cargo: string | null, grau: string | null): number => {
+  if (!cargo) return 999;
+  const cargoLower = cargo.toLowerCase();
+  
+  if (grau === 'V') {
+    if (cargoLower.includes('diretor regional')) return 1;
+    if (cargoLower.includes('operacional regional')) return 2;
+    if (cargoLower.includes('social regional')) return 3;
+    if (cargoLower.includes('adm') && cargoLower.includes('regional')) return 4;
+    if (cargoLower.includes('comunicação') || cargoLower.includes('comunicacao')) return 5;
+  }
+  
+  if (grau === 'VI') {
+    if (cargoLower.includes('diretor') && cargoLower.includes('divisão')) return 1;
+    if (cargoLower.includes('sub diretor')) return 2;
+    if (cargoLower.includes('social') && cargoLower.includes('divisão')) return 3;
+    if (cargoLower.includes('adm') && cargoLower.includes('divisão')) return 4;
+    if (cargoLower.includes('armas') || cargoLower.includes('sgt')) return 5;
+  }
+  
+  if (grau === 'X') {
+    if (cargoLower === 'pp' || cargoLower.includes('sgt armas pp')) return 1;
+    if (cargoLower.includes('camiseta')) return 2;
+  }
+  
+  return 999;
+};
+
+const getStatusOrder = (status: string): number => {
+  switch (status) {
+    case 'presente': return 1;
+    case 'visitante': return 2;
+    case 'ausente': return 3;
+    case 'justificado': return 4;
+    default: return 999;
+  }
+};
+
 export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) => {
   const [eventoSelecionado, setEventoSelecionado] = useState<string>('');
 
-  // Buscar eventos disponíveis
+  // Buscar eventos disponíveis (apenas passados ou de hoje)
   const { data: eventos, isLoading: loadingEventos } = useQuery({
     queryKey: ['eventos-lista', userDivisaoId],
     queryFn: async () => {
+      const hoje = new Date();
+      hoje.setHours(23, 59, 59, 999);
+      
       let query = supabase
         .from('eventos_agenda')
         .select(`
@@ -31,6 +85,7 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
           divisao_id,
           divisoes(nome)
         `)
+        .lte('data_evento', hoje.toISOString())
         .order('data_evento', { ascending: false })
         .limit(50);
 
@@ -78,6 +133,33 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
 
   const eventoAtual = eventos?.find(e => e.id === eventoSelecionado);
 
+  // Ordenar presenças hierarquicamente
+  const presencasOrdenadas = useMemo(() => {
+    if (!presencas) return [];
+    
+    return [...presencas].sort((a, b) => {
+      // 1. Ordenar por status
+      const statusOrderA = getStatusOrder(a.status);
+      const statusOrderB = getStatusOrder(b.status);
+      if (statusOrderA !== statusOrderB) return statusOrderA - statusOrderB;
+      
+      // 2. Ordenar por grau
+      const grauA = romanToNumber(a.integrantes_portal?.grau || null);
+      const grauB = romanToNumber(b.integrantes_portal?.grau || null);
+      if (grauA !== grauB) return grauA - grauB;
+      
+      // 3. Ordenar por cargo
+      const cargoOrderA = getCargoOrder(a.integrantes_portal?.cargo_nome || null, a.integrantes_portal?.grau || null);
+      const cargoOrderB = getCargoOrder(b.integrantes_portal?.cargo_nome || null, b.integrantes_portal?.grau || null);
+      if (cargoOrderA !== cargoOrderB) return cargoOrderA - cargoOrderB;
+      
+      // 4. Ordenar por nome
+      const nomeA = a.integrantes_portal?.nome_colete || '';
+      const nomeB = b.integrantes_portal?.nome_colete || '';
+      return nomeA.localeCompare(nomeB, 'pt-BR');
+    });
+  }, [presencas]);
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'presente':
@@ -93,13 +175,37 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
     }
   };
 
-  const estatisticas = presencas ? {
-    total: presencas.length,
-    presentes: presencas.filter(p => p.status === 'presente').length,
-    visitantes: presencas.filter(p => p.status === 'visitante').length,
-    ausentes: presencas.filter(p => p.status === 'ausente').length,
-    justificados: presencas.filter(p => p.status === 'justificado').length
+  const estatisticas = presencasOrdenadas ? {
+    total: presencasOrdenadas.length,
+    presentes: presencasOrdenadas.filter(p => p.status === 'presente').length,
+    visitantes: presencasOrdenadas.filter(p => p.status === 'visitante').length,
+    ausentes: presencasOrdenadas.filter(p => p.status === 'ausente').length,
+    justificados: presencasOrdenadas.filter(p => p.status === 'justificado').length
   } : null;
+
+  const handleExportarExcel = () => {
+    if (!eventoAtual || !presencasOrdenadas) return;
+    
+    const dadosExcel = presencasOrdenadas.map(p => ({
+      'Nome': p.integrantes_portal?.nome_colete || '-',
+      'Divisão': p.integrantes_portal?.divisao_texto || '-',
+      'Cargo': p.integrantes_portal?.cargo_nome || '-',
+      'Grau': p.integrantes_portal?.grau || '-',
+      'Status': p.status,
+      'Confirmado Por': p.confirmado_por || '-',
+      'Data/Hora': p.confirmado_em 
+        ? format(new Date(p.confirmado_em), "dd/MM/yyyy HH:mm", { locale: ptBR })
+        : '-',
+      'Justificativa': p.status === 'presente' ? '-' : (p.justificativa_ausencia || 'Não justificado')
+    }));
+    
+    const ws = XLSX.utils.json_to_sheet(dadosExcel);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Lista de Presença');
+    
+    const nomeArquivo = `lista_presenca_${format(new Date(eventoAtual.data_evento), 'yyyy-MM-dd')}_${removeAccents(eventoAtual.titulo).replace(/\s+/g, '_')}.xlsx`;
+    XLSX.writeFile(wb, nomeArquivo);
+  };
 
   return (
     <div className="space-y-6">
@@ -129,6 +235,20 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
               )}
             </SelectContent>
           </Select>
+          
+          {eventoSelecionado && presencasOrdenadas && presencasOrdenadas.length > 0 && (
+            <div className="flex justify-end mt-4">
+              <Button
+                onClick={handleExportarExcel}
+                variant="outline"
+                size="sm"
+                className="gap-2"
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                Exportar para Excel
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -209,7 +329,7 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
               <div className="flex justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
-            ) : presencas && presencas.length > 0 ? (
+            ) : presencasOrdenadas && presencasOrdenadas.length > 0 ? (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -217,6 +337,7 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
                       <TableHead>Nome</TableHead>
                       <TableHead>Divisão</TableHead>
                       <TableHead>Cargo</TableHead>
+                      <TableHead>Grau</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Confirmado Por</TableHead>
                       <TableHead>Data/Hora</TableHead>
@@ -224,7 +345,7 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {presencas.map((presenca) => (
+                    {presencasOrdenadas.map((presenca) => (
                       <TableRow key={presenca.id}>
                         <TableCell className="font-medium">
                           {presenca.integrantes_portal?.nome_colete 
@@ -238,8 +359,11 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
                         </TableCell>
                         <TableCell>
                           {presenca.integrantes_portal?.cargo_nome 
-                            ? `${removeAccents(presenca.integrantes_portal.cargo_nome)}${presenca.integrantes_portal.grau ? ` (${removeAccents(presenca.integrantes_portal.grau)})` : ''}`
+                            ? removeAccents(presenca.integrantes_portal.cargo_nome)
                             : '-'}
+                        </TableCell>
+                        <TableCell>
+                          {presenca.integrantes_portal?.grau || '-'}
                         </TableCell>
                         <TableCell>{getStatusBadge(presenca.status)}</TableCell>
                         <TableCell>{presenca.confirmado_por || '-'}</TableCell>
