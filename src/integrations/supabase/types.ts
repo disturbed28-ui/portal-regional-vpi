@@ -1096,6 +1096,9 @@ export type Database = {
         | "diretor_regional"
         | "diretor_divisao"
         | "regional"
+        | "app.authenticated"
+        | "presence.view_division"
+        | "presence.view_region"
       motivo_inativacao:
         | "transferido"
         | "falecido"
@@ -1238,6 +1241,9 @@ export const Constants = {
         "diretor_regional",
         "diretor_divisao",
         "regional",
+        "app.authenticated",
+        "presence.view_division",
+        "presence.view_region",
       ],
       motivo_inativacao: [
         "transferido",
