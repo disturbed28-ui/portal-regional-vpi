@@ -14,6 +14,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
+import { dataAtualBrasil } from "@/lib/timezone";
 
 const Agenda = () => {
   const navigate = useNavigate();
@@ -44,6 +45,49 @@ const Agenda = () => {
     const monthEnd = endOfMonth(selectedMonth);
     return isWithinInterval(eventDate, { start: monthStart, end: monthEnd });
   }) || [];
+
+  // Auto-scroll para a data de hoje (apenas no mês atual)
+  useEffect(() => {
+    const hoje = dataAtualBrasil();
+    const mesAtual = startOfMonth(hoje);
+    const mesSelecionado = startOfMonth(selectedMonth);
+    
+    const isMesAtual = mesAtual.getTime() === mesSelecionado.getTime();
+    
+    if (isLoading || filteredEvents.length === 0 || !isMesAtual) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      try {
+        const dataHoje = format(hoje, 'yyyy-MM-dd');
+        const elementoHoje = document.querySelector(`[data-date="${dataHoje}"]`);
+
+        if (elementoHoje) {
+          console.log('[Auto-Scroll] Posicionando na data:', dataHoje);
+          
+          elementoHoje.scrollIntoView({ 
+            block: "start", 
+            behavior: "smooth" 
+          });
+
+          setTimeout(() => {
+            const scrollAtual = window.scrollY || document.documentElement.scrollTop;
+            window.scrollTo({
+              top: scrollAtual - 100,
+              behavior: "smooth"
+            });
+          }, 300);
+        } else {
+          console.log('[Auto-Scroll] Nenhum evento encontrado para hoje:', dataHoje);
+        }
+      } catch (error) {
+        console.error('[Auto-Scroll] Erro ao posicionar scroll:', error);
+      }
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [isLoading, filteredEvents, selectedMonth]);
 
   const handlePreviousMonth = () => {
     setSelectedMonth(subMonths(selectedMonth, 1));
@@ -120,9 +164,14 @@ const Agenda = () => {
 
         {!isLoading && !error && filteredEvents.length > 0 && (
           <div className="space-y-4">
-            {filteredEvents.map((event) => (
-              <EventCard key={event.id} event={event} onClick={() => handleEventClick(event)} />
-            ))}
+            {filteredEvents.map((event) => {
+              const eventDate = format(new Date(event.start), 'yyyy-MM-dd');
+              return (
+                <div key={event.id} data-date={eventDate}>
+                  <EventCard event={event} onClick={() => handleEventClick(event)} />
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
