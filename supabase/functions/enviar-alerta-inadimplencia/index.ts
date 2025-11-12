@@ -95,13 +95,12 @@ serve(async (req) => {
     const { data: diretorRoles, error: diretorRolesError } = await supabaseAdmin
       .from('v_user_effective_roles')
       .select('user_id')
-      .eq('effective_role', 'diretor_divisao')
-      .limit(1);
+      .eq('effective_role', 'diretor_divisao');
 
     if (diretorRolesError || !diretorRoles || diretorRoles.length === 0) {
       console.error('[enviar-alerta] ❌ Nenhum diretor encontrado:', diretorRolesError);
       return new Response(
-        JSON.stringify({ error: 'Nenhum diretor de divisão encontrado' }),
+        JSON.stringify({ error: 'Nenhum diretor de divisão encontrado no sistema' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -117,7 +116,9 @@ serve(async (req) => {
     if (profileError || !diretorProfile) {
       console.error('[enviar-alerta] ❌ Perfil do diretor não encontrado:', profileError);
       return new Response(
-        JSON.stringify({ error: 'Diretor da divisão não encontrado' }),
+        JSON.stringify({ 
+          error: `Diretor não encontrado para a divisão ${divisao.nome}. Verifique se há um usuário com cargo de Diretor de Divisão cadastrado.` 
+        }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
