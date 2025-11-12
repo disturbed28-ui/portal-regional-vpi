@@ -26,3 +26,9 @@ verify_jwt = false
 
 [functions.get-calendar-events]
 verify_jwt = false
+
+[functions.enviar-alerta-inadimplencia]
+verify_jwt = true
+
+[functions.verificar-alertas-diarios]
+verify_jwt = false
