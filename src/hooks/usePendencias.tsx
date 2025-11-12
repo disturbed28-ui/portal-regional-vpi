@@ -143,7 +143,8 @@ export const usePendencias = (
             .single();
           
           if (divisao) {
-            queryMensalidades = queryMensalidades.eq('divisao_texto', divisao.nome);
+            // Usar ilike para matching robusto (ignora acentos e case)
+            queryMensalidades = queryMensalidades.ilike('divisao_texto', divisao.nome);
           }
         }
       } else if (userRole === 'user' && registroId) {
@@ -278,7 +279,8 @@ export const usePendencias = (
             .single();
           
           if (divisao) {
-            queryAfastados = queryAfastados.eq('divisao_texto', divisao.nome);
+            // Usar ilike para matching robusto (ignora acentos e case)
+            queryAfastados = queryAfastados.ilike('divisao_texto', divisao.nome);
           }
         }
       } else if (userRole === 'user' && registroId) {
@@ -361,7 +363,8 @@ export const usePendencias = (
             .single();
           
           if (divisao) {
-            queryDeltas = queryDeltas.eq('divisao_texto', divisao.nome);
+            // Usar ilike para matching robusto (ignora acentos e case)
+            queryDeltas = queryDeltas.ilike('divisao_texto', divisao.nome);
           }
         }
       } else if (userRole === 'user' && registroId) {

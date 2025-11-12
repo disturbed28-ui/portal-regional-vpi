@@ -32,9 +32,28 @@ const MensalidadeDetalhesCard = ({ detalhes }: { detalhes: MensalidadeDetalhes }
   const formatarData = (data: string) => 
     format(new Date(data), 'dd/MM/yyyy', { locale: ptBR });
   
+  // Verificar se há alguma parcela com 80+ dias de atraso (risco de desligamento)
+  const maiorAtraso = Math.max(...detalhes.parcelas.map(p => p.dias_atraso));
+  const isCritico = maiorAtraso >= 80;
+  
   return (
     <Card className="bg-background/50 border-destructive/20">
       <CardContent className="p-4 space-y-3">
+        {/* Alerta Crítico: 80+ dias */}
+        {isCritico && (
+          <div className="p-3 bg-red-600 text-white rounded-lg border-2 border-red-700 animate-pulse">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 flex-shrink-0" />
+              <div>
+                <p className="font-bold text-sm">⚠️ RISCO DE DESLIGAMENTO</p>
+                <p className="text-xs mt-1">
+                  Mensalidade vencida há {maiorAtraso} dias. Limite de 80 dias ultrapassado.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Cargo do Integrante */}
         {detalhes.cargo_grau_texto && (
           <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-950/20 rounded">
@@ -83,25 +102,39 @@ const MensalidadeDetalhesCard = ({ detalhes }: { detalhes: MensalidadeDetalhes }
             Parcelas Atrasadas:
           </p>
           <div className="space-y-1 max-h-32 overflow-y-auto">
-            {detalhes.parcelas.map((parcela, idx) => (
-              <div 
-                key={idx} 
-                className="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2 text-xs p-2 bg-secondary/30 rounded"
-              >
-                <div>
-                  <span className="font-medium">{parcela.ref}</span>
+            {detalhes.parcelas.map((parcela, idx) => {
+              const isParcelaCritica = parcela.dias_atraso >= 80;
+              return (
+                <div key={idx}>
+                  <div 
+                    className={`grid grid-cols-[1fr_1fr_1fr_1fr] gap-2 text-xs p-2 rounded ${
+                      isParcelaCritica 
+                        ? 'bg-red-100 dark:bg-red-950/40 border border-red-600' 
+                        : 'bg-secondary/30'
+                    }`}
+                  >
+                    <div>
+                      <span className="font-medium">{parcela.ref}</span>
+                    </div>
+                    <div className="text-muted-foreground">
+                      {formatarData(parcela.data_vencimento)}
+                    </div>
+                    <div className="font-medium text-red-600">
+                      {formatarValor(parcela.valor)}
+                    </div>
+                    <div className={`text-right ${isParcelaCritica ? 'text-red-700 font-bold' : 'text-red-600'}`}>
+                      {parcela.dias_atraso}d atraso
+                    </div>
+                  </div>
+                  {isParcelaCritica && (
+                    <div className="text-xs text-red-700 dark:text-red-400 font-semibold mt-1 ml-2 flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      Limite crítico ultrapassado
+                    </div>
+                  )}
                 </div>
-                <div className="text-muted-foreground">
-                  {formatarData(parcela.data_vencimento)}
-                </div>
-                <div className="font-medium text-red-600">
-                  {formatarValor(parcela.valor)}
-                </div>
-                <div className="text-right text-red-600">
-                  {parcela.dias_atraso}d atraso
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </CardContent>
@@ -336,7 +369,14 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
   const isDelta = pendencia.tipo === 'delta';
   const detalhes = pendencia.detalhes_completos;
   
+  // Calcular se é mensalidade crítica (80+ dias)
+  const maiorAtrasoMensalidade = isMensalidade 
+    ? Math.max(...(detalhes as MensalidadeDetalhes).parcelas.map(p => p.dias_atraso))
+    : 0;
+  const isCritico = isMensalidade && maiorAtrasoMensalidade >= 80;
+  
   const getBorderColor = () => {
+    if (isMensalidade && isCritico) return 'border-red-700';
     if (isMensalidade) return 'border-red-500';
     if (isAfastamento) return 'border-orange-500';
     if (isDelta) {
@@ -404,6 +444,11 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
               >
                 {getIcon()} {getLabel()}
               </Badge>
+              {isCritico && (
+                <Badge variant="destructive" className="text-xs animate-pulse">
+                  ⚠️ RISCO DE DESLIGAMENTO
+                </Badge>
+              )}
               <span className="text-xs text-muted-foreground flex-1 min-w-0 truncate" title={pendencia.detalhe}>
                 {pendencia.detalhe}
               </span>
@@ -419,12 +464,19 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
               {pendencia.divisao_texto}
             </div>
             <div className="flex items-center justify-between gap-2">
-              <Badge 
-                variant={isMensalidade ? 'destructive' : isDelta ? 'default' : 'secondary'}
-                className="text-xs truncate"
-              >
-                {getIcon()} {getLabel()}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge 
+                  variant={isMensalidade ? 'destructive' : isDelta ? 'default' : 'secondary'}
+                  className="text-xs truncate"
+                >
+                  {getIcon()} {getLabel()}
+                </Badge>
+                {isCritico && (
+                  <Badge variant="destructive" className="text-xs animate-pulse">
+                    ⚠️ RISCO DE DESLIGAMENTO
+                  </Badge>
+                )}
+              </div>
               <span className="text-xs text-muted-foreground truncate">
                 {pendencia.detalhe}
               </span>
