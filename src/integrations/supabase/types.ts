@@ -14,6 +14,78 @@ export type Database = {
   }
   public: {
     Tables: {
+      alertas_emails_log: {
+        Row: {
+          created_at: string | null
+          destinatario_cargo: string | null
+          destinatario_nome: string | null
+          dias_atraso: number
+          divisao_texto: string
+          email_cc: string[] | null
+          email_destinatario: string
+          enviado_em: string | null
+          erro_mensagem: string | null
+          id: string
+          message_id: string | null
+          motivo_ignorado: string | null
+          nome_colete: string
+          payload_hash: string | null
+          registro_id: number
+          run_id: string
+          status: string
+          template_version: string | null
+          tipo_alerta: string
+          total_parcelas: number
+          valor_total: number
+        }
+        Insert: {
+          created_at?: string | null
+          destinatario_cargo?: string | null
+          destinatario_nome?: string | null
+          dias_atraso: number
+          divisao_texto: string
+          email_cc?: string[] | null
+          email_destinatario: string
+          enviado_em?: string | null
+          erro_mensagem?: string | null
+          id?: string
+          message_id?: string | null
+          motivo_ignorado?: string | null
+          nome_colete: string
+          payload_hash?: string | null
+          registro_id: number
+          run_id?: string
+          status?: string
+          template_version?: string | null
+          tipo_alerta?: string
+          total_parcelas: number
+          valor_total: number
+        }
+        Update: {
+          created_at?: string | null
+          destinatario_cargo?: string | null
+          destinatario_nome?: string | null
+          dias_atraso?: number
+          divisao_texto?: string
+          email_cc?: string[] | null
+          email_destinatario?: string
+          enviado_em?: string | null
+          erro_mensagem?: string | null
+          id?: string
+          message_id?: string | null
+          motivo_ignorado?: string | null
+          nome_colete?: string
+          payload_hash?: string | null
+          registro_id?: number
+          run_id?: string
+          status?: string
+          template_version?: string | null
+          tipo_alerta?: string
+          total_parcelas?: number
+          valor_total?: number
+        }
+        Relationships: []
+      }
       atualizacoes_carga: {
         Row: {
           campo_alterado: string
@@ -95,6 +167,33 @@ export type Database = {
           realizado_por?: string | null
           tipo_carga?: string
           total_integrantes?: number
+        }
+        Relationships: []
+      }
+      cargo_role_mapping: {
+        Row: {
+          app_role: Database["public"]["Enums"]["app_role"]
+          cargo_nome: string
+          cargo_nome_normalizado: string
+          created_at: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          app_role: Database["public"]["Enums"]["app_role"]
+          cargo_nome: string
+          cargo_nome_normalizado: string
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          app_role?: Database["public"]["Enums"]["app_role"]
+          cargo_nome?: string
+          cargo_nome_normalizado?: string
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -435,6 +534,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "integrantes_historico_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_effective_roles"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       integrantes_portal: {
@@ -544,6 +650,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integrantes_portal_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_effective_roles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -1013,6 +1126,14 @@ export type Database = {
       }
     }
     Views: {
+      v_user_effective_roles: {
+        Row: {
+          effective_role: Database["public"]["Enums"]["app_role"] | null
+          role_source: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       vw_deltas_resolvidos: {
         Row: {
           carga_id: string | null
@@ -1080,6 +1201,15 @@ export type Database = {
       }
     }
     Functions: {
+      cargo_normalize: { Args: { cargo_texto: string }; Returns: string }
+      has_permission: {
+        Args: {
+          _divisao_id?: string
+          _permission_code: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1087,6 +1217,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
       app_role:
