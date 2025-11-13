@@ -454,6 +454,9 @@ const Admin = () => {
             <Button onClick={() => navigate("/admin/alertas")} variant="outline" className="flex-1 sm:flex-none">
               🔔 Alertas de Inadimplência
             </Button>
+            <Button onClick={() => navigate("/admin/links-uteis")} variant="outline" className="flex-1 sm:flex-none">
+              🔗 Links Úteis
+            </Button>
             <Button onClick={() => navigate("/")} variant="outline" className="flex-1 sm:flex-none">
               Voltar
             </Button>
