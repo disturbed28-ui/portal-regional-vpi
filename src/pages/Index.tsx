@@ -26,31 +26,38 @@ const Index = () => {
   const [showQRCode, setShowQRCode] = useState(false);
 
   // Determinar role para pendências
-  const isAdmin = hasRole('admin');
-  const isDiretorDivisao = hasRole('diretor_divisao');
-  const isDiretorRegional = hasRole('diretor_regional') || hasRole('regional');
-  const isModerator = hasRole('moderator');
-  
-  const pendenciaRole = isAdmin ? 'admin' 
-    : isDiretorRegional ? 'regional'
-    : isDiretorDivisao ? 'diretor_divisao'
-    : 'user';
+  const isAdmin = hasRole("admin");
+  const isDiretorDivisao = hasRole("diretor_divisao");
+  const isDiretorRegional = hasRole("diretor_regional") || hasRole("regional");
+  const isModerator = hasRole("moderator");
 
-  const { pendencias, loading: pendenciasLoading, totalPendencias } = usePendencias(
+  const pendenciaRole = isAdmin
+    ? "admin"
+    : isDiretorRegional
+      ? "regional"
+      : isDiretorDivisao
+        ? "diretor_divisao"
+        : "user";
+
+  const {
+    pendencias,
+    loading: pendenciasLoading,
+    totalPendencias,
+  } = usePendencias(
     user?.id,
     pendenciaRole,
     profile?.regional_id,
     profile?.divisao_id,
-    profile?.integrante?.registro_id || undefined
+    profile?.integrante?.registro_id || undefined,
   );
 
   const isLoggedIn = !!user;
   const isLoadingProfile = isLoggedIn && profileLoading;
-  
+
   // Redirecionar para perfil se usuário não tiver nome_colete
   useEffect(() => {
     if (isLoggedIn && !profileLoading && profile && !profile.nome_colete) {
-      console.log('[Index] Usuário sem nome_colete, redirecionando para perfil...');
+      console.log("[Index] Usuário sem nome_colete, redirecionando para perfil...");
       toast({
         title: "Complete seu cadastro",
         description: "Por favor, adicione seu nome de colete para continuar.",
@@ -58,15 +65,12 @@ const Index = () => {
       navigate("/perfil");
     }
   }, [isLoggedIn, profileLoading, profile, navigate, toast]);
-  
-  const rawUserName = isLoadingProfile 
-    ? "Carregando..." 
-    : (profile?.nome_colete || profile?.name || "Visitante");
-  
-  const userName = rawUserName === "Carregando..." || rawUserName === "Visitante" 
-    ? rawUserName 
-    : removeAccents(rawUserName);
-  
+
+  const rawUserName = isLoadingProfile ? "Carregando..." : profile?.nome_colete || profile?.name || "Visitante";
+
+  const userName =
+    rawUserName === "Carregando..." || rawUserName === "Visitante" ? rawUserName : removeAccents(rawUserName);
+
   // DEBUG: Log state (comentado para evitar spam)
   // console.log('📊 Index state:', {
   //   isLoggedIn,
@@ -75,31 +79,31 @@ const Index = () => {
   //   userName,
   //   userId: user?.id
   // });
-  
+
   // Mapeamento de status com cores e icones
   const statusConfig = {
-    'Pendente': { color: 'text-yellow-600', icon: '', label: 'Pendente' },
-    'Analise': { color: 'text-yellow-600', icon: '', label: 'Em Analise' },
-    'Ativo': { color: 'text-green-600', icon: '', label: 'Ativo' },
-    'Recusado': { color: 'text-red-600', icon: '', label: 'Recusado' },
-    'Inativo': { color: 'text-gray-500', icon: '', label: 'Inativo' }
+    Pendente: { color: "text-yellow-600", icon: "", label: "Pendente" },
+    Analise: { color: "text-yellow-600", icon: "", label: "Em Analise" },
+    Ativo: { color: "text-green-600", icon: "", label: "Ativo" },
+    Recusado: { color: "text-red-600", icon: "", label: "Recusado" },
+    Inativo: { color: "text-gray-500", icon: "", label: "Inativo" },
   };
 
-  const profileStatus = profile?.profile_status || 'Pendente';
-  const currentStatus = statusConfig[profileStatus as keyof typeof statusConfig] || statusConfig['Pendente'];
+  const profileStatus = profile?.profile_status || "Pendente";
+  const currentStatus = statusConfig[profileStatus as keyof typeof statusConfig] || statusConfig["Pendente"];
 
   const userStatus = isLoadingProfile
     ? "Carregando..."
-    : isLoggedIn 
-      ? `${profile?.status || 'Online'}/${currentStatus.label}` 
+    : isLoggedIn
+      ? `${profile?.status || "Online"}/${currentStatus.label}`
       : "Offline";
-  
-  const userPhoto = isLoadingProfile ? "" : (profile?.photo_url || "");
-  const isActive = profile?.profile_status === 'Ativo';
+
+  const userPhoto = isLoadingProfile ? "" : profile?.photo_url || "";
+  const isActive = profile?.profile_status === "Ativo";
   const isProfileIncomplete = isLoggedIn && !profile?.nome_colete;
 
   // DEBUG: Log roles para diagnóstico
-  console.log('🔐 Roles Debug:', {
+  console.log("🔐 Roles Debug:", {
     userId: user?.id,
     roleLoading,
     isAdmin,
@@ -108,7 +112,7 @@ const Index = () => {
     isDiretorDivisao,
     isActive,
     profileStatus: profile?.profile_status,
-    pendenciaRole
+    pendenciaRole,
   });
 
   const handleConnect = () => {
@@ -151,7 +155,6 @@ const Index = () => {
     navigate("/listas-presenca");
   };
 
-
   return (
     <div className="landing-page min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-[360px] flex flex-col">
@@ -161,28 +164,20 @@ const Index = () => {
           <div className="text-center mb-6">
             <div className="flex items-center justify-between mb-2">
               <div className="flex-1" />
-              <h1 className="text-2xl font-bold text-foreground tracking-wider">
-                PORTAL REGIONAL
-              </h1>
+              <h1 className="text-2xl font-bold text-foreground tracking-wider">PORTAL REGIONAL</h1>
               <div className="flex-1 flex justify-end">
-                {isLoggedIn && totalOnline > 0 && (
-                  <OnlineUsersModal users={onlineUsers} totalOnline={totalOnline} />
-                )}
+                {isLoggedIn && totalOnline > 0 && <OnlineUsersModal users={onlineUsers} totalOnline={totalOnline} />}
               </div>
             </div>
-            <h2 className="text-lg text-muted-foreground tracking-wide">
-              VALE DO PARAIBA I - SP
-            </h2>
+            <h2 className="text-lg text-muted-foreground tracking-wide">VALE DO PARAIBA I - SP</h2>
           </div>
 
           {/* Avatar */}
           <div className="flex justify-center items-center mb-4 relative">
-            <div 
+            <div
               className="w-32 h-32 rounded-full bg-secondary border-2 border-border bg-cover bg-center"
               style={{
-                backgroundImage: userPhoto 
-                  ? `url(${userPhoto})` 
-                  : `url('/images/skull.png')`
+                backgroundImage: userPhoto ? `url(${userPhoto})` : `url('/images/skull.png')`,
               }}
             />
             {isLoggedIn && profile?.id && (
@@ -199,17 +194,12 @@ const Index = () => {
           {/* Nome e Status */}
           <div className="text-center mb-6">
             <div className="flex items-center justify-center gap-2 mb-1">
-              <h3 className="text-xl font-semibold text-foreground">
-                {userName}
-              </h3>
+              <h3 className="text-xl font-semibold text-foreground">{userName}</h3>
               {isLoggedIn && !pendenciasLoading && (
-                <PendenciasModal 
-                  pendencias={pendencias} 
-                  totalPendencias={totalPendencias} 
-                />
+                <PendenciasModal pendencias={pendencias} totalPendencias={totalPendencias} />
               )}
             </div>
-            
+
             {/* Cargo */}
             {isLoggedIn && profile?.integrante?.cargo_nome && (
               <p className="text-sm text-muted-foreground mb-1">
@@ -217,33 +207,29 @@ const Index = () => {
                 {profile.integrante.grau && ` (${removeAccents(profile.integrante.grau)})`}
               </p>
             )}
-            
+
             {/* Divisão */}
             {isLoggedIn && profile?.integrante?.divisao_texto && (
-              <p className="text-sm text-muted-foreground mb-1">
-                {removeAccents(profile.integrante.divisao_texto)}
-              </p>
+              <p className="text-sm text-muted-foreground mb-1">{removeAccents(profile.integrante.divisao_texto)}</p>
             )}
-            
+
             {/* Status com Vinculado */}
-            <p className={`text-sm font-medium ${isLoggedIn ? currentStatus.color : 'text-muted-foreground'}`}>
+            <p className={`text-sm font-medium ${isLoggedIn ? currentStatus.color : "text-muted-foreground"}`}>
               {userStatus}
-              {isLoggedIn && profile?.integrante?.vinculado && (
-                <span>/Vinculado</span>
-              )}
+              {isLoggedIn && profile?.integrante?.vinculado && <span>/Vinculado</span>}
             </p>
           </div>
 
           {/* Botoes - todos com o mesmo tamanho */}
           <div className="flex flex-col gap-3 mb-6">
-            <Button 
+            <Button
               onClick={isLoggedIn ? handleDisconnect : handleConnect}
               className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl"
             >
               {isLoggedIn ? "Desconectar" : "Conectar"}
             </Button>
-            
-            <Button 
+
+            <Button
               onClick={handleAgenda}
               disabled={!isLoggedIn || !isActive}
               className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
@@ -252,37 +238,37 @@ const Index = () => {
             </Button>
 
             {linksAtivos.length > 0 && (
-              <Button 
+              <Button
                 onClick={() => navigate("/links-uteis")}
                 disabled={!isLoggedIn || !isActive}
                 className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                🔗 Links Úteis
+                🔗 Links Uteis
               </Button>
             )}
-            
-            <Button 
+
+            <Button
               onClick={handleOrganograma}
               disabled={!isLoggedIn || !isActive}
               className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Organograma
             </Button>
-            
-            <Button 
+
+            <Button
               onClick={handlePerfil}
               disabled={!isLoggedIn}
               className={`w-full h-12 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed ${
-                isProfileIncomplete 
-                  ? 'btn-pulse-warning font-bold' 
-                  : 'bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border'
+                isProfileIncomplete
+                  ? "btn-pulse-warning font-bold"
+                  : "bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border"
               }`}
             >
-              {isProfileIncomplete ? '⚠️ Complete seu Perfil!' : 'Perfil do Usuario'}
+              {isProfileIncomplete ? "⚠️ Complete seu Perfil!" : "Perfil do Usuario"}
             </Button>
-            
+
             {isAdmin && (
-              <Button 
+              <Button
                 onClick={handleAdmin}
                 disabled={!isLoggedIn || !isActive}
                 className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
@@ -290,9 +276,9 @@ const Index = () => {
                 Administracao
               </Button>
             )}
-            
+
             {!roleLoading && (isAdmin || isDiretorDivisao || isModerator || isDiretorRegional) && (
-              <Button 
+              <Button
                 onClick={handleRelatorios}
                 disabled={!isLoggedIn || !isActive}
                 className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
@@ -300,9 +286,9 @@ const Index = () => {
                 Relatorios
               </Button>
             )}
-            
+
             {!roleLoading && (isAdmin || isModerator) && (
-              <Button 
+              <Button
                 onClick={handleListasPresenca}
                 disabled={!isLoggedIn || !isActive}
                 className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
@@ -313,18 +299,18 @@ const Index = () => {
           </div>
 
           {/* Footer - dentro do card, no bottom */}
-        <div className="mt-auto pt-4 border-t border-border">
-          <div className="text-center text-xs text-muted-foreground space-y-2">
-            <div>2025 - {new Date().getFullYear()}</div>
-            <div>🔐 Autenticacao segura via Google OAuth</div>
+          <div className="mt-auto pt-4 border-t border-border">
+            <div className="text-center text-xs text-muted-foreground space-y-2">
+              <div>2025 - {new Date().getFullYear()}</div>
+              <div>🔐 Autenticacao segura via Google OAuth</div>
+            </div>
           </div>
-        </div>
         </div>
       </div>
 
       {/* Modal de QR Code */}
       <Dialog open={showQRCode} onOpenChange={setShowQRCode}>
-        <DialogContent 
+        <DialogContent
           className="max-w-[90vw] w-full max-h-[90vh] h-auto p-6 bg-background border-border"
           onClick={() => setShowQRCode(false)}
         >
@@ -333,21 +319,15 @@ const Index = () => {
           </DialogHeader>
           <div className="flex flex-col items-center justify-center gap-6 py-6">
             <div className="bg-white p-6 rounded-xl">
-              <QRCodeSVG 
-                value={profile?.id || ""} 
+              <QRCodeSVG
+                value={profile?.id || ""}
                 size={Math.min(window.innerWidth * 0.7, 400)}
                 level="H"
                 includeMargin
               />
             </div>
-            <p className="text-sm text-muted-foreground text-center">
-              ID: {profile?.id}
-            </p>
-            <Button 
-              onClick={() => setShowQRCode(false)} 
-              variant="outline"
-              className="w-full max-w-xs"
-            >
+            <p className="text-sm text-muted-foreground text-center">ID: {profile?.id}</p>
+            <Button onClick={() => setShowQRCode(false)} variant="outline" className="w-full max-w-xs">
               <X className="w-4 h-4 mr-2" />
               Fechar
             </Button>
