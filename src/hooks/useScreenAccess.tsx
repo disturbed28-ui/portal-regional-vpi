@@ -12,30 +12,49 @@ export const useScreenAccess = (screenRoute: string, userId: string | undefined)
   }, [screenRoute, roles, userId, roleLoading]);
 
   const checkAccess = async () => {
-    // Aguardar carregamento completo das roles
-    if (!userId || roleLoading) {
-      console.log("[useScreenAccess] ===== AGUARDANDO =====", {
+    // SEMPRE aguardar userId estar definido
+    if (!userId) {
+      console.log("[useScreenAccess] ===== AGUARDANDO userId =====", {
         screenRoute,
-        userId: userId ? 'definido' : 'undefined',
-        roleLoading,
-        motivo: !userId ? 'userId não definido' : 'aguardando roles'
+        userId: 'undefined'
+      });
+      setHasAccess(false);
+      setLoading(true);
+      return;
+    }
+
+    // SEMPRE aguardar roleLoading terminar
+    if (roleLoading) {
+      console.log("[useScreenAccess] ===== AGUARDANDO roleLoading =====", {
+        screenRoute,
+        userId,
+        roleLoading: true,
+        rolesAtual: roles
       });
       setLoading(true);
       return;
     }
 
-    // Verificar se usuário não tem roles após loading completo
+    // AGORA SIM verificar se usuário não tem roles após loading completo
     if (roles.length === 0) {
       console.log("[useScreenAccess] ===== SEM ACESSO =====", {
         screenRoute,
         userId,
         roles,
+        roleLoading: false,
         motivo: 'sem roles após loading completo'
       });
       setHasAccess(false);
       setLoading(false);
       return;
     }
+
+    console.log("[useScreenAccess] ===== INICIANDO VERIFICAÇÃO =====", {
+      screenRoute,
+      userId,
+      roles,
+      roleLoading: false
+    });
 
     try {
       console.log("[useScreenAccess] ===== VERIFICANDO ACESSO =====", {
