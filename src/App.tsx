@@ -12,10 +12,12 @@ import AdminDados from "./pages/AdminDados";
 import AdminIntegrantes from "./pages/AdminIntegrantes";
 import AdminPermissoes from "./pages/AdminPermissoes";
 import AdminAlertas from "./pages/AdminAlertas";
+import AdminLinksUteis from "./pages/AdminLinksUteis";
 import Agenda from "./pages/Agenda";
 import Relatorios from "./pages/Relatorios";
 import Organograma from "./pages/Organograma";
 import ListasPresenca from "./pages/ListasPresenca";
+import LinksUteis from "./pages/LinksUteis";
 import PoliticaPrivacidade from "./pages/PoliticaPrivacidade";
 import TermosServico from "./pages/TermosServico";
 import NotFound from "./pages/NotFound";
@@ -37,10 +39,12 @@ const App = () => (
           <Route path="/admin/integrantes" element={<AdminIntegrantes />} />
           <Route path="/admin/permissoes" element={<AdminPermissoes />} />
           <Route path="/admin/alertas" element={<AdminAlertas />} />
+          <Route path="/admin/links-uteis" element={<AdminLinksUteis />} />
           <Route path="/agenda" element={<Agenda />} />
           <Route path="/relatorios" element={<Relatorios />} />
           <Route path="/organograma" element={<Organograma />} />
           <Route path="/listas-presenca" element={<ListasPresenca />} />
+          <Route path="/links-uteis" element={<LinksUteis />} />
           <Route path="/politica-privacidade" element={<PoliticaPrivacidade />} />
           <Route path="/termos-servico" element={<TermosServico />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

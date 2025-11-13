@@ -8,6 +8,7 @@ import { usePresence } from "@/hooks/usePresence";
 import { OnlineUsersModal } from "@/components/OnlineUsersModal";
 import { PendenciasModal } from "@/components/PendenciasModal";
 import { usePendencias } from "@/hooks/usePendencias";
+import { useLinksUteis } from "@/hooks/useLinksUteis";
 import { removeAccents } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { QRCodeSVG } from "qrcode.react";
@@ -21,6 +22,7 @@ const Index = () => {
   const { profile, loading: profileLoading } = useProfile(user?.id);
   const { hasRole, loading: roleLoading } = useUserRole(user?.id);
   const { onlineUsers, totalOnline } = usePresence(user?.id, profile?.nome_colete);
+  const { links: linksAtivos } = useLinksUteis(true);
   const [showQRCode, setShowQRCode] = useState(false);
 
   // Determinar role para pendências
@@ -248,6 +250,16 @@ const Index = () => {
             >
               Agenda
             </Button>
+
+            {linksAtivos.length > 0 && (
+              <Button 
+                onClick={() => navigate("/links-uteis")}
+                disabled={!isLoggedIn || !isActive}
+                className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                🔗 Links Úteis
+              </Button>
+            )}
             
             <Button 
               onClick={handleOrganograma}
