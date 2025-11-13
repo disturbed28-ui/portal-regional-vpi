@@ -21,6 +21,19 @@ const AdminLinksUteis = () => {
   const { hasAccess, loading: accessLoading } = useScreenAccess('/admin/links-uteis', user?.id);
   const { links, loading, addLink, updateLink, toggleAtivo, deleteLink } = useLinksUteis(false);
 
+  // ===== DEBUG: Log detalhado de permissão =====
+  useEffect(() => {
+    console.log("[AdminLinksUteis] ===== PERMISSÃO DEBUG =====", {
+      pathAtual: window.location.pathname,
+      routeUsada: '/admin/links-uteis',
+      userId: user?.id,
+      hasAccess,
+      accessLoading,
+      authLoading,
+      timestamp: new Date().toISOString()
+    });
+  }, [user, hasAccess, accessLoading, authLoading]);
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingLink, setEditingLink] = useState<LinkUtil | null>(null);
