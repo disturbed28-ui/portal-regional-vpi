@@ -80,14 +80,9 @@ const LinksUteis = () => {
               >
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-white mb-1">
-                        {link.titulo}
-                      </h3>
-                      <p className="text-sm text-gray-400 break-all">
-                        {link.url}
-                      </p>
-                    </div>
+                    <h3 className="text-lg font-semibold text-white">
+                      {link.titulo}
+                    </h3>
                     <ExternalLink className="h-5 w-5 text-gray-400 ml-4 flex-shrink-0" />
                   </div>
                 </CardContent>

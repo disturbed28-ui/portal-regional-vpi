@@ -20,7 +20,7 @@ export const useLinksUteis = (apenasAtivos: boolean = false) => {
     let query = supabase
       .from('links_uteis')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: true });
 
     if (apenasAtivos) {
       query = query.eq('ativo', true);
