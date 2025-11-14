@@ -128,35 +128,14 @@ Deno.serve(async (req) => {
     let inativadosCount = 0;
     const deltasPendentes: any[] = [];
 
-    // Buscar integrantes ativos atuais para detectar deltas
+    // Detectar novos ativos
     const { data: ativosAtuais } = await supabase
       .from('integrantes_portal')
-      .select('registro_id, nome_colete, divisao_texto, cargo_grau_texto')
+      .select('registro_id')
       .eq('ativo', true);
     
-    const registrosNovaPlanilha = new Set(novos?.map(n => n.registro_id) || []);
     const registrosAtuais = new Set(ativosAtuais?.map(a => a.registro_id) || []);
 
-    // Detectar quem sumiu dos ativos (alta prioridade!)
-    ativosAtuais?.forEach(atual => {
-      if (!registrosNovaPlanilha.has(atual.registro_id)) {
-        console.log(`[DELTA] Sumiu dos ativos: ${atual.nome_colete} (${atual.registro_id})`);
-        
-        deltasPendentes.push({
-          registro_id: atual.registro_id,
-          nome_colete: atual.nome_colete,
-          divisao_texto: atual.divisao_texto,
-          tipo_delta: 'SUMIU_ATIVOS',
-          prioridade: 1, // ALTA prioridade
-          dados_adicionais: { 
-            origem: 'Estava ativo, não está mais na planilha',
-            cargo_anterior: atual.cargo_grau_texto
-          }
-        });
-      }
-    });
-
-    // Detectar novos ativos
     novos?.forEach(novo => {
       if (!registrosAtuais.has(novo.registro_id)) {
         console.log(`[DELTA] Novo ativo: ${novo.nome_colete} (${novo.registro_id})`);
