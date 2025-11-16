@@ -23,7 +23,7 @@ import { DialogAtualizados } from "@/components/admin/DialogAtualizados";
 import type { IntegrantePortal } from "@/hooks/useIntegrantes";
 import type { ExcelIntegrante } from "@/lib/excelParser";
 import { CargaAfastados } from "@/components/admin/CargaAfastados";
-import { DeltasAfastados } from "@/components/relatorios/DeltasAfastados";
+import { DeltasPendentes } from "@/components/relatorios/DeltasPendentes";
 import { usePendencias } from "@/hooks/usePendencias";
 import { useUserRole } from "@/hooks/useUserRole";
 import { LimparDeltasFalsos } from "@/components/admin/LimparDeltasFalsos";
@@ -668,8 +668,8 @@ const AdminIntegrantes = () => {
               </div>
             </div>
             
-            {/* Deltas Afastados */}
-            <DeltasAfastados 
+            {/* Deltas Pendentes */}
+            <DeltasPendentes 
               pendencias={pendencias}
               loading={pendenciasLoading}
               userId={user?.id}
