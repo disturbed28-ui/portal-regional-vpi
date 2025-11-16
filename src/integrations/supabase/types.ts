@@ -702,6 +702,33 @@ export type Database = {
         }
         Relationships: []
       }
+      links_uteis: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          id: string
+          ordem: number
+          titulo: string
+          url: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          ordem?: number
+          titulo: string
+          url: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          ordem?: number
+          titulo?: string
+          url?: string
+        }
+        Relationships: []
+      }
       mensalidades_atraso: {
         Row: {
           ativo: boolean | null
