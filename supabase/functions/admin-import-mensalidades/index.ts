@@ -106,7 +106,37 @@ Deno.serve(async (req) => {
 
     console.log(`[admin-import-mensalidades] Liquidations detected: ${liquidacoesIds.length}`);
 
-    // 4. Desativar carga anterior
+    // 4. Validar e corrigir divisao_texto para integrantes Grau V
+    console.log('[admin-import-mensalidades] Validating Grau V members...');
+
+    const registrosIds = mensalidades.map(m => m.registro_id);
+    const { data: integrantesGrauV } = await supabase
+      .from('integrantes_portal')
+      .select('registro_id, grau, regional_texto')
+      .in('registro_id', registrosIds)
+      .eq('grau', 'V');
+
+    // Criar mapa de registro_id -> regional_texto para Grau V
+    const grauVMap = new Map(
+      (integrantesGrauV || []).map(i => [i.registro_id, i.regional_texto])
+    );
+
+    // Corrigir divisao_texto para Grau V
+    const mensalidadesCorrigidas = mensalidades.map(m => {
+      const regionalGrauV = grauVMap.get(m.registro_id);
+      if (regionalGrauV) {
+        console.log(`[GRAU V] Corrigindo ${m.nome_colete}: "${m.divisao_texto}" → "${regionalGrauV}"`);
+        return {
+          ...m,
+          divisao_texto: regionalGrauV
+        };
+      }
+      return m;
+    });
+
+    console.log(`[admin-import-mensalidades] ${grauVMap.size} Grau V members corrected`);
+
+    // 5. Desativar carga anterior
     console.log('[admin-import-mensalidades] Deactivating previous load...');
     const { error: deactivateError } = await supabase
       .from('mensalidades_atraso')
@@ -118,7 +148,7 @@ Deno.serve(async (req) => {
       throw deactivateError;
     }
 
-    // 5. Marcar liquidações
+    // 6. Marcar liquidações
     if (liquidacoesIds.length > 0) {
       console.log(`[admin-import-mensalidades] Marking ${liquidacoesIds.length} liquidations...`);
       const { error: liquidacaoError } = await supabase
@@ -135,9 +165,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 6. Inserir novos registros
-    console.log(`[admin-import-mensalidades] Inserting ${mensalidades.length} new records...`);
-    const dataToInsert = mensalidades.map(m => ({
+    // 7. Inserir novos registros (usando mensalidadesCorrigidas com Grau V corrigido)
+    console.log(`[admin-import-mensalidades] Inserting ${mensalidadesCorrigidas.length} new records...`);
+    const dataToInsert = mensalidadesCorrigidas.map(m => ({
       registro_id: m.registro_id,
       nome_colete: m.nome_colete,
       divisao_texto: m.divisao_texto,
@@ -164,7 +194,7 @@ Deno.serve(async (req) => {
     }
 
     console.log('[admin-import-mensalidades] ✅ Success');
-    console.log(`[admin-import-mensalidades] Inserted: ${mensalidades.length}, Liquidated: ${liquidacoesIds.length}`);
+    console.log(`[admin-import-mensalidades] Inserted: ${mensalidadesCorrigidas.length}, Liquidated: ${liquidacoesIds.length}`);
 
     return new Response(
       JSON.stringify({
