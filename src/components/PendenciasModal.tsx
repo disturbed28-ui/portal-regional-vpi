@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,8 @@ import {
   Clock,
   FileText,
   User,
-  AlertTriangle
+  AlertTriangle,
+  ArrowRight
 } from "lucide-react";
 import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes } from "@/hooks/usePendencias";
 
@@ -364,6 +366,7 @@ interface PendenciaItemProps {
 }
 
 const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemProps) => {
+  const navigate = useNavigate();
   const isMensalidade = pendencia.tipo === 'mensalidade';
   const isAfastamento = pendencia.tipo === 'afastamento';
   const isDelta = pendencia.tipo === 'delta';
@@ -493,10 +496,22 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
         
         {/* Conteúdo expansível */}
         <CollapsibleContent>
-          <div className="px-3 pb-3 pt-0">
+          <div className="px-3 pb-3 pt-0 space-y-3">
             {isMensalidade && <MensalidadeDetalhesCard detalhes={detalhes as MensalidadeDetalhes} />}
             {isAfastamento && <AfastamentoDetalhesCard detalhes={detalhes as AfastamentoDetalhes} />}
             {isDelta && <DeltaDetalhesCard detalhes={detalhes as DeltaDetalhes} />}
+            
+            {/* Botão Resolver para Anomalias */}
+            {isDelta && (
+              <Button 
+                onClick={() => navigate('/admin/integrantes')}
+                className="w-full"
+                variant="default"
+              >
+                <ArrowRight className="h-4 w-4 mr-2" />
+                Ir para Tela de Resolução
+              </Button>
+            )}
           </div>
         </CollapsibleContent>
       </div>
@@ -505,7 +520,10 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
 };
 
 export const PendenciasModal = ({ pendencias, totalPendencias }: PendenciasModalProps) => {
+  const navigate = useNavigate();
   const [openItemId, setOpenItemId] = useState<string | null>(null);
+  
+  const totalAnomalias = pendencias.filter(p => p.tipo === 'delta').length;
   
   if (totalPendencias === 0) return null;
 
@@ -528,10 +546,25 @@ export const PendenciasModal = ({ pendencias, totalPendencias }: PendenciasModal
       
       <DialogContent className="sm:max-w-3xl max-h-[85vh] w-[95vw] sm:w-full" aria-describedby="pendencias-description">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-red-600" />
-            Pendências ({totalPendencias})
-          </DialogTitle>
+          <div className="flex items-center justify-between gap-4">
+            <DialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-600" />
+              Pendências ({totalPendencias})
+            </DialogTitle>
+            
+            {/* Botão Ver Todas as Anomalias */}
+            {totalAnomalias > 0 && (
+              <Button 
+                onClick={() => navigate('/admin/integrantes')}
+                variant="outline"
+                size="sm"
+                className="flex-shrink-0"
+              >
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                Ver Todas as Anomalias
+              </Button>
+            )}
+          </div>
         </DialogHeader>
         
         <div className="space-y-2 overflow-y-auto max-h-[65vh] pr-2">
