@@ -226,6 +226,20 @@ const AfastamentoDetalhesCard = ({ detalhes }: { detalhes: AfastamentoDetalhes }
 };
 
 const DeltaDetalhesCard = ({ detalhes }: { detalhes: DeltaDetalhes }) => {
+  // GUARD CLAUSE - Proteção crítica
+  if (!detalhes) {
+    console.warn('[DeltaDetalhesCard] Detalhes null recebido');
+    return (
+      <Card className="bg-background/50 border-gray-500">
+        <CardContent className="p-4">
+          <p className="text-sm text-muted-foreground">
+            ⚠️ Dados da anomalia não disponíveis no momento.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+  
   const formatarData = (data: string) => 
     format(new Date(data), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
   
@@ -372,6 +386,16 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
   const isDelta = pendencia.tipo === 'delta';
   const detalhes = pendencia.detalhes_completos;
   
+  // LOG DE DEBUG TEMPORÁRIO
+  if (isDelta && !detalhes) {
+    console.warn('[PendenciaItem] Delta sem detalhes_completos:', {
+      nome_colete: pendencia.nome_colete,
+      registro_id: pendencia.registro_id,
+      tipo: pendencia.tipo,
+      detalhe: pendencia.detalhe
+    });
+  }
+  
   // Calcular se é mensalidade crítica (80+ dias)
   const maiorAtrasoMensalidade = isMensalidade 
     ? Math.max(...(detalhes as MensalidadeDetalhes).parcelas.map(p => p.dias_atraso))
@@ -383,7 +407,12 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
     if (isMensalidade) return 'border-red-500';
     if (isAfastamento) return 'border-orange-500';
     if (isDelta) {
-      const deltaDetalhes = detalhes as DeltaDetalhes;
+      // PROTEÇÃO ADICIONADA
+      const deltaDetalhes = detalhes as DeltaDetalhes | null;
+      if (!deltaDetalhes) {
+        console.warn('[PendenciaItem] Delta sem detalhes em getBorderColor');
+        return 'border-gray-500';
+      }
       if (deltaDetalhes.prioridade === 1) return 'border-red-600';
       return 'border-blue-500';
     }
@@ -394,7 +423,14 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
     if (isMensalidade) return '💰';
     if (isAfastamento) return '🏥';
     if (isDelta) {
-      const tipo = (detalhes as DeltaDetalhes).tipo_delta;
+      // PROTEÇÃO ADICIONADA
+      const deltaDetalhes = detalhes as DeltaDetalhes | null;
+      if (!deltaDetalhes || !deltaDetalhes.tipo_delta) {
+        console.warn('[PendenciaItem] Delta sem tipo_delta em getIcon');
+        return '❓';
+      }
+      
+      const tipo = deltaDetalhes.tipo_delta;
       const icons: Record<string, string> = {
         'SUMIU_ATIVOS': '🚨',
         'NOVO_ATIVOS': '🆕',
@@ -499,7 +535,18 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
           <div className="px-3 pb-3 pt-0 space-y-3">
             {isMensalidade && <MensalidadeDetalhesCard detalhes={detalhes as MensalidadeDetalhes} />}
             {isAfastamento && <AfastamentoDetalhesCard detalhes={detalhes as AfastamentoDetalhes} />}
-            {isDelta && <DeltaDetalhesCard detalhes={detalhes as DeltaDetalhes} />}
+            
+            {/* PROTEÇÃO ADICIONADA */}
+            {isDelta && detalhes && <DeltaDetalhesCard detalhes={detalhes as DeltaDetalhes} />}
+            {isDelta && !detalhes && (
+              <Card className="bg-background/50 border-gray-500">
+                <CardContent className="p-4">
+                  <p className="text-sm text-muted-foreground">
+                    ⚠️ Dados da anomalia não disponíveis.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
             
             {/* Botão Resolver para Anomalias */}
             {isDelta && (
