@@ -23,19 +23,19 @@ export const DeltasPendentes = ({ pendencias, loading, userId, isAdmin }: Deltas
 
   // Filtrar todos os deltas pendentes
   const deltasPendentes = useMemo(() => {
-    return pendencias.filter(p => p.tipo === 'delta');
+    return pendencias.filter(p => p.tipo === 'delta' && p.detalhes_completos != null);
   }, [pendencias]);
 
   // Estatísticas
   const stats = useMemo(() => {
     const sumiu_ativos = deltasPendentes.filter(
-      (d) => (d.detalhes_completos as DeltaDetalhes).tipo_delta === 'SUMIU_ATIVOS'
+      (d) => (d.detalhes_completos as DeltaDetalhes | null)?.tipo_delta === 'SUMIU_ATIVOS'
     ).length;
     const sumiu_afastados = deltasPendentes.filter(
-      (d) => (d.detalhes_completos as DeltaDetalhes).tipo_delta === 'SUMIU_AFASTADOS'
+      (d) => (d.detalhes_completos as DeltaDetalhes | null)?.tipo_delta === 'SUMIU_AFASTADOS'
     ).length;
     const novo_afastados = deltasPendentes.filter(
-      (d) => (d.detalhes_completos as DeltaDetalhes).tipo_delta === 'NOVO_AFASTADOS'
+      (d) => (d.detalhes_completos as DeltaDetalhes | null)?.tipo_delta === 'NOVO_AFASTADOS'
     ).length;
 
     return { 
@@ -86,6 +86,13 @@ export const DeltasPendentes = ({ pendencias, loading, userId, isAdmin }: Deltas
 
   const handleResolverClick = (pendencia: Pendencia) => {
     const detalhes = pendencia.detalhes_completos as DeltaDetalhes;
+    
+    // Validação de segurança
+    if (!detalhes) {
+      console.error('Detalhes do delta não disponíveis:', pendencia);
+      return;
+    }
+    
     setSelectedDelta({
       id: detalhes.id,
       tipo_delta: detalhes.tipo_delta,
@@ -223,6 +230,13 @@ export const DeltasPendentes = ({ pendencias, loading, userId, isAdmin }: Deltas
                   <TableBody>
                     {deltasPendentes.map((pendencia) => {
                       const detalhes = pendencia.detalhes_completos as DeltaDetalhes;
+                      
+                      // Validação de segurança - pular se detalhes não existir
+                      if (!detalhes) {
+                        console.warn('Delta sem detalhes_completos:', pendencia);
+                        return null;
+                      }
+                      
                       return (
                         <TableRow key={detalhes.id}>
                           <TableCell>{getTipoDeltaBadge(detalhes.tipo_delta)}</TableCell>
