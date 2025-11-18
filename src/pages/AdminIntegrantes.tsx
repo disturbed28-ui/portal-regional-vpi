@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { parseExcelFile, processDelta, parseCargoGrau } from "@/lib/excelParser";
 import { parseMensalidadesExcel, formatRef, ParseResult } from "@/lib/mensalidadesParser";
-import { Upload, ArrowLeft, Users, UserCheck, UserX, AlertCircle, FileSpreadsheet, History, Info, RefreshCw, XCircle } from "lucide-react";
+import { Upload, ArrowLeft, Users, UserCheck, UserX, AlertCircle, FileSpreadsheet, History, Info, RefreshCw, XCircle, Eye } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { HistoricoDevedores } from "@/components/admin/HistoricoDevedores";
@@ -27,6 +27,7 @@ import { DeltasPendentes } from "@/components/relatorios/DeltasPendentes";
 import { usePendencias } from "@/hooks/usePendencias";
 import { useUserRole } from "@/hooks/useUserRole";
 import { LimparDeltasFalsos } from "@/components/admin/LimparDeltasFalsos";
+import { ProfileDetailDialog } from "@/components/admin/ProfileDetailDialog";
 
 const AdminIntegrantes = () => {
   const navigate = useNavigate();
@@ -42,6 +43,9 @@ const AdminIntegrantes = () => {
   const [processing, setProcessing] = useState(false);
   const [mensalidadesPreview, setMensalidadesPreview] = useState<ParseResult | null>(null);
   const [showHistoricoDialog, setShowHistoricoDialog] = useState(false);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState<any>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
   const [ultimaCarga, setUltimaCarga] = useState<{
     id: string;
     data_carga: string;
@@ -70,6 +74,49 @@ const AdminIntegrantes = () => {
   const integrantesFiltrados = integrantes.filter((i) =>
     i.nome_colete.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleOpenProfile = async (integrante: IntegrantePortal) => {
+    // Se não está vinculado, mostrar mensagem
+    if (!integrante.vinculado || !integrante.profile_id) {
+      toast({
+        title: "Integrante não vinculado",
+        description: "Este integrante ainda não está vinculado a um perfil de usuário. Vincule-o primeiro na página de administração.",
+        variant: "default",
+      });
+      return;
+    }
+
+    // Buscar o profile completo
+    setLoadingProfile(true);
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select(`
+          *,
+          comandos:comando_id(nome),
+          regionais:regional_id(nome),
+          divisoes:divisao_id(nome),
+          cargos:cargo_id(nome, grau),
+          funcoes:funcao_id(nome)
+        `)
+        .eq('id', integrante.profile_id)
+        .single();
+
+      if (error) throw error;
+
+      setSelectedProfile(profile);
+      setDetailDialogOpen(true);
+    } catch (error) {
+      console.error('Erro ao buscar perfil:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao carregar os detalhes do perfil",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -762,6 +809,18 @@ const AdminIntegrantes = () => {
                           {integrante.lobo && <Badge variant="secondary">🐺 Lobo</Badge>}
                         </div>
                       </div>
+                      <div className="mt-3 pt-3 border-t border-border">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full gap-2"
+                          onClick={() => handleOpenProfile(integrante)}
+                          disabled={loadingProfile}
+                        >
+                          <Eye className="h-4 w-4" />
+                          {loadingProfile ? "Carregando..." : "Ver Detalhes"}
+                        </Button>
+                      </div>
                     </div>
                   </Card>
                 ))}
@@ -805,6 +864,18 @@ const AdminIntegrantes = () => {
                           {integrante.lobo && <Badge variant="secondary">🐺 Lobo</Badge>}
                         </div>
                       </div>
+                      <div className="mt-3 pt-3 border-t border-border">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full gap-2"
+                          onClick={() => handleOpenProfile(integrante)}
+                          disabled={loadingProfile}
+                        >
+                          <Eye className="h-4 w-4" />
+                          {loadingProfile ? "Carregando..." : "Ver Detalhes"}
+                        </Button>
+                      </div>
                     </div>
                   </Card>
                 ))}
@@ -836,7 +907,7 @@ const AdminIntegrantes = () => {
                         {integrante.data_entrada && (
                           <p><span className="font-semibold">Entrada:</span> {new Date(integrante.data_entrada).toLocaleDateString('pt-BR')}</p>
                         )}
-                        <div className="flex gap-1 flex-wrap mt-2">
+                         <div className="flex gap-1 flex-wrap mt-2">
                           {integrante.tem_moto && <Badge variant="secondary">🏍️ Moto</Badge>}
                           {integrante.tem_carro && <Badge variant="secondary">🚗 Carro</Badge>}
                           {integrante.sgt_armas && <Badge variant="secondary">⚔️ Sgt Armas</Badge>}
@@ -846,6 +917,18 @@ const AdminIntegrantes = () => {
                           {integrante.ursinho && <Badge variant="secondary">🐻 Ursinho</Badge>}
                           {integrante.lobo && <Badge variant="secondary">🐺 Lobo</Badge>}
                         </div>
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-border">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full gap-2"
+                          onClick={() => handleOpenProfile(integrante)}
+                          disabled={loadingProfile}
+                        >
+                          <Eye className="h-4 w-4" />
+                          {loadingProfile ? "Carregando..." : "Ver Detalhes"}
+                        </Button>
                       </div>
                     </div>
                   </Card>
@@ -1081,6 +1164,18 @@ const AdminIntegrantes = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog de detalhes do perfil */}
+      <ProfileDetailDialog
+        profile={selectedProfile}
+        open={detailDialogOpen}
+        onOpenChange={setDetailDialogOpen}
+        onSuccess={() => {
+          setDetailDialogOpen(false);
+          setSelectedProfile(null);
+          refetch();
+        }}
+      />
     </div>
   </div>
   );
