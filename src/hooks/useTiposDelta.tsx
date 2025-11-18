@@ -42,3 +42,26 @@ export const useTiposDelta = () => {
     getTipoByCode,
   };
 };
+
+// Hook específico para o painel administrativo - lista todos os tipos (ativos e inativos)
+export const useTiposDeltaAdminList = () => {
+  const { data: tiposDelta, isLoading, refetch } = useQuery({
+    queryKey: ['tipos-delta-config-admin'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tipos_delta_config')
+        .select('*')
+        .order('ordem', { ascending: true });
+      
+      if (error) throw error;
+      return data as TipoDeltaConfig[];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  return {
+    tiposDelta: tiposDelta || [],
+    isLoading,
+    refetch,
+  };
+};

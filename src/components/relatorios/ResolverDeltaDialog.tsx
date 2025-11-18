@@ -129,8 +129,8 @@ export const ResolverDeltaDialog = ({
 
           {/* Informações Adicionais */}
           {delta.dados_adicionais && (
-            <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg text-sm">
-              <p className="font-semibold mb-1 text-foreground">Informações adicionais:</p>
+            <div className="bg-muted border border-border rounded-lg p-3 text-sm space-y-2">
+              <p className="font-semibold text-foreground">Informações adicionais:</p>
               <pre className="text-xs overflow-auto text-foreground">
                 {JSON.stringify(delta.dados_adicionais, null, 2)}
               </pre>
