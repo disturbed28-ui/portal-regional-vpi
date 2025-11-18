@@ -25,7 +25,7 @@ interface ResolverDeltaDialogProps {
     cargo_grau_texto: string | null;
     dados_adicionais?: any;
     created_at: string;
-  };
+  } | null;
   onResolve: (observacao: string, acao: string) => Promise<void>;
 }
 
@@ -39,6 +39,11 @@ export const ResolverDeltaDialog = ({
   const [acaoSelecionada, setAcaoSelecionada] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // ✅ Guard crítico: se não houver delta, não renderiza nada
+  if (!delta) {
+    return null;
+  }
+
   const getTipoDeltaBadge = (tipo: string) => {
     switch (tipo) {
       case 'SUMIU_AFASTADOS':
@@ -51,6 +56,8 @@ export const ResolverDeltaDialog = ({
   };
 
   const getAcoesDisponiveis = () => {
+    if (!delta) return []; // defensive: redundante mas garante segurança futura
+    
     if (delta.tipo_delta === 'SUMIU_AFASTADOS') {
       return [
         { value: 'retornou', label: 'Retornou ao clube' },
