@@ -12,6 +12,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
+import { useTiposDelta } from '@/hooks/useTiposDelta';
+import { useAcoesResolucaoDelta } from '@/hooks/useAcoesResolucaoDelta';
 
 interface ResolverDeltaDialogProps {
   open: boolean;
@@ -38,6 +40,8 @@ export const ResolverDeltaDialog = ({
   const [observacao, setObservacao] = useState('');
   const [acaoSelecionada, setAcaoSelecionada] = useState('');
   const [loading, setLoading] = useState(false);
+  const { getTipoByCode } = useTiposDelta();
+  const { acoes } = useAcoesResolucaoDelta(delta?.tipo_delta);
 
   // ✅ Guard crítico: se não houver delta, não renderiza nada
   if (!delta) {
@@ -45,47 +49,14 @@ export const ResolverDeltaDialog = ({
   }
 
   const getTipoDeltaBadge = (tipo: string) => {
-    switch (tipo) {
-      case 'SUMIU_ATIVOS':
-        return <Badge className="bg-red-600">🚨 Sumiu dos Ativos</Badge>;
-      case 'SUMIU_AFASTADOS':
-        return <Badge className="bg-orange-600">↩️ Saiu dos Afastados</Badge>;
-      case 'NOVO_ATIVOS':
-        return <Badge className="bg-green-600">🆕 Novo Ativo</Badge>;
-      case 'NOVO_AFASTADOS':
-        return <Badge className="bg-blue-600">⏸️ Novo Afastamento</Badge>;
-      default:
-        return <Badge>{tipo}</Badge>;
-    }
-  };
-
-  const getAcoesDisponiveis = () => {
-    if (!delta) return []; // defensive: redundante mas garante segurança futura
+    const tipoDelta = getTipoByCode(tipo);
+    if (!tipoDelta) return <Badge>{tipo}</Badge>;
     
-    if (delta.tipo_delta === 'SUMIU_ATIVOS') {
-      return [
-        { value: 'transferido', label: '📤 Transferido para outra divisão/regional' },
-        { value: 'desligamento', label: '👋 Pediu desligamento voluntário' },
-        { value: 'expulso', label: '⛔ Foi expulso do clube' },
-        { value: 'afastado', label: '⏸️ Passou para lista de afastados' },
-        { value: 'erro_planilha', label: '📋 Erro na planilha de carga' },
-      ];
-    } else if (delta.tipo_delta === 'SUMIU_AFASTADOS') {
-      return [
-        { value: 'retornou', label: 'Retornou ao clube' },
-        { value: 'saiu', label: 'Saiu do clube' },
-        { value: 'erro', label: 'Erro de planilha' },
-      ];
-    } else if (delta.tipo_delta === 'NOVO_AFASTADOS') {
-      return [{ value: 'confirmar', label: 'Confirmar afastamento' }];
-    } else if (delta.tipo_delta === 'NOVO_ATIVOS') {
-      return [
-        { value: 'confirmar_novo', label: 'Confirmar novo integrante ativo' },
-        { value: 'retorno_afastamento', label: 'Retorno de afastamento' },
-        { value: 'erro_planilha', label: 'Erro na planilha de carga' },
-      ];
-    }
-    return [];
+    return (
+      <Badge style={{ backgroundColor: tipoDelta.cor }}>
+        {tipoDelta.icone} {tipoDelta.nome}
+      </Badge>
+    );
   };
 
   const handleResolver = async () => {
@@ -169,15 +140,15 @@ export const ResolverDeltaDialog = ({
           {/* Seleção de Ação */}
           <div className="space-y-2">
             <Label>Selecione a ação apropriada:</Label>
-            <RadioGroup value={acaoSelecionada} onValueChange={setAcaoSelecionada}>
-              {getAcoesDisponiveis().map((acao) => (
-                <div key={acao.value} className="flex items-center space-x-2">
-                  <RadioGroupItem value={acao.value} id={acao.value} />
-                  <Label htmlFor={acao.value} className="cursor-pointer">
-                    {acao.label}
-                  </Label>
-                </div>
-              ))}
+              <RadioGroup value={acaoSelecionada} onValueChange={setAcaoSelecionada}>
+                {acoes.map((acao) => (
+                  <div key={acao.codigo_acao} className="flex items-center space-x-2">
+                    <RadioGroupItem value={acao.codigo_acao} id={acao.codigo_acao} />
+                    <Label htmlFor={acao.codigo_acao} className="cursor-pointer">
+                      {acao.label}
+                    </Label>
+                  </div>
+                ))}
             </RadioGroup>
           </div>
 

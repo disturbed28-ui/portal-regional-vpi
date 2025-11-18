@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AlertTriangle, CheckCircle2, Clock, Info, UserX } from 'lucide-react';
 import { ResolverDeltaDialog } from './ResolverDeltaDialog';
 import { useResolverDelta } from '@/hooks/useResolverDelta';
+import { useTiposDelta } from '@/hooks/useTiposDelta';
 import type { Pendencia, DeltaDetalhes } from '@/hooks/usePendencias';
 
 interface DeltasPendentesProps {
@@ -18,6 +19,7 @@ interface DeltasPendentesProps {
 
 export const DeltasPendentes = ({ pendencias, loading, userId, isAdmin }: DeltasPendentesProps) => {
   const { resolverDelta } = useResolverDelta();
+  const { getTipoByCode } = useTiposDelta();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDelta, setSelectedDelta] = useState<any>(null);
 
@@ -47,31 +49,14 @@ export const DeltasPendentes = ({ pendencias, loading, userId, isAdmin }: Deltas
   }, [deltasPendentes]);
 
   const getTipoDeltaBadge = (tipo: string) => {
-    switch (tipo) {
-      case 'SUMIU_ATIVOS':
-        return (
-          <Badge className="bg-red-600 hover:bg-red-700">
-            <UserX className="w-3 h-3 mr-1" />
-            Sumiu dos Ativos
-          </Badge>
-        );
-      case 'SUMIU_AFASTADOS':
-        return (
-          <Badge className="bg-orange-600 hover:bg-orange-700">
-            <AlertTriangle className="w-3 h-3 mr-1" />
-            Saiu dos Afastados
-          </Badge>
-        );
-      case 'NOVO_AFASTADOS':
-        return (
-          <Badge className="bg-blue-600 hover:bg-blue-700">
-            <Clock className="w-3 h-3 mr-1" />
-            Novo Afastamento
-          </Badge>
-        );
-      default:
-        return <Badge>{tipo}</Badge>;
-    }
+    const tipoDelta = getTipoByCode(tipo);
+    if (!tipoDelta) return <Badge>{tipo}</Badge>;
+    
+    return (
+      <Badge style={{ backgroundColor: tipoDelta.cor }}>
+        {tipoDelta.icone} {tipoDelta.nome}
+      </Badge>
+    );
   };
 
   const formatDate = (dateString: string) => {

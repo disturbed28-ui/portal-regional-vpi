@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      acoes_resolucao_delta: {
+        Row: {
+          ativo: boolean | null
+          codigo_acao: string
+          created_at: string | null
+          descricao: string | null
+          id: string
+          label: string
+          ordem: number | null
+          tipo_delta_codigo: string
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          codigo_acao: string
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          label: string
+          ordem?: number | null
+          tipo_delta_codigo: string
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          codigo_acao?: string
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          label?: string
+          ordem?: number | null
+          tipo_delta_codigo?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       alertas_emails_log: {
         Row: {
           created_at: string | null
@@ -1087,6 +1123,48 @@ export type Database = {
           nome?: string
           ordem?: number | null
           rota?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      tipos_delta_config: {
+        Row: {
+          ativo: boolean | null
+          bloqueado: boolean | null
+          codigo: string
+          cor: string | null
+          created_at: string | null
+          descricao: string | null
+          icone: string | null
+          id: string
+          nome: string
+          ordem: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          bloqueado?: boolean | null
+          codigo: string
+          cor?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          icone?: string | null
+          id?: string
+          nome: string
+          ordem?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          bloqueado?: boolean | null
+          codigo?: string
+          cor?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          icone?: string | null
+          id?: string
+          nome?: string
+          ordem?: number | null
           updated_at?: string | null
         }
         Relationships: []
