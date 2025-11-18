@@ -58,9 +58,9 @@ const MensalidadeDetalhesCard = ({ detalhes }: { detalhes: MensalidadeDetalhes }
 
         {/* Cargo do Integrante */}
         {detalhes.cargo_grau_texto && (
-          <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-950/20 rounded">
+          <div className="flex items-center gap-2 p-2 bg-muted border border-border rounded">
             <User className="h-4 w-4 text-blue-600" />
-            <div className="text-xs text-gray-900 dark:text-gray-100">
+            <div className="text-xs text-foreground">
               <span className="font-medium">Cargo:</span>{' '}
               {detalhes.cargo_grau_texto}
             </div>
@@ -89,9 +89,9 @@ const MensalidadeDetalhesCard = ({ detalhes }: { detalhes: MensalidadeDetalhes }
         </div>
         
         {/* Período */}
-        <div className="flex items-center gap-2 p-2 bg-red-50 dark:bg-red-950/20 rounded">
-          <Calendar className="h-4 w-4 text-red-600" />
-          <div className="text-xs text-gray-900 dark:text-gray-100">
+        <div className="flex items-center gap-2 p-2 bg-destructive/10 border border-destructive/20 rounded">
+          <Calendar className="h-4 w-4 text-destructive" />
+          <div className="text-xs text-foreground">
             <span className="font-medium">Período:</span>{' '}
             {formatarData(detalhes.primeira_divida)} até {formatarData(detalhes.ultima_divida)}
           </div>
@@ -194,19 +194,19 @@ const AfastamentoDetalhesCard = ({ detalhes }: { detalhes: AfastamentoDetalhes }
         
         {/* Duração */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-950/20 rounded">
+          <div className="flex items-center gap-2 p-2 bg-muted border border-border rounded">
             <Clock className="h-4 w-4 text-blue-600" />
-            <div className="text-xs text-gray-900 dark:text-gray-100">
+            <div className="text-xs text-foreground">
               <span className="font-medium">Tempo Afastado:</span>{' '}
               <span className="font-semibold">{detalhes.dias_afastado} dias</span>
             </div>
           </div>
           
-          <div className="flex items-center gap-2 p-2 bg-red-50 dark:bg-red-950/20 rounded">
-            <AlertTriangle className="h-4 w-4 text-red-600" />
-            <div className="text-xs text-gray-900 dark:text-gray-100">
+          <div className="flex items-center gap-2 p-2 bg-destructive/10 border border-destructive/20 rounded">
+            <AlertTriangle className="h-4 w-4 text-destructive" />
+            <div className="text-xs text-foreground">
               <span className="font-medium">Atraso:</span>{' '}
-              <span className="font-semibold text-red-600">{detalhes.dias_atraso} dias</span>
+              <span className="font-semibold text-destructive">{detalhes.dias_atraso} dias</span>
             </div>
           </div>
         </div>
@@ -248,23 +248,23 @@ const DeltaDetalhesCard = ({ detalhes }: { detalhes: DeltaDetalhes }) => {
       'SUMIU_ATIVOS': {
         icon: '🚨',
         label: 'Desapareceu dos Ativos',
-        color: 'text-red-600',
-        bgColor: 'bg-red-50 dark:bg-red-950/20',
-        description: 'Integrante não aparece mais na planilha de ativos'
+      color: 'text-destructive',
+      bgColor: 'bg-destructive/10 border border-destructive/20',
+      description: 'Integrante não aparece mais na planilha de ativos'
       },
       'NOVO_ATIVOS': {
         icon: '🆕',
         label: 'Novo Integrante Ativo',
-        color: 'text-blue-600',
-        bgColor: 'bg-blue-50 dark:bg-blue-950/20',
-        description: 'Novo integrante detectado na planilha de ativos'
+      color: 'text-blue-600',
+      bgColor: 'bg-muted border border-border',
+      description: 'Novo integrante detectado na planilha de ativos'
       },
       'SUMIU_AFASTADOS': {
         icon: '↩️',
         label: 'Saiu dos Afastados',
-        color: 'text-green-600',
-        bgColor: 'bg-green-50 dark:bg-green-950/20',
-        description: 'Integrante não aparece mais na planilha de afastados'
+      color: 'text-green-600',
+      bgColor: 'bg-muted border border-border',
+      description: 'Integrante não aparece mais na planilha de afastados'
       },
       'NOVO_AFASTADOS': {
         icon: '⏸️',

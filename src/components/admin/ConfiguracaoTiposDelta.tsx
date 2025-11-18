@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useTiposDelta } from "@/hooks/useTiposDelta";
+import { useTiposDeltaAdminList } from "@/hooks/useTiposDelta";
 import { useTiposDeltaAdmin } from "@/hooks/useTiposDeltaAdmin";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Lock, Save } from "lucide-react";
@@ -13,7 +13,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 export const ConfiguracaoTiposDelta = () => {
-  const { tiposDelta, isLoading } = useTiposDelta();
+  const { tiposDelta, isLoading } = useTiposDeltaAdminList();
   const { update } = useTiposDeltaAdmin();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<any>({});
@@ -90,6 +90,11 @@ export const ConfiguracaoTiposDelta = () => {
                         <Badge variant="outline" className="gap-1">
                           <Lock className="h-3 w-3" />
                           Bloqueado
+                        </Badge>
+                      )}
+                      {!tipo.ativo && (
+                        <Badge variant="outline" className="gap-1 text-muted-foreground">
+                          Inativo
                         </Badge>
                       )}
                       <Switch

@@ -187,17 +187,17 @@ const Perfil = () => {
         {/* Mensagem de Status */}
         {statusMessage && (
           <Card className={
-            statusMessage.type === 'success' ? 'border-green-500/50 bg-green-50 dark:bg-green-950/20' :
-            statusMessage.type === 'warning' ? 'border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20' :
-            statusMessage.type === 'error' ? 'border-red-500/50 bg-red-50 dark:bg-red-950/20' :
-            statusMessage.type === 'info' ? 'border-blue-500/50 bg-blue-50 dark:bg-blue-950/20' :
+            statusMessage.type === 'success' ? 'border-green-500 bg-muted' :
+            statusMessage.type === 'warning' ? 'border-yellow-500 bg-muted' :
+            statusMessage.type === 'error' ? 'border-destructive bg-destructive/10' :
+            statusMessage.type === 'info' ? 'border-blue-500 bg-muted' :
             'border-border'
           }>
             <CardContent className="p-4">
-              <p className={`text-sm ${
-                statusMessage.type === 'success' ? 'text-green-700 dark:text-green-300' :
-                statusMessage.type === 'warning' ? 'text-yellow-700 dark:text-yellow-300' :
-                statusMessage.type === 'error' ? 'text-red-700 dark:text-red-300' :
+              <p className={`text-sm font-medium ${
+                statusMessage.type === 'success' ? 'text-green-600 dark:text-green-400' :
+                statusMessage.type === 'warning' ? 'text-yellow-600 dark:text-yellow-400' :
+                statusMessage.type === 'error' ? 'text-destructive' :
                 statusMessage.type === 'info' ? 'text-blue-700 dark:text-blue-300' :
                 'text-foreground'
               }`}>
