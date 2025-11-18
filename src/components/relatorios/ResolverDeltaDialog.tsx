@@ -46,8 +46,12 @@ export const ResolverDeltaDialog = ({
 
   const getTipoDeltaBadge = (tipo: string) => {
     switch (tipo) {
+      case 'SUMIU_ATIVOS':
+        return <Badge className="bg-red-600">🚨 Sumiu dos Ativos</Badge>;
       case 'SUMIU_AFASTADOS':
         return <Badge className="bg-orange-600">↩️ Saiu dos Afastados</Badge>;
+      case 'NOVO_ATIVOS':
+        return <Badge className="bg-green-600">🆕 Novo Ativo</Badge>;
       case 'NOVO_AFASTADOS':
         return <Badge className="bg-blue-600">⏸️ Novo Afastamento</Badge>;
       default:
@@ -58,7 +62,15 @@ export const ResolverDeltaDialog = ({
   const getAcoesDisponiveis = () => {
     if (!delta) return []; // defensive: redundante mas garante segurança futura
     
-    if (delta.tipo_delta === 'SUMIU_AFASTADOS') {
+    if (delta.tipo_delta === 'SUMIU_ATIVOS') {
+      return [
+        { value: 'transferido', label: '📤 Transferido para outra divisão/regional' },
+        { value: 'desligamento', label: '👋 Pediu desligamento voluntário' },
+        { value: 'expulso', label: '⛔ Foi expulso do clube' },
+        { value: 'afastado', label: '⏸️ Passou para lista de afastados' },
+        { value: 'erro_planilha', label: '📋 Erro na planilha de carga' },
+      ];
+    } else if (delta.tipo_delta === 'SUMIU_AFASTADOS') {
       return [
         { value: 'retornou', label: 'Retornou ao clube' },
         { value: 'saiu', label: 'Saiu do clube' },
@@ -66,6 +78,12 @@ export const ResolverDeltaDialog = ({
       ];
     } else if (delta.tipo_delta === 'NOVO_AFASTADOS') {
       return [{ value: 'confirmar', label: 'Confirmar afastamento' }];
+    } else if (delta.tipo_delta === 'NOVO_ATIVOS') {
+      return [
+        { value: 'confirmar_novo', label: 'Confirmar novo integrante ativo' },
+        { value: 'retorno_afastamento', label: 'Retorno de afastamento' },
+        { value: 'erro_planilha', label: 'Erro na planilha de carga' },
+      ];
     }
     return [];
   };
@@ -101,7 +119,7 @@ export const ResolverDeltaDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Resolver Delta de Afastamento</DialogTitle>
+          <DialogTitle>Resolver Delta de Integrante</DialogTitle>
           <DialogDescription>
             Analise o delta e escolha a ação apropriada
           </DialogDescription>
