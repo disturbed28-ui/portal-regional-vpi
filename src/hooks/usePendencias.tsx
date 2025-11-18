@@ -394,6 +394,16 @@ export const usePendencias = (
       }
 
       deltas?.forEach(d => {
+        // PROTEÇÃO: Pular deltas com dados incompletos
+        if (!d || !d.tipo_delta) {
+          console.warn('[usePendencias] Delta com dados incompletos encontrado:', {
+            registro_id: d?.registro_id,
+            nome_colete: d?.nome_colete,
+            tipo_delta: d?.tipo_delta
+          });
+          return; // Pula este delta
+        }
+        
         const tipoDeltaLabel = {
           'SUMIU_ATIVOS': '🚨 Desapareceu dos ativos',
           'NOVO_ATIVOS': '🆕 Novo integrante ativo',
@@ -425,8 +435,17 @@ export const usePendencias = (
       // Ordenar: deltas críticos primeiro, depois por data
       todasPendencias.sort((a, b) => {
         if (a.tipo === 'delta' && b.tipo === 'delta') {
-          const prioA = (a.detalhes_completos as DeltaDetalhes).prioridade;
-          const prioB = (b.detalhes_completos as DeltaDetalhes).prioridade;
+          // PROTEÇÃO CRÍTICA: Verificar se detalhes_completos existe
+          const detalhesA = a.detalhes_completos as DeltaDetalhes | null;
+          const detalhesB = b.detalhes_completos as DeltaDetalhes | null;
+          
+          if (!detalhesA || !detalhesB) {
+            console.warn('[usePendencias] Delta sem detalhes_completos encontrado na ordenação');
+            return !detalhesA ? 1 : -1; // Coloca null no final
+          }
+          
+          const prioA = detalhesA.prioridade;
+          const prioB = detalhesB.prioridade;
           if (prioA !== prioB) return prioB - prioA;
         }
         return a.data_ref.localeCompare(b.data_ref);
