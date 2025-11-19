@@ -226,7 +226,7 @@ const Index = () => {
               onClick={isLoggedIn ? handleDisconnect : handleConnect}
               className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl"
             >
-              {isLoggedIn ? "Desconectar" : "Conectar"}
+      {isLoggedIn ? "Desconectar" : "Conectar"}
             </Button>
 
             <Button
@@ -238,13 +238,13 @@ const Index = () => {
             </Button>
 
             {linksAtivos.length > 0 && (
-              <Button
-                onClick={() => navigate("/links-uteis")}
-                disabled={!isLoggedIn || !isActive}
-                className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                🔗 Links Uteis
-              </Button>
+            <Button
+              onClick={() => navigate("/links-uteis")}
+              disabled={!isLoggedIn || !isActive}
+              className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Links Uteis
+            </Button>
             )}
 
             <Button
@@ -252,7 +252,7 @@ const Index = () => {
               disabled={!isLoggedIn || !isActive}
               className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              📝 Formulários
+              Formularios
             </Button>
 
             <Button
@@ -272,7 +272,7 @@ const Index = () => {
                   : "bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border"
               }`}
             >
-              {isProfileIncomplete ? "⚠️ Complete seu Perfil!" : "Perfil do Usuario"}
+              {isProfileIncomplete ? "Complete seu Perfil!" : "Perfil do Usuario"}
             </Button>
 
             {isAdmin && (
@@ -310,7 +310,7 @@ const Index = () => {
           <div className="mt-auto pt-4 border-t border-border">
             <div className="text-center text-xs text-muted-foreground space-y-2">
               <div>2025 - {new Date().getFullYear()}</div>
-              <div>🔐 Autenticacao segura via Google OAuth</div>
+              <div>Autenticacao segura via Google OAuth</div>
             </div>
           </div>
         </div>
