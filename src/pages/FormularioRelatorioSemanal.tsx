@@ -10,8 +10,14 @@ import { useIntegrantes, useBuscaIntegrante } from "@/hooks/useIntegrantes";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { normalizeText, getSemanaAtual, formatDateToSQL } from "@/lib/normalizeText";
-import { useSubmitRelatorioSemanal } from "@/hooks/useRelatorioSemanal";
+import { useSubmitRelatorioSemanal, SubmitRelatorioParams } from "@/hooks/useRelatorioSemanal";
 import { useAcoesResolucaoDelta } from "@/hooks/useAcoesResolucaoDelta";
+
+// Constante com nomes de dias da semana
+const DIAS_SEMANA_NOMES = [
+  'Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 
+  'Quinta-feira', 'Sexta-feira', 'Sábado'
+];
 
 // Componente auxiliar: Seção de Saídas
 const SecaoSaidas = ({ teveSaidas, setTeveSaidas, saidas, setSaidas }: any) => {
@@ -353,6 +359,9 @@ const FormularioRelatorioSemanal = () => {
   const [divisaoSelecionada, setDivisaoSelecionada] = useState<any>(null);
   const [divisoesDisponiveis, setDivisoesDisponiveis] = useState<any[]>([]);
   const [formularioId, setFormularioId] = useState<string | null>(null);
+  const [formConfig, setFormConfig] = useState<any>(null);
+  const [existingReport, setExistingReport] = useState<any>(null);
+  const [modoEdicao, setModoEdicao] = useState<'nova' | 'editar' | null>(null);
   
   // Seções do formulário
   const [teveEntradas, setTeveEntradas] = useState(false);
@@ -366,6 +375,21 @@ const FormularioRelatorioSemanal = () => {
   const [conflitos, setConflitos] = useState<any[]>([]);
   const [acoesSociais, setAcoesSociais] = useState<any[]>([]);
   const [estatisticas, setEstatisticas] = useState<any>(null);
+
+  // Calcular dia permitido
+  const hoje = new Date();
+  const diaHoje = hoje.getDay(); // 0=Dom, 1=Seg, ..., 6=Sab
+  const diasPermitidos = formConfig?.dias_semana;
+  const hojePermitido = !diasPermitidos || 
+                        diasPermitidos.length === 0 || 
+                        diasPermitidos.includes(diaHoje);
+
+  // Log de diagnóstico
+  console.log('[FormularioRelatorioSemanal] Dia hoje:', diaHoje, DIAS_SEMANA_NOMES[diaHoje]);
+  console.log('[FormularioRelatorioSemanal] Dias permitidos:', diasPermitidos);
+  console.log('[FormularioRelatorioSemanal] Hoje permitido?', hojePermitido);
+  console.log('[FormularioRelatorioSemanal] Limite respostas:', formConfig?.limite_respostas);
+  console.log('[FormularioRelatorioSemanal] Relatório existente:', existingReport?.id);
 
   // T6: Carregar dados iniciais do responsável
   useEffect(() => {
@@ -414,15 +438,38 @@ const FormularioRelatorioSemanal = () => {
         const divisaoNormalizada = normalizeText(integrante.divisao_texto);
         const divisaoIntegrante = divisoes?.find(d => normalizeText(d.nome) === divisaoNormalizada);
 
-        // Buscar formulário
+        // Buscar formulário COM todos os campos relevantes
         const { data: formulario, error: formularioError } = await supabase
           .from('formularios_catalogo')
-          .select('id')
+          .select('id, dias_semana, limite_respostas, periodicidade')
           .eq('link_interno', '/formularios/relatorio-semanal-divisao')
           .eq('regional_id', regional.id)
+          .eq('ativo', true)
           .single();
 
         if (formularioError) throw formularioError;
+
+        setFormularioId(formulario?.id || null);
+        setFormConfig(formulario);
+
+        // Buscar relatório existente da semana atual
+        if (formulario?.id) {
+          const { inicio, fim } = getSemanaAtual();
+          
+          const { data: relatorioExistente } = await supabase
+            .from('relatorios_semanais_divisao')
+            .select('*')
+            .eq('formulario_id', formulario.id)
+            .eq('profile_id', user!.id)
+            .eq('semana_inicio', formatDateToSQL(inicio))
+            .eq('semana_fim', formatDateToSQL(fim))
+            .maybeSingle();
+          
+          if (relatorioExistente) {
+            setExistingReport(relatorioExistente);
+            console.log('[FormularioRelatorioSemanal] Relatório existente encontrado:', relatorioExistente.id);
+          }
+        }
 
         setDadosResponsavel({
           ...integrante,
@@ -528,7 +575,73 @@ const FormularioRelatorioSemanal = () => {
     carregarInadimplencias();
   }, [divisaoSelecionada]);
 
+  const carregarRespostasExistentes = (relatorio: any) => {
+    // Preencher estados com dados do relatório existente
+    setTeveEntradas(relatorio.entradas_json?.length > 0);
+    setEntradas(relatorio.entradas_json || []);
+    
+    setTeveSaidas(relatorio.saidas_json?.length > 0);
+    setSaidas(relatorio.saidas_json || []);
+    
+    setInadimplencias(relatorio.inadimplencias_json || []);
+    
+    setTeveConflitos(relatorio.conflitos_json?.length > 0);
+    setConflitos(relatorio.conflitos_json || []);
+    
+    setTeveAcoesSociais(relatorio.acoes_sociais_json?.length > 0);
+    setAcoesSociais(relatorio.acoes_sociais_json || []);
+    
+    // Estatísticas permanecem recalculadas (dados atuais da divisão)
+    
+    toast({
+      title: "Respostas carregadas",
+      description: "Edite os campos desejados e clique em 'Atualizar Relatório'."
+    });
+  };
+
+  const limparFormulario = () => {
+    setTeveEntradas(false);
+    setEntradas([]);
+    setTeveSaidas(false);
+    setSaidas([]);
+    setTeveConflitos(false);
+    setConflitos([]);
+    setTeveAcoesSociais(false);
+    setAcoesSociais([]);
+    // Inadimplências e estatísticas são sempre recalculadas automaticamente
+    
+    toast({
+      title: "Formulário limpo",
+      description: "Preencha novamente e clique em 'Enviar Relatório' para sobrescrever."
+    });
+  };
+
   const handleEnviar = () => {
+    // Validação 1: Dia permitido
+    if (!hojePermitido) {
+      toast({
+        title: "Dia não permitido",
+        description: `Este formulário só pode ser respondido em: ${
+          (formConfig?.dias_semana || [])
+            .map((d: number) => DIAS_SEMANA_NOMES[d])
+            .join(', ')
+        }`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validação 2: Limite 'unica' + já existe
+    if (formConfig?.limite_respostas === 'unica' && existingReport) {
+      toast({
+        title: "Relatório já enviado",
+        description: "Este formulário permite apenas uma resposta por semana.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validação 3: Dados incompletos
     if (!formularioId || !dadosResponsavel || !divisaoSelecionada) {
       toast({
         title: "Erro",
@@ -564,7 +677,20 @@ const FormularioRelatorioSemanal = () => {
       estatisticas_divisao_json: estatisticas || {}
     };
 
-    submitRelatorio(dados, {
+    // Preparar parâmetros para o hook
+    const params: SubmitRelatorioParams = {
+      dados,
+      existingReportId: existingReport?.id || null,
+      limiteRespostas: formConfig?.limite_respostas
+    };
+
+    console.log('[FormularioRelatorioSemanal] Enviando relatório:', {
+      modo: existingReport ? 'UPDATE' : 'INSERT',
+      existingReportId: existingReport?.id,
+      limiteRespostas: formConfig?.limite_respostas
+    });
+
+    submitRelatorio(params, {
       onSuccess: () => {
         navigate("/formularios");
       }
@@ -583,15 +709,107 @@ const FormularioRelatorioSemanal = () => {
     <div className="min-h-screen bg-background p-3 sm:p-4">
       <div className="max-w-full sm:max-w-2xl mx-auto space-y-4 sm:space-y-6">
         {/* T6: Cabeçalho */}
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/formularios")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <p className="text-xs sm:text-sm text-muted-foreground">Regional {dadosResponsavel?.regional_texto}</p>
-            <h1 className="text-xl sm:text-2xl font-bold">Relatório Semanal da Divisão</h1>
-          </div>
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="icon" onClick={() => navigate("/formularios")}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div>
+          <p className="text-xs sm:text-sm text-muted-foreground">Regional {dadosResponsavel?.regional_texto}</p>
+          <h1 className="text-xl sm:text-2xl font-bold">Relatório Semanal da Divisão</h1>
         </div>
+      </div>
+
+      {/* Banner: Dia não permitido */}
+      {!hojePermitido && formConfig && (
+        <Card className="p-4 bg-amber-50 dark:bg-amber-950 border-amber-300 dark:border-amber-700">
+          <div className="flex items-start gap-3">
+            <div className="text-2xl">⚠️</div>
+            <div>
+              <h4 className="font-semibold text-amber-900 dark:text-amber-100 mb-1">
+                Dia não permitido para responder
+              </h4>
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                Este formulário só pode ser respondido nos seguintes dias:
+                <strong className="ml-1">
+                  {(formConfig.dias_semana || [])
+                    .map((d: number) => DIAS_SEMANA_NOMES[d])
+                    .join(', ')}
+                </strong>
+              </p>
+              <p className="text-sm text-amber-700 dark:text-amber-300 mt-2">
+                Hoje é <strong>{DIAS_SEMANA_NOMES[diaHoje]}</strong>. Volte em um dia permitido.
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Banner: Limite 'unica' - já respondeu */}
+      {formConfig?.limite_respostas === 'unica' && existingReport && (
+        <Card className="p-4 bg-blue-50 dark:bg-blue-950 border-blue-300 dark:border-blue-700">
+          <div className="flex items-start gap-3">
+            <div className="text-2xl">ℹ️</div>
+            <div>
+              <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                Relatório já enviado
+              </h4>
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                Você já respondeu este relatório em{' '}
+                <strong>
+                  {new Date(existingReport.created_at).toLocaleString('pt-BR')}
+                </strong>.
+              </p>
+              <p className="text-sm text-blue-700 dark:text-blue-300 mt-2">
+                Como este formulário permite apenas <strong>uma resposta por semana</strong>, 
+                não é possível enviar novamente. Se houver erro nas informações, entre em 
+                contato com o ADM Regional.
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Banner: Limite 'multipla' - opção de editar ou sobrescrever */}
+      {formConfig?.limite_respostas === 'multipla' && existingReport && !modoEdicao && (
+        <Card className="p-4 bg-purple-50 dark:bg-purple-950 border-purple-300 dark:border-purple-700">
+          <div className="flex items-start gap-3">
+            <div className="text-2xl">🔄</div>
+            <div className="flex-1">
+              <h4 className="font-semibold text-purple-900 dark:text-purple-100 mb-1">
+                Relatório já enviado
+              </h4>
+              <p className="text-sm text-purple-800 dark:text-purple-200 mb-3">
+                Você já enviou este relatório em{' '}
+                <strong>
+                  {new Date(existingReport.created_at).toLocaleString('pt-BR')}
+                </strong>.
+                Deseja carregar as respostas anteriores para edição ou começar um novo relatório?
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setModoEdicao('editar');
+                    carregarRespostasExistentes(existingReport);
+                  }}
+                >
+                  Editar respostas anteriores
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setModoEdicao('nova');
+                    limparFormulario();
+                  }}
+                >
+                  Nova resposta (sobrescrever)
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
 
         {/* Dados do Responsável */}
         <Card className="p-4 sm:p-6 space-y-3">
@@ -1058,8 +1276,20 @@ const FormularioRelatorioSemanal = () => {
           <Button onClick={() => navigate("/formularios")} variant="outline" className="flex-1">
             Cancelar
           </Button>
-          <Button onClick={handleEnviar} className="flex-1">
-            Enviar Relatório
+          <Button 
+            onClick={handleEnviar} 
+            className="flex-1"
+            disabled={
+              !hojePermitido || 
+              (formConfig?.limite_respostas === 'unica' && existingReport)
+            }
+          >
+            {existingReport && modoEdicao === 'editar' 
+              ? 'Atualizar Relatório'
+              : existingReport && modoEdicao === 'nova'
+              ? 'Sobrescrever Relatório'
+              : 'Enviar Relatório'
+            }
           </Button>
         </div>
       </div>
