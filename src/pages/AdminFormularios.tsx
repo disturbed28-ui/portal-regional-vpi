@@ -13,6 +13,15 @@ import { useFormulariosAdmin, useFormularioCRUD, FormularioCatalogo } from "@/ho
 import { useRegionais } from "@/hooks/useRegionais";
 import { format } from "date-fns";
 
+const ROLES_DISPONIVEIS = [
+  { id: "admin", label: "Admin", color: "bg-red-500" },
+  { id: "moderator", label: "Moderador", color: "bg-blue-500" },
+  { id: "diretor_regional", label: "Diretor Regional", color: "bg-green-500" },
+  { id: "diretor_divisao", label: "Diretor / Subdiretor de Divisão", color: "bg-purple-500" },
+  { id: "regional", label: "Regional", color: "bg-teal-500" },
+  { id: "user", label: "Usuário", color: "bg-gray-500" }
+];
+
 const AdminFormularios = () => {
   const navigate = useNavigate();
   const { data: formularios, isLoading } = useFormulariosAdmin();
@@ -77,6 +86,27 @@ const AdminFormularios = () => {
       limite_respostas: "multipla",
       ativo: true,
       roles_permitidas: null
+    });
+  };
+
+  const toggleRole = (roleId: string) => {
+    setFormData(prev => {
+      const current = prev.roles_permitidas || [];
+      
+      if (current.includes(roleId)) {
+        // Remover role
+        const newRoles = current.filter(r => r !== roleId);
+        return {
+          ...prev,
+          roles_permitidas: newRoles.length === 0 ? null : newRoles
+        };
+      } else {
+        // Adicionar role
+        return {
+          ...prev,
+          roles_permitidas: [...current, roleId]
+        };
+      }
     });
   };
 
@@ -225,6 +255,42 @@ const AdminFormularios = () => {
               </div>
             )}
 
+            {/* Permissões de Acesso (Roles) */}
+            <div className="space-y-2">
+              <Label>Permissões de Acesso (Roles)</Label>
+              <p className="text-xs text-muted-foreground mb-3">
+                Selecione as roles que podem acessar este formulário. 
+                Se nenhuma for selecionada, todos da regional terão acesso.
+              </p>
+              
+              <div className="flex flex-wrap gap-2">
+                {ROLES_DISPONIVEIS.map(role => {
+                  const isSelected = formData.roles_permitidas?.includes(role.id) || false;
+                  
+                  return (
+                    <Button
+                      key={role.id}
+                      type="button"
+                      variant={isSelected ? "default" : "outline"}
+                      size="sm"
+                      className={isSelected ? `${role.color} text-white hover:opacity-90` : ""}
+                      onClick={() => toggleRole(role.id)}
+                    >
+                      {isSelected && "✓ "}
+                      {role.label}
+                    </Button>
+                  );
+                })}
+              </div>
+              
+              {/* Indicador visual de "acesso liberado para todos" */}
+              {(!formData.roles_permitidas || formData.roles_permitidas.length === 0) && (
+                <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800 dark:bg-amber-950 dark:border-amber-800 dark:text-amber-200">
+                  ℹ️ Nenhuma role selecionada = <strong>todos os usuários da regional</strong> terão acesso
+                </div>
+              )}
+            </div>
+
             <div className="flex items-center gap-2">
               <Switch checked={formData.ativo} onCheckedChange={(v) => setFormData({ ...formData, ativo: v })} />
               <Label>Ativo</Label>
@@ -267,6 +333,33 @@ const AdminFormularios = () => {
                       <span>Periodicidade: {form.periodicidade}</span>
                       <span>Criado: {format(new Date(form.created_at), "dd/MM/yyyy")}</span>
                     </div>
+                    
+                    {/* Exibir roles permitidas */}
+                    {form.roles_permitidas && form.roles_permitidas.length > 0 ? (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        <span className="text-xs text-muted-foreground">Acesso:</span>
+                        {form.roles_permitidas.map(roleId => {
+                          const roleConfig = ROLES_DISPONIVEIS.find(r => r.id === roleId);
+                          if (!roleConfig) return null;
+                          
+                          return (
+                            <Badge 
+                              key={roleId} 
+                              className={`${roleConfig.color} text-white text-xs`}
+                            >
+                              {roleConfig.label}
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 mt-2">
+                        <span className="text-xs text-muted-foreground">Acesso: </span>
+                        <Badge variant="outline" className="text-xs">
+                          Todos da regional
+                        </Badge>
+                      </div>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={() => handleEdit(form)}>
