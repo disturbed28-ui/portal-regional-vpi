@@ -441,6 +441,72 @@ export type Database = {
           },
         ]
       }
+      formularios_catalogo: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          descricao: string | null
+          dias_semana: number[] | null
+          id: string
+          limite_respostas: string
+          link_interno: string | null
+          periodicidade: string
+          regional_id: string
+          roles_permitidas: string[] | null
+          tipo: string
+          titulo: string
+          updated_at: string | null
+          url_externa: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          dias_semana?: number[] | null
+          id?: string
+          limite_respostas?: string
+          link_interno?: string | null
+          periodicidade?: string
+          regional_id: string
+          roles_permitidas?: string[] | null
+          tipo: string
+          titulo: string
+          updated_at?: string | null
+          url_externa?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          dias_semana?: number[] | null
+          id?: string
+          limite_respostas?: string
+          link_interno?: string | null
+          periodicidade?: string
+          regional_id?: string
+          roles_permitidas?: string[] | null
+          tipo?: string
+          titulo?: string
+          updated_at?: string | null
+          url_externa?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "formularios_catalogo_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "regionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "formularios_catalogo_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["regional_id"]
+          },
+        ]
+      }
       funcoes: {
         Row: {
           created_at: string | null
@@ -1059,6 +1125,134 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_estrutura_completa"
             referencedColumns: ["comando_id"]
+          },
+        ]
+      }
+      relatorios_semanais_divisao: {
+        Row: {
+          acoes_sociais_json: Json | null
+          conflitos_json: Json | null
+          created_at: string | null
+          divisao_relatorio_id: string | null
+          divisao_relatorio_texto: string
+          entradas_json: Json | null
+          estatisticas_divisao_json: Json | null
+          formulario_id: string | null
+          id: string
+          inadimplencias_json: Json | null
+          integrante_portal_id: string | null
+          profile_id: string
+          regional_relatorio_id: string | null
+          regional_relatorio_texto: string
+          responsavel_cargo_nome: string | null
+          responsavel_comando_texto: string
+          responsavel_divisao_texto: string
+          responsavel_nome_colete: string
+          responsavel_regional_texto: string
+          saidas_json: Json | null
+          semana_fim: string
+          semana_inicio: string
+          updated_at: string | null
+        }
+        Insert: {
+          acoes_sociais_json?: Json | null
+          conflitos_json?: Json | null
+          created_at?: string | null
+          divisao_relatorio_id?: string | null
+          divisao_relatorio_texto: string
+          entradas_json?: Json | null
+          estatisticas_divisao_json?: Json | null
+          formulario_id?: string | null
+          id?: string
+          inadimplencias_json?: Json | null
+          integrante_portal_id?: string | null
+          profile_id: string
+          regional_relatorio_id?: string | null
+          regional_relatorio_texto: string
+          responsavel_cargo_nome?: string | null
+          responsavel_comando_texto: string
+          responsavel_divisao_texto: string
+          responsavel_nome_colete: string
+          responsavel_regional_texto: string
+          saidas_json?: Json | null
+          semana_fim: string
+          semana_inicio: string
+          updated_at?: string | null
+        }
+        Update: {
+          acoes_sociais_json?: Json | null
+          conflitos_json?: Json | null
+          created_at?: string | null
+          divisao_relatorio_id?: string | null
+          divisao_relatorio_texto?: string
+          entradas_json?: Json | null
+          estatisticas_divisao_json?: Json | null
+          formulario_id?: string | null
+          id?: string
+          inadimplencias_json?: Json | null
+          integrante_portal_id?: string | null
+          profile_id?: string
+          regional_relatorio_id?: string | null
+          regional_relatorio_texto?: string
+          responsavel_cargo_nome?: string | null
+          responsavel_comando_texto?: string
+          responsavel_divisao_texto?: string
+          responsavel_nome_colete?: string
+          responsavel_regional_texto?: string
+          saidas_json?: Json | null
+          semana_fim?: string
+          semana_inicio?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relatorios_semanais_divisao_divisao_relatorio_id_fkey"
+            columns: ["divisao_relatorio_id"]
+            isOneToOne: false
+            referencedRelation: "divisoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relatorios_semanais_divisao_divisao_relatorio_id_fkey"
+            columns: ["divisao_relatorio_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["divisao_id"]
+          },
+          {
+            foreignKeyName: "relatorios_semanais_divisao_formulario_id_fkey"
+            columns: ["formulario_id"]
+            isOneToOne: false
+            referencedRelation: "formularios_catalogo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relatorios_semanais_divisao_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relatorios_semanais_divisao_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_user_effective_roles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "relatorios_semanais_divisao_regional_relatorio_id_fkey"
+            columns: ["regional_relatorio_id"]
+            isOneToOne: false
+            referencedRelation: "regionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "relatorios_semanais_divisao_regional_relatorio_id_fkey"
+            columns: ["regional_relatorio_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["regional_id"]
           },
         ]
       }

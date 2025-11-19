@@ -22,6 +22,9 @@ import LinksUteis from "./pages/LinksUteis";
 import PoliticaPrivacidade from "./pages/PoliticaPrivacidade";
 import TermosServico from "./pages/TermosServico";
 import NotFound from "./pages/NotFound";
+import AdminFormularios from "./pages/AdminFormularios";
+import Formularios from "./pages/Formularios";
+import FormularioRelatorioSemanal from "./pages/FormularioRelatorioSemanal";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +50,9 @@ const App = () => (
           <Route path="/organograma" element={<Organograma />} />
           <Route path="/listas-presenca" element={<ListasPresenca />} />
           <Route path="/links-uteis" element={<LinksUteis />} />
+          <Route path="/admin/formularios" element={<AdminFormularios />} />
+          <Route path="/formularios" element={<Formularios />} />
+          <Route path="/formularios/relatorio-semanal-divisao" element={<FormularioRelatorioSemanal />} />
           <Route path="/politica-privacidade" element={<PoliticaPrivacidade />} />
           <Route path="/termos-servico" element={<TermosServico />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

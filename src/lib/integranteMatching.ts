@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeText } from "@/lib/normalizeText";
 
 interface MatchResult {
   comando_id: string | null;
@@ -9,30 +10,6 @@ interface MatchResult {
   matched_fields: string[];
   failed_fields: string[];
 }
-
-// Função para normalizar texto antes do matching
-const normalizeText = (text: string): string => {
-  if (!text) return '';
-  
-  return text
-    .toUpperCase()
-    // Remover acentos
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    // Remover prefixos
-    .replace(/^COMANDO\s+REGIONAL\s+/i, '')
-    .replace(/^REGIONAL\s+/i, '')
-    .replace(/^DIVISAO\s+/i, '')
-    .replace(/^DIVISÃO\s+/i, '')
-    // Remover sufixos geográficos " - SP", " - RJ"
-    .replace(/\s+-\s+[A-Z]{2}$/i, '')
-    // Remover hífen solto no final " -"
-    .replace(/\s+-\s*$/i, '')
-    // Remover sufixos entre parênteses " (Grau VI)"
-    .replace(/\s+\([^)]*\)\s*$/i, '')
-    // Normalizar espaços
-    .replace(/\s+/g, ' ')
-    .trim();
-};
 
 export const matchIntegranteToStructure = async (
   comandoTexto: string,
