@@ -26,24 +26,52 @@ export interface DadosRelatorioSemanal {
   estatisticas_divisao_json: any; // T1: Nome correto
 }
 
+export interface SubmitRelatorioParams {
+  dados: DadosRelatorioSemanal;
+  existingReportId?: string | null;
+  limiteRespostas?: 'unica' | 'multipla';
+}
+
 export const useSubmitRelatorioSemanal = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (dados: DadosRelatorioSemanal) => {
+    mutationFn: async (params: SubmitRelatorioParams) => {
+      const { dados, existingReportId, limiteRespostas } = params;
+
+      // CASO 1: Não existe relatório → INSERT
+      if (!existingReportId) {
+        const { data, error } = await supabase
+          .from('relatorios_semanais_divisao')
+          .insert([dados])
+          .select()
+          .single();
+        
+        if (error) throw error;
+        return data;
+      }
+
+      // CASO 2: Existe relatório com limite 'unica' → ERRO
+      if (limiteRespostas === 'unica') {
+        throw new Error('Você já respondeu este formulário nesta semana. Apenas uma resposta é permitida.');
+      }
+
+      // CASO 3: Existe relatório com limite 'multipla' → UPDATE
       const { data, error } = await supabase
         .from('relatorios_semanais_divisao')
-        .insert([dados])
+        .update(dados)
+        .eq('id', existingReportId)
         .select()
         .single();
       
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      const isUpdate = !!variables.existingReportId;
       toast({ 
-        title: "Relatório enviado com sucesso!",
-        description: "Obrigado por preencher o relatório semanal."
+        title: isUpdate ? "Relatório atualizado com sucesso!" : "Relatório enviado com sucesso!",
+        description: isUpdate ? "Suas alterações foram salvas." : "Obrigado por preencher o relatório semanal."
       });
     },
     onError: (error) => {
