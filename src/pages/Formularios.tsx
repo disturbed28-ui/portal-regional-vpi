@@ -7,6 +7,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useFormulariosUsuario } from "@/hooks/useFormulariosCatalogo";
 import { useScreenAccess } from "@/hooks/useScreenAccess";
+import { useUserRole } from "@/hooks/useUserRole";
+
+// Tipo de roles de negócio válidas
+type AppRole = 'admin' | 'moderator' | 'user' | 'diretor_divisao' | 'diretor_regional' | 'regional';
+
+// Constante com roles de negócio válidas
+const APP_ROLES: AppRole[] = ['admin', 'moderator', 'diretor_regional', 'diretor_divisao', 'regional', 'user'];
 
 const Formularios = () => {
   const navigate = useNavigate();
@@ -14,13 +21,43 @@ const Formularios = () => {
   const { profile } = useProfile(user?.id);
   const { hasAccess, loading: loadingAccess } = useScreenAccess("/formularios", user?.id);
   
+  // Obter roles do usuário
+  const { roles: userRoles, loading: loadingRoles } = useUserRole(user?.id);
+  
+  // Filtrar apenas roles de negócio (ignorar roles legadas)
+  const userAppRoles: string[] = userRoles.filter((role): role is AppRole => APP_ROLES.includes(role as AppRole));
+  
+  console.log('[Formularios] User roles brutas:', userRoles);
+  console.log('[Formularios] User app roles filtradas:', userAppRoles);
+  
   // T5: Obter regionalId do perfil do usuário
   const regionalId = profile?.regional_id || null;
   
   // T5: Listar formulários ativos da regional
   const { data: formularios, isLoading } = useFormulariosUsuario(regionalId);
 
-  if (loadingAccess || isLoading) {
+  /**
+   * Verifica se o usuário pode acessar um formulário baseado em roles_permitidas
+   * @param form - Formulário a ser verificado
+   * @returns true se o usuário tem acesso, false caso contrário
+   */
+  const canAccessForm = (form: any): boolean => {
+    // Regra 1: Se roles_permitidas for null ou array vazio, libera acesso para todos da regional
+    if (!form.roles_permitidas || form.roles_permitidas.length === 0) {
+      console.log(`[Formularios] Formulário "${form.titulo}" sem restrição de roles (acesso liberado)`);
+      return true;
+    }
+
+    // Regra 2: Verifica se usuário tem pelo menos uma das roles permitidas
+    const hasRequiredRole = form.roles_permitidas.some((role: string) => userAppRoles.includes(role));
+    
+    console.log(`[Formularios] Formulário "${form.titulo}" requer roles:`, form.roles_permitidas);
+    console.log(`[Formularios] Usuário tem acesso:`, hasRequiredRole);
+    
+    return hasRequiredRole;
+  };
+
+  if (loadingAccess || isLoading || loadingRoles) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p>Carregando...</p>
@@ -83,44 +120,55 @@ const Formularios = () => {
         </div>
 
         {/* Cards de formulários */}
-        {formularios && formularios.length > 0 ? (
-          <div className="grid gap-4">
-            {formularios.map((form) => (
-              <Card key={form.id} className="p-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <FileText className="h-5 w-5 text-primary" />
-                      <h3 className="text-lg font-semibold">{form.titulo}</h3>
-                      {getTipoBadge(form.tipo)}
+        {(() => {
+          // Filtrar formulários baseado em roles_permitidas
+          const formulariosFiltrados = formularios?.filter(form => canAccessForm(form)) || [];
+          
+          console.log(`[Formularios] Total de formulários da regional: ${formularios?.length || 0}`);
+          console.log(`[Formularios] Formulários após filtro de roles: ${formulariosFiltrados.length}`);
+
+          return formulariosFiltrados.length > 0 ? (
+            <div className="grid gap-4">
+              {formulariosFiltrados.map((form) => (
+                <Card key={form.id} className="p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FileText className="h-5 w-5 text-primary" />
+                        <h3 className="text-lg font-semibold">{form.titulo}</h3>
+                        {getTipoBadge(form.tipo)}
+                      </div>
+                      {form.descricao && (
+                        <p className="text-sm text-muted-foreground mb-4">{form.descricao}</p>
+                      )}
+                      <div className="flex gap-4 text-xs text-muted-foreground">
+                        <span>Periodicidade: {form.periodicidade}</span>
+                        <span>
+                          {form.limite_respostas === "unica" ? "1 resposta por período" : "Respostas ilimitadas"}
+                        </span>
+                      </div>
                     </div>
-                    {form.descricao && (
-                      <p className="text-sm text-muted-foreground mb-4">{form.descricao}</p>
-                    )}
-                    <div className="flex gap-4 text-xs text-muted-foreground">
-                      <span>Periodicidade: {form.periodicidade}</span>
-                      <span>
-                        {form.limite_respostas === "unica" ? "1 resposta por período" : "Respostas ilimitadas"}
-                      </span>
-                    </div>
+                    <Button onClick={() => handleResponder(form)}>
+                      Responder
+                      {form.tipo === "url_externa" && <ExternalLink className="h-4 w-4 ml-2" />}
+                    </Button>
                   </div>
-                  <Button onClick={() => handleResponder(form)}>
-                    Responder
-                    {form.tipo === "url_externa" && <ExternalLink className="h-4 w-4 ml-2" />}
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <Card className="p-8 text-center">
-            <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Nenhum formulário disponível</h3>
-            <p className="text-sm text-muted-foreground">
-              Não há formulários ativos para a sua regional no momento.
-            </p>
-          </Card>
-        )}
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card className="p-8 text-center">
+              <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Nenhum formulário disponível</h3>
+              <p className="text-sm text-muted-foreground">
+                {formularios && formularios.length > 0 
+                  ? "Não há formulários disponíveis para o seu perfil no momento."
+                  : "Não há formulários ativos para a sua regional no momento."
+                }
+              </p>
+            </Card>
+          );
+        })()}
       </div>
     </div>
   );
