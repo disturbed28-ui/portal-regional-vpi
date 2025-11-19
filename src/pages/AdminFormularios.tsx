@@ -1,0 +1,293 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Plus, Edit, Power } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { useFormulariosAdmin, useFormularioCRUD, FormularioCatalogo } from "@/hooks/useFormulariosCatalogo";
+import { useRegionais } from "@/hooks/useRegionais";
+import { format } from "date-fns";
+
+const AdminFormularios = () => {
+  const navigate = useNavigate();
+  const { data: formularios, isLoading } = useFormulariosAdmin();
+  const { regionais } = useRegionais();
+  const { create, update, toggleAtivo, isLoading: isSaving } = useFormularioCRUD();
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    titulo: "",
+    descricao: "",
+    tipo: "link_interno" as "builder" | "link_interno" | "url_externa",
+    link_interno: "",
+    url_externa: "",
+    regional_id: "",
+    periodicidade: "semanal" as "diaria" | "semanal" | "mensal",
+    dias_semana: [] as number[],
+    limite_respostas: "multipla" as "unica" | "multipla",
+    ativo: true,
+    roles_permitidas: null as string[] | null
+  });
+
+  const handleEdit = (formulario: FormularioCatalogo) => {
+    setIsEditing(true);
+    setEditingId(formulario.id);
+    setFormData({
+      titulo: formulario.titulo,
+      descricao: formulario.descricao || "",
+      tipo: formulario.tipo,
+      link_interno: formulario.link_interno || "",
+      url_externa: formulario.url_externa || "",
+      regional_id: formulario.regional_id,
+      periodicidade: formulario.periodicidade,
+      dias_semana: formulario.dias_semana || [],
+      limite_respostas: formulario.limite_respostas,
+      ativo: formulario.ativo,
+      roles_permitidas: formulario.roles_permitidas
+    });
+  };
+
+  const handleSubmit = () => {
+    if (isEditing && editingId) {
+      update({ id: editingId, ...formData });
+    } else {
+      create(formData);
+    }
+    resetForm();
+  };
+
+  const resetForm = () => {
+    setIsEditing(false);
+    setEditingId(null);
+    setFormData({
+      titulo: "",
+      descricao: "",
+      tipo: "link_interno",
+      link_interno: "",
+      url_externa: "",
+      regional_id: "",
+      periodicidade: "semanal",
+      dias_semana: [],
+      limite_respostas: "multipla",
+      ativo: true,
+      roles_permitidas: null
+    });
+  };
+
+  const diasSemanaNomes = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+  return (
+    <div className="min-h-screen bg-background p-4">
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/admin")}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">Administração de Formulários</h1>
+            <p className="text-sm text-muted-foreground">Gerenciar formulários do portal</p>
+          </div>
+        </div>
+
+        {/* Formulário de criação/edição */}
+        <Card className="p-6">
+          <h2 className="text-lg font-semibold mb-4">
+            {isEditing ? "Editar Formulário" : "Criar Novo Formulário"}
+          </h2>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Título *</Label>
+                <Input
+                  value={formData.titulo}
+                  onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
+                  placeholder="Nome do formulário"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Regional *</Label>
+                <Select value={formData.regional_id} onValueChange={(v) => setFormData({ ...formData, regional_id: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a regional" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {regionais?.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Descrição</Label>
+              <Textarea
+                value={formData.descricao}
+                onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+                placeholder="Descrição do formulário"
+                rows={3}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Tipo *</Label>
+                <Select value={formData.tipo} onValueChange={(v: any) => setFormData({ ...formData, tipo: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="link_interno">Link Interno</SelectItem>
+                    <SelectItem value="url_externa">URL Externa</SelectItem>
+                    <SelectItem value="builder">Builder (futuro)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Periodicidade</Label>
+                <Select value={formData.periodicidade} onValueChange={(v: any) => setFormData({ ...formData, periodicidade: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="diaria">Diária</SelectItem>
+                    <SelectItem value="semanal">Semanal</SelectItem>
+                    <SelectItem value="mensal">Mensal</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Limite de Respostas</Label>
+                <Select value={formData.limite_respostas} onValueChange={(v: any) => setFormData({ ...formData, limite_respostas: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unica">Única</SelectItem>
+                    <SelectItem value="multipla">Múltipla</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {formData.tipo === "link_interno" && (
+              <div className="space-y-2">
+                <Label>Link Interno</Label>
+                <Input
+                  value={formData.link_interno}
+                  onChange={(e) => setFormData({ ...formData, link_interno: e.target.value })}
+                  placeholder="/formularios/nome-do-formulario"
+                />
+              </div>
+            )}
+
+            {formData.tipo === "url_externa" && (
+              <div className="space-y-2">
+                <Label>URL Externa</Label>
+                <Input
+                  value={formData.url_externa}
+                  onChange={(e) => setFormData({ ...formData, url_externa: e.target.value })}
+                  placeholder="https://forms.gle/..."
+                />
+              </div>
+            )}
+
+            {formData.periodicidade === "semanal" && (
+              <div className="space-y-2">
+                <Label>Dias da Semana</Label>
+                <div className="flex gap-2">
+                  {diasSemanaNomes.map((dia, idx) => (
+                    <Button
+                      key={idx}
+                      type="button"
+                      variant={formData.dias_semana.includes(idx) ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        const novo = formData.dias_semana.includes(idx)
+                          ? formData.dias_semana.filter(d => d !== idx)
+                          : [...formData.dias_semana, idx];
+                        setFormData({ ...formData, dias_semana: novo });
+                      }}
+                    >
+                      {dia}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              <Switch checked={formData.ativo} onCheckedChange={(v) => setFormData({ ...formData, ativo: v })} />
+              <Label>Ativo</Label>
+            </div>
+
+            <div className="flex gap-2">
+              <Button onClick={handleSubmit} disabled={isSaving || !formData.titulo || !formData.regional_id}>
+                {isEditing ? <Edit className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                {isEditing ? "Atualizar" : "Criar"}
+              </Button>
+              {isEditing && (
+                <Button variant="outline" onClick={resetForm}>
+                  Cancelar
+                </Button>
+              )}
+            </div>
+          </div>
+        </Card>
+
+        {/* Grid de formulários */}
+        <Card className="p-6">
+          <h2 className="text-lg font-semibold mb-4">Formulários Cadastrados</h2>
+          {isLoading ? (
+            <p>Carregando...</p>
+          ) : (
+            <div className="space-y-3">
+              {formularios?.map((form) => (
+                <div key={form.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold">{form.titulo}</h3>
+                      <Badge variant={form.ativo ? "default" : "secondary"}>
+                        {form.ativo ? "Ativo" : "Inativo"}
+                      </Badge>
+                      <Badge variant="outline">{form.tipo}</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">{form.descricao}</p>
+                    <div className="flex gap-4 text-xs text-muted-foreground mt-2">
+                      <span>Regional: {form.regionais?.nome}</span>
+                      <span>Periodicidade: {form.periodicidade}</span>
+                      <span>Criado: {format(new Date(form.created_at), "dd/MM/yyyy")}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(form)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => toggleAtivo({ id: form.id, ativo: !form.ativo })}
+                    >
+                      <Power className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+export default AdminFormularios;
