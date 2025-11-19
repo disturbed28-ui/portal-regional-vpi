@@ -31,7 +31,7 @@ const SecaoSaidas = ({ teveSaidas, setTeveSaidas, saidas, setSaidas }: any) => {
   };
 
   return (
-    <Card className="p-6 space-y-4">
+    <Card className="p-4 sm:p-6 space-y-4">
       <h3 className="font-semibold">Saída de Integrantes</h3>
       <div className="space-y-2">
         <p className="text-sm text-muted-foreground">Houve saída de integrantes nesta semana?</p>
@@ -39,7 +39,7 @@ const SecaoSaidas = ({ teveSaidas, setTeveSaidas, saidas, setSaidas }: any) => {
           <Button 
             type="button"
             variant={teveSaidas ? "default" : "outline"}
-            size="sm"
+            className="min-h-[44px]"
             onClick={() => setTeveSaidas(true)}
           >
             Sim
@@ -47,7 +47,7 @@ const SecaoSaidas = ({ teveSaidas, setTeveSaidas, saidas, setSaidas }: any) => {
           <Button 
             type="button"
             variant={!teveSaidas ? "default" : "outline"}
-            size="sm"
+            className="min-h-[44px]"
             onClick={() => {
               setTeveSaidas(false);
               setSaidas([]);
@@ -76,7 +76,7 @@ const SecaoSaidas = ({ teveSaidas, setTeveSaidas, saidas, setSaidas }: any) => {
           <Button
             type="button"
             variant="outline"
-            size="sm"
+            className="min-h-[44px]"
             onClick={adicionarSaida}
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -241,7 +241,7 @@ const SecaoInadimplencia = ({ inadimplencias, setInadimplencias, divisaoSelecion
   };
 
   return (
-    <Card className="p-6 space-y-4">
+    <Card className="p-4 sm:p-6 space-y-4">
       <h3 className="font-semibold">Inadimplência / Mensalidades</h3>
       
       {inadimplencias.length > 0 && (
@@ -580,22 +580,22 @@ const FormularioRelatorioSemanal = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="max-w-2xl mx-auto space-y-6">
+    <div className="min-h-screen bg-background p-3 sm:p-4">
+      <div className="max-w-full sm:max-w-2xl mx-auto space-y-4 sm:space-y-6">
         {/* T6: Cabeçalho */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate("/formularios")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <p className="text-sm text-muted-foreground">Regional {dadosResponsavel?.regional_texto}</p>
-            <h1 className="text-2xl font-bold">Relatório Semanal da Divisão</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">Regional {dadosResponsavel?.regional_texto}</p>
+            <h1 className="text-xl sm:text-2xl font-bold">Relatório Semanal da Divisão</h1>
           </div>
         </div>
 
         {/* Dados do Responsável */}
-        <Card className="p-6 space-y-3">
-          <div className="grid grid-cols-2 gap-3 text-sm">
+        <Card className="p-4 sm:p-6 space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             <div>
               <span className="text-muted-foreground">Nome:</span>
               <p className="font-medium">{dadosResponsavel?.nome_colete}</p>
@@ -633,25 +633,25 @@ const FormularioRelatorioSemanal = () => {
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">Houve entrada de integrantes nesta semana?</p>
             <div className="flex gap-2">
-              <Button 
-                type="button"
-                variant={teveEntradas ? "default" : "outline"}
-                size="sm"
-                onClick={() => setTeveEntradas(true)}
-              >
-                Sim
-              </Button>
-              <Button 
-                type="button"
-                variant={!teveEntradas ? "default" : "outline"}
-                size="sm"
-                onClick={() => {
-                  setTeveEntradas(false);
-                  setEntradas([]);
-                }}
-              >
-                Não
-              </Button>
+            <Button 
+              type="button"
+              variant={teveEntradas ? "default" : "outline"}
+              className="min-h-[44px]"
+              onClick={() => setTeveEntradas(true)}
+            >
+              Sim
+            </Button>
+            <Button 
+              type="button"
+              variant={!teveEntradas ? "default" : "outline"}
+              className="min-h-[44px]"
+              onClick={() => {
+                setTeveEntradas(false);
+                setEntradas([]);
+              }}
+            >
+              Não
+            </Button>
             </div>
           </div>
 
@@ -826,25 +826,25 @@ const FormularioRelatorioSemanal = () => {
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">Houve conflitos esta semana?</p>
             <div className="flex gap-2">
-              <Button 
-                type="button"
-                variant={teveConflitos ? "default" : "outline"}
-                size="sm"
-                onClick={() => setTeveConflitos(true)}
-              >
-                Sim
-              </Button>
-              <Button 
-                type="button"
-                variant={!teveConflitos ? "default" : "outline"}
-                size="sm"
-                onClick={() => {
-                  setTeveConflitos(false);
-                  setConflitos([]);
-                }}
-              >
-                Não
-              </Button>
+            <Button 
+              type="button"
+              variant={teveConflitos ? "default" : "outline"}
+              className="min-h-[44px]"
+              onClick={() => setTeveConflitos(true)}
+            >
+              Sim
+            </Button>
+            <Button 
+              type="button"
+              variant={!teveConflitos ? "default" : "outline"}
+              className="min-h-[44px]"
+              onClick={() => {
+                setTeveConflitos(false);
+                setConflitos([]);
+              }}
+            >
+              Não
+            </Button>
             </div>
           </div>
 
@@ -919,25 +919,25 @@ const FormularioRelatorioSemanal = () => {
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">Houve ações sociais esta semana?</p>
             <div className="flex gap-2">
-              <Button 
-                type="button"
-                variant={teveAcoesSociais ? "default" : "outline"}
-                size="sm"
-                onClick={() => setTeveAcoesSociais(true)}
-              >
-                Sim
-              </Button>
-              <Button 
-                type="button"
-                variant={!teveAcoesSociais ? "default" : "outline"}
-                size="sm"
-                onClick={() => {
-                  setTeveAcoesSociais(false);
-                  setAcoesSociais([]);
-                }}
-              >
-                Não
-              </Button>
+            <Button 
+              type="button"
+              variant={teveAcoesSociais ? "default" : "outline"}
+              className="min-h-[44px]"
+              onClick={() => setTeveAcoesSociais(true)}
+            >
+              Sim
+            </Button>
+            <Button 
+              type="button"
+              variant={!teveAcoesSociais ? "default" : "outline"}
+              className="min-h-[44px]"
+              onClick={() => {
+                setTeveAcoesSociais(false);
+                setAcoesSociais([]);
+              }}
+            >
+              Não
+            </Button>
             </div>
           </div>
 
