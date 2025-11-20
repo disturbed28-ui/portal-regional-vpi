@@ -390,6 +390,8 @@ const FormularioRelatorioSemanal = () => {
   console.log('[FormularioRelatorioSemanal] Hoje permitido?', hojePermitido);
   console.log('[FormularioRelatorioSemanal] Limite respostas:', formConfig?.limite_respostas);
   console.log('[FormularioRelatorioSemanal] Relatório existente:', existingReport?.id);
+  console.log('[FormularioRelatorioSemanal] Divisão selecionada:', divisaoSelecionada?.nome, divisaoSelecionada?.id);
+  console.log('[FormularioRelatorioSemanal] Responsável do relatório existente:', existingReport?.responsavel_nome_colete);
 
   // T6: Carregar dados iniciais do responsável
   useEffect(() => {
@@ -452,22 +454,24 @@ const FormularioRelatorioSemanal = () => {
         setFormularioId(formulario?.id || null);
         setFormConfig(formulario);
 
-        // Buscar relatório existente da semana atual
-        if (formulario?.id) {
+        // Buscar relatório existente da semana atual para a divisão inicial
+        if (formulario?.id && divisaoIntegrante?.id) {
           const { inicio, fim } = getSemanaAtual();
           
           const { data: relatorioExistente } = await supabase
             .from('relatorios_semanais_divisao')
             .select('*')
             .eq('formulario_id', formulario.id)
-            .eq('profile_id', user!.id)
+            .eq('divisao_relatorio_id', divisaoIntegrante.id)
             .eq('semana_inicio', formatDateToSQL(inicio))
             .eq('semana_fim', formatDateToSQL(fim))
             .maybeSingle();
           
           if (relatorioExistente) {
             setExistingReport(relatorioExistente);
-            console.log('[FormularioRelatorioSemanal] Relatório existente encontrado:', relatorioExistente.id);
+            console.log('[FormularioRelatorioSemanal] Relatório existente para divisão:', divisaoIntegrante.nome, relatorioExistente.id);
+          } else {
+            console.log('[FormularioRelatorioSemanal] Nenhum relatório existente para divisão:', divisaoIntegrante.nome);
           }
         }
 
@@ -575,6 +579,36 @@ const FormularioRelatorioSemanal = () => {
     carregarInadimplencias();
   }, [divisaoSelecionada]);
 
+  // Recarregar relatório existente quando divisão do relatório mudar
+  useEffect(() => {
+    if (!divisaoSelecionada?.id || !formularioId) return;
+
+    const verificarRelatorioExistente = async () => {
+      const { inicio, fim } = getSemanaAtual();
+      
+      const { data: relatorioExistente } = await supabase
+        .from('relatorios_semanais_divisao')
+        .select('*')
+        .eq('formulario_id', formularioId)
+        .eq('divisao_relatorio_id', divisaoSelecionada.id)
+        .eq('semana_inicio', formatDateToSQL(inicio))
+        .eq('semana_fim', formatDateToSQL(fim))
+        .maybeSingle();
+      
+      if (relatorioExistente) {
+        setExistingReport(relatorioExistente);
+        setModoEdicao(null); // Reset modo edição ao trocar divisão
+        console.log('[FormularioRelatorioSemanal] Relatório existente para divisão:', divisaoSelecionada.nome, relatorioExistente.id);
+      } else {
+        setExistingReport(null);
+        setModoEdicao(null);
+        console.log('[FormularioRelatorioSemanal] Nenhum relatório existente para divisão:', divisaoSelecionada.nome);
+      }
+    };
+
+    verificarRelatorioExistente();
+  }, [divisaoSelecionada?.id, formularioId]);
+
   const carregarRespostasExistentes = (relatorio: any) => {
     // Preencher estados com dados do relatório existente
     setTeveEntradas(relatorio.entradas_json?.length > 0);
@@ -631,11 +665,11 @@ const FormularioRelatorioSemanal = () => {
       return;
     }
 
-    // Validação 2: Limite 'unica' + já existe
+    // Validação 2: Limite 'unica' + já existe para esta divisão
     if (formConfig?.limite_respostas === 'unica' && existingReport) {
       toast({
         title: "Relatório já enviado",
-        description: "Este formulário permite apenas uma resposta por semana.",
+        description: `A divisão "${divisaoSelecionada?.nome}" já possui relatório nesta semana. Apenas 1 relatório por divisão é permitido.`,
         variant: "destructive"
       });
       return;
@@ -754,15 +788,19 @@ const FormularioRelatorioSemanal = () => {
                 Relatório já enviado
               </h4>
               <p className="text-sm text-blue-800 dark:text-blue-200">
-                Você já respondeu este relatório em{' '}
+                Esta divisão (<strong>{divisaoSelecionada?.nome}</strong>) já possui um relatório 
+                enviado nesta semana em{' '}
                 <strong>
                   {new Date(existingReport.created_at).toLocaleString('pt-BR')}
-                </strong>.
+                </strong>
+                {existingReport.profile_id !== user?.id && (
+                  <span> por <strong>{existingReport.responsavel_nome_colete}</strong></span>
+                )}.
               </p>
               <p className="text-sm text-blue-700 dark:text-blue-300 mt-2">
-                Como este formulário permite apenas <strong>uma resposta por semana</strong>, 
-                não é possível enviar novamente. Se houver erro nas informações, entre em 
-                contato com o ADM Regional.
+                Como este formulário permite apenas <strong>1 relatório por semana para cada divisão</strong>, 
+                não é possível enviar outro. Se precisar corrigir informações, entre em contato com o 
+                ADM Regional.
               </p>
             </div>
           </div>
@@ -776,14 +814,19 @@ const FormularioRelatorioSemanal = () => {
             <div className="text-2xl">🔄</div>
             <div className="flex-1">
               <h4 className="font-semibold text-purple-900 dark:text-purple-100 mb-1">
-                Relatório já enviado
+                Relatório já enviado para esta divisão
               </h4>
               <p className="text-sm text-purple-800 dark:text-purple-200 mb-3">
-                Você já enviou este relatório em{' '}
+                A divisão <strong>{divisaoSelecionada?.nome}</strong> já possui um relatório 
+                enviado nesta semana em{' '}
                 <strong>
                   {new Date(existingReport.created_at).toLocaleString('pt-BR')}
-                </strong>.
-                Deseja carregar as respostas anteriores para edição ou começar um novo relatório?
+                </strong>
+                {existingReport.profile_id !== user?.id && (
+                  <span> por <strong>{existingReport.responsavel_nome_colete}</strong></span>
+                )}.
+                <br />
+                Deseja carregar as respostas anteriores para edição ou sobrescrever com um novo relatório?
               </p>
               <div className="flex gap-2">
                 <Button
