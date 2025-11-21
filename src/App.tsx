@@ -26,6 +26,7 @@ import AdminFormularios from "./pages/AdminFormularios";
 import Formularios from "./pages/Formularios";
 import FormularioRelatorioSemanal from "./pages/FormularioRelatorioSemanal";
 import FormularioAcoesSociais from "./pages/FormularioAcoesSociais";
+import AcoesSociais from "./pages/AcoesSociais";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +56,7 @@ const App = () => (
           <Route path="/formularios" element={<Formularios />} />
           <Route path="/formularios/relatorio-semanal-divisao" element={<FormularioRelatorioSemanal />} />
           <Route path="/formularios/acoes_sociais" element={<FormularioAcoesSociais />} />
+          <Route path="/acoes-sociais" element={<AcoesSociais />} />
           <Route path="/politica-privacidade" element={<PoliticaPrivacidade />} />
           <Route path="/termos-servico" element={<TermosServico />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

@@ -50,6 +50,33 @@ export type Database = {
         }
         Relationships: []
       }
+      acoes_sociais_config_regional: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          email_formulario: string
+          id: string
+          regional_texto: string
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          email_formulario: string
+          id?: string
+          regional_texto: string
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          email_formulario?: string
+          id?: string
+          regional_texto?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       acoes_sociais_registros: {
         Row: {
           created_at: string | null
@@ -59,6 +86,9 @@ export type Database = {
           divisao_relatorio_texto: string
           escopo_acao: string
           formulario_id: string | null
+          google_form_enviado_em: string | null
+          google_form_enviado_por: string | null
+          google_form_status: string | null
           id: string
           integrante_portal_id: string | null
           profile_id: string
@@ -81,6 +111,9 @@ export type Database = {
           divisao_relatorio_texto: string
           escopo_acao: string
           formulario_id?: string | null
+          google_form_enviado_em?: string | null
+          google_form_enviado_por?: string | null
+          google_form_status?: string | null
           id?: string
           integrante_portal_id?: string | null
           profile_id: string
@@ -103,6 +136,9 @@ export type Database = {
           divisao_relatorio_texto?: string
           escopo_acao?: string
           formulario_id?: string | null
+          google_form_enviado_em?: string | null
+          google_form_enviado_por?: string | null
+          google_form_status?: string | null
           id?: string
           integrante_portal_id?: string | null
           profile_id?: string
@@ -165,6 +201,50 @@ export type Database = {
             columns: ["tipo_acao_id"]
             isOneToOne: false
             referencedRelation: "acoes_sociais_tipos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      acoes_sociais_solicitacoes_exclusao: {
+        Row: {
+          created_at: string | null
+          id: string
+          justificativa: string
+          processado_em: string | null
+          processado_por: string | null
+          profile_id: string
+          registro_id: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          justificativa: string
+          processado_em?: string | null
+          processado_por?: string | null
+          profile_id: string
+          registro_id: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          justificativa?: string
+          processado_em?: string | null
+          processado_por?: string | null
+          profile_id?: string
+          registro_id?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "acoes_sociais_solicitacoes_exclusao_registro_id_fkey"
+            columns: ["registro_id"]
+            isOneToOne: false
+            referencedRelation: "acoes_sociais_registros"
             referencedColumns: ["id"]
           },
         ]
