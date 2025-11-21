@@ -239,9 +239,9 @@ const FormularioAcoesSociais = () => {
   return (
     <div className="min-h-screen bg-background p-3 sm:p-4">
       <div className="max-w-full sm:max-w-2xl mx-auto space-y-4 sm:space-y-6">
-        {/* Header */}
+        {/* Cabeçalho (igual Relatório Semanal) */}
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/formularios")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
@@ -249,51 +249,39 @@ const FormularioAcoesSociais = () => {
             <h1 className="text-xl sm:text-2xl font-bold">Ações Sociais</h1>
           </div>
         </div>
-        {/* Card: Dados do Responsável */}
+
+        {/* Dados do Responsável (layout espelhado do Relatório Semanal) */}
         <Card className="p-4 sm:p-6 space-y-3">
-          <h3 className="font-semibold text-sm text-muted-foreground">Dados do Responsável</h3>
-          <div className="grid gap-2 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             <div>
-              <span className="text-muted-foreground">Nome:</span>{" "}
-              <strong>{dadosResponsavel.nome_colete}</strong>
+              <span className="text-muted-foreground">Nome:</span>
+              <p className="font-medium">{dadosResponsavel.nome_colete}</p>
             </div>
             <div>
-              <span className="text-muted-foreground">Cargo:</span>{" "}
-              {dadosResponsavel.cargo_nome || 'N/A'}
+              <span className="text-muted-foreground">Cargo:</span>
+              <p className="font-medium">{dadosResponsavel.cargo_nome || "—"}</p>
             </div>
             <div>
-              <span className="text-muted-foreground">Divisão:</span>{" "}
-              {dadosResponsavel.divisao_texto}
-            </div>
-            <div>
-              <span className="text-muted-foreground">Regional:</span>{" "}
-              {dadosResponsavel.regional_texto}
-            </div>
-            <div>
-              <span className="text-muted-foreground">Comando:</span>{" "}
-              {dadosResponsavel.comando_texto}
+              <span className="text-muted-foreground">Divisão:</span>
+              <p className="font-medium">{dadosResponsavel.divisao_texto}</p>
             </div>
           </div>
-        </Card>
 
-        {/* Card: Divisão da Ação */}
-        <Card className="p-4 sm:p-6 space-y-3">
-          <h3 className="font-semibold">Divisão da Ação Social</h3>
-          <p className="text-sm text-muted-foreground">
-            Selecione a divisão responsável pela ação social (padrão: sua divisão)
-          </p>
-          <select
-            className="w-full p-2 border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            value={divisaoSelecionada?.id || ""}
-            onChange={(e) => {
-              const div = divisoesDisponiveis.find(d => d.id === e.target.value);
-              setDivisaoSelecionada(div || null);
-            }}
-          >
-            {divisoesDisponiveis.map((div) => (
-              <option key={div.id} value={div.id}>{div.nome}</option>
-            ))}
-          </select>
+          <div className="pt-3 border-t">
+            <label className="text-sm text-muted-foreground">Divisão da Ação Social</label>
+            <select 
+              className="w-full mt-1 p-2 border rounded bg-secondary text-secondary-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              value={divisaoSelecionada?.id || ""}
+              onChange={(e) => {
+                const div = divisoesDisponiveis.find(d => d.id === e.target.value);
+                setDivisaoSelecionada(div || null);
+              }}
+            >
+              {divisoesDisponiveis.map((div) => (
+                <option key={div.id} value={div.id}>{div.nome}</option>
+              ))}
+            </select>
+          </div>
         </Card>
 
         {/* Card: Dados da Ação */}
