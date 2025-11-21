@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft } from "lucide-react";
-import { normalizarNomeDivisao } from "@/lib/utils";
+import { normalizeText } from "@/lib/normalizeText";
 import { useTiposAcaoSocial } from "@/hooks/useTiposAcaoSocial";
 import { useSubmitAcaoSocial, type DadosAcaoSocial } from "@/hooks/useSubmitAcaoSocial";
 import { useToast } from "@/hooks/use-toast";
@@ -59,7 +59,7 @@ const FormularioAcoesSociais = () => {
         console.log("Integrante encontrado:", integrante);
 
         // 2. Normalizar regional_texto e buscar regional real
-        const regionalNormalizada = normalizarNomeDivisao(integrante.regional_texto);
+        const regionalNormalizada = normalizeText(integrante.regional_texto);
         const { data: regionais, error: regionaisError } = await supabase
           .from('regionais')
           .select('*');
@@ -67,7 +67,7 @@ const FormularioAcoesSociais = () => {
         if (regionaisError) throw regionaisError;
 
         const regionalEncontrada = regionais?.find(
-          (r) => normalizarNomeDivisao(r.nome) === regionalNormalizada
+          (r) => normalizeText(r.nome) === regionalNormalizada
         );
 
         if (!regionalEncontrada) {
@@ -89,9 +89,9 @@ const FormularioAcoesSociais = () => {
         setDivisoesDisponiveis(divisoes || []);
 
         // 4. Encontrar divisão padrão (divisão do integrante)
-        const divisaoNormalizada = normalizarNomeDivisao(integrante.divisao_texto);
+        const divisaoNormalizada = normalizeText(integrante.divisao_texto);
         const divisaoPadrao = divisoes?.find(
-          (d) => normalizarNomeDivisao(d.nome) === divisaoNormalizada
+          (d) => normalizeText(d.nome) === divisaoNormalizada
         ) || divisoes?.[0];
 
         setDivisaoSelecionada(divisaoPadrao);
