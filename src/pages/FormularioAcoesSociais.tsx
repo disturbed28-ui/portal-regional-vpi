@@ -196,21 +196,17 @@ const FormularioAcoesSociais = () => {
 
   if (carregando || loadingTipos) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="bg-vp1-primary text-white p-4">
+      <div className="min-h-screen bg-background p-3 sm:p-4">
+        <div className="max-w-full sm:max-w-2xl mx-auto space-y-4 sm:space-y-6">
           <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(-1)}
-              className="text-white hover:bg-white/20"
-            >
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-xl font-bold">Ações Sociais</h1>
+            <div>
+              <p className="text-xs sm:text-sm text-muted-foreground">Regional {dadosResponsavel?.regional_texto || '...'}</p>
+              <h1 className="text-xl sm:text-2xl font-bold">Ações Sociais</h1>
+            </div>
           </div>
-        </div>
-        <div className="p-4">
           <p className="text-muted-foreground">Carregando...</p>
         </div>
       </div>
@@ -219,21 +215,17 @@ const FormularioAcoesSociais = () => {
 
   if (!dadosResponsavel) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="bg-vp1-primary text-white p-4">
+      <div className="min-h-screen bg-background p-3 sm:p-4">
+        <div className="max-w-full sm:max-w-2xl mx-auto space-y-4 sm:space-y-6">
           <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(-1)}
-              className="text-white hover:bg-white/20"
-            >
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-xl font-bold">Ações Sociais</h1>
+            <div>
+              <p className="text-xs sm:text-sm text-muted-foreground">Regional ...</p>
+              <h1 className="text-xl sm:text-2xl font-bold">Ações Sociais</h1>
+            </div>
           </div>
-        </div>
-        <div className="p-4 max-w-2xl mx-auto">
           <Card className="p-6">
             <p className="text-destructive">
               Você precisa estar cadastrado como integrante ativo para acessar este formulário.
@@ -245,24 +237,18 @@ const FormularioAcoesSociais = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-vp1-primary text-white p-4">
+    <div className="min-h-screen bg-background p-3 sm:p-4">
+      <div className="max-w-full sm:max-w-2xl mx-auto space-y-4 sm:space-y-6">
+        {/* Header */}
         <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(-1)}
-            className="text-white hover:bg-white/20"
-          >
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-bold">Ações Sociais</h1>
+          <div>
+            <p className="text-xs sm:text-sm text-muted-foreground">Regional {dadosResponsavel.regional_texto}</p>
+            <h1 className="text-xl sm:text-2xl font-bold">Ações Sociais</h1>
+          </div>
         </div>
-      </div>
-
-      {/* Conteúdo */}
-      <div className="p-4 space-y-4 max-w-2xl mx-auto">
         {/* Card: Dados do Responsável */}
         <Card className="p-4 sm:p-6 space-y-3">
           <h3 className="font-semibold text-sm text-muted-foreground">Dados do Responsável</h3>
