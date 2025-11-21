@@ -20,7 +20,14 @@ export const useAcoesSociaisLista = () => {
     const isDiretor = roles.includes('diretor_divisao');
     const isModerator = roles.includes('moderator');
 
-    console.log('[useAcoesSociaisLista] Roles:', { isRegional, isDiretor, isModerator });
+    console.log('[useAcoesSociaisLista] Debug:', { 
+      roles, 
+      isRegional, 
+      isDiretor, 
+      isModerator,
+      profileRegional: profile.regional,
+      profileDivisao: profile.divisao 
+    });
 
     let query = supabase
       .from('acoes_sociais_registros')
@@ -31,12 +38,12 @@ export const useAcoesSociaisLista = () => {
       // Regional vê todas da sua regional
       const regionalTexto = profile.regional;
       console.log('[useAcoesSociaisLista] Filtrando por regional:', regionalTexto);
-      query = query.eq('regional_relatorio_texto', regionalTexto);
+      query = query.ilike('regional_relatorio_texto', regionalTexto);
     } else if (isDiretor || isModerator) {
       // Diretor/Moderador vê apenas da própria divisão
       const divisaoTexto = profile.divisao;
       console.log('[useAcoesSociaisLista] Filtrando por divisão:', divisaoTexto);
-      query = query.eq('divisao_relatorio_texto', divisaoTexto);
+      query = query.ilike('divisao_relatorio_texto', divisaoTexto);
     } else {
       // Sem permissão
       console.log('[useAcoesSociaisLista] Usuário sem permissão para ver ações sociais');
