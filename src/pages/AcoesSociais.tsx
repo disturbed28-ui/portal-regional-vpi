@@ -112,7 +112,7 @@ export default function AcoesSociais() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold">Ações Sociais</h1>
+              <h1 className="text-xl sm:text-2xl font-bold">Acoes Sociais</h1>
               <p className="text-sm text-muted-foreground">Consulta e gerenciamento</p>
             </div>
           </div>
@@ -133,9 +133,9 @@ export default function AcoesSociais() {
         {!loading && registros.length === 0 && (
           <Card className="p-12 text-center">
             <Heart className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <h3 className="text-lg font-semibold mb-2">Nenhuma ação social encontrada</h3>
+            <h3 className="text-lg font-semibold mb-2">Nenhuma acao social encontrada</h3>
             <p className="text-sm text-muted-foreground">
-              Ainda não há ações sociais registradas para visualização.
+              Ainda nao ha acoes sociais registradas para visualizacao.
             </p>
           </Card>
         )}
@@ -229,18 +229,18 @@ export default function AcoesSociais() {
         <Dialog open={mostrarDetalhes} onOpenChange={setMostrarDetalhes}>
           <DialogContent className="max-w-2xl max-h-[90vh]">
             <DialogHeader>
-              <DialogTitle>Detalhes da Ação Social</DialogTitle>
+              <DialogTitle>Detalhes da Acao Social</DialogTitle>
             </DialogHeader>
             {registroSelecionado && (
               <ScrollArea className="max-h-[70vh] pr-4">
                 <div className="space-y-4 text-sm">
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <span className="text-muted-foreground">Data da Ação:</span>
-                      <p className="font-medium">
-                        {new Date(registroSelecionado.data_acao).toLocaleDateString('pt-BR')}
-                      </p>
-                    </div>
+                  <div>
+                    <span className="text-muted-foreground">Data da Acao:</span>
+                    <p className="font-medium">
+                      {new Date(registroSelecionado.data_acao).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
                     <div>
                       <span className="text-muted-foreground">Status de Envio:</span>
                       <div className="mt-1">
@@ -252,7 +252,7 @@ export default function AcoesSociais() {
                   <Separator />
 
                   <div>
-                    <span className="text-muted-foreground">Tipo de Ação:</span>
+                    <span className="text-muted-foreground">Tipo de Acao:</span>
                     <p className="font-medium">{registroSelecionado.tipo_acao_nome_snapshot}</p>
                   </div>
 
@@ -271,7 +271,7 @@ export default function AcoesSociais() {
                   </div>
 
                   <div>
-                    <span className="text-muted-foreground">Divisão:</span>
+                    <span className="text-muted-foreground">Divisao:</span>
                     <p className="font-medium">{registroSelecionado.divisao_relatorio_texto}</p>
                   </div>
 
@@ -293,7 +293,7 @@ export default function AcoesSociais() {
                     <>
                       <Separator />
                       <div>
-                        <span className="text-muted-foreground">Descrição:</span>
+                        <span className="text-muted-foreground">Descricao:</span>
                         <p className="mt-1 whitespace-pre-wrap">{registroSelecionado.descricao_acao}</p>
                       </div>
                     </>
@@ -303,7 +303,7 @@ export default function AcoesSociais() {
                     <>
                       <Separator />
                       <div className="bg-green-500/10 p-3 rounded-md">
-                        <p className="text-green-500 font-medium mb-1">✓ Enviado ao Formulário Oficial</p>
+                        <p className="text-green-500 font-medium mb-1">Enviado ao Formulario Oficial</p>
                         {registroSelecionado.google_form_enviado_em && (
                           <p className="text-xs text-muted-foreground">
                             Em {new Date(registroSelecionado.google_form_enviado_em).toLocaleString('pt-BR')}
@@ -331,14 +331,14 @@ export default function AcoesSociais() {
         <Dialog open={mostrarExclusao} onOpenChange={setMostrarExclusao}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Solicitar Exclusão</DialogTitle>
+              <DialogTitle>Solicitar Exclusao</DialogTitle>
               <DialogDescription>
-                Informe o motivo da solicitação de exclusão. Um administrador irá analisar sua solicitação.
+                Informe o motivo da solicitacao de exclusao. Um administrador ira analisar sua solicitacao.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <Textarea
-                placeholder="Digite a justificativa para a exclusão desta ação social..."
+                placeholder="Digite a justificativa para a exclusao desta acao social..."
                 value={justificativaExclusao}
                 onChange={(e) => setJustificativaExclusao(e.target.value)}
                 rows={4}
@@ -358,7 +358,7 @@ export default function AcoesSociais() {
                 onClick={handleConfirmarExclusao}
                 disabled={!justificativaExclusao.trim() || solicitarExclusaoMutation.isPending}
               >
-                {solicitarExclusaoMutation.isPending ? 'Solicitando...' : 'Solicitar Exclusão'}
+                {solicitarExclusaoMutation.isPending ? 'Solicitando...' : 'Solicitar Exclusao'}
               </Button>
             </DialogFooter>
           </DialogContent>
