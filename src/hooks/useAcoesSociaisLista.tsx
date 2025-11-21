@@ -25,8 +25,8 @@ export const useAcoesSociaisLista = () => {
       isRegional, 
       isDiretor, 
       isModerator,
-      profileRegional: profile.regional,
-      profileDivisao: profile.divisao 
+      profileRegionalId: profile.regional_id,
+      profileDivisaoId: profile.divisao_id 
     });
 
     let query = supabase
@@ -34,19 +34,49 @@ export const useAcoesSociaisLista = () => {
       .select('*')
       .order('data_acao', { ascending: false });
 
-    if (isRegional) {
-      // Regional vê todas da sua regional
-      const regionalTexto = profile.regional;
-      console.log('[useAcoesSociaisLista] Filtrando por regional:', regionalTexto);
-      query = query.ilike('regional_relatorio_texto', regionalTexto);
-    } else if (isDiretor || isModerator) {
-      // Diretor/Moderador vê apenas da própria divisão
-      const divisaoTexto = profile.divisao;
-      console.log('[useAcoesSociaisLista] Filtrando por divisão:', divisaoTexto);
-      query = query.ilike('divisao_relatorio_texto', divisaoTexto);
+    if (isRegional && profile.regional_id) {
+      // Buscar nome da regional usando o ID
+      const { data: regionalData, error: regionalError } = await supabase
+        .from('regionais')
+        .select('nome')
+        .eq('id', profile.regional_id)
+        .single();
+
+      if (regionalError) {
+        console.error('[useAcoesSociaisLista] Erro ao buscar regional:', regionalError);
+        return [];
+      }
+
+      if (regionalData?.nome) {
+        console.log('[useAcoesSociaisLista] Filtrando por regional:', regionalData.nome);
+        query = query.ilike('regional_relatorio_texto', `%${regionalData.nome}%`);
+      } else {
+        console.log('[useAcoesSociaisLista] Nome da regional não encontrado');
+        return [];
+      }
+    } else if ((isDiretor || isModerator) && profile.divisao_id) {
+      // Buscar nome da divisão usando o ID
+      const { data: divisaoData, error: divisaoError } = await supabase
+        .from('divisoes')
+        .select('nome')
+        .eq('id', profile.divisao_id)
+        .single();
+
+      if (divisaoError) {
+        console.error('[useAcoesSociaisLista] Erro ao buscar divisão:', divisaoError);
+        return [];
+      }
+
+      if (divisaoData?.nome) {
+        console.log('[useAcoesSociaisLista] Filtrando por divisão:', divisaoData.nome);
+        query = query.ilike('divisao_relatorio_texto', `%${divisaoData.nome}%`);
+      } else {
+        console.log('[useAcoesSociaisLista] Nome da divisão não encontrado');
+        return [];
+      }
     } else {
-      // Sem permissão
-      console.log('[useAcoesSociaisLista] Usuário sem permissão para ver ações sociais');
+      // Sem permissão ou sem IDs necessários
+      console.log('[useAcoesSociaisLista] Usuário sem permissão ou IDs ausentes');
       return [];
     }
 
