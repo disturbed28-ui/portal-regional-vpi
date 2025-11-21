@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useScreenAccess } from "@/hooks/useScreenAccess";
 import { useToast } from "@/hooks/use-toast";
 import { usePresence } from "@/hooks/usePresence";
 import { OnlineUsersModal } from "@/components/OnlineUsersModal";
@@ -23,6 +24,7 @@ const Index = () => {
   const { hasRole, loading: roleLoading } = useUserRole(user?.id);
   const { onlineUsers, totalOnline } = usePresence(user?.id, profile?.nome_colete);
   const { links: linksAtivos } = useLinksUteis(true);
+  const { hasAccess: hasAcessoAcoesSociais, loading: loadingAcessoAcoes } = useScreenAccess('/acoes-sociais', user?.id);
   const [showQRCode, setShowQRCode] = useState(false);
 
   // Determinar role para pendências
@@ -274,6 +276,16 @@ const Index = () => {
             >
               {isProfileIncomplete ? "Complete seu Perfil!" : "Perfil do Usuario"}
             </Button>
+
+            {hasAcessoAcoesSociais && !loadingAcessoAcoes && (
+              <Button
+                onClick={() => navigate("/acoes-sociais")}
+                disabled={!isLoggedIn || !isActive}
+                className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Ações Sociais
+              </Button>
+            )}
 
             {isAdmin && (
               <Button
