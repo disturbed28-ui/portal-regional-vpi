@@ -50,6 +50,149 @@ export type Database = {
         }
         Relationships: []
       }
+      acoes_sociais_registros: {
+        Row: {
+          created_at: string | null
+          data_acao: string
+          descricao_acao: string | null
+          divisao_relatorio_id: string | null
+          divisao_relatorio_texto: string
+          escopo_acao: string
+          formulario_id: string | null
+          id: string
+          integrante_portal_id: string | null
+          profile_id: string
+          regional_relatorio_id: string | null
+          regional_relatorio_texto: string
+          responsavel_cargo_nome: string | null
+          responsavel_comando_texto: string
+          responsavel_divisao_texto: string
+          responsavel_nome_colete: string
+          responsavel_regional_texto: string
+          tipo_acao_id: string | null
+          tipo_acao_nome_snapshot: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          data_acao: string
+          descricao_acao?: string | null
+          divisao_relatorio_id?: string | null
+          divisao_relatorio_texto: string
+          escopo_acao: string
+          formulario_id?: string | null
+          id?: string
+          integrante_portal_id?: string | null
+          profile_id: string
+          regional_relatorio_id?: string | null
+          regional_relatorio_texto: string
+          responsavel_cargo_nome?: string | null
+          responsavel_comando_texto: string
+          responsavel_divisao_texto: string
+          responsavel_nome_colete: string
+          responsavel_regional_texto: string
+          tipo_acao_id?: string | null
+          tipo_acao_nome_snapshot: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          data_acao?: string
+          descricao_acao?: string | null
+          divisao_relatorio_id?: string | null
+          divisao_relatorio_texto?: string
+          escopo_acao?: string
+          formulario_id?: string | null
+          id?: string
+          integrante_portal_id?: string | null
+          profile_id?: string
+          regional_relatorio_id?: string | null
+          regional_relatorio_texto?: string
+          responsavel_cargo_nome?: string | null
+          responsavel_comando_texto?: string
+          responsavel_divisao_texto?: string
+          responsavel_nome_colete?: string
+          responsavel_regional_texto?: string
+          tipo_acao_id?: string | null
+          tipo_acao_nome_snapshot?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "acoes_sociais_registros_divisao_relatorio_id_fkey"
+            columns: ["divisao_relatorio_id"]
+            isOneToOne: false
+            referencedRelation: "divisoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acoes_sociais_registros_divisao_relatorio_id_fkey"
+            columns: ["divisao_relatorio_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["divisao_id"]
+          },
+          {
+            foreignKeyName: "acoes_sociais_registros_formulario_id_fkey"
+            columns: ["formulario_id"]
+            isOneToOne: false
+            referencedRelation: "formularios_catalogo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acoes_sociais_registros_integrante_portal_id_fkey"
+            columns: ["integrante_portal_id"]
+            isOneToOne: false
+            referencedRelation: "integrantes_portal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acoes_sociais_registros_regional_relatorio_id_fkey"
+            columns: ["regional_relatorio_id"]
+            isOneToOne: false
+            referencedRelation: "regionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acoes_sociais_registros_regional_relatorio_id_fkey"
+            columns: ["regional_relatorio_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["regional_id"]
+          },
+          {
+            foreignKeyName: "acoes_sociais_registros_tipo_acao_id_fkey"
+            columns: ["tipo_acao_id"]
+            isOneToOne: false
+            referencedRelation: "acoes_sociais_tipos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      acoes_sociais_tipos: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          id: string
+          nome: string
+          ordem: number | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: string
+          nome: string
+          ordem?: number | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: string
+          nome?: string
+          ordem?: number | null
+        }
+        Relationships: []
+      }
       alertas_emails_log: {
         Row: {
           created_at: string | null
