@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Heart, Calendar, Users, MapPin, FileText, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, Heart, Calendar, Users, MapPin, FileText, Send, Trash2, Eye } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useScreenAccess } from "@/hooks/useScreenAccess";
 import { useAcoesSociaisLista } from "@/hooks/useAcoesSociaisLista";
@@ -187,14 +187,14 @@ export default function AcoesSociais() {
 
                 <Separator />
 
-                <div className="flex gap-2 flex-wrap">
+                <div className="grid grid-cols-2 gap-2">
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => handleVerDetalhes(registro)}
-                    className="flex-1 min-w-[120px]"
                   >
-                    Ver Detalhes
+                    <Eye className="h-4 w-4 mr-2" />
+                    Detalhes
                   </Button>
                   {registro.google_form_status === 'nao_enviado' && (
                     <Button
@@ -202,10 +202,9 @@ export default function AcoesSociais() {
                       variant="default"
                       onClick={() => handleEnviarFormulario(registro)}
                       disabled={enviarMutation.isPending}
-                      className="flex-1 min-w-[140px]"
                     >
                       <Send className="h-4 w-4 mr-2" />
-                      Enviar ao Formulário
+                      Enviar ao Form
                     </Button>
                   )}
                   {registro.profile_id === user?.id && (
@@ -214,9 +213,10 @@ export default function AcoesSociais() {
                       variant="destructive"
                       onClick={() => handleSolicitarExclusao(registro)}
                       disabled={solicitarExclusaoMutation.isPending}
+                      className="col-span-2"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
-                      Solicitar Exclusão
+                      Excluir
                     </Button>
                   )}
                 </div>
