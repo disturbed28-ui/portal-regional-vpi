@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { logSystemEventFromClient } from "@/lib/logSystemEvent";
 
 type AppRole = 'admin' | 'moderator' | 'user' | 'diretor_divisao' | 'diretor_regional' | 'regional' | 'app.authenticated' | 'presence.view_division' | 'presence.view_region';
 
@@ -45,6 +46,12 @@ export const useScreenPermissions = () => {
 
     if (screensError) {
       console.error('Erro ao buscar telas:', screensError);
+      logSystemEventFromClient({
+        tipo: 'DATABASE_ERROR',
+        origem: 'frontend:useScreenPermissions',
+        mensagem: 'Erro ao buscar telas do sistema',
+        detalhes: { error: screensError.message }
+      });
       toast({
         title: "Erro",
         description: "Não foi possível carregar as telas",
@@ -61,6 +68,12 @@ export const useScreenPermissions = () => {
 
     if (permissionsError) {
       console.error('Erro ao buscar permissões:', permissionsError);
+      logSystemEventFromClient({
+        tipo: 'DATABASE_ERROR',
+        origem: 'frontend:useScreenPermissions',
+        mensagem: 'Erro ao buscar permissões de telas',
+        detalhes: { error: permissionsError.message }
+      });
     } else {
       setPermissions(permissionsData || []);
     }
@@ -90,6 +103,12 @@ export const useScreenPermissions = () => {
     // Pegar user ID
     if (!user) {
       console.error('[useScreenPermissions] Usuário não autenticado');
+      logSystemEventFromClient({
+        tipo: 'AUTH_ERROR',
+        origem: 'frontend:useScreenPermissions',
+        mensagem: 'Tentativa de alterar permissões sem autenticação',
+        detalhes: { screenId, role }
+      });
       toast({
         title: "Erro",
         description: "Usuário não autenticado",
@@ -120,6 +139,17 @@ export const useScreenPermissions = () => {
 
       if (error) {
         console.error('[useScreenPermissions] ERRO ao remover permissão:', error);
+        logSystemEventFromClient({
+          tipo: 'FUNCTION_ERROR',
+          origem: 'frontend:useScreenPermissions',
+          mensagem: 'Erro ao remover permissão de tela',
+          detalhes: {
+            screenId,
+            screenName,
+            role,
+            error: error.message
+          }
+        });
         // Reverter atualização otimista
         setPermissions(prev => [...prev, existing]);
         toast({
@@ -158,6 +188,17 @@ export const useScreenPermissions = () => {
 
       if (error) {
         console.error('[useScreenPermissions] ERRO ao adicionar permissão:', error);
+        logSystemEventFromClient({
+          tipo: 'FUNCTION_ERROR',
+          origem: 'frontend:useScreenPermissions',
+          mensagem: 'Erro ao adicionar permissão de tela',
+          detalhes: {
+            screenId,
+            screenName,
+            role,
+            error: error.message
+          }
+        });
         // Reverter atualização otimista
         setPermissions(prev => prev.filter(p => p.id !== newPermission.id));
         toast({
