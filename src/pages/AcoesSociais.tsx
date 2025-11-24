@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Heart, Calendar, Users, MapPin, FileText, Send, Trash2, Eye } from "lucide-react";
+import { ArrowLeft, Heart, Calendar, Users, MapPin, FileText, Send, Trash2, Eye, Plus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useScreenAccess } from "@/hooks/useScreenAccess";
 import { useAcoesSociaisLista } from "@/hooks/useAcoesSociaisLista";
@@ -27,13 +27,13 @@ export default function AcoesSociais() {
   const [mostrarExclusao, setMostrarExclusao] = useState(false);
   const [justificativaExclusao, setJustificativaExclusao] = useState("");
 
-  // Proteção de acesso
+  // Protecao de acesso
   if (loadingAccess) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Verificando permissões...</p>
+          <p className="text-muted-foreground">Verificando permissoes...</p>
         </div>
       </div>
     );
@@ -51,6 +51,7 @@ export default function AcoesSociais() {
 
   const handleEnviarFormulario = async (registro: any) => {
     await enviarMutation.mutateAsync(registro.id);
+    // opcional: refetch();
   };
 
   const handleSolicitarExclusao = (registro: any) => {
@@ -72,11 +73,12 @@ export default function AcoesSociais() {
     setMostrarExclusao(false);
     setRegistroSelecionado(null);
     setJustificativaExclusao("");
+    // opcional: refetch();
   };
 
   const getStatusBadge = (status: string) => {
     const variants = {
-      'nao_enviado': { label: 'Não Enviado', className: 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50' },
+      'nao_enviado': { label: 'Nao Enviado', className: 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50' },
       'enviado': { label: 'Enviado', className: 'bg-green-500/20 text-green-500 border-green-500/50' },
       'erro': { label: 'Erro', className: 'bg-red-500/20 text-red-500 border-red-500/50' },
     };
@@ -116,16 +118,25 @@ export default function AcoesSociais() {
               <p className="text-sm text-muted-foreground">Consulta e gerenciamento</p>
             </div>
           </div>
-          <Badge variant="secondary" className="h-8 px-3">
-            {registros.length} {registros.length === 1 ? 'ação' : 'ações'}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="h-8 px-3">
+              {registros.length} {registros.length === 1 ? 'acao' : 'acoes'}
+            </Badge>
+            <Button
+              size="sm"
+              onClick={() => navigate('/formularios/acoes_sociais')}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Acao Social
+            </Button>
+          </div>
         </div>
 
         {/* Loading State */}
         {loading && (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Carregando ações sociais...</p>
+            <p className="text-muted-foreground">Carregando acoes sociais...</p>
           </div>
         )}
 
@@ -235,12 +246,12 @@ export default function AcoesSociais() {
               <ScrollArea className="max-h-[70vh] pr-4">
                 <div className="space-y-4 text-sm">
                   <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <span className="text-muted-foreground">Data da Acao:</span>
-                    <p className="font-medium">
-                      {new Date(registroSelecionado.data_acao).toLocaleDateString('pt-BR')}
-                    </p>
-                  </div>
+                    <div>
+                      <span className="text-muted-foreground">Data da Acao:</span>
+                      <p className="font-medium">
+                        {new Date(registroSelecionado.data_acao).toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
                     <div>
                       <span className="text-muted-foreground">Status de Envio:</span>
                       <div className="mt-1">
@@ -278,7 +289,7 @@ export default function AcoesSociais() {
                   <Separator />
 
                   <div>
-                    <span className="text-muted-foreground">Responsável:</span>
+                    <span className="text-muted-foreground">Responsavel:</span>
                     <p className="font-medium">{registroSelecionado.responsavel_nome_colete}</p>
                   </div>
 
@@ -327,7 +338,7 @@ export default function AcoesSociais() {
           </DialogContent>
         </Dialog>
 
-        {/* Modal de Solicitação de Exclusão */}
+        {/* Modal de Solicitacao de Exclusao */}
         <Dialog open={mostrarExclusao} onOpenChange={setMostrarExclusao}>
           <DialogContent>
             <DialogHeader>
