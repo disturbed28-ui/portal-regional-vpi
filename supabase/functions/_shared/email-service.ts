@@ -330,3 +330,220 @@ Template ${templateVersion} | ${new Date().toLocaleDateString('pt-BR')}
 
   return { html, text };
 }
+
+export function renderNewProfileTemplate(profileData: {
+  name: string;
+  nome_colete: string;
+  telefone: string;
+  profile_status: string;
+  updated_at: string;
+}): { html: string; text: string } {
+  const portalUrl = 'https://48ecd9cb-adf8-4eee-8548-c826c493e103.lovableproject.com/admin';
+  const dataFormatada = new Date(profileData.updated_at).toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  
+  const html = `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Novo Cadastro Pendente</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+          line-height: 1.6; 
+          color: #1f2937;
+          background-color: #f3f4f6;
+          padding: 20px;
+        }
+        .container { 
+          max-width: 600px; 
+          margin: 0 auto; 
+          background: white;
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header { 
+          background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+          color: white; 
+          padding: 32px 24px;
+          text-align: center;
+        }
+        .header h1 {
+          font-size: 24px;
+          font-weight: 700;
+          margin-bottom: 8px;
+        }
+        .header p {
+          font-size: 14px;
+          opacity: 0.95;
+        }
+        .content { 
+          padding: 32px 24px;
+        }
+        .intro {
+          font-size: 15px;
+          color: #4b5563;
+          margin-bottom: 24px;
+          line-height: 1.7;
+        }
+        .data-box { 
+          background: #f9fafb;
+          padding: 24px;
+          border-radius: 8px;
+          margin: 24px 0;
+          border-left: 4px solid #dc2626;
+        }
+        .data-box h2 {
+          font-size: 18px;
+          color: #111827;
+          margin-bottom: 16px;
+          font-weight: 600;
+        }
+        .data-row { 
+          display: flex;
+          justify-content: space-between;
+          padding: 12px 0;
+          border-bottom: 1px solid #e5e7eb;
+        }
+        .data-row:last-child {
+          border-bottom: none;
+        }
+        .label { 
+          font-weight: 600;
+          color: #374151;
+          font-size: 14px;
+        }
+        .value { 
+          color: #6b7280;
+          font-size: 14px;
+          text-align: right;
+        }
+        .value.highlight {
+          color: #dc2626;
+          font-weight: 700;
+          font-size: 16px;
+        }
+        .button-container {
+          text-align: center;
+          margin: 32px 0;
+        }
+        .button { 
+          display: inline-block;
+          background: #dc2626;
+          color: white;
+          padding: 16px 32px;
+          text-decoration: none;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 15px;
+          transition: background 0.2s;
+          box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
+        }
+        .button:hover {
+          background: #b91c1c;
+        }
+        .footer { 
+          text-align: center;
+          color: #9ca3af;
+          font-size: 12px;
+          margin-top: 32px;
+          padding-top: 24px;
+          border-top: 1px solid #e5e7eb;
+        }
+        .footer p {
+          margin: 8px 0;
+        }
+        @media only screen and (max-width: 600px) {
+          .container { margin: 0; border-radius: 0; }
+          .content { padding: 24px 16px; }
+          .data-row { flex-direction: column; }
+          .value { text-align: left; margin-top: 4px; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>🆕 Novo Cadastro Recebido</h1>
+          <p>Portal Regional Vale do Paraíba I - SP</p>
+        </div>
+        
+        <div class="content">
+          <p class="intro">
+            Um novo usuário completou seu cadastro no Portal Regional e está aguardando aprovação.
+          </p>
+          
+          <div class="data-box">
+            <h2>📊 Dados do Integrante</h2>
+            <div class="data-row">
+              <span class="label">Nome:</span>
+              <span class="value">${profileData.name}</span>
+            </div>
+            <div class="data-row">
+              <span class="label">Nome de Colete:</span>
+              <span class="value"><strong>${profileData.nome_colete}</strong></span>
+            </div>
+            <div class="data-row">
+              <span class="label">Telefone:</span>
+              <span class="value">${profileData.telefone || 'Não informado'}</span>
+            </div>
+            <div class="data-row">
+              <span class="label">Status:</span>
+              <span class="value highlight">${profileData.profile_status}</span>
+            </div>
+            <div class="data-row">
+              <span class="label">Data de Cadastro:</span>
+              <span class="value">${dataFormatada}</span>
+            </div>
+          </div>
+          
+          <div class="button-container">
+            <a href="${portalUrl}" class="button">
+              🔐 Acessar Portal de Administração →
+            </a>
+          </div>
+          
+          <div class="footer">
+            <p><strong>Portal Regional Vale do Paraíba I - SP</strong></p>
+            <p>Esta é uma notificação automática do sistema de gestão.</p>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+  
+  const text = `
+NOVO CADASTRO RECEBIDO
+Portal Regional Vale do Paraíba I - SP
+
+Um novo usuário completou seu cadastro e está aguardando aprovação.
+
+DADOS DO INTEGRANTE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Nome: ${profileData.name}
+Nome de Colete: ${profileData.nome_colete}
+Telefone: ${profileData.telefone || 'Não informado'}
+Status: ${profileData.profile_status}
+Data de Cadastro: ${dataFormatada}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Acesse o portal de administração:
+${portalUrl}
+
+────────────────────────────────────
+Portal Regional Vale do Paraíba I - SP
+Esta é uma notificação automática do sistema de gestão.
+  `.trim();
+  
+  return { html, text };
+}
