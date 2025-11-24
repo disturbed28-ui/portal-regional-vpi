@@ -239,15 +239,24 @@ const FormularioAcoesSociais = () => {
   return (
     <div className="min-h-screen bg-background p-3 sm:p-4">
       <div className="max-w-full sm:max-w-2xl mx-auto space-y-4 sm:space-y-6">
-        {/* Cabeçalho (igual Relatório Semanal) */}
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/formularios")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <p className="text-xs sm:text-sm text-muted-foreground">Regional {dadosResponsavel.regional_texto}</p>
-            <h1 className="text-xl sm:text-2xl font-bold">Ações Sociais</h1>
+        {/* Cabeçalho (igual Relatório Semanal) + atalho para lista */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/formularios")}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <p className="text-xs sm:text-sm text-muted-foreground">Regional {dadosResponsavel.regional_texto}</p>
+              <h1 className="text-xl sm:text-2xl font-bold">Ações Sociais</h1>
+            </div>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate("/acoes-sociais")}
+          >
+            Ver Ações Sociais
+          </Button>
         </div>
 
         {/* Dados do Responsável (layout espelhado do Relatório Semanal) */}
