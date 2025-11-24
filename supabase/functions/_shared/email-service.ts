@@ -549,6 +549,219 @@ Esta é uma notificação automática do sistema de gestão.
 }
 
 /**
+ * Renderiza template de notificação de erro crítico do sistema
+ */
+export function renderSystemErrorTemplate(data: {
+  tipo: string;
+  origem: string;
+  rota: string;
+  mensagem: string;
+  detalhes: any;
+  created_at: string;
+}): { html: string; text: string } {
+  
+  const portalUrl = 'https://48ecd9cb-adf8-4eee-8548-c826c493e103.lovableproject.com/';
+  const dataFormatada = new Date(data.created_at).toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZone: 'America/Sao_Paulo'
+  });
+
+  // Ícone baseado no tipo
+  const iconMap: Record<string, string> = {
+    'AUTH_ERROR': '🔒',
+    'PERMISSION_DENIED': '🚫',
+    'FUNCTION_ERROR': '⚠️',
+    'NETWORK_ERROR': '🌐',
+    'VALIDATION_ERROR': '📝',
+    'DATABASE_ERROR': '💾',
+    'UNKNOWN_ERROR': '❓'
+  };
+  const icon = iconMap[data.tipo] || '🚨';
+
+  // Formatando detalhes JSON
+  const detalhesFormatted = data.detalhes 
+    ? JSON.stringify(data.detalhes, null, 2)
+    : 'Nenhum detalhe adicional';
+
+  const html = `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Alerta de Erro no Sistema</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+          line-height: 1.6; 
+          color: #1f2937;
+          background-color: #f3f4f6;
+          padding: 20px;
+        }
+        .container { 
+          max-width: 600px; 
+          margin: 0 auto; 
+          background: white;
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header { 
+          background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+          color: white; 
+          padding: 32px 24px;
+          text-align: center;
+        }
+        .header h1 { font-size: 24px; margin-bottom: 8px; }
+        .header p { font-size: 14px; opacity: 0.95; }
+        .content { padding: 32px 24px; }
+        .alert-box {
+          background: #fef2f2;
+          border-left: 4px solid #dc2626;
+          padding: 16px;
+          margin: 24px 0;
+          border-radius: 4px;
+        }
+        .alert-box strong { color: #991b1b; display: block; margin-bottom: 8px; }
+        .data-row { 
+          display: flex; 
+          padding: 12px 0; 
+          border-bottom: 1px solid #e5e7eb;
+        }
+        .data-row:last-child { border-bottom: none; }
+        .label { 
+          font-weight: 600; 
+          color: #6b7280; 
+          min-width: 120px;
+        }
+        .value { color: #1f2937; flex: 1; }
+        .code-block {
+          background: #f9fafb;
+          border: 1px solid #e5e7eb;
+          padding: 16px;
+          margin: 16px 0;
+          border-radius: 6px;
+          overflow-x: auto;
+          font-family: 'Courier New', monospace;
+          font-size: 12px;
+          color: #374151;
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
+        .button-container { text-align: center; margin: 32px 0; }
+        .button {
+          display: inline-block;
+          padding: 14px 32px;
+          background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+          color: white;
+          text-decoration: none;
+          border-radius: 8px;
+          font-weight: 600;
+          box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
+        }
+        .footer {
+          margin-top: 32px;
+          padding-top: 24px;
+          border-top: 1px solid #e5e7eb;
+          text-align: center;
+          color: #6b7280;
+          font-size: 12px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>${icon} Alerta de Erro no Sistema</h1>
+          <p>Portal Regional Vale do Paraíba I - SP</p>
+        </div>
+        
+        <div class="content">
+          <div class="alert-box">
+            <strong>⚠️ Erro Crítico Detectado</strong>
+            <p>Um erro crítico foi registrado no sistema e requer atenção.</p>
+          </div>
+
+          <h2 style="color: #dc2626; margin-bottom: 16px;">📊 Detalhes do Erro</h2>
+          
+          <div class="data-row">
+            <span class="label">Tipo:</span>
+            <span class="value"><strong>${data.tipo}</strong></span>
+          </div>
+          <div class="data-row">
+            <span class="label">Origem:</span>
+            <span class="value">${data.origem}</span>
+          </div>
+          <div class="data-row">
+            <span class="label">Rota:</span>
+            <span class="value">${data.rota}</span>
+          </div>
+          <div class="data-row">
+            <span class="label">Data/Hora:</span>
+            <span class="value">${dataFormatada}</span>
+          </div>
+          <div class="data-row">
+            <span class="label">Mensagem:</span>
+            <span class="value">${data.mensagem}</span>
+          </div>
+
+          <h3 style="margin-top: 24px; margin-bottom: 12px; color: #374151;">🔍 Informações Técnicas</h3>
+          <div class="code-block">${detalhesFormatted}</div>
+
+          <div class="button-container">
+            <a href="${portalUrl}" class="button">
+              🔐 Acessar Portal de Administração →
+            </a>
+          </div>
+
+          <div class="footer">
+            <p><strong>Portal Regional Vale do Paraíba I - SP</strong></p>
+            <p>Esta é uma notificação automática do sistema de monitoramento.</p>
+            <p>Para parar de receber estes alertas, ajuste suas configurações no portal.</p>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const text = `
+🚨 ALERTA DE ERRO NO SISTEMA
+Portal Regional Vale do Paraíba I - SP
+
+⚠️ ERRO CRÍTICO DETECTADO
+Um erro crítico foi registrado no sistema e requer atenção.
+
+📊 DETALHES DO ERRO:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Tipo: ${data.tipo}
+Origem: ${data.origem}
+Rota: ${data.rota}
+Data/Hora: ${dataFormatada}
+Mensagem: ${data.mensagem}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔍 INFORMAÇÕES TÉCNICAS:
+${detalhesFormatted}
+
+Acesse o portal de administração:
+${portalUrl}
+
+────────────────────────────────────────
+Portal Regional Vale do Paraíba I - SP
+Esta é uma notificação automática do sistema de monitoramento.
+  `.trim();
+
+  return { html, text };
+}
+
+/**
  * Renderiza template de notificação de mudança de status de perfil
  */
 export function renderProfileStatusChangeTemplate(data: {
