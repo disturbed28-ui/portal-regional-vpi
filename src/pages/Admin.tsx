@@ -27,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { ProfileStatus } from "@/types/profile";
 import { ProfileDetailDialog } from "@/components/admin/ProfileDetailDialog";
+import { logSystemEventFromClient } from "@/lib/logSystemEvent";
 
 interface Profile {
   id: string;
@@ -104,6 +105,16 @@ const Admin = () => {
     // Verificar se e admin (sem setTimeout, roles como dependencia)
     if (!hasRole('admin')) {
       console.log('[Admin] ACESSO NEGADO - nao e admin. Roles:', roles);
+      logSystemEventFromClient({
+        tipo: 'PERMISSION_DENIED',
+        origem: 'frontend:Admin',
+        rota: '/admin',
+        mensagem: 'Tentativa de acesso à área admin sem permissão',
+        detalhes: {
+          userId: user.id,
+          userRoles: roles
+        }
+      });
       toast({
         title: "Acesso Negado",
         description: "Apenas administradores podem acessar esta area",

@@ -1,5 +1,4 @@
-import { createTransport } from 'npm:nodemailer@6.9.7';
-import type { Transporter } from 'npm:nodemailer@6.9.7';
+import { createTransport } from 'https://esm.sh/nodemailer@6.9.16';
 
 interface EmailConfig {
   to: string | string[];
@@ -20,7 +19,7 @@ interface AlertData {
   tipo_alerta: string;
 }
 
-let transporter: Transporter | null = null;
+let transporter: any | null = null;
 
 export async function initializeEmailService() {
   if (transporter) return transporter;

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { logSystemEventFromClient } from "@/lib/logSystemEvent";
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -40,6 +41,17 @@ export const useAuth = () => {
 
               if (error) {
                 console.error('[useAuth] Error creating profile:', error);
+                logSystemEventFromClient({
+                  tipo: 'FUNCTION_ERROR',
+                  origem: 'frontend:useAuth',
+                  rota: window.location.pathname,
+                  mensagem: 'Erro ao criar/atualizar perfil no login',
+                  detalhes: {
+                    userId: session.user.id,
+                    email: session.user.email,
+                    error: error.message
+                  }
+                });
                 // Não mostrar toast - edge function já trata casos conhecidos
               } else {
                 console.log('[useAuth] Profile creation result:', data);
@@ -64,6 +76,17 @@ export const useAuth = () => {
               }
             } catch (error: any) {
               console.error('[useAuth] Failed to create profile:', error);
+              logSystemEventFromClient({
+                tipo: 'FUNCTION_ERROR',
+                origem: 'frontend:useAuth',
+                rota: window.location.pathname,
+                mensagem: 'Exceção ao criar/atualizar perfil no login',
+                detalhes: {
+                  userId: session.user.id,
+                  email: session.user.email,
+                  error: error.message
+                }
+              });
               // Não mostrar toast - edge function já trata casos conhecidos
             }
           }, 500);
@@ -97,6 +120,14 @@ export const useAuth = () => {
 
       if (error) throw error;
     } catch (error: any) {
+      console.error('[useAuth] Error signing in with Google:', error);
+      logSystemEventFromClient({
+        tipo: 'AUTH_ERROR',
+        origem: 'frontend:useAuth',
+        rota: window.location.pathname,
+        mensagem: 'Erro ao fazer login com Google',
+        detalhes: { error: error.message }
+      });
       toast({
         title: "Erro ao conectar",
         description: error.message,
@@ -138,6 +169,17 @@ export const useAuth = () => {
         throw error;
       }
     } catch (error: any) {
+      console.error('[useAuth] Error signing out:', error);
+      logSystemEventFromClient({
+        tipo: 'AUTH_ERROR',
+        origem: 'frontend:useAuth',
+        rota: window.location.pathname,
+        mensagem: 'Erro ao fazer logout',
+        detalhes: { 
+          userId: user?.id,
+          error: error.message 
+        }
+      });
       toast({
         title: "Erro ao desconectar",
         description: error.message,
