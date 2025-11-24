@@ -224,6 +224,7 @@ const SecaoInadimplencia = ({ inadimplencias, setInadimplencias, divisaoSelecion
   const [acaoCobranca, setAcaoCobranca] = useState("");
   const { resultados } = useBuscaIntegrante(buscaManual);
   const [mostrarResultados, setMostrarResultados] = useState(false);
+  const [integranteSelecionado, setIntegranteSelecionado] = useState<any | null>(null);
 
   const removerDevedor = (idx: number) => {
     const novo = [...inadimplencias];
@@ -231,18 +232,30 @@ const SecaoInadimplencia = ({ inadimplencias, setInadimplencias, divisaoSelecion
     setInadimplencias(novo);
   };
 
-  const adicionarManual = (integrante: any) => {
-    if (!acaoCobranca) return;
+  const adicionarManual = () => {
+    if (!integranteSelecionado) {
+      alert("Selecione o nome de colete antes de adicionar.");
+      return;
+    }
+
+    if (!acaoCobranca) {
+      alert("Preencha a ação de cobrança antes de adicionar.");
+      return;
+    }
     
-    setInadimplencias([...inadimplencias, {
-      nome_colete: integrante.nome_colete,
-      status: "Adicionado_manual",
-      acao_cobranca: acaoCobranca,
-      justificativa_remocao: null
-    }]);
+    setInadimplencias([
+      ...inadimplencias,
+      {
+        nome_colete: integranteSelecionado.nome_colete,
+        status: "Adicionado_manual",
+        acao_cobranca: acaoCobranca,
+        justificativa_remocao: null
+      }
+    ]);
     
     setBuscaManual("");
     setAcaoCobranca("");
+    setIntegranteSelecionado(null);
     setMostrarResultados(false);
   };
 
@@ -253,49 +266,83 @@ const SecaoInadimplencia = ({ inadimplencias, setInadimplencias, divisaoSelecion
       {inadimplencias.length > 0 && (
         <div className="space-y-3">
           <p className="text-sm font-medium">Devedores da Divisão:</p>
-          {inadimplencias.map((inad: any, idx: number) => (
-            <Card key={idx} className="p-3 bg-muted/50">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="font-medium text-sm">{inad.nome_colete}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Status: {inad.status === "Removido" ? "Removido (justificado)" : inad.status}
-                  </p>
-                  {inad.status === "Adicionado_manual" && inad.acao_cobranca && (
-                    <p className="text-xs mt-1">Ação: {inad.acao_cobranca}</p>
+          <p className="text-xs text-muted-foreground">
+            Confirme abaixo os devedores e registre qual ação de cobrança está sendo tomada com cada um.
+          </p>
+          {inadimplencias.map((inad: any, idx: number) => {
+            const getStatusLabel = () => {
+              if (inad.status === "Removido") return "Removido (justificado)";
+              if (inad.status === "Confirmado") return "Devedor ativo (confirmado)";
+              if (inad.status === "Adicionado_manual") return "Devedor adicionado manualmente";
+              return inad.status || "—";
+            };
+
+            return (
+              <Card key={idx} className="p-3 bg-muted/50">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-medium text-sm">{inad.nome_colete}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Status: {getStatusLabel()}
+                    </p>
+                    {inad.justificativa_remocao && (
+                      <p className="text-xs mt-2 p-2 bg-background rounded">
+                        Justificativa: {inad.justificativa_remocao}
+                      </p>
+                    )}
+                  </div>
+                  {inad.status !== "Removido" && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const justificativa = prompt(
+                          "Por que este devedor deve ser removido da lista?"
+                        );
+                        if (justificativa) {
+                          const novo = [...inadimplencias];
+                          novo[idx].status = "Removido";
+                          novo[idx].justificativa_remocao = justificativa;
+                          setInadimplencias(novo);
+                        }
+                      }}
+                    >
+                      Remover
+                    </Button>
                   )}
                 </div>
-                {inad.status === "Confirmado" && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const justificativa = prompt("Por que este devedor deve ser removido da lista?");
-                      if (justificativa) {
+
+                {inad.status !== "Removido" && (
+                  <div className="mt-3">
+                    <label className="text-xs text-muted-foreground">
+                      Qual ação está sendo tomada para este devedor?
+                    </label>
+                    <Textarea
+                      className="w-full mt-1"
+                      rows={2}
+                      value={inad.acao_cobranca || ""}
+                      onChange={(e) => {
                         const novo = [...inadimplencias];
-                        novo[idx].status = "Removido";
-                        novo[idx].justificativa_remocao = justificativa;
+                        novo[idx].acao_cobranca = e.target.value;
                         setInadimplencias(novo);
-                      }
-                    }}
-                  >
-                    Remover
-                  </Button>
+                      }}
+                      placeholder="Descreva a ação de cobrança (contato, prazo, tratativa, etc.)..."
+                    />
+                  </div>
                 )}
-              </div>
-              {inad.justificativa_remocao && (
-                <p className="text-xs mt-2 p-2 bg-background rounded">
-                  Justificativa: {inad.justificativa_remocao}
-                </p>
-              )}
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       )}
 
       <div className="pt-4 border-t space-y-3">
         <p className="text-sm font-medium">Adicionar Devedor Manualmente:</p>
+        <p className="text-xs text-muted-foreground">
+          1) Busque o nome de colete • 2) Informe a ação de cobrança • 3) Clique em "Adicionar Devedor".
+        </p>
+
         <div className="relative">
           <label className="text-xs text-muted-foreground">Buscar Integrante</label>
           <input
@@ -317,11 +364,9 @@ const SecaoInadimplencia = ({ inadimplencias, setInadimplencias, divisaoSelecion
                   type="button"
                   className="w-full text-left px-3 py-2 hover:bg-muted text-sm"
                   onClick={() => {
-                    if (acaoCobranca) {
-                      adicionarManual(r);
-                    } else {
-                      alert("Preencha a ação de cobrança primeiro");
-                    }
+                    setIntegranteSelecionado(r);
+                    setBuscaManual(r.nome_colete);
+                    setMostrarResultados(false);
                   }}
                 >
                   {r.nome_colete}
@@ -340,6 +385,16 @@ const SecaoInadimplencia = ({ inadimplencias, setInadimplencias, divisaoSelecion
             onChange={(e) => setAcaoCobranca(e.target.value)}
             placeholder="Descreva a ação de cobrança..."
           />
+        </div>
+
+        <div className="mt-3 flex justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={adicionarManual}
+          >
+            Adicionar Devedor
+          </Button>
         </div>
       </div>
     </Card>
@@ -572,7 +627,7 @@ const FormularioRelatorioSemanal = () => {
         nome_colete: d.nome_colete,
         status: "Confirmado",
         justificativa_remocao: null,
-        acao_cobranca: null
+        acao_cobranca: ""
       })));
     };
 
@@ -743,116 +798,116 @@ const FormularioRelatorioSemanal = () => {
     <div className="min-h-screen bg-background p-3 sm:p-4">
       <div className="max-w-full sm:max-w-2xl mx-auto space-y-4 sm:space-y-6">
         {/* T6: Cabeçalho */}
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/formularios")}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <p className="text-xs sm:text-sm text-muted-foreground">Regional {dadosResponsavel?.regional_texto}</p>
-          <h1 className="text-xl sm:text-2xl font-bold">Relatório Semanal da Divisão</h1>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/formularios")}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <p className="text-xs sm:text-sm text-muted-foreground">Regional {dadosResponsavel?.regional_texto}</p>
+            <h1 className="text-xl sm:text-2xl font-bold">Relatório Semanal da Divisão</h1>
+          </div>
         </div>
-      </div>
 
-      {/* Banner: Dia não permitido */}
-      {!hojePermitido && formConfig && (
-        <Card className="p-4 bg-amber-50 dark:bg-amber-950 border-amber-300 dark:border-amber-700">
-          <div className="flex items-start gap-3">
-            <div className="text-2xl">⚠️</div>
-            <div>
-              <h4 className="font-semibold text-amber-900 dark:text-amber-100 mb-1">
-                Dia não permitido para responder
-              </h4>
-              <p className="text-sm text-amber-800 dark:text-amber-200">
-                Este formulário só pode ser respondido nos seguintes dias:
-                <strong className="ml-1">
-                  {(formConfig.dias_semana || [])
-                    .map((d: number) => DIAS_SEMANA_NOMES[d])
-                    .join(', ')}
-                </strong>
-              </p>
-              <p className="text-sm text-amber-700 dark:text-amber-300 mt-2">
-                Hoje é <strong>{DIAS_SEMANA_NOMES[diaHoje]}</strong>. Volte em um dia permitido.
-              </p>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Banner: Limite 'unica' - já respondeu */}
-      {formConfig?.limite_respostas === 'unica' && existingReport && (
-        <Card className="p-4 bg-blue-50 dark:bg-blue-950 border-blue-300 dark:border-blue-700">
-          <div className="flex items-start gap-3">
-            <div className="text-2xl">ℹ️</div>
-            <div>
-              <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
-                Relatório já enviado
-              </h4>
-              <p className="text-sm text-blue-800 dark:text-blue-200">
-                Esta divisão (<strong>{divisaoSelecionada?.nome}</strong>) já possui um relatório 
-                enviado nesta semana em{' '}
-                <strong>
-                  {new Date(existingReport.created_at).toLocaleString('pt-BR')}
-                </strong>
-                {existingReport.profile_id !== user?.id && (
-                  <span> por <strong>{existingReport.responsavel_nome_colete}</strong></span>
-                )}.
-              </p>
-              <p className="text-sm text-blue-700 dark:text-blue-300 mt-2">
-                Como este formulário permite apenas <strong>1 relatório por semana para cada divisão</strong>, 
-                não é possível enviar outro. Se precisar corrigir informações, entre em contato com o 
-                ADM Regional.
-              </p>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Banner: Limite 'multipla' - opção de editar ou sobrescrever */}
-      {formConfig?.limite_respostas === 'multipla' && existingReport && !modoEdicao && (
-        <Card className="p-4 bg-purple-50 dark:bg-purple-950 border-purple-300 dark:border-purple-700">
-          <div className="flex items-start gap-3">
-            <div className="text-2xl">🔄</div>
-            <div className="flex-1">
-              <h4 className="font-semibold text-purple-900 dark:text-purple-100 mb-1">
-                Relatório já enviado para esta divisão
-              </h4>
-              <p className="text-sm text-purple-800 dark:text-purple-200 mb-3">
-                A divisão <strong>{divisaoSelecionada?.nome}</strong> já possui um relatório 
-                enviado nesta semana em{' '}
-                <strong>
-                  {new Date(existingReport.created_at).toLocaleString('pt-BR')}
-                </strong>
-                {existingReport.profile_id !== user?.id && (
-                  <span> por <strong>{existingReport.responsavel_nome_colete}</strong></span>
-                )}.
-                <br />
-                Deseja carregar as respostas anteriores para edição ou sobrescrever com um novo relatório?
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    setModoEdicao('editar');
-                    carregarRespostasExistentes(existingReport);
-                  }}
-                >
-                  Editar respostas anteriores
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setModoEdicao('nova');
-                    limparFormulario();
-                  }}
-                >
-                  Nova resposta (sobrescrever)
-                </Button>
+        {/* Banner: Dia não permitido */}
+        {!hojePermitido && formConfig && (
+          <Card className="p-4 bg-amber-50 dark:bg-amber-950 border-amber-300 dark:border-amber-700">
+            <div className="flex items-start gap-3">
+              <div className="text-2xl">⚠️</div>
+              <div>
+                <h4 className="font-semibold text-amber-900 dark:text-amber-100 mb-1">
+                  Dia não permitido para responder
+                </h4>
+                <p className="text-sm text-amber-800 dark:text-amber-200">
+                  Este formulário só pode ser respondido nos seguintes dias:
+                  <strong className="ml-1">
+                    {(formConfig.dias_semana || [])
+                      .map((d: number) => DIAS_SEMANA_NOMES[d])
+                      .join(', ')}
+                  </strong>
+                </p>
+                <p className="text-sm text-amber-700 dark:text-amber-300 mt-2">
+                  Hoje é <strong>{DIAS_SEMANA_NOMES[diaHoje]}</strong>. Volte em um dia permitido.
+                </p>
               </div>
             </div>
-          </div>
-        </Card>
-      )}
+          </Card>
+        )}
+
+        {/* Banner: Limite 'unica' - já respondeu */}
+        {formConfig?.limite_respostas === 'unica' && existingReport && (
+          <Card className="p-4 bg-blue-50 dark:bg-blue-950 border-blue-300 dark:border-blue-700">
+            <div className="flex items-start gap-3">
+              <div className="text-2xl">ℹ️</div>
+              <div>
+                <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                  Relatório já enviado
+                </h4>
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  Esta divisão (<strong>{divisaoSelecionada?.nome}</strong>) já possui um relatório 
+                  enviado nesta semana em{' '}
+                  <strong>
+                    {new Date(existingReport.created_at).toLocaleString('pt-BR')}
+                  </strong>
+                  {existingReport.profile_id !== user?.id && (
+                    <span> por <strong>{existingReport.responsavel_nome_colete}</strong></span>
+                  )}.
+                </p>
+                <p className="text-sm text-blue-700 dark:text-blue-300 mt-2">
+                  Como este formulário permite apenas <strong>1 relatório por semana para cada divisão</strong>, 
+                  não é possível enviar outro. Se precisar corrigir informações, entre em contato com o 
+                  ADM Regional.
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Banner: Limite 'multipla' - opção de editar ou sobrescrever */}
+        {formConfig?.limite_respostas === 'multipla' && existingReport && !modoEdicao && (
+          <Card className="p-4 bg-purple-50 dark:bg-purple-950 border-purple-300 dark:border-purple-700">
+            <div className="flex items-start gap-3">
+              <div className="text-2xl">🔄</div>
+              <div className="flex-1">
+                <h4 className="font-semibold text-purple-900 dark:text-purple-100 mb-1">
+                  Relatório já enviado para esta divisão
+                </h4>
+                <p className="text-sm text-purple-800 dark:text-purple-200 mb-3">
+                  A divisão <strong>{divisaoSelecionada?.nome}</strong> já possui um relatório 
+                  enviado nesta semana em{' '}
+                  <strong>
+                    {new Date(existingReport.created_at).toLocaleString('pt-BR')}
+                  </strong>
+                  {existingReport.profile_id !== user?.id && (
+                    <span> por <strong>{existingReport.responsavel_nome_colete}</strong></span>
+                  )}.
+                  <br />
+                  Deseja carregar as respostas anteriores para edição ou sobrescrever com um novo relatório?
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setModoEdicao('editar');
+                      carregarRespostasExistentes(existingReport);
+                    }}
+                  >
+                    Editar respostas anteriores
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setModoEdicao('nova');
+                      limparFormulario();
+                    }}
+                  >
+                    Nova resposta (sobrescrever)
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* Dados do Responsável */}
         <Card className="p-4 sm:p-6 space-y-3">
@@ -894,25 +949,25 @@ const FormularioRelatorioSemanal = () => {
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">Houve entrada de integrantes nesta semana?</p>
             <div className="flex gap-2">
-            <Button 
-              type="button"
-              variant={teveEntradas ? "default" : "outline"}
-              className="min-h-[44px]"
-              onClick={() => setTeveEntradas(true)}
-            >
-              Sim
-            </Button>
-            <Button 
-              type="button"
-              variant={!teveEntradas ? "default" : "outline"}
-              className="min-h-[44px]"
-              onClick={() => {
-                setTeveEntradas(false);
-                setEntradas([]);
-              }}
-            >
-              Não
-            </Button>
+              <Button 
+                type="button"
+                variant={teveEntradas ? "default" : "outline"}
+                className="min-h-[44px]"
+                onClick={() => setTeveEntradas(true)}
+              >
+                Sim
+              </Button>
+              <Button 
+                type="button"
+                variant={!teveEntradas ? "default" : "outline"}
+                className="min-h-[44px]"
+                onClick={() => {
+                  setTeveEntradas(false);
+                  setEntradas([]);
+                }}
+              >
+                Não
+              </Button>
             </div>
           </div>
 
@@ -920,7 +975,7 @@ const FormularioRelatorioSemanal = () => {
             <div className="space-y-4">
               {entradas.map((entrada, idx) => (
                 <Card key={idx} className="p-4 space-y-3 bg-muted/50">
-                  <div className="flex justify-between items-start">
+                  <div className="flex justify_between items-start">
                     <h4 className="text-sm font-medium">Entrada #{idx + 1}</h4>
                     <Button
                       type="button"
@@ -933,20 +988,7 @@ const FormularioRelatorioSemanal = () => {
                   </div>
                   
                   <div className="grid gap-3">
-                    <div>
-                      <label className="text-xs text-muted-foreground">Nome Completo</label>
-                      <input
-                        type="text"
-                        className="w-full mt-1 p-2 border rounded bg-background"
-                        value={entrada.nome_completo || ""}
-                        onChange={(e) => {
-                          const novo = [...entradas];
-                          novo[idx].nome_completo = e.target.value;
-                          setEntradas(novo);
-                        }}
-                      />
-                    </div>
-
+                    {/* Nome de Colete (único nome digitado) */}
                     <div>
                       <label className="text-xs text-muted-foreground">Nome de Colete</label>
                       <input
@@ -961,6 +1003,7 @@ const FormularioRelatorioSemanal = () => {
                       />
                     </div>
 
+                    {/* Manter Data de Entrada */}
                     <div>
                       <label className="text-xs text-muted-foreground">Data de Entrada</label>
                       <input
@@ -975,6 +1018,7 @@ const FormularioRelatorioSemanal = () => {
                       />
                     </div>
 
+                    {/* Motivo da Entrada */}
                     <div>
                       <label className="text-xs text-muted-foreground">Motivo da Entrada</label>
                       <select
@@ -994,6 +1038,7 @@ const FormularioRelatorioSemanal = () => {
                       </select>
                     </div>
 
+                    {/* Veículos */}
                     <div>
                       <label className="text-xs text-muted-foreground">Veículos</label>
                       <div className="flex gap-4 mt-2">
@@ -1049,15 +1094,17 @@ const FormularioRelatorioSemanal = () => {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setEntradas([...entradas, {
-                  nome_completo: "",
-                  nome_colete: "",
-                  data_entrada: "",
-                  motivo_entrada: "",
-                  possui_carro: false,
-                  possui_moto: false,
-                  nenhum: false
-                }])}
+                onClick={() => setEntradas([
+                  ...entradas,
+                  {
+                    nome_colete: "",
+                    data_entrada: "",
+                    motivo_entrada: "",
+                    possui_carro: false,
+                    possui_moto: false,
+                    nenhum: false
+                  }
+                ])}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Adicionar Entrada
@@ -1087,25 +1134,25 @@ const FormularioRelatorioSemanal = () => {
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">Houve conflitos esta semana?</p>
             <div className="flex gap-2">
-            <Button 
-              type="button"
-              variant={teveConflitos ? "default" : "outline"}
-              className="min-h-[44px]"
-              onClick={() => setTeveConflitos(true)}
-            >
-              Sim
-            </Button>
-            <Button 
-              type="button"
-              variant={!teveConflitos ? "default" : "outline"}
-              className="min-h-[44px]"
-              onClick={() => {
-                setTeveConflitos(false);
-                setConflitos([]);
-              }}
-            >
-              Não
-            </Button>
+              <Button 
+                type="button"
+                variant={teveConflitos ? "default" : "outline"}
+                className="min-h-[44px]"
+                onClick={() => setTeveConflitos(true)}
+              >
+                Sim
+              </Button>
+              <Button 
+                type="button"
+                variant={!teveConflitos ? "default" : "outline"}
+                className="min-h-[44px]"
+                onClick={() => {
+                  setTeveConflitos(false);
+                  setConflitos([]);
+                }}
+              >
+                Não
+              </Button>
             </div>
           </div>
 
@@ -1180,25 +1227,25 @@ const FormularioRelatorioSemanal = () => {
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">Houve ações sociais esta semana?</p>
             <div className="flex gap-2">
-            <Button 
-              type="button"
-              variant={teveAcoesSociais ? "default" : "outline"}
-              className="min-h-[44px]"
-              onClick={() => setTeveAcoesSociais(true)}
-            >
-              Sim
-            </Button>
-            <Button 
-              type="button"
-              variant={!teveAcoesSociais ? "default" : "outline"}
-              className="min-h-[44px]"
-              onClick={() => {
-                setTeveAcoesSociais(false);
-                setAcoesSociais([]);
-              }}
-            >
-              Não
-            </Button>
+              <Button 
+                type="button"
+                variant={teveAcoesSociais ? "default" : "outline"}
+                className="min-h-[44px]"
+                onClick={() => setTeveAcoesSociais(true)}
+              >
+                Sim
+              </Button>
+              <Button 
+                type="button"
+                variant={!teveAcoesSociais ? "default" : "outline"}
+                className="min-h-[44px]"
+                onClick={() => {
+                  setTeveAcoesSociais(false);
+                  setAcoesSociais([]);
+                }}
+              >
+                Não
+              </Button>
             </div>
           </div>
 
