@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.acoes-sociais-enviar-form]
 verify_jwt = false
+
+[functions.log-system-event]
+verify_jwt = false

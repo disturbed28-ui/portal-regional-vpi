@@ -1508,6 +1508,42 @@ export type Database = {
           },
         ]
       }
+      system_logs: {
+        Row: {
+          created_at: string
+          detalhes: Json | null
+          id: string
+          mensagem: string | null
+          notificacao_enviada: boolean
+          origem: string
+          rota: string | null
+          tipo: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          detalhes?: Json | null
+          id?: string
+          mensagem?: string | null
+          notificacao_enviada?: boolean
+          origem: string
+          rota?: string | null
+          tipo: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          detalhes?: Json | null
+          id?: string
+          mensagem?: string | null
+          notificacao_enviada?: boolean
+          origem?: string
+          rota?: string | null
+          tipo?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       system_screens: {
         Row: {
           ativo: boolean | null
