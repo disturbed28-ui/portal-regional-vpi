@@ -2,6 +2,66 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { handleDatabaseError, logError } from '../_shared/error-handler.ts';
+import { sendEmail, renderProfileStatusChangeTemplate } from '../_shared/email-service.ts';
+
+/**
+ * Notifica o integrante sobre mudança de status via email
+ */
+async function notifyIntegranteStatusChange(
+  profileId: string,
+  oldStatus: string,
+  newStatus: string,
+  profileData: any
+): Promise<void> {
+  try {
+    console.log('[admin-update-profile] 📧 Iniciando notificação de mudança de status...');
+    console.log(`[admin-update-profile] Status: ${oldStatus} → ${newStatus}`);
+    
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+    
+    // Buscar email do usuário
+    const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(profileId);
+    
+    if (userError || !userData?.user?.email) {
+      console.error('[admin-update-profile] ⚠️ Erro ao buscar email do usuário:', userError);
+      console.error('[admin-update-profile] ⚠️ User data:', userData);
+      return;
+    }
+    
+    const userEmail = userData.user.email;
+    console.log('[admin-update-profile] 📧 Email encontrado:', userEmail);
+    
+    // Renderizar template
+    const { html, text } = renderProfileStatusChangeTemplate({
+      nome_colete: profileData.nome_colete || 'Integrante',
+      name: profileData.name || 'Integrante',
+      status_anterior: oldStatus,
+      status_novo: newStatus,
+      observacao: profileData.observacao || null
+    });
+    
+    // Enviar email
+    const emailResult = await sendEmail({
+      to: [userEmail],
+      subject: 'Insanos MC VP1 – Atualização de status do seu cadastro',
+      html,
+      text
+    });
+    
+    if (emailResult.success) {
+      console.log('[admin-update-profile] ✅ Email enviado com sucesso! Message ID:', emailResult.messageId);
+      console.log('[admin-update-profile] 📨 Destinatário:', userEmail);
+    } else {
+      console.error('[admin-update-profile] ❌ Erro ao enviar email:', emailResult.error);
+    }
+    
+  } catch (error) {
+    console.error('[admin-update-profile] ❌ Exceção ao enviar notificação:', error);
+    // Não lançar erro para não bloquear o update do perfil
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -77,6 +137,20 @@ Deno.serve(async (req) => {
 
     console.log('Updating profile:', profile_id, 'by admin:', admin_user_id);
 
+    // Buscar profile atual antes do update (para comparar status)
+    const { data: currentProfile, error: fetchError } = await supabase
+      .from('profiles')
+      .select('profile_status')
+      .eq('id', profile_id)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching current profile:', fetchError);
+    }
+
+    const oldStatus = currentProfile?.profile_status || null;
+    console.log('Current profile_status:', oldStatus);
+
     // Preparar payload de atualização - adicionar apenas campos fornecidos
     const updatePayload: any = {
       updated_at: new Date().toISOString(),
@@ -114,6 +188,20 @@ Deno.serve(async (req) => {
     }
 
     console.log('Profile updated successfully:', updatedProfile);
+
+    // Verificar se houve mudança de status e enviar notificação
+    const newStatus = updatedProfile.profile_status;
+    if (oldStatus && newStatus && oldStatus !== newStatus) {
+      console.log('[admin-update-profile] 🔔 Status mudou de', oldStatus, '→', newStatus);
+      console.log('[admin-update-profile] 📧 Disparando notificação de mudança de status...');
+      
+      // Disparar notificação de forma não-bloqueante
+      notifyIntegranteStatusChange(profile_id, oldStatus, newStatus, updatedProfile).catch(err => {
+        console.error('[admin-update-profile] ⚠️ Falha ao enviar notificação (não-crítico):', err);
+      });
+    } else {
+      console.log('[admin-update-profile] ℹ️ Status não mudou, sem notificação');
+    }
 
     // Se foi solicitado desvinculação
     if (desvincular === true) {

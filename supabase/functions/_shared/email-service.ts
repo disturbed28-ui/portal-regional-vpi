@@ -547,3 +547,254 @@ Esta é uma notificação automática do sistema de gestão.
   
   return { html, text };
 }
+
+/**
+ * Renderiza template de notificação de mudança de status de perfil
+ */
+export function renderProfileStatusChangeTemplate(data: {
+  nome_colete: string;
+  name: string;
+  status_anterior: string;
+  status_novo: string;
+  observacao: string | null;
+}): { html: string; text: string } {
+  const portalUrl = 'https://48ecd9cb-adf8-4eee-8548-c826c493e103.lovableproject.com/';
+  
+  const html = `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Atualização de Status - Portal Regional VP1</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+          line-height: 1.6; 
+          color: #1f2937;
+          background-color: #f3f4f6;
+          padding: 20px;
+        }
+        .container { 
+          max-width: 600px; 
+          margin: 0 auto; 
+          background: white;
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header { 
+          background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+          color: white; 
+          padding: 32px 24px;
+          text-align: center;
+        }
+        .header h1 {
+          font-size: 24px;
+          font-weight: 700;
+          margin-bottom: 8px;
+        }
+        .header p {
+          font-size: 14px;
+          opacity: 0.95;
+        }
+        .content {
+          padding: 32px 24px;
+        }
+        .greeting {
+          font-size: 18px;
+          font-weight: 600;
+          color: #1f2937;
+          margin-bottom: 16px;
+        }
+        .intro {
+          font-size: 15px;
+          color: #4b5563;
+          margin-bottom: 24px;
+          line-height: 1.6;
+        }
+        .status-box {
+          background: #f9fafb;
+          border-left: 4px solid #dc2626;
+          border-radius: 8px;
+          padding: 20px;
+          margin: 24px 0;
+        }
+        .status-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 0;
+          border-bottom: 1px solid #e5e7eb;
+        }
+        .status-row:last-child {
+          border-bottom: none;
+        }
+        .status-label {
+          font-size: 14px;
+          font-weight: 600;
+          color: #6b7280;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .status-value {
+          font-size: 16px;
+          font-weight: 700;
+          color: #1f2937;
+          padding: 6px 12px;
+          background: white;
+          border-radius: 6px;
+          border: 2px solid #e5e7eb;
+        }
+        .status-value.novo {
+          color: #dc2626;
+          border-color: #dc2626;
+          background: #fef2f2;
+        }
+        .observacao-box {
+          background: #fffbeb;
+          border-left: 4px solid #f59e0b;
+          border-radius: 8px;
+          padding: 16px;
+          margin: 20px 0;
+        }
+        .observacao-box h3 {
+          font-size: 14px;
+          font-weight: 600;
+          color: #92400e;
+          margin-bottom: 8px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .observacao-box p {
+          font-size: 14px;
+          color: #78350f;
+          line-height: 1.5;
+          white-space: pre-wrap;
+        }
+        .button-container {
+          text-align: center;
+          margin: 32px 0;
+        }
+        .button {
+          display: inline-block;
+          background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+          color: white;
+          text-decoration: none;
+          padding: 14px 32px;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 15px;
+          box-shadow: 0 4px 6px rgba(220, 38, 38, 0.3);
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .button:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 12px rgba(220, 38, 38, 0.4);
+        }
+        .footer {
+          background: #f9fafb;
+          padding: 24px;
+          text-align: center;
+          border-top: 1px solid #e5e7eb;
+        }
+        .footer p {
+          font-size: 13px;
+          color: #6b7280;
+          margin: 4px 0;
+        }
+        .footer strong {
+          color: #1f2937;
+        }
+        @media only screen and (max-width: 600px) {
+          body { padding: 10px; }
+          .content { padding: 20px 16px; }
+          .header { padding: 24px 16px; }
+          .header h1 { font-size: 20px; }
+          .status-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>📋 Atualização de Status</h1>
+          <p>Portal Regional Vale do Paraíba I - SP</p>
+        </div>
+        <div class="content">
+          <p class="greeting">Olá, ${data.nome_colete || data.name}!</p>
+          <p class="intro">
+            O status do seu cadastro no Portal Regional foi atualizado por um administrador.
+            Confira as informações abaixo:
+          </p>
+          
+          <div class="status-box">
+            <div class="status-row">
+              <span class="status-label">Status Anterior</span>
+              <span class="status-value">${data.status_anterior}</span>
+            </div>
+            <div class="status-row">
+              <span class="status-label">Novo Status</span>
+              <span class="status-value novo">${data.status_novo}</span>
+            </div>
+          </div>
+          
+          ${data.observacao ? `
+          <div class="observacao-box">
+            <h3>💬 Observação do Administrador</h3>
+            <p>${data.observacao}</p>
+          </div>
+          ` : ''}
+          
+          <div class="button-container">
+            <a href="${portalUrl}" class="button">
+              🔐 Acessar Portal Regional →
+            </a>
+          </div>
+          
+          <div class="footer">
+            <p><strong>Portal Regional Vale do Paraíba I - SP</strong></p>
+            <p>Esta é uma notificação automática do sistema de gestão.</p>
+            <p>Em caso de dúvidas, entre em contato com a administração.</p>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+  
+  const text = `
+ATUALIZAÇÃO DE STATUS
+Portal Regional Vale do Paraíba I - SP
+
+Olá, ${data.nome_colete || data.name}!
+
+O status do seu cadastro no Portal Regional foi atualizado por um administrador.
+
+MUDANÇA DE STATUS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Status Anterior: ${data.status_anterior}
+Novo Status: ${data.status_novo}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${data.observacao ? `
+OBSERVAÇÃO DO ADMINISTRADOR:
+${data.observacao}
+
+` : ''}
+Acesse o portal para mais informações:
+${portalUrl}
+
+────────────────────────────────────
+Portal Regional Vale do Paraíba I - SP
+Esta é uma notificação automática do sistema de gestão.
+Em caso de dúvidas, entre em contato com a administração.
+  `.trim();
+  
+  return { html, text };
+}
