@@ -474,6 +474,9 @@ const Admin = () => {
             <Button onClick={() => navigate("/admin/configuracao-deltas")} variant="outline" className="flex-1 sm:flex-none">
               ⚙️ Configuração de Deltas
             </Button>
+            <Button onClick={() => navigate("/admin/system-logs")} variant="outline" className="flex-1 sm:flex-none">
+              📊 Logs de Sistema
+            </Button>
             <Button onClick={() => navigate("/")} variant="outline" className="flex-1 sm:flex-none">
               Voltar
             </Button>
