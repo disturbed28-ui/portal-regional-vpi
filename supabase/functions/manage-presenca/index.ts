@@ -49,26 +49,38 @@ Deno.serve(async (req) => {
         .trim();
     }
 
-    /**
-     * Determina se um evento é do tipo CMD (Comando)
-     * 
-     * Critérios:
-     * - Título contém " CMD" (ex: "Reunião - CMD V e XX")
-     * - tipo_evento contém "CMD"
-     * - Nome da divisão contém "CMD"
-     */
-    function isCmdEvent(evento: { 
-      titulo?: string | null; 
-      tipo_evento?: string | null 
-    } | null | undefined, divisaoNome?: string | null): boolean {
-      if (!evento) return false;
-      
-      const t = normalize(evento?.titulo);
-      const tipo = normalize(evento?.tipo_evento);
-      const div = normalize(divisaoNome);
-      
-      return t.includes(' CMD') || tipo.includes('CMD') || div.includes('CMD');
-    }
+/**
+ * Determina se um evento é ESPECIAL (CMD ou REGIONAL)
+ * 
+ * Eventos especiais sempre têm status 'presente', nunca 'visitante'
+ * 
+ * Critérios para CMD:
+ * - Título contém " CMD" (ex: "Reunião - CMD V e XX")
+ * - tipo_evento contém "CMD"
+ * - Nome da divisão contém "CMD"
+ * 
+ * Critérios para REGIONAL:
+ * - Título contém "REGIONAL" (ex: "Reunião - Regional - Grau V Reunião")
+ * - tipo_evento contém "REGIONAL"
+ */
+function isEventoEspecial(evento: { 
+  titulo?: string | null; 
+  tipo_evento?: string | null 
+} | null | undefined, divisaoNome?: string | null): boolean {
+  if (!evento) return false;
+  
+  const t = normalize(evento?.titulo);
+  const tipo = normalize(evento?.tipo_evento);
+  const div = normalize(divisaoNome);
+  
+  // Detectar CMD
+  const isCmd = t.includes(' CMD') || tipo.includes('CMD') || div.includes('CMD');
+  
+  // Detectar REGIONAL
+  const isRegional = t.includes('REGIONAL') || tipo.includes('REGIONAL');
+  
+  return isCmd || isRegional;
+}
 
     console.log('[manage-presenca] user_id recebido:', user_id);
 
@@ -142,13 +154,13 @@ Deno.serve(async (req) => {
         divisaoEventoNome = divisaoData?.nome || null;
       }
 
-      // Verificar se é evento CMD
-      const isCmd = isCmdEvent(evento, divisaoEventoNome);
-      console.log('[manage-presenca] Evento CMD detectado:', isCmd);
+  // Verificar se é evento especial (CMD ou REGIONAL)
+  const isEspecial = isEventoEspecial(evento, divisaoEventoNome);
+  console.log('[manage-presenca] Evento Especial (CMD/Regional) detectado:', isEspecial);
 
-      // Se for evento CMD, permitir acesso independentemente da divisão
-      if (isCmd) {
-        console.log('[manage-presenca] Evento CMD - permissão concedida para diretor_divisao');
+  // Se for evento especial, permitir acesso independentemente da divisão
+  if (isEspecial) {
+    console.log('[manage-presenca] Evento Especial (CMD/Regional) - permissão concedida para diretor_divisao');
         // Pular validação de divisão para eventos CMD
       } else {
         // Validar se o evento é da mesma divisão (APENAS para eventos não-CMD)
@@ -208,24 +220,24 @@ Deno.serve(async (req) => {
         divisaoEventoNomeInit = divisaoData?.nome || null;
       }
 
-      // Verificar se é evento CMD
-      const isCmdInit = isCmdEvent(eventoInit, divisaoEventoNomeInit);
-      console.log('[manage-presenca] Initialize - Evento CMD:', isCmdInit);
+  // Verificar se é evento especial (CMD ou REGIONAL)
+  const isEspecialInit = isEventoEspecial(eventoInit, divisaoEventoNomeInit);
+  console.log('[manage-presenca] Initialize - Evento Especial (CMD/Regional):', isEspecialInit);
 
-      // Validar permissão para carga automática
-      if (!roles.includes('moderator')) {
-        // Se não é moderator, verificar se é diretor_divisao válido
-        
-        if (!roles.includes('diretor_divisao')) {
-          console.log('[manage-presenca] Usuário sem permissão para carga automática');
-          return new Response(
-            JSON.stringify({ error: 'Apenas moderadores ou diretores de divisão podem inicializar listas de presença' }),
-            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-        
-        // Se é diretor_divisao e NÃO é evento CMD, validar se é da mesma divisão
-        if (!isCmdInit) {
+  // Validar permissão para carga automática
+  if (!roles.includes('moderator')) {
+    // Se não é moderator, verificar se é diretor_divisao válido
+    
+    if (!roles.includes('diretor_divisao')) {
+      console.log('[manage-presenca] Usuário sem permissão para carga automática');
+      return new Response(
+        JSON.stringify({ error: 'Apenas moderadores ou diretores de divisão podem inicializar listas de presença' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Se é diretor_divisao e NÃO é evento especial, validar se é da mesma divisão
+    if (!isEspecialInit) {
           // Buscar divisão do usuário
           const { data: userProfileInit, error: profileInitError } = await supabaseAdmin
             .from('profiles')
@@ -242,15 +254,15 @@ Deno.serve(async (req) => {
           }
           
           if (eventoInit.divisao_id !== userProfileInit.divisao_id) {
-            console.log('[manage-presenca] Diretor tentando inicializar evento de outra divisão');
-            return new Response(
-              JSON.stringify({ error: 'Diretores de divisão só podem inicializar listas de eventos da própria divisão' }),
-              { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
-          }
-        }
-        // Se for CMD, diretor_divisao pode inicializar independentemente da divisão
-      }
+      console.log('[manage-presenca] Diretor tentando inicializar evento de outra divisão');
+      return new Response(
+        JSON.stringify({ error: 'Diretores de divisão só podem inicializar listas de eventos da própria divisão' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+  }
+  // Se for evento especial (CMD/Regional), diretor_divisao pode inicializar independentemente da divisão
+}
 
       // ========================================================================
       // FIM DA VALIDAÇÃO - Continua com a lógica existente de initialize
@@ -380,17 +392,17 @@ Deno.serve(async (req) => {
           divisaoEvento = divisaoData?.nome || null;
         }
 
-        // Verificar se é evento CMD
-        const isCmdAdd = isCmdEvent(evento, divisaoEvento);
-        console.log('[manage-presenca] Add - Evento CMD:', isCmdAdd);
-        
-        // Determinar o status
-        let novoStatus = 'visitante'; // padrão
+    // Verificar se é evento especial (CMD ou REGIONAL)
+    const isEspecialAdd = isEventoEspecial(evento, divisaoEvento);
+    console.log('[manage-presenca] Add - Evento Especial (CMD/Regional):', isEspecialAdd);
+    
+    // Determinar o status
+    let novoStatus = 'visitante'; // padrão
 
-        if (isCmdAdd) {
-          // ✅ EVENTOS CMD: sempre 'presente', nunca 'visitante'
-          novoStatus = 'presente';
-          console.log('[manage-presenca] Evento CMD - status forçado para "presente"');
+    if (isEspecialAdd) {
+      // ✅ EVENTOS ESPECIAIS (CMD/REGIONAL): sempre 'presente', nunca 'visitante'
+      novoStatus = 'presente';
+      console.log('[manage-presenca] Evento Especial (CMD/Regional) - status forçado para "presente"');
         } else if (integrante?.divisao_texto && divisaoEvento) {
           // Eventos normais: verificar divisão
           const divisaoIntegranteNorm = integrante.divisao_texto
@@ -460,12 +472,12 @@ Deno.serve(async (req) => {
           divisaoEventoNomeNovo = divisaoData?.nome || null;
         }
         
-        // Verificar se é evento CMD
-        const isCmdNovo = isCmdEvent(eventoNovo, divisaoEventoNomeNovo);
-        
-        // Definir status inicial
-        const statusInicial = isCmdNovo ? 'presente' : 'visitante';
-        console.log('[manage-presenca] Novo registro - Evento CMD:', isCmdNovo, '- Status:', statusInicial);
+  // Verificar se é evento especial (CMD ou REGIONAL)
+  const isEspecialNovo = isEventoEspecial(eventoNovo, divisaoEventoNomeNovo);
+  
+  // Definir status inicial
+  const statusInicial = isEspecialNovo ? 'presente' : 'visitante';
+  console.log('[manage-presenca] Novo registro - Evento Especial (CMD/Regional):', isEspecialNovo, '- Status:', statusInicial);
         
         // Inserir novo registro
         const { data, error } = await supabaseAdmin
@@ -488,8 +500,8 @@ Deno.serve(async (req) => {
           );
         }
         
-        const tipoPresenca = isCmdNovo ? 'presente em evento CMD' : 'visitante';
-        console.log(`[manage-presenca] Presença adicionada (${tipoPresenca})`);
+  const tipoPresenca = isEspecialNovo ? 'presente em evento especial (CMD/Regional)' : 'visitante';
+  console.log(`[manage-presenca] Presença adicionada (${tipoPresenca})`);
         return new Response(
           JSON.stringify({ success: true, data }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
