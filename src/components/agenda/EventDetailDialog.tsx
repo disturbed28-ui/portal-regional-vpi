@@ -14,6 +14,8 @@ import { ptBR } from "date-fns/locale";
 import { Calendar, Clock, MapPin, Tag, ExternalLink, Users, Crown } from "lucide-react";
 import { ListaPresenca } from "./ListaPresenca";
 import { useTiposEvento } from "@/hooks/useTiposEvento";
+import { useAuth } from "@/hooks/useAuth";
+import { useScreenAccess } from "@/hooks/useScreenAccess";
 
 interface EventDetailDialogProps {
   event: CalendarEvent | null;
@@ -24,6 +26,11 @@ interface EventDetailDialogProps {
 export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDialogProps) {
   const [listaPresencaOpen, setListaPresencaOpen] = useState(false);
   const { getColorForType } = useTiposEvento();
+  
+  // Validar permissão para Lista de Presença
+  const { user } = useAuth();
+  const { hasAccess: canSeeLista, loading: loadingListaAccess } = 
+    useScreenAccess('/lista-presenca', user?.id);
   
   if (!event) return null;
 
@@ -129,14 +136,17 @@ export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDial
           )}
 
           <div className="flex gap-2 mt-4">
-            <Button
-              variant="default"
-              className="flex-1"
-              onClick={() => setListaPresencaOpen(true)}
-            >
-              <Users className="mr-2 h-4 w-4" />
-              Lista de Presença
-            </Button>
+            {/* Só renderiza botão se tiver permissão */}
+            {!loadingListaAccess && canSeeLista && (
+              <Button
+                variant="default"
+                className="flex-1"
+                onClick={() => setListaPresencaOpen(true)}
+              >
+                <Users className="mr-2 h-4 w-4" />
+                Lista de Presença
+              </Button>
+            )}
             
             {event.htmlLink && (
               <Button
