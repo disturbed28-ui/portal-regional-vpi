@@ -342,7 +342,7 @@ const AdminAcoesSociaisExclusoes = () => {
                   <div className="space-y-2">
                     <Label>Justificativa do Usuário:</Label>
                     <div className="bg-muted border rounded-lg p-3 text-sm">
-                      <p>{solicitacaoSelecionada.justificativa}</p>
+                      <p className="text-foreground">{solicitacaoSelecionada.justificativa}</p>
                     </div>
                   </div>
 
