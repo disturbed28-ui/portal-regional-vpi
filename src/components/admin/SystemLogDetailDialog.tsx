@@ -121,7 +121,7 @@ export const SystemLogDetailDialog = ({
           Detalhes Técnicos
         </label>
         {log.detalhes ? (
-          <pre className="bg-muted border rounded-lg p-3 text-xs overflow-x-auto max-h-64">
+          <pre className="bg-slate-900 text-green-400 border border-slate-700 rounded-lg p-4 text-xs overflow-x-auto max-h-64 font-mono">
             {JSON.stringify(log.detalhes, null, 2)}
           </pre>
         ) : (
