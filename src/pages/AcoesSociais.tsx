@@ -102,8 +102,8 @@ export default function AcoesSociais() {
     
     if (solicitacao.status === 'pendente') {
       return (
-        <Badge variant="outline" className="bg-orange-500/20 text-orange-500 border-orange-500/50">
-          Em analise
+        <Badge variant="outline" className="bg-yellow-500/20 text-yellow-500 border-yellow-500/50">
+          Exclusão em análise
         </Badge>
       );
     }
@@ -111,7 +111,15 @@ export default function AcoesSociais() {
     if (solicitacao.status === 'recusado') {
       return (
         <Badge variant="outline" className="bg-red-500/20 text-red-500 border-red-500/50">
-          Recusada
+          Exclusão recusada
+        </Badge>
+      );
+    }
+    
+    if (solicitacao.status === 'aprovado') {
+      return (
+        <Badge variant="outline" className="bg-green-500/20 text-green-500 border-green-500/50">
+          Exclusão aprovada
         </Badge>
       );
     }
