@@ -31,7 +31,16 @@ export const useAcoesSociaisLista = () => {
 
     let query = supabase
       .from('acoes_sociais_registros')
-      .select('*')
+      .select(`
+        *,
+        solicitacao_exclusao:acoes_sociais_solicitacoes_exclusao(
+          id,
+          status,
+          observacao_admin,
+          created_at
+        )
+      `)
+      .neq('status_registro', 'excluido')
       .order('data_acao', { ascending: false });
 
     if (isRegional && profile.regional_id) {
