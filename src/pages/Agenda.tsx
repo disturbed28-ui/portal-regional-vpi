@@ -14,6 +14,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
+import { useScreenAccess } from "@/hooks/useScreenAccess";
 import { dataAtualBrasil } from "@/lib/timezone";
 
 const Agenda = () => {
@@ -21,10 +22,28 @@ const Agenda = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { profile, loading: profileLoading } = useProfile(user?.id);
+  const { hasAccess, loading: loadingAccess } = useScreenAccess('/agenda', user?.id);
   const { data: events, isLoading, error } = useCalendarEvents();
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  // Proteção de acesso via matriz de permissões
+  if (loadingAccess) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Verificando permissoes...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
+    navigate('/');
+    return null;
+  }
 
   // Redirecionar para perfil se usuário não tiver nome_colete
   useEffect(() => {
