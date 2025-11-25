@@ -172,15 +172,16 @@ const AdminLinksUteis = () => {
                 {links.map((link) => (
                   <TableRow key={link.id}>
                     <TableCell className="font-medium">{link.titulo}</TableCell>
-                    <TableCell>
+                    <TableCell className="max-w-[280px]">
                       <a 
                         href={link.url} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="text-blue-500 hover:underline flex items-center gap-1"
+                        className="text-blue-500 hover:underline flex items-center gap-1 group"
+                        title={link.url}
                       >
-                        {link.url}
-                        <ExternalLink className="h-3 w-3" />
+                        <span className="truncate">{link.url}</span>
+                        <ExternalLink className="h-3 w-3 flex-shrink-0 opacity-70 group-hover:opacity-100 transition-opacity" />
                       </a>
                     </TableCell>
                     <TableCell className="text-center">
