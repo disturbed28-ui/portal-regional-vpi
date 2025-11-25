@@ -256,18 +256,19 @@ export default function AcoesSociais() {
                   {/* BOTÕES APENAS PARA MODERADOR/ADMIN */}
                   {isModeradorOuAdmin && (
                     <>
-                      {/* BOTÃO ENVIAR AO FORM - Apenas se não enviado */}
-                      {registro.google_form_status === 'nao_enviado' && (
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={() => handleAbrirConfirmacaoEnvio(registro)}
-                          disabled={enviarMutation.isPending}
-                        >
-                          <Send className="h-4 w-4 mr-2" />
-                          Enviar ao Form
-                        </Button>
-                      )}
+            {/* BOTÃO ENVIAR AO FORM - Apenas se não enviado E sem solicitação pendente */}
+            {registro.google_form_status === 'nao_enviado' && 
+             getSolicitacaoStatus(registro)?.status !== 'pendente' && (
+              <Button
+                size="sm"
+                variant="default"
+                onClick={() => handleAbrirConfirmacaoEnvio(registro)}
+                disabled={enviarMutation.isPending}
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Enviar ao Form
+              </Button>
+            )}
 
                       {/* BOTÃO SOLICITAR EXCLUSÃO - Apenas se não houver solicitação pendente */}
                       {(!getSolicitacaoStatus(registro) || getSolicitacaoStatus(registro)?.status !== 'pendente') && (
