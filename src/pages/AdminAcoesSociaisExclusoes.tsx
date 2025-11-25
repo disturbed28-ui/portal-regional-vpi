@@ -341,8 +341,10 @@ const AdminAcoesSociaisExclusoes = () => {
                   {/* Justificativa do Usuário */}
                   <div className="space-y-2">
                     <Label>Justificativa do Usuário:</Label>
-                    <div className="bg-muted border rounded-lg p-3 text-sm">
-                      <p className="text-foreground">{solicitacaoSelecionada.justificativa}</p>
+                    <div className="bg-card border rounded-lg p-4">
+                      <p className="text-card-foreground whitespace-pre-wrap leading-relaxed">
+                        {solicitacaoSelecionada.justificativa || 'Nenhuma justificativa fornecida'}
+                      </p>
                     </div>
                   </div>
 
