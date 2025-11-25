@@ -1,4 +1,4 @@
-import { createTransport } from 'https://esm.sh/nodemailer@6.9.16';
+import { Resend } from 'https://esm.sh/resend@4.0.0';
 
 interface EmailConfig {
   to: string | string[];
@@ -19,48 +19,43 @@ interface AlertData {
   tipo_alerta: string;
 }
 
-let transporter: any | null = null;
+let resendClient: Resend | null = null;
 
-export async function initializeEmailService() {
-  if (transporter) return transporter;
-
-  console.log('[email-service] Inicializando transporter SMTP...');
-  
-  transporter = createTransport({
-    host: Deno.env.get('SMTP_HOST'),
-    port: parseInt(Deno.env.get('SMTP_PORT') || '465'),
-    secure: Deno.env.get('SMTP_SECURE') === 'ssl',
-    auth: {
-      user: Deno.env.get('SMTP_USER'),
-      pass: Deno.env.get('SMTP_PASS'),
-    },
-  });
-
-  console.log('[email-service] Verificando conexão SMTP...');
-  await transporter.verify();
-  console.log('[email-service] ✅ Conexão SMTP verificada com sucesso!');
-  
-  return transporter;
+function getResendClient(): Resend {
+  if (!resendClient) {
+    const apiKey = Deno.env.get('RESEND_API_KEY');
+    if (!apiKey) {
+      throw new Error('RESEND_API_KEY não configurada nas variáveis de ambiente');
+    }
+    console.log('[email-service] Inicializando cliente Resend...');
+    resendClient = new Resend(apiKey);
+  }
+  return resendClient;
 }
 
 export async function sendEmail(config: EmailConfig): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
-    const emailTransporter = await initializeEmailService();
+    const resend = getResendClient();
     
-    console.log('[email-service] Enviando email para:', config.to);
+    console.log('[email-service] 📧 Enviando email via Resend para:', config.to);
     console.log('[email-service] CC:', config.cc || 'Nenhum');
     
-    const info = await emailTransporter.sendMail({
-      from: `"Portal Regional VP1" <${Deno.env.get('SMTP_USER')}>`,
-      to: Array.isArray(config.to) ? config.to.join(', ') : config.to,
-      cc: config.cc ? (Array.isArray(config.cc) ? config.cc.join(', ') : config.cc) : undefined,
+    const { data, error } = await resend.emails.send({
+      from: 'Portal Regional VP1 <noreply@vp1.app.br>',
+      to: Array.isArray(config.to) ? config.to : [config.to],
+      cc: config.cc ? (Array.isArray(config.cc) ? config.cc : [config.cc]) : undefined,
       subject: config.subject,
       html: config.html,
       text: config.text || config.subject,
     });
 
-    console.log('[email-service] ✅ Email enviado com sucesso! Message ID:', info.messageId);
-    return { success: true, messageId: info.messageId };
+    if (error) {
+      console.error('[email-service] ❌ Erro do Resend:', error);
+      throw error;
+    }
+
+    console.log('[email-service] ✅ Email enviado com sucesso! ID:', data?.id);
+    return { success: true, messageId: data?.id };
     
   } catch (error) {
     console.error('[email-service] ❌ Erro ao enviar email:', error);
