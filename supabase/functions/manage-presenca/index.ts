@@ -34,6 +34,42 @@ Deno.serve(async (req) => {
       }
     );
 
+    // ============================================================================
+    // HELPER: Identificação de Eventos CMD
+    // ============================================================================
+
+    /**
+     * Normaliza string removendo acentos, cedilhas e convertendo para maiúsculas
+     */
+    function normalize(str?: string | null): string {
+      return (str || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toUpperCase()
+        .trim();
+    }
+
+    /**
+     * Determina se um evento é do tipo CMD (Comando)
+     * 
+     * Critérios:
+     * - Título contém " CMD" (ex: "Reunião - CMD V e XX")
+     * - tipo_evento contém "CMD"
+     * - Nome da divisão contém "CMD"
+     */
+    function isCmdEvent(evento: { 
+      titulo?: string | null; 
+      tipo_evento?: string | null 
+    } | null | undefined, divisaoNome?: string | null): boolean {
+      if (!evento) return false;
+      
+      const t = normalize(evento?.titulo);
+      const tipo = normalize(evento?.tipo_evento);
+      const div = normalize(divisaoNome);
+      
+      return t.includes(' CMD') || tipo.includes('CMD') || div.includes('CMD');
+    }
+
     console.log('[manage-presenca] user_id recebido:', user_id);
 
     // Verificar se o usuário tem role de admin ou moderator
@@ -80,10 +116,10 @@ Deno.serve(async (req) => {
         );
       }
       
-      // Buscar divisão do evento
+      // Buscar dados completos do evento (incluindo campos para detectar CMD)
       const { data: evento, error: eventoError } = await supabaseAdmin
         .from('eventos_agenda')
-        .select('divisao_id')
+        .select('divisao_id, titulo, tipo_evento')
         .eq('id', evento_agenda_id)
         .single();
       
@@ -95,13 +131,34 @@ Deno.serve(async (req) => {
         );
       }
       
-      // Validar se o evento é da mesma divisão
-      if (evento.divisao_id !== userProfile.divisao_id) {
-        console.log('[manage-presenca] Diretor tentando editar evento de outra divisão');
-        return new Response(
-          JSON.stringify({ error: 'Você só pode gerenciar presenças de eventos da sua divisão' }),
-          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+      // Buscar nome da divisão do evento (para detectar CMD)
+      let divisaoEventoNome: string | null = null;
+      if (evento.divisao_id) {
+        const { data: divisaoData } = await supabaseAdmin
+          .from('divisoes')
+          .select('nome')
+          .eq('id', evento.divisao_id)
+          .single();
+        divisaoEventoNome = divisaoData?.nome || null;
+      }
+
+      // Verificar se é evento CMD
+      const isCmd = isCmdEvent(evento, divisaoEventoNome);
+      console.log('[manage-presenca] Evento CMD detectado:', isCmd);
+
+      // Se for evento CMD, permitir acesso independentemente da divisão
+      if (isCmd) {
+        console.log('[manage-presenca] Evento CMD - permissão concedida para diretor_divisao');
+        // Pular validação de divisão para eventos CMD
+      } else {
+        // Validar se o evento é da mesma divisão (APENAS para eventos não-CMD)
+        if (evento.divisao_id !== userProfile.divisao_id) {
+          console.log('[manage-presenca] Diretor tentando editar evento de outra divisão');
+          return new Response(
+            JSON.stringify({ error: 'Você só pode gerenciar presenças de eventos da sua divisão' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
       }
     }
 
@@ -118,6 +175,86 @@ Deno.serve(async (req) => {
     // Executar ação
     if (action === 'initialize') {
       console.log('[manage-presenca] Inicializando lista de presença...');
+
+      // ========================================================================
+      // REGRA: Carga automática só pode ser executada por:
+      // - moderator (qualquer divisão)
+      // - diretor_divisao (apenas da MESMA divisão do evento, exceto CMD)
+      // ========================================================================
+
+      // Buscar dados do evento para verificar se é CMD
+      const { data: eventoInit, error: eventoInitError } = await supabaseAdmin
+        .from('eventos_agenda')
+        .select('divisao_id, titulo, tipo_evento')
+        .eq('id', evento_agenda_id)
+        .single();
+
+      if (eventoInitError || !eventoInit) {
+        console.error('[manage-presenca] Erro ao buscar evento:', eventoInitError);
+        return new Response(
+          JSON.stringify({ error: 'Evento não encontrado' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Buscar nome da divisão do evento
+      let divisaoEventoNomeInit: string | null = null;
+      if (eventoInit.divisao_id) {
+        const { data: divisaoData } = await supabaseAdmin
+          .from('divisoes')
+          .select('nome')
+          .eq('id', eventoInit.divisao_id)
+          .single();
+        divisaoEventoNomeInit = divisaoData?.nome || null;
+      }
+
+      // Verificar se é evento CMD
+      const isCmdInit = isCmdEvent(eventoInit, divisaoEventoNomeInit);
+      console.log('[manage-presenca] Initialize - Evento CMD:', isCmdInit);
+
+      // Validar permissão para carga automática
+      if (!roles.includes('moderator')) {
+        // Se não é moderator, verificar se é diretor_divisao válido
+        
+        if (!roles.includes('diretor_divisao')) {
+          console.log('[manage-presenca] Usuário sem permissão para carga automática');
+          return new Response(
+            JSON.stringify({ error: 'Apenas moderadores ou diretores de divisão podem inicializar listas de presença' }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        // Se é diretor_divisao e NÃO é evento CMD, validar se é da mesma divisão
+        if (!isCmdInit) {
+          // Buscar divisão do usuário
+          const { data: userProfileInit, error: profileInitError } = await supabaseAdmin
+            .from('profiles')
+            .select('divisao_id')
+            .eq('id', user_id)
+            .single();
+          
+          if (profileInitError || !userProfileInit?.divisao_id) {
+            console.log('[manage-presenca] Diretor sem divisão atribuída');
+            return new Response(
+              JSON.stringify({ error: 'Você não possui divisão atribuída' }),
+              { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          if (eventoInit.divisao_id !== userProfileInit.divisao_id) {
+            console.log('[manage-presenca] Diretor tentando inicializar evento de outra divisão');
+            return new Response(
+              JSON.stringify({ error: 'Diretores de divisão só podem inicializar listas de eventos da própria divisão' }),
+              { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        }
+        // Se for CMD, diretor_divisao pode inicializar independentemente da divisão
+      }
+
+      // ========================================================================
+      // FIM DA VALIDAÇÃO - Continua com a lógica existente de initialize
+      // ========================================================================
       
       // Buscar nome da divisão
       const { data: divisao, error: divisaoError } = await supabaseAdmin
@@ -225,10 +362,10 @@ Deno.serve(async (req) => {
           .eq('id', integrante_id)
           .single();
         
-        // Buscar dados do evento para verificar a divisão do evento
+        // Buscar dados do evento (incluindo campos para detectar CMD)
         const { data: evento } = await supabaseAdmin
           .from('eventos_agenda')
-          .select('divisao_id')
+          .select('divisao_id, titulo, tipo_evento')
           .eq('id', evento_agenda_id)
           .single();
         
@@ -242,12 +379,20 @@ Deno.serve(async (req) => {
             .single();
           divisaoEvento = divisaoData?.nome || null;
         }
+
+        // Verificar se é evento CMD
+        const isCmdAdd = isCmdEvent(evento, divisaoEvento);
+        console.log('[manage-presenca] Add - Evento CMD:', isCmdAdd);
         
-        // Determinar o status: presente se for da mesma divisão, visitante se for de outra
+        // Determinar o status
         let novoStatus = 'visitante'; // padrão
-        
-        if (integrante?.divisao_texto && divisaoEvento) {
-          // Normalizar textos para comparação
+
+        if (isCmdAdd) {
+          // ✅ EVENTOS CMD: sempre 'presente', nunca 'visitante'
+          novoStatus = 'presente';
+          console.log('[manage-presenca] Evento CMD - status forçado para "presente"');
+        } else if (integrante?.divisao_texto && divisaoEvento) {
+          // Eventos normais: verificar divisão
           const divisaoIntegranteNorm = integrante.divisao_texto
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '')
@@ -260,7 +405,6 @@ Deno.serve(async (req) => {
             .toLowerCase()
             .trim();
           
-          // Verificar se a divisão do integrante corresponde à divisão do evento
           if (divisaoIntegranteNorm === divisaoEventoNorm) {
             novoStatus = 'presente';
           }
@@ -296,14 +440,41 @@ Deno.serve(async (req) => {
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       } else {
-        // Inserir novo registro com status 'visitante'
+        // Não existe registro - precisa criar novo
+        
+        // Buscar dados do evento para detectar CMD
+        const { data: eventoNovo } = await supabaseAdmin
+          .from('eventos_agenda')
+          .select('divisao_id, titulo, tipo_evento')
+          .eq('id', evento_agenda_id)
+          .single();
+        
+        // Buscar nome da divisão do evento
+        let divisaoEventoNomeNovo: string | null = null;
+        if (eventoNovo?.divisao_id) {
+          const { data: divisaoData } = await supabaseAdmin
+            .from('divisoes')
+            .select('nome')
+            .eq('id', eventoNovo.divisao_id)
+            .single();
+          divisaoEventoNomeNovo = divisaoData?.nome || null;
+        }
+        
+        // Verificar se é evento CMD
+        const isCmdNovo = isCmdEvent(eventoNovo, divisaoEventoNomeNovo);
+        
+        // Definir status inicial
+        const statusInicial = isCmdNovo ? 'presente' : 'visitante';
+        console.log('[manage-presenca] Novo registro - Evento CMD:', isCmdNovo, '- Status:', statusInicial);
+        
+        // Inserir novo registro
         const { data, error } = await supabaseAdmin
           .from('presencas')
           .insert({
             evento_agenda_id,
             integrante_id,
             profile_id: profile_id || null,
-            status: 'visitante',
+            status: statusInicial,
             confirmado_por: confirmado_por_nome,
           })
           .select()
@@ -312,12 +483,13 @@ Deno.serve(async (req) => {
         if (error) {
           console.error('[manage-presenca] Erro ao inserir:', error);
           return new Response(
-            JSON.stringify({ error: 'Erro ao adicionar visitante' }),
+            JSON.stringify({ error: 'Erro ao adicionar presença' }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
         
-        console.log('[manage-presenca] Visitante adicionado');
+        const tipoPresenca = isCmdNovo ? 'presente em evento CMD' : 'visitante';
+        console.log(`[manage-presenca] Presença adicionada (${tipoPresenca})`);
         return new Response(
           JSON.stringify({ success: true, data }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
