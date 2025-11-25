@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { removeAccents } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { useScreenAccess } from "@/hooks/useScreenAccess";
 
 interface ListaPresencaProps {
   event: CalendarEvent | null;
@@ -52,6 +53,23 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
   const { evento, presencas, loading, criarEvento, registrarPresenca, removerPresenca, refetch } = useEventoPresenca(event?.id || null);
   const { toast } = useToast();
   const { user } = useAuth();
+  
+  // Validar permissão para abrir Lista de Presença
+  const { hasAccess: hasScreenAccessLista, loading: loadingScreenAccessLista } = 
+    useScreenAccess('/lista-presenca', user?.id);
+
+  // Fechar modal automaticamente se não tiver permissão
+  useEffect(() => {
+    if (open && !loadingScreenAccessLista && !hasScreenAccessLista) {
+      console.log('[ListaPresenca] Usuário sem permissão - fechando modal');
+      onOpenChange(false);
+      toast({
+        title: "Acesso Negado",
+        description: "Você não tem permissão para acessar a lista de presença",
+        variant: "destructive",
+      });
+    }
+  }, [open, loadingScreenAccessLista, hasScreenAccessLista, onOpenChange, toast]);
 
   useEffect(() => {
     if (open && event) {
@@ -280,6 +298,15 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     setNomeColeteSearch("");
     setSearchResults([]);
   };
+
+  // Não renderizar durante carregamento ou sem permissão
+  if (loadingScreenAccessLista) {
+    return null;
+  }
+
+  if (!hasScreenAccessLista) {
+    return null;
+  }
 
   if (!event) return null;
 
