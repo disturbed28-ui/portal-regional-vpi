@@ -28,18 +28,6 @@ const Agenda = () => {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // Proteção de acesso via matriz de permissões
-  if (loadingAccess) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Verificando permissoes...</p>
-        </div>
-      </div>
-    );
-  }
-
   // Redirecionar para home se não tiver acesso
   useEffect(() => {
     if (!loadingAccess && !hasAccess) {
@@ -57,6 +45,18 @@ const Agenda = () => {
       navigate("/perfil");
     }
   }, [user, profileLoading, profile, navigate, toast]);
+
+  // Proteção de acesso via matriz de permissões
+  if (loadingAccess) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Verificando permissoes...</p>
+        </div>
+      </div>
+    );
+  }
 
   const currentMonth = format(selectedMonth, "MMMM 'de' yyyy", { locale: ptBR });
 
