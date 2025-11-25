@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ChevronDown } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -75,6 +76,7 @@ const Admin = () => {
   const [detailProfile, setDetailProfile] = useState<Profile | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<ProfileStatus>('Analise');
   const [selectedRole, setSelectedRole] = useState<'all' | 'admin' | 'moderator' | 'user'>('all');
+  const [activeDivisionKey, setActiveDivisionKey] = useState<string | null>(null);
 
   // Verificar se e admin
   useEffect(() => {
@@ -325,6 +327,63 @@ const Admin = () => {
     return filtered;
   };
 
+  /**
+   * Agrupa usuários por divisão
+   */
+  const groupByDivision = (profiles: Profile[]): Record<string, Profile[]> => {
+    const grouped: Record<string, Profile[]> = {};
+    
+    profiles.forEach(profile => {
+      const divisionName = profile.divisoes?.nome || 'Sem Divisão';
+      
+      if (!grouped[divisionName]) {
+        grouped[divisionName] = [];
+      }
+      
+      grouped[divisionName].push(profile);
+    });
+    
+    return grouped;
+  };
+
+  /**
+   * Componente de cabeçalho de divisão (clicável)
+   */
+  const DivisionHeader = ({ 
+    divisionName, 
+    count,
+    isActive,
+    onClick 
+  }: { 
+    divisionName: string; 
+    count: number;
+    isActive: boolean;
+    onClick: () => void;
+  }) => (
+    <div 
+      onClick={onClick}
+      className={`
+        flex items-center justify-between p-4 rounded-lg border cursor-pointer
+        transition-all hover:bg-accent hover:shadow-md
+        ${isActive ? 'bg-accent border-primary' : 'bg-card border-border'}
+      `}
+    >
+      <div className="flex items-center gap-3">
+        <h3 className="font-semibold text-lg">{divisionName}</h3>
+        <Badge variant="secondary" className="ml-2">
+          {count} {count === 1 ? 'usuário' : 'usuários'}
+        </Badge>
+      </div>
+      
+      <div className={`
+        transition-transform duration-200
+        ${isActive ? 'rotate-180' : 'rotate-0'}
+      `}>
+        <ChevronDown className="h-5 w-5" />
+      </div>
+    </div>
+  );
+
   const ProfileCard = ({ profile }: { profile: Profile }) => {
     const statusBadge = getStatusBadge(profile.profile_status);
     
@@ -531,17 +590,56 @@ const Admin = () => {
             </div>
           </div>
           
-          {/* Lista Filtrada */}
-          <div className="space-y-3">
-            {filterByStatusAndRole(selectedStatus).map(profile => (
-              <ProfileCard key={profile.id} profile={profile} />
-            ))}
-            
-            {filterByStatusAndRole(selectedStatus).length === 0 && (
-              <p className="text-center text-muted-foreground py-8">
-                Nenhum perfil encontrado com os filtros selecionados
-              </p>
-            )}
+          {/* Lista Agrupada por Divisão */}
+          <div className="space-y-4">
+            {(() => {
+              const filteredProfiles = filterByStatusAndRole(selectedStatus);
+              
+              // Se não houver usuários filtrados
+              if (filteredProfiles.length === 0) {
+                return (
+                  <p className="text-center text-muted-foreground py-8">
+                    Nenhum perfil encontrado com os filtros selecionados
+                  </p>
+                );
+              }
+              
+              // Agrupar por divisão
+              const groupedProfiles = groupByDivision(filteredProfiles);
+              
+              // Ordenar divisões alfabeticamente
+              const sortedDivisions = Object.keys(groupedProfiles).sort();
+              
+              // Renderizar cada divisão
+              return sortedDivisions.map(divisionName => {
+                const divisionProfiles = groupedProfiles[divisionName];
+                const isActive = activeDivisionKey === divisionName;
+                
+                return (
+                  <div key={divisionName} className="border rounded-lg overflow-hidden">
+                    {/* Cabeçalho da Divisão */}
+                    <DivisionHeader
+                      divisionName={divisionName}
+                      count={divisionProfiles.length}
+                      isActive={isActive}
+                      onClick={() => {
+                        // Toggle: se já está ativa, fecha; senão, abre
+                        setActiveDivisionKey(isActive ? null : divisionName);
+                      }}
+                    />
+                    
+                    {/* Conteúdo da Divisão (cards de usuários) */}
+                    {isActive && (
+                      <div className="p-4 space-y-3 bg-muted/30">
+                        {divisionProfiles.map(profile => (
+                          <ProfileCard key={profile.id} profile={profile} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              });
+            })()}
           </div>
         </div>
 
