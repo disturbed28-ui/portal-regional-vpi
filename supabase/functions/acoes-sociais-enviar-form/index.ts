@@ -64,18 +64,53 @@ Deno.serve(async (req) => {
       throw new Error('Este registro já foi enviado ao formulário');
     }
 
-    // Buscar email da regional
-    const { data: config, error: configError } = await supabase
+    // Buscar todas as configurações ativas
+    const { data: configs, error: configError } = await supabase
       .from('acoes_sociais_config_regional')
-      .select('email_formulario')
-      .eq('regional_texto', registro.regional_relatorio_texto)
-      .eq('ativo', true)
-      .single();
+      .select('email_formulario, regional_texto')
+      .eq('ativo', true);
 
-    if (configError || !config) {
-      console.error('[enviar-form] Erro ao buscar config:', configError);
-      throw new Error('Configuração de email não encontrada para esta regional');
+    if (configError) {
+      console.error('[enviar-form] Erro ao buscar configs:', configError);
+      throw new Error('Erro ao buscar configurações de email');
     }
+
+    // Função para normalizar texto de regional
+    const normalizeRegional = (text: string): string => {
+      return text
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/\bi\b/g, '1')
+        .replace(/\bii\b/g, '2')
+        .replace(/\biii\b/g, '3')
+        .replace(/\biv\b/g, '4')
+        .replace(/\bv\b/g, '5');
+    };
+
+    // Encontrar config com match normalizado
+    const registroRegionalNorm = normalizeRegional(registro.regional_relatorio_texto);
+    const config = configs?.find(c => 
+      normalizeRegional(c.regional_texto) === registroRegionalNorm
+    );
+
+    if (!config) {
+      console.error('[enviar-form] Nenhuma config encontrada para:', {
+        original: registro.regional_relatorio_texto,
+        normalizado: registroRegionalNorm,
+        configsDisponiveis: configs?.map(c => ({
+          original: c.regional_texto,
+          normalizado: normalizeRegional(c.regional_texto)
+        }))
+      });
+      throw new Error(`Configuração de email não encontrada para a regional: ${registro.regional_relatorio_texto}`);
+    }
+
+    console.log('[enviar-form] ✅ Config encontrada:', {
+      registroRegional: registro.regional_relatorio_texto,
+      configRegional: config.regional_texto,
+      email: config.email_formulario
+    });
 
     // Extrair mês e dia da data_acao
     const dataAcao = new Date(registro.data_acao);
