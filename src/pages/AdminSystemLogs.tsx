@@ -7,14 +7,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useSystemLogs } from "@/hooks/useSystemLogs";
+import { useSystemSettings } from "@/hooks/useSystemSettings";
 import { SystemLogDetailDialog } from "@/components/admin/SystemLogDetailDialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { FileText, Filter, RefreshCw, X, ChevronRight, ArrowLeft } from "lucide-react";
+import { FileText, Filter, RefreshCw, X, ChevronRight, ArrowLeft, Bell } from "lucide-react";
 import type { SystemLog } from "@/hooks/useSystemLogs";
 
 const AdminSystemLogs = () => {
@@ -45,6 +47,9 @@ const AdminSystemLogs = () => {
 
   const [selectedLog, setSelectedLog] = useState<SystemLog | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+
+  const { getSettingValue, updateSetting, isLoading: settingsLoading } = useSystemSettings();
+  const notificacoesAtivas = getSettingValue('notificacoes_email_admin');
 
   useEffect(() => {
     if (authLoading || roleLoading) return;
@@ -81,6 +86,10 @@ const AdminSystemLogs = () => {
   const handleRowClick = (log: SystemLog) => {
     setSelectedLog(log);
     setDetailDialogOpen(true);
+  };
+
+  const handleToggleNotificacoes = (checked: boolean) => {
+    updateSetting.mutate({ chave: 'notificacoes_email_admin', valor: checked });
   };
 
   const tipoColors: Record<string, string> = {
@@ -126,6 +135,21 @@ const AdminSystemLogs = () => {
             </Button>
           </div>
         </div>
+
+        {/* Configurações de Notificações */}
+        <Card className="bg-muted/30">
+          <CardContent className="py-3 md:py-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bell className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs md:text-sm font-medium">Notificações por email para admins</span>
+            </div>
+            <Switch 
+              checked={notificacoesAtivas}
+              onCheckedChange={handleToggleNotificacoes}
+              disabled={settingsLoading || updateSetting.isPending}
+            />
+          </CardContent>
+        </Card>
 
         {/* Filtros */}
         <Card>

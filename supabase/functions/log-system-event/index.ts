@@ -163,6 +163,26 @@ async function notifyAdminsIfNeeded(
   payload: LogEvent
 ): Promise<void> {
   try {
+    // 0️⃣ VERIFICAR SE NOTIFICAÇÕES ESTÃO ATIVAS
+    const { data: emailSetting, error: settingError } = await supabaseAdmin
+      .from('system_settings')
+      .select('valor')
+      .eq('chave', 'notificacoes_email_admin')
+      .single();
+
+    if (settingError) {
+      console.error('[log-system-event] ⚠️ Erro ao buscar configuração de notificações:', settingError);
+    }
+
+    const notificacoesAtivas = emailSetting?.valor === true;
+
+    if (!notificacoesAtivas) {
+      console.log('[log-system-event] 🔕 Notificações por email desativadas nas configurações');
+      return;
+    }
+
+    console.log('[log-system-event] ✅ Notificações por email ativas');
+
     // 1️⃣ VERIFICAR RATE LIMIT (2 horas)
     const rateLimitDate = new Date();
     rateLimitDate.setHours(rateLimitDate.getHours() - RATE_LIMIT_HOURS);
