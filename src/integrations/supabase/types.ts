@@ -99,6 +99,7 @@ export type Database = {
           responsavel_divisao_texto: string
           responsavel_nome_colete: string
           responsavel_regional_texto: string
+          status_registro: string | null
           tipo_acao_id: string | null
           tipo_acao_nome_snapshot: string
           updated_at: string | null
@@ -124,6 +125,7 @@ export type Database = {
           responsavel_divisao_texto: string
           responsavel_nome_colete: string
           responsavel_regional_texto: string
+          status_registro?: string | null
           tipo_acao_id?: string | null
           tipo_acao_nome_snapshot: string
           updated_at?: string | null
@@ -149,6 +151,7 @@ export type Database = {
           responsavel_divisao_texto?: string
           responsavel_nome_colete?: string
           responsavel_regional_texto?: string
+          status_registro?: string | null
           tipo_acao_id?: string | null
           tipo_acao_nome_snapshot?: string
           updated_at?: string | null
@@ -210,6 +213,7 @@ export type Database = {
           created_at: string | null
           id: string
           justificativa: string
+          observacao_admin: string | null
           processado_em: string | null
           processado_por: string | null
           profile_id: string
@@ -221,6 +225,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           justificativa: string
+          observacao_admin?: string | null
           processado_em?: string | null
           processado_por?: string | null
           profile_id: string
@@ -232,6 +237,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           justificativa?: string
+          observacao_admin?: string | null
           processado_em?: string | null
           processado_por?: string | null
           profile_id?: string
