@@ -28,6 +28,7 @@ import Formularios from "./pages/Formularios";
 import FormularioRelatorioSemanal from "./pages/FormularioRelatorioSemanal";
 import FormularioAcoesSociais from "./pages/FormularioAcoesSociais";
 import AcoesSociais from "./pages/AcoesSociais";
+import AdminAcoesSociaisExclusoes from "./pages/AdminAcoesSociaisExclusoes";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,7 @@ const App = () => (
           <Route path="/admin/alertas" element={<AdminAlertas />} />
           <Route path="/admin/links-uteis" element={<AdminLinksUteis />} />
           <Route path="/admin/configuracao-deltas" element={<AdminConfiguracaoDeltas />} />
+          <Route path="/admin/acoes-sociais/solicitacoes-exclusao" element={<AdminAcoesSociaisExclusoes />} />
           <Route path="/admin/system-logs" element={<AdminSystemLogs />} />
           <Route path="/agenda" element={<Agenda />} />
           <Route path="/relatorios" element={<Relatorios />} />
