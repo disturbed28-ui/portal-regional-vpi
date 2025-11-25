@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Heart, Calendar, Users, MapPin, FileText, Send, Trash2, Eye, Plus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useScreenAccess } from "@/hooks/useScreenAccess";
+import { useUserRole } from "@/hooks/useUserRole";
 import { useAcoesSociaisLista } from "@/hooks/useAcoesSociaisLista";
 import { useEnviarAcaoSocialParaFormClube } from "@/hooks/useEnviarAcaoSocialParaFormClube";
 import { useSolicitarExclusaoAcaoSocial } from "@/hooks/useSolicitarExclusaoAcaoSocial";
@@ -18,6 +19,8 @@ export default function AcoesSociais() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { hasAccess, loading: loadingAccess } = useScreenAccess('/acoes-sociais', user?.id);
+  const { roles, loading: loadingRoles } = useUserRole(user?.id);
+  const isModeradorOuAdmin = roles.includes('moderator') || roles.includes('admin');
   const { registros, loading, refetch } = useAcoesSociaisLista();
   const enviarMutation = useEnviarAcaoSocialParaFormClube();
   const solicitarExclusaoMutation = useSolicitarExclusaoAcaoSocial();
@@ -26,9 +29,11 @@ export default function AcoesSociais() {
   const [mostrarDetalhes, setMostrarDetalhes] = useState(false);
   const [mostrarExclusao, setMostrarExclusao] = useState(false);
   const [justificativaExclusao, setJustificativaExclusao] = useState("");
+  const [mostrarConfirmacaoEnvio, setMostrarConfirmacaoEnvio] = useState(false);
+  const [registroParaEnvio, setRegistroParaEnvio] = useState<any>(null);
 
   // Protecao de acesso
-  if (loadingAccess) {
+  if (loadingAccess || loadingRoles) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -49,9 +54,18 @@ export default function AcoesSociais() {
     setMostrarDetalhes(true);
   };
 
-  const handleEnviarFormulario = async (registro: any) => {
-    await enviarMutation.mutateAsync(registro.id);
-    // opcional: refetch();
+  const handleAbrirConfirmacaoEnvio = (registro: any) => {
+    setRegistroParaEnvio(registro);
+    setMostrarConfirmacaoEnvio(true);
+  };
+
+  const handleConfirmarEnvio = async () => {
+    if (!registroParaEnvio) return;
+    
+    await enviarMutation.mutateAsync(registroParaEnvio.id);
+    setMostrarConfirmacaoEnvio(false);
+    setRegistroParaEnvio(null);
+    refetch();
   };
 
   const handleSolicitarExclusao = (registro: any) => {
@@ -73,7 +87,36 @@ export default function AcoesSociais() {
     setMostrarExclusao(false);
     setRegistroSelecionado(null);
     setJustificativaExclusao("");
-    // opcional: refetch();
+    refetch();
+  };
+
+  const getSolicitacaoStatus = (registro: any) => {
+    const solicitacao = registro.solicitacao_exclusao?.[0];
+    return solicitacao || null;
+  };
+
+  const getSolicitacaoBadge = (registro: any) => {
+    const solicitacao = getSolicitacaoStatus(registro);
+    
+    if (!solicitacao) return null;
+    
+    if (solicitacao.status === 'pendente') {
+      return (
+        <Badge variant="outline" className="bg-orange-500/20 text-orange-500 border-orange-500/50">
+          Em analise
+        </Badge>
+      );
+    }
+    
+    if (solicitacao.status === 'recusado') {
+      return (
+        <Badge variant="outline" className="bg-red-500/20 text-red-500 border-red-500/50">
+          Recusada
+        </Badge>
+      );
+    }
+    
+    return null;
   };
 
   const getStatusBadge = (status: string) => {
@@ -166,6 +209,7 @@ export default function AcoesSociais() {
                   <div className="flex gap-2 flex-wrap justify-end">
                     {getStatusBadge(registro.google_form_status)}
                     {getEscopoBadge(registro.escopo_acao)}
+                    {getSolicitacaoBadge(registro)}
                   </div>
                 </div>
               </CardHeader>
@@ -199,6 +243,7 @@ export default function AcoesSociais() {
                 <Separator />
 
                 <div className="grid grid-cols-2 gap-2">
+                  {/* BOTÃO DETALHES - SEMPRE VISÍVEL */}
                   <Button
                     size="sm"
                     variant="outline"
@@ -207,28 +252,37 @@ export default function AcoesSociais() {
                     <Eye className="h-4 w-4 mr-2" />
                     Detalhes
                   </Button>
-                  {registro.google_form_status === 'nao_enviado' && (
-                    <Button
-                      size="sm"
-                      variant="default"
-                      onClick={() => handleEnviarFormulario(registro)}
-                      disabled={enviarMutation.isPending}
-                    >
-                      <Send className="h-4 w-4 mr-2" />
-                      Enviar ao Form
-                    </Button>
-                  )}
-                  {registro.profile_id === user?.id && (
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleSolicitarExclusao(registro)}
-                      disabled={solicitarExclusaoMutation.isPending}
-                      className="col-span-2"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Excluir
-                    </Button>
+
+                  {/* BOTÕES APENAS PARA MODERADOR/ADMIN */}
+                  {isModeradorOuAdmin && (
+                    <>
+                      {/* BOTÃO ENVIAR AO FORM - Apenas se não enviado */}
+                      {registro.google_form_status === 'nao_enviado' && (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          onClick={() => handleAbrirConfirmacaoEnvio(registro)}
+                          disabled={enviarMutation.isPending}
+                        >
+                          <Send className="h-4 w-4 mr-2" />
+                          Enviar ao Form
+                        </Button>
+                      )}
+
+                      {/* BOTÃO SOLICITAR EXCLUSÃO - Apenas se não houver solicitação pendente */}
+                      {(!getSolicitacaoStatus(registro) || getSolicitacaoStatus(registro)?.status !== 'pendente') && (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleSolicitarExclusao(registro)}
+                          disabled={solicitarExclusaoMutation.isPending || getSolicitacaoStatus(registro)?.status === 'pendente'}
+                          className="col-span-2"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Solicitar Exclusao
+                        </Button>
+                      )}
+                    </>
                   )}
                 </div>
               </CardContent>
@@ -324,6 +378,22 @@ export default function AcoesSociais() {
                     </>
                   )}
 
+                  {/* MOSTRAR MOTIVO DA RECUSA SE EXISTIR */}
+                  {getSolicitacaoStatus(registroSelecionado)?.status === 'recusado' && (
+                    <>
+                      <Separator />
+                      <div className="bg-red-500/10 p-4 rounded-lg border border-red-500/30">
+                        <p className="text-red-500 font-semibold mb-2">❌ Solicitacao de Exclusao Recusada</p>
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">Motivo da recusa:</p>
+                          <p className="text-sm text-foreground">
+                            {getSolicitacaoStatus(registroSelecionado)?.observacao_admin || 'Sem observacao'}
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
                   <Separator />
 
                   <div className="text-xs text-muted-foreground">
@@ -370,6 +440,34 @@ export default function AcoesSociais() {
                 disabled={!justificativaExclusao.trim() || solicitarExclusaoMutation.isPending}
               >
                 {solicitarExclusaoMutation.isPending ? 'Solicitando...' : 'Solicitar Exclusao'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal de Confirmacao de Envio ao Formulario */}
+        <Dialog open={mostrarConfirmacaoEnvio} onOpenChange={setMostrarConfirmacaoEnvio}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirmar envio ao formulario?</DialogTitle>
+              <DialogDescription>
+                Voce confirma o envio desta acao para o formulario oficial do clube? Apos o envio, ela sera registrada no banco de dados oficial.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setMostrarConfirmacaoEnvio(false)}
+                disabled={enviarMutation.isPending}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="default"
+                onClick={handleConfirmarEnvio}
+                disabled={enviarMutation.isPending}
+              >
+                {enviarMutation.isPending ? 'Enviando...' : 'Confirmar envio'}
               </Button>
             </DialogFooter>
           </DialogContent>
