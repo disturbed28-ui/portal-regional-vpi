@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Heart, Calendar, Users, MapPin, FileText, Send, Trash2, Eye, Plus } from "lucide-react";
+import { ArrowLeft, Heart, Calendar, Users, MapPin, Send, Trash2, Eye, Plus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useScreenAccess } from "@/hooks/useScreenAccess";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -238,14 +238,6 @@ export default function AcoesSociais() {
                       <span className="text-muted-foreground">• {registro.responsavel_cargo_nome}</span>
                     )}
                   </div>
-                  {registro.descricao_acao && (
-                    <div className="flex items-start gap-2">
-                      <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
-                      <span className="text-muted-foreground line-clamp-2">
-                        {registro.descricao_acao}
-                      </span>
-                    </div>
-                  )}
                 </div>
 
                 <Separator />
