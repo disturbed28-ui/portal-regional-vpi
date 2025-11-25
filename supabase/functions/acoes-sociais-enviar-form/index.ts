@@ -117,20 +117,33 @@ Deno.serve(async (req) => {
     const mes = dataAcao.getMonth() + 1; // Janeiro = 1
     const dia = dataAcao.getDate();
 
-    // Montar payload para Google Forms
+    // Mapear escopo_acao para texto exato do formulário Google
+    const mapearEscopo = (escopo: string): string => {
+      const mapeamento: Record<string, string> = {
+        'interna': 'Interna ( ajuda ao integrante)',
+        'externa': 'Externa',
+      };
+      return mapeamento[escopo?.toLowerCase()] || escopo || '';
+    };
+
+    const escopoFormulario = mapearEscopo(registro.escopo_acao);
+
+    // Montar payload para Google Forms (com mapeamento correto)
     const formData = new URLSearchParams({
       'emailAddress': config.email_formulario,
       'entry.1698025551_month': mes.toString(),
       'entry.1698025551_day': dia.toString(),
-      'entry.1818867636': registro.tipo_acao_nome_snapshot || '',
-      'entry.354405432': registro.escopo_acao || '',
-      'entry.577779066': registro.divisao_relatorio_texto || '',
-      'entry.122607591': registro.responsavel_nome_colete || '',
-      'entry.1873990495': registro.responsavel_cargo_nome || '',
-      'entry.2045537139': registro.descricao_acao || '',
+      'entry.1818867636': registro.regional_relatorio_texto || '',    // Regional
+      'entry.354405432': registro.divisao_relatorio_texto || '',      // Divisão
+      'entry.577779066': registro.responsavel_nome_colete || '',      // Responsável
+      'entry.122607591': registro.descricao_acao || '',               // Descrição
+      'entry.1873990495': escopoFormulario,                           // Escopo (mapeado)
+      'entry.2045537139': registro.tipo_acao_nome_snapshot || '',     // Tipo de Ação
     });
 
-    console.log('[enviar-form] Enviando para Google Forms...');
+    console.log('[enviar-form] Enviando para Google Forms...', {
+      dadosEnviados: Object.fromEntries(formData)
+    });
 
     // Enviar para Google Forms
     const formResponse = await fetch(
@@ -144,9 +157,46 @@ Deno.serve(async (req) => {
       }
     );
 
-    console.log('[enviar-form] Resposta Google Forms:', formResponse.status);
+    // Capturar detalhes da resposta para debug
+    const responseBody = await formResponse.text();
 
-    // Google Forms retorna 200 mesmo em caso de erro, então consideramos sucesso se status < 400
+    console.log('[enviar-form] Resposta Google Forms:', {
+      status: formResponse.status,
+      statusText: formResponse.statusText,
+      bodyPreview: responseBody.substring(0, 500)
+    });
+
+    // Se erro, logar detalhes e retornar
+    if (formResponse.status >= 400) {
+      console.error('[enviar-form] ❌ Erro do Google Forms:', {
+        status: formResponse.status,
+        statusText: formResponse.statusText,
+        body: responseBody
+      });
+
+      // Atualizar status como erro
+      await supabase
+        .from('acoes_sociais_registros')
+        .update({ google_form_status: 'erro' })
+        .eq('id', registro_id);
+
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Erro ao enviar para o formulário do Google',
+          details: {
+            status: formResponse.status,
+            statusText: formResponse.statusText
+          }
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      );
+    }
+
+    // Google Forms retorna 200 em caso de sucesso
     const sucesso = formResponse.status < 400;
 
     // Atualizar status do registro
@@ -162,10 +212,6 @@ Deno.serve(async (req) => {
     if (updateError) {
       console.error('[enviar-form] Erro ao atualizar status:', updateError);
       throw new Error('Erro ao atualizar status do registro');
-    }
-
-    if (!sucesso) {
-      throw new Error('Erro ao enviar para o formulário do Google');
     }
 
     console.log('[enviar-form] ✅ Registro enviado com sucesso');
