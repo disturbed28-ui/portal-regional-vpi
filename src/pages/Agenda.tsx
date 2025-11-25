@@ -40,10 +40,12 @@ const Agenda = () => {
     );
   }
 
-  if (!hasAccess) {
-    navigate('/');
-    return null;
-  }
+  // Redirecionar para home se não tiver acesso
+  useEffect(() => {
+    if (!loadingAccess && !hasAccess) {
+      navigate('/');
+    }
+  }, [loadingAccess, hasAccess, navigate]);
 
   // Redirecionar para perfil se usuário não tiver nome_colete
   useEffect(() => {
