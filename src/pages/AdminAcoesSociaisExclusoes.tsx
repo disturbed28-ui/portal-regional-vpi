@@ -106,17 +106,17 @@ const AdminAcoesSociaisExclusoes = () => {
   const getStatusBadge = (status: string) => {
     const variants = {
       pendente: {
-        label: 'Pendente',
+        label: 'Exclusão em análise',
         className: 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50',
         icon: <Clock className="h-3 w-3 mr-1" />,
       },
       aprovado: {
-        label: 'Aprovado',
+        label: 'Exclusão aprovada',
         className: 'bg-green-500/20 text-green-500 border-green-500/50',
         icon: <CheckCircle className="h-3 w-3 mr-1" />,
       },
       recusado: {
-        label: 'Recusado',
+        label: 'Exclusão recusada',
         className: 'bg-red-500/20 text-red-500 border-red-500/50',
         icon: <XCircle className="h-3 w-3 mr-1" />,
       },
