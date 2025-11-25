@@ -25,8 +25,8 @@ const AdminSystemLogs = () => {
 
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
-  const [tipoSelecionado, setTipoSelecionado] = useState("");
-  const [origemSelecionada, setOrigemSelecionada] = useState("");
+  const [tipoSelecionado, setTipoSelecionado] = useState("all");
+  const [origemSelecionada, setOrigemSelecionada] = useState("all");
   const [userIdInput, setUserIdInput] = useState("");
 
   const {
@@ -63,8 +63,8 @@ const AdminSystemLogs = () => {
     applyFilters({
       dataInicio: dataInicio || undefined,
       dataFim: dataFim || undefined,
-      tipo: tipoSelecionado || undefined,
-      origem: origemSelecionada || undefined,
+      tipo: tipoSelecionado !== "all" ? tipoSelecionado : undefined,
+      origem: origemSelecionada !== "all" ? origemSelecionada : undefined,
       userId: userIdInput || undefined,
     });
   };
@@ -72,8 +72,8 @@ const AdminSystemLogs = () => {
   const handleClearFilters = () => {
     setDataInicio("");
     setDataFim("");
-    setTipoSelecionado("");
-    setOrigemSelecionada("");
+    setTipoSelecionado("all");
+    setOrigemSelecionada("all");
     setUserIdInput("");
     clearFilters();
   };
@@ -172,7 +172,7 @@ const AdminSystemLogs = () => {
                     <SelectValue placeholder="Todos os tipos" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos os tipos</SelectItem>
+                    <SelectItem value="all">Todos os tipos</SelectItem>
                     {tiposDisponiveis.map((tipo) => (
                       <SelectItem key={tipo} value={tipo} className="text-xs">
                         {tipo}
@@ -190,7 +190,7 @@ const AdminSystemLogs = () => {
                     <SelectValue placeholder="Todas as origens" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas as origens</SelectItem>
+                    <SelectItem value="all">Todas as origens</SelectItem>
                     {origensDisponiveis.map((origem) => (
                       <SelectItem key={origem} value={origem} className="text-xs">
                         {origem}
