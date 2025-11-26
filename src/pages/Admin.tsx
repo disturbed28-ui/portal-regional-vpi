@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ArrowLeft, Building2, Database, Users, ShieldCheck, Bell, Link as LinkIcon, FileCheck, TriangleAlert, Settings, Activity } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -86,13 +85,11 @@ const Admin = () => {
     console.log('[Admin] roles:', roles);
     console.log('[Admin] hasRole(admin):', hasRole('admin'));
     
-    // Esperar authLoading E roleLoading terminarem
     if (authLoading || roleLoading) {
       console.log('[Admin] Aguardando carregamento...');
       return;
     }
     
-    // Se nao tem user, negar acesso
     if (!user) {
       console.log('[Admin] ACESSO NEGADO - sem usuario');
       toast({
@@ -104,14 +101,13 @@ const Admin = () => {
       return;
     }
     
-    // Verificar se e admin (sem setTimeout, roles como dependencia)
     if (!hasRole('admin')) {
       console.log('[Admin] ACESSO NEGADO - nao e admin. Roles:', roles);
       logSystemEventFromClient({
         tipo: 'PERMISSION_DENIED',
         origem: 'frontend:Admin',
         rota: '/admin',
-        mensagem: 'Tentativa de acesso à área admin sem permissão',
+        mensagem: 'Tentativa de acesso a area admin sem permissao',
         detalhes: {
           userId: user.id,
           userRoles: roles
@@ -132,7 +128,6 @@ const Admin = () => {
   useEffect(() => {
     fetchProfiles();
 
-    // Realtime updates
     const channel = supabase
       .channel('admin-profiles')
       .on(
@@ -172,7 +167,6 @@ const Admin = () => {
 
       if (error) throw error;
       
-      // Processar integrantes e buscar roles separadamente
       if (data) {
         const profilesWithRoles = await Promise.all(
           data.map(async (profile) => {
@@ -220,7 +214,6 @@ const Admin = () => {
   const handleAction = async () => {
     if (!selectedProfile || !actionType || !user) return;
 
-    // Validar observacao para recusa
     if (actionType === 'recusar' && !observacao.trim()) {
       toast({
         title: "Erro",
@@ -248,14 +241,12 @@ const Admin = () => {
           break;
       }
 
-      // Chamar edge function de atualização de perfil
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       
-      // Obter token JWT da sessão atual
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        throw new Error('Sessão expirada. Faça login novamente.');
+        throw new Error('Sessao expirada. Faca login novamente.');
       }
       
       const response = await fetch(
@@ -289,7 +280,7 @@ const Admin = () => {
       setSelectedProfile(null);
       setObservacao("");
       setActionType(null);
-      fetchProfiles(); // Recarregar perfis
+      fetchProfiles();
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
@@ -302,17 +293,13 @@ const Admin = () => {
 
   const getStatusBadge = (status: string) => {
     const config = {
-    'Pendente': { variant: 'secondary' as const, label: 'Pendente' },
-    'Analise': { variant: 'secondary' as const, label: 'Em Analise' },
+      'Pendente': { variant: 'secondary' as const, label: 'Pendente' },
+      'Analise': { variant: 'secondary' as const, label: 'Em Analise' },
       'Ativo': { variant: 'default' as const, label: 'Ativo' },
       'Recusado': { variant: 'destructive' as const, label: 'Recusado' },
       'Inativo': { variant: 'outline' as const, label: 'Inativo' }
     };
     return config[status];
-  };
-
-  const filterByStatus = (status: string) => {
-    return profiles.filter(p => p.profile_status === status);
   };
 
   const filterByStatusAndRole = (status: ProfileStatus) => {
@@ -327,14 +314,11 @@ const Admin = () => {
     return filtered;
   };
 
-  /**
-   * Agrupa usuários por divisão
-   */
   const groupByDivision = (profiles: Profile[]): Record<string, Profile[]> => {
     const grouped: Record<string, Profile[]> = {};
     
     profiles.forEach(profile => {
-      const divisionName = profile.divisoes?.nome || 'Sem Divisão';
+      const divisionName = profile.divisoes?.nome || 'Sem Divisao';
       
       if (!grouped[divisionName]) {
         grouped[divisionName] = [];
@@ -346,9 +330,6 @@ const Admin = () => {
     return grouped;
   };
 
-  /**
-   * Componente de cabeçalho de divisão (clicável)
-   */
   const DivisionHeader = ({ 
     divisionName, 
     count,
@@ -371,7 +352,7 @@ const Admin = () => {
       <div className="flex items-center gap-3">
         <h3 className="font-semibold text-lg">{divisionName}</h3>
         <Badge variant="secondary" className="ml-2">
-          {count} {count === 1 ? 'usuário' : 'usuários'}
+          {count} {count === 1 ? 'usuario' : 'usuarios'}
         </Badge>
       </div>
       
@@ -402,30 +383,27 @@ const Admin = () => {
                   {profile.nome_colete || profile.name}
                 </h4>
                 
-                {/* Badge de Status do Perfil */}
                 <Badge variant={statusBadge.variant}>
                   {statusBadge.label}
                 </Badge>
                 
-                {/* Badge de Vínculo */}
                 {profile.integrante?.vinculado ? (
                   <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-300">
                     Vinculado
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="text-orange-600 border-orange-300">
-                    Não Vinculado
+                    Nao Vinculado
                   </Badge>
                 )}
                 
-                {/* Badges de Role */}
                 {Array.isArray(profile.roles) && profile.roles.length > 0 && (
                   profile.roles.map(role => {
                     const roleConfig = {
                       admin: { label: 'Admin', variant: 'destructive' as const },
                       moderator: { label: 'Moderador', variant: 'default' as const },
-                      user: { label: 'Usuário', variant: 'secondary' as const },
-                      diretor_divisao: { label: 'Diretor / Subdiretor de Divisão', variant: 'default' as const },
+                      user: { label: 'Usuario', variant: 'secondary' as const },
+                      diretor_divisao: { label: 'Diretor / Subdiretor de Divisao', variant: 'default' as const },
                     }[role] || { label: role, variant: 'outline' as const };
                     
                     return (
@@ -506,49 +484,108 @@ const Admin = () => {
   return (
     <div className="admin-page min-h-screen bg-background p-4">
       <div className="max-w-4xl mx-auto">
-        <div className="flex flex-col gap-4 mb-6 md:flex-row md:items-center md:justify-between">
-          <h1 className="text-2xl font-bold">Administracao de Perfis</h1>
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={() => navigate("/admin/estrutura")} variant="outline" className="flex-1 sm:flex-none">
-              Gestao de Estrutura
-            </Button>
-            <Button onClick={() => navigate("/admin/dados")} variant="outline" className="flex-1 sm:flex-none">
-              Gestao de Dados
-            </Button>
-            <Button onClick={() => navigate("/admin/integrantes")} variant="outline" className="flex-1 sm:flex-none">
-              Gestao de Integrantes
-            </Button>
-            <Button onClick={() => navigate("/admin/permissoes")} variant="outline" className="flex-1 sm:flex-none">
-              Gestao de Permissoes
-            </Button>
-            <Button onClick={() => navigate("/admin/alertas")} variant="outline" className="flex-1 sm:flex-none">
-              🔔 Alertas de Inadimplência
-            </Button>
-            <Button onClick={() => navigate("/admin/links-uteis")} variant="outline" className="flex-1 sm:flex-none">
-              🔗 Links Úteis
-            </Button>
-            <Button onClick={() => navigate("/admin/formularios")} variant="outline" className="flex-1 sm:flex-none">
-              📋 Formulários
-            </Button>
-            <Button onClick={() => navigate("/admin/acoes-sociais/solicitacoes-exclusao")} variant="outline" className="flex-1 sm:flex-none">
-              ⚠️ Exclusões de Ações Sociais
-            </Button>
-            <Button onClick={() => navigate("/admin/configuracao-deltas")} variant="outline" className="flex-1 sm:flex-none">
-              ⚙️ Configuração de Deltas
-            </Button>
-            <Button onClick={() => navigate("/admin/system-logs")} variant="outline" className="flex-1 sm:flex-none">
-              📊 Logs de Sistema
-            </Button>
-            <Button onClick={() => navigate("/")} variant="outline" className="flex-1 sm:flex-none">
-              Voltar
-            </Button>
-          </div>
+        {/* Header mobile-first com botao de voltar */}
+        <div className="flex items-center gap-3 mb-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/")}
+            className="flex-shrink-0"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-xl font-bold sm:text-2xl">
+            Administracao de Perfis
+          </h1>
+        </div>
+
+        {/* Grid de botoes - pensado para 9x18 */}
+        <div className="grid grid-cols-2 gap-2 mb-6 sm:grid-cols-3">
+          <Button
+            onClick={() => navigate("/admin/estrutura")}
+            variant="outline"
+            className="w-full justify-start"
+          >
+            <Building2 className="h-4 w-4 mr-2" />
+            Gestao de Estrutura
+          </Button>
+          <Button
+            onClick={() => navigate("/admin/dados")}
+            variant="outline"
+            className="w-full justify-start"
+          >
+            <Database className="h-4 w-4 mr-2" />
+            Gestao de Dados
+          </Button>
+          <Button
+            onClick={() => navigate("/admin/integrantes")}
+            variant="outline"
+            className="w-full justify-start"
+          >
+            <Users className="h-4 w-4 mr-2" />
+            Gestao de Integrantes
+          </Button>
+          <Button
+            onClick={() => navigate("/admin/permissoes")}
+            variant="outline"
+            className="w-full justify-start"
+          >
+            <ShieldCheck className="h-4 w-4 mr-2" />
+            Gestao de Permissoes
+          </Button>
+          <Button
+            onClick={() => navigate("/admin/alertas")}
+            variant="outline"
+            className="w-full justify-start"
+          >
+            <Bell className="h-4 w-4 mr-2" />
+            Alertas de Inadimplencia
+          </Button>
+          <Button
+            onClick={() => navigate("/admin/links-uteis")}
+            variant="outline"
+            className="w-full justify-start"
+          >
+            <LinkIcon className="h-4 w-4 mr-2" />
+            Links Uteis
+          </Button>
+          <Button
+            onClick={() => navigate("/admin/formularios")}
+            variant="outline"
+            className="w-full justify-start"
+          >
+            <FileCheck className="h-4 w-4 mr-2" />
+            Formularios
+          </Button>
+          <Button
+            onClick={() => navigate("/admin/acoes-sociais/solicitacoes-exclusao")}
+            variant="outline"
+            className="w-full justify-start"
+          >
+            <TriangleAlert className="h-4 w-4 mr-2" />
+            Exclusoes de Acoes Sociais
+          </Button>
+          <Button
+            onClick={() => navigate("/admin/configuracao-deltas")}
+            variant="outline"
+            className="w-full justify-start"
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Configuracao de Deltas
+          </Button>
+          <Button
+            onClick={() => navigate("/admin/system-logs")}
+            variant="outline"
+            className="w-full justify-start"
+          >
+            <Activity className="h-4 w-4 mr-2" />
+            Logs de Sistema
+          </Button>
         </div>
 
         <div className="space-y-4">
           {/* Filtros */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Filtro de Status */}
             <div>
               <label className="text-sm font-medium mb-2 block">Filtrar por Status</label>
               <Select value={selectedStatus} onValueChange={(v) => setSelectedStatus(v as ProfileStatus)}>
@@ -557,7 +594,7 @@ const Admin = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Analise">
-                    Em Análise ({filterByStatusAndRole('Analise').length})
+                    Em Analise ({filterByStatusAndRole('Analise').length})
                   </SelectItem>
                   <SelectItem value="Ativo">
                     Ativos ({filterByStatusAndRole('Ativo').length})
@@ -575,7 +612,6 @@ const Admin = () => {
               </Select>
             </div>
             
-            {/* Filtro de Role */}
             <div>
               <label className="text-sm font-medium mb-2 block">Filtrar por Perfil de Acesso</label>
               <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as any)}>
@@ -586,19 +622,18 @@ const Admin = () => {
                   <SelectItem value="all">Todos os Perfis</SelectItem>
                   <SelectItem value="admin">Administradores</SelectItem>
                   <SelectItem value="moderator">Moderadores</SelectItem>
-                  <SelectItem value="diretor_divisao">Diretores / Subdiretores de Divisão</SelectItem>
-                  <SelectItem value="user">Usuários Comuns</SelectItem>
+                  <SelectItem value="diretor_divisao">Diretores / Subdiretores de Divisao</SelectItem>
+                  <SelectItem value="user">Usuarios Comuns</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           
-          {/* Lista Agrupada por Divisão */}
+          {/* Lista agrupada por divisao */}
           <div className="space-y-4">
             {(() => {
               const filteredProfiles = filterByStatusAndRole(selectedStatus);
               
-              // Se não houver usuários filtrados
               if (filteredProfiles.length === 0) {
                 return (
                   <p className="text-center text-muted-foreground py-8">
@@ -607,31 +642,24 @@ const Admin = () => {
                 );
               }
               
-              // Agrupar por divisão
               const groupedProfiles = groupByDivision(filteredProfiles);
-              
-              // Ordenar divisões alfabeticamente
               const sortedDivisions = Object.keys(groupedProfiles).sort();
               
-              // Renderizar cada divisão
               return sortedDivisions.map(divisionName => {
                 const divisionProfiles = groupedProfiles[divisionName];
                 const isActive = activeDivisionKey === divisionName;
                 
                 return (
                   <div key={divisionName} className="border rounded-lg overflow-hidden">
-                    {/* Cabeçalho da Divisão */}
                     <DivisionHeader
                       divisionName={divisionName}
                       count={divisionProfiles.length}
                       isActive={isActive}
                       onClick={() => {
-                        // Toggle: se já está ativa, fecha; senão, abre
                         setActiveDivisionKey(isActive ? null : divisionName);
                       }}
                     />
                     
-                    {/* Conteúdo da Divisão (cards de usuários) */}
                     {isActive && (
                       <div className="p-4 space-y-3 bg-muted/30">
                         {divisionProfiles.map(profile => (
@@ -646,7 +674,7 @@ const Admin = () => {
           </div>
         </div>
 
-        {/* Dialog de Acao */}
+        {/* Dialog de acao */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent>
             <DialogHeader>
@@ -667,11 +695,11 @@ const Admin = () => {
               <Textarea
                 value={observacao}
                 onChange={(e) => setObservacao(e.target.value)}
-                  placeholder={
-                    actionType === 'recusar' 
-                      ? "Digite o motivo da recusa..."
-                      : "Adicione uma observacao (opcional)..."
-                  }
+                placeholder={
+                  actionType === 'recusar' 
+                    ? "Digite o motivo da recusa..."
+                    : "Adicione uma observacao (opcional)..."
+                }
                 className="min-h-[100px]"
               />
             </div>
@@ -687,7 +715,7 @@ const Admin = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Dialog de Detalhes */}
+        {/* Dialog de detalhes */}
         <ProfileDetailDialog
           profile={detailProfile}
           open={detailDialogOpen}
