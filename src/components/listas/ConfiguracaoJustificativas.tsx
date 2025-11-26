@@ -10,7 +10,11 @@ import { Calculator, GripVertical, Plus, Save } from "lucide-react";
 import { usePesosJustificativas } from "@/hooks/usePesosJustificativas";
 import { Badge } from "@/components/ui/badge";
 
-export const ConfiguracaoJustificativas = () => {
+interface ConfiguracaoJustificativasProps {
+  readOnly?: boolean;
+}
+
+export const ConfiguracaoJustificativas = ({ readOnly = false }: ConfiguracaoJustificativasProps) => {
   const { justificativas, isLoading, update } = usePesosJustificativas();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [simulacao, setSimulacao] = useState({
@@ -65,6 +69,13 @@ export const ConfiguracaoJustificativas = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {readOnly && (
+            <Alert className="mb-4">
+              <AlertDescription>
+                Você está visualizando as configurações. Apenas administradores podem fazer alterações.
+              </AlertDescription>
+            </Alert>
+          )}
           {justificativas.map((just) => (
             <div
               key={just.id}
@@ -87,7 +98,7 @@ export const ConfiguracaoJustificativas = () => {
                     <Switch
                       checked={just.ativo}
                       onCheckedChange={(checked) => update({ id: just.id, updates: { ativo: checked } })}
-                      disabled={just.bloqueado}
+                      disabled={readOnly || just.bloqueado}
                     />
                   </div>
                 </div>
@@ -102,6 +113,7 @@ export const ConfiguracaoJustificativas = () => {
                       max={100}
                       step={1}
                       className="w-full"
+                      disabled={readOnly}
                     />
                     <p className="text-xs text-muted-foreground">{just.descricao}</p>
                   </div>
@@ -130,6 +142,7 @@ export const ConfiguracaoJustificativas = () => {
               min={1}
               value={simulacao.totalEventos}
               onChange={(e) => setSimulacao(prev => ({ ...prev, totalEventos: parseInt(e.target.value) || 0 }))}
+              disabled={readOnly}
             />
           </div>
 
@@ -142,6 +155,7 @@ export const ConfiguracaoJustificativas = () => {
                 max={simulacao.totalEventos}
                 value={simulacao.presente}
                 onChange={(e) => setSimulacao(prev => ({ ...prev, presente: parseInt(e.target.value) || 0 }))}
+                disabled={readOnly}
               />
             </div>
             <div>
@@ -152,6 +166,7 @@ export const ConfiguracaoJustificativas = () => {
                 max={simulacao.totalEventos}
                 value={simulacao.saude}
                 onChange={(e) => setSimulacao(prev => ({ ...prev, saude: parseInt(e.target.value) || 0 }))}
+                disabled={readOnly}
               />
             </div>
             <div>
@@ -162,6 +177,7 @@ export const ConfiguracaoJustificativas = () => {
                 max={simulacao.totalEventos}
                 value={simulacao.trabalho}
                 onChange={(e) => setSimulacao(prev => ({ ...prev, trabalho: parseInt(e.target.value) || 0 }))}
+                disabled={readOnly}
               />
             </div>
             <div>
@@ -172,6 +188,7 @@ export const ConfiguracaoJustificativas = () => {
                 max={simulacao.totalEventos}
                 value={simulacao.familia}
                 onChange={(e) => setSimulacao(prev => ({ ...prev, familia: parseInt(e.target.value) || 0 }))}
+                disabled={readOnly}
               />
             </div>
           </div>
