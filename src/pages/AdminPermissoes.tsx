@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useScreenPermissions } from "@/hooks/useScreenPermissions";
 import { Shield, Loader2, RefreshCw, ArrowLeft } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useState } from "react";
@@ -101,24 +101,26 @@ export default function AdminPermissoes() {
               ))}
             </Accordion>
           ) : (
-            <div className="overflow-auto max-h-[60vh] relative">
-              <Table>
-                <TableHeader className="sticky top-0 z-10 bg-background">
-                  <TableRow>
-                    <TableHead className="w-[300px] bg-background">Tela</TableHead>
+            <div className="overflow-auto max-h-[60vh] border rounded-md">
+              <table className="w-full caption-bottom text-sm">
+                <thead className="sticky top-0 z-10 bg-background [&_tr]:border-b">
+                  <tr className="border-b">
+                    <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[300px] bg-background">
+                      Tela
+                    </th>
                     {ROLES.map(role => (
-                      <TableHead key={role.value} className="text-center bg-background">
+                      <th key={role.value} className="h-12 px-4 text-center align-middle font-medium text-muted-foreground bg-background">
                         <Badge className={`${role.color} text-white`}>
                           {role.label}
                         </Badge>
-                      </TableHead>
+                      </th>
                     ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+                  </tr>
+                </thead>
+                <tbody className="[&_tr:last-child]:border-0">
                   {screens.map(screen => (
-                    <TableRow key={screen.id}>
-                      <TableCell>
+                    <tr key={screen.id} className="border-b transition-colors hover:bg-muted/50">
+                      <td className="p-4 align-middle">
                         <div>
                           <div className="font-medium">{screen.nome}</div>
                           <div className="text-sm text-muted-foreground">
@@ -130,9 +132,9 @@ export default function AdminPermissoes() {
                             </div>
                           )}
                         </div>
-                      </TableCell>
+                      </td>
                       {ROLES.map(role => (
-                        <TableCell key={role.value} className="text-center">
+                        <td key={role.value} className="p-4 align-middle text-center">
                           <div className="flex justify-center items-center gap-2">
                             {isOperationLoading(screen.id, role.value) ? (
                               <Loader2 className="h-4 w-4 animate-spin text-primary" />
@@ -151,12 +153,12 @@ export default function AdminPermissoes() {
                               />
                             )}
                           </div>
-                        </TableCell>
+                        </td>
                       ))}
-                    </TableRow>
+                    </tr>
                   ))}
-                </TableBody>
-              </Table>
+                </tbody>
+              </table>
             </div>
           )}
         </CardContent>
