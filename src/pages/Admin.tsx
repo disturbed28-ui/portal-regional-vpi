@@ -500,88 +500,100 @@ const Admin = () => {
         </div>
 
         {/* Grid de botoes - pensado para 9x18 */}
-        <div className="grid grid-cols-2 gap-2 mb-6 sm:grid-cols-3">
-          <Button
-            onClick={() => navigate("/admin/estrutura")}
-            variant="outline"
-            className="w-full justify-start"
-          >
-            <Building2 className="h-4 w-4 mr-2" />
-            Gestao de Estrutura
-          </Button>
-          <Button
-            onClick={() => navigate("/admin/dados")}
-            variant="outline"
-            className="w-full justify-start"
-          >
-            <Database className="h-4 w-4 mr-2" />
-            Gestao de Dados
-          </Button>
-          <Button
-            onClick={() => navigate("/admin/integrantes")}
-            variant="outline"
-            className="w-full justify-start"
-          >
-            <Users className="h-4 w-4 mr-2" />
-            Gestao de Integrantes
-          </Button>
-          <Button
-            onClick={() => navigate("/admin/permissoes")}
-            variant="outline"
-            className="w-full justify-start"
-          >
-            <ShieldCheck className="h-4 w-4 mr-2" />
-            Gestao de Permissoes
-          </Button>
-          <Button
-            onClick={() => navigate("/admin/alertas")}
-            variant="outline"
-            className="w-full justify-start"
-          >
-            <Bell className="h-4 w-4 mr-2" />
-            Alertas de Inadimplencia
-          </Button>
-          <Button
-            onClick={() => navigate("/admin/links-uteis")}
-            variant="outline"
-            className="w-full justify-start"
-          >
-            <LinkIcon className="h-4 w-4 mr-2" />
-            Links Uteis
-          </Button>
-          <Button
-            onClick={() => navigate("/admin/formularios")}
-            variant="outline"
-            className="w-full justify-start"
-          >
-            <FileCheck className="h-4 w-4 mr-2" />
-            Formularios
-          </Button>
-          <Button
-            onClick={() => navigate("/admin/acoes-sociais/solicitacoes-exclusao")}
-            variant="outline"
-            className="w-full justify-start"
-          >
-            <TriangleAlert className="h-4 w-4 mr-2" />
-            Exclusoes de Acoes Sociais
-          </Button>
-          <Button
-            onClick={() => navigate("/admin/configuracao-deltas")}
-            variant="outline"
-            className="w-full justify-start"
-          >
-            <Settings className="h-4 w-4 mr-2" />
-            Configuracao de Deltas
-          </Button>
-          <Button
-            onClick={() => navigate("/admin/logs")}
-            variant="outline"
-            className="w-full justify-start"
-          >
-            <Activity className="h-4 w-4 mr-2" />
-            Auditoria
-          </Button>
-        </div>
+        
+<div className="grid grid-cols-2 gap-2 mb-6 sm:grid-cols-3">
+
+  <Button
+    onClick={() => navigate("/admin/estrutura")}
+    variant="outline"
+    className="w-full justify-start h-9 px-2 py-2 text-sm"
+  >
+    <Building2 className="h-4 w-4 mr-2" />
+    Gestao de Estrutura
+  </Button>
+
+  <Button
+    onClick={() => navigate("/admin/dados")}
+    variant="outline"
+    className="w-full justify-start h-9 px-2 py-2 text-sm"
+  >
+    <Database className="h-4 w-4 mr-2" />
+    Gestao de Dados
+  </Button>
+
+  <Button
+    onClick={() => navigate("/admin/integrantes")}
+    variant="outline"
+    className="w-full justify-start h-9 px-2 py-2 text-sm"
+  >
+    <Users className="h-4 w-4 mr-2" />
+    Gestao de Integrantes
+  </Button>
+
+  <Button
+    onClick={() => navigate("/admin/permissoes")}
+    variant="outline"
+    className="w-full justify-start h-9 px-2 py-2 text-sm"
+  >
+    <ShieldCheck className="h-4 w-4 mr-2" />
+    Gestao de Permissoes
+  </Button>
+
+  <Button
+    onClick={() => navigate("/admin/alertas")}
+    variant="outline"
+    className="w-full justify-start h-9 px-2 py-2 text-sm"
+  >
+    <Bell className="h-4 w-4 mr-2" />
+    Alertas de Inadimplencia
+  </Button>
+
+  <Button
+    onClick={() => navigate("/admin/links-uteis")}
+    variant="outline"
+    className="w-full justify-start h-9 px-2 py-2 text-sm"
+  >
+    <LinkIcon className="h-4 w-4 mr-2" />
+    Links Uteis
+  </Button>
+
+  <Button
+    onClick={() => navigate("/admin/formularios")}
+    variant="outline"
+    className="w-full justify-start h-9 px-2 py-2 text-sm"
+  >
+    <FileCheck className="h-4 w-4 mr-2" />
+    Formularios
+  </Button>
+
+  <Button
+    onClick={() => navigate("/admin/acoes-sociais/solicitacoes-exclusao")}
+    variant="outline"
+    className="w-full justify-start h-9 px-2 py-2 text-sm"
+  >
+    <TriangleAlert className="h-4 w-4 mr-2" />
+    Exclusoes de Acoes Sociais
+  </Button>
+
+  <Button
+    onClick={() => navigate("/admin/configuracao-deltas")}
+    variant="outline"
+    className="w-full justify-start h-9 px-2 py-2 text-sm"
+  >
+    <Settings className="h-4 w-4 mr-2" />
+    Configuracao de Deltas
+  </Button>
+
+  <Button
+    onClick={() => navigate("/admin/system-logs")}
+    variant="outline"
+    className="w-full justify-start h-9 px-2 py-2 text-sm"
+  >
+    <Activity className="h-4 w-4 mr-2" />
+    Logs de Sistema
+  </Button>
+</div>
+
 
         <div className="space-y-4">
           {/* Filtros */}
