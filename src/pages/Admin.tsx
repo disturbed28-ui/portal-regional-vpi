@@ -584,14 +584,14 @@ const Admin = () => {
     Configuracao de Deltas
   </Button>
 
-  <Button
-    onClick={() => navigate("/admin/system-logs")}
-    variant="outline"
-    className="w-full justify-start h-9 px-2 py-2 text-sm"
-  >
-    <Activity className="h-4 w-4 mr-2" />
-    Logs de Sistema
-  </Button>
+            <Button
+              onClick={() => navigate("/admin/logs")}
+              variant="outline"
+              className="w-full justify-start h-9 px-2 py-2 text-sm"
+            >
+              <Activity className="h-4 w-4 mr-2" />
+              Auditoria
+            </Button>
 </div>
 
 
