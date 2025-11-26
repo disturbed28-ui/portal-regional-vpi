@@ -261,6 +261,15 @@ async function notifyAdminsIfNeeded(
       subject: `🚨 Insanos MC VP1 – Alerta de erro no sistema (${payload.tipo})`,
       html,
       text
+    }, {
+      tipo: 'erro_sistema_critico',
+      to_nome: 'Administradores',
+      metadata: {
+        tipo_erro: payload.tipo,
+        origem: payload.origem,
+        rota: payload.rota,
+        log_id: logData.id
+      }
     });
 
     if (emailResult.success) {
