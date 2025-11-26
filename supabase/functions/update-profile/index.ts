@@ -77,6 +77,14 @@ async function notifyAdminsNovoCadastroPendente(profileData: any): Promise<void>
       subject: '🆕 Novo Cadastro Aguardando Análise - Portal Regional VP1',
       html,
       text
+    }, {
+      tipo: 'novo_cadastro_pendente',
+      to_nome: 'Administradores',
+      related_user_id: profileData.id,
+      metadata: {
+        nome_colete: profileData.nome_colete,
+        profile_status: profileData.profile_status
+      }
     });
     
     if (emailResult.success) {

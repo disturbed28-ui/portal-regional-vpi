@@ -9,6 +9,7 @@ const requestSchema = z.object({
   divisao_id: z.string().uuid(),
   dry_run: z.boolean().optional().default(false),
   test_email: z.string().email().optional(),
+  run_id: z.string().optional(),
 });
 
 serve(async (req) => {
@@ -278,6 +279,17 @@ serve(async (req) => {
           subject: `⚠️ Alerta: Inadimplência de ${devedor.nome_colete} - ${divisao.nome}`,
           html,
           text
+        }, {
+          tipo: 'alerta_inadimplencia',
+          to_nome: diretor.nome,
+          related_divisao_id: divisao.id,
+          metadata: {
+            registro_id: devedor.registro_id,
+            dias_atraso: diasAtraso,
+            valor_total: devedor.total_devido,
+            total_parcelas: devedor.total_parcelas,
+            run_id: payload.run_id
+          }
         });
 
         // Registrar log

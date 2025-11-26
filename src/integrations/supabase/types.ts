@@ -605,6 +605,54 @@ export type Database = {
           },
         ]
       }
+      email_logs: {
+        Row: {
+          body_preview: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          metadata: Json | null
+          related_divisao_id: string | null
+          related_user_id: string | null
+          resend_message_id: string | null
+          status: string
+          subject: string
+          tipo: string
+          to_email: string
+          to_nome: string | null
+        }
+        Insert: {
+          body_preview?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          related_divisao_id?: string | null
+          related_user_id?: string | null
+          resend_message_id?: string | null
+          status?: string
+          subject: string
+          tipo: string
+          to_email: string
+          to_nome?: string | null
+        }
+        Update: {
+          body_preview?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          related_divisao_id?: string | null
+          related_user_id?: string | null
+          resend_message_id?: string | null
+          status?: string
+          subject?: string
+          tipo?: string
+          to_email?: string
+          to_nome?: string | null
+        }
+        Relationships: []
+      }
       eventos_agenda: {
         Row: {
           created_at: string | null

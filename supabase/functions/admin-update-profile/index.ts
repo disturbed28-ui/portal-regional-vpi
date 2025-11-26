@@ -48,6 +48,15 @@ async function notifyIntegranteStatusChange(
       subject: 'Insanos MC VP1 – Atualização de status do seu cadastro',
       html,
       text
+    }, {
+      tipo: 'profile_status_change',
+      to_nome: profileData.nome_colete || profileData.name,
+      related_user_id: profileId,
+      metadata: {
+        status_anterior: oldStatus,
+        status_novo: newStatus,
+        observacao: profileData.observacao
+      }
     });
     
     if (emailResult.success) {

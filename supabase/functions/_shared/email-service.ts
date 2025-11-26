@@ -1,4 +1,5 @@
 import { Resend } from 'https://esm.sh/resend@4.0.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 interface EmailConfig {
   to: string | string[];
@@ -6,6 +7,14 @@ interface EmailConfig {
   subject: string;
   html: string;
   text?: string;
+}
+
+export interface EmailLogData {
+  tipo: string;
+  to_nome?: string;
+  related_user_id?: string;
+  related_divisao_id?: string;
+  metadata?: Record<string, any>;
 }
 
 interface AlertData {
@@ -33,12 +42,18 @@ function getResendClient(): Resend {
   return resendClient;
 }
 
-export async function sendEmail(config: EmailConfig): Promise<{ success: boolean; messageId?: string; error?: string }> {
+export async function sendEmail(
+  config: EmailConfig,
+  logData?: EmailLogData
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  let result: { success: boolean; messageId?: string; error?: string };
+  
   try {
     const resend = getResendClient();
     
     console.log('[email-service] 📧 Enviando email via Resend para:', config.to);
     console.log('[email-service] CC:', config.cc || 'Nenhum');
+    console.log('[email-service] Tipo:', logData?.tipo || 'N/A');
     
     const { data, error } = await resend.emails.send({
       from: 'Portal Regional VP1 <noreply@vp1.app.br>',
@@ -55,14 +70,66 @@ export async function sendEmail(config: EmailConfig): Promise<{ success: boolean
     }
 
     console.log('[email-service] ✅ Email enviado com sucesso! ID:', data?.id);
-    return { success: true, messageId: data?.id };
+    result = { success: true, messageId: data?.id };
     
   } catch (error) {
     console.error('[email-service] ❌ Erro ao enviar email:', error);
-    return { 
+    result = { 
       success: false, 
       error: error instanceof Error ? error.message : 'Erro desconhecido ao enviar email' 
     };
+  }
+  
+  // Registrar log se logData foi fornecido
+  if (logData) {
+    await registrarLogEmail({
+      tipo: logData.tipo,
+      to_email: Array.isArray(config.to) ? config.to.join(', ') : config.to,
+      to_nome: logData.to_nome,
+      subject: config.subject,
+      body_preview: extrairPreview(config.html, 300),
+      status: result.success ? 'enviado' : 'erro',
+      error_message: result.error || null,
+      related_user_id: logData.related_user_id,
+      related_divisao_id: logData.related_divisao_id,
+      metadata: {
+        ...logData.metadata,
+        resend_id: result.messageId,
+        timestamp: new Date().toISOString()
+      },
+      resend_message_id: result.messageId
+    });
+  }
+  
+  return result;
+}
+
+function extrairPreview(html: string, maxLength: number): string {
+  return html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .substring(0, maxLength);
+}
+
+async function registrarLogEmail(logEntry: any): Promise<void> {
+  try {
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
+    
+    const { error } = await supabaseAdmin
+      .from('email_logs')
+      .insert(logEntry);
+    
+    if (error) {
+      console.error('[email-service] ⚠️ Erro ao registrar log:', error);
+    } else {
+      console.log('[email-service] 📝 Log de email registrado:', logEntry.tipo);
+    }
+  } catch (error) {
+    console.error('[email-service] ⚠️ Exceção ao registrar log:', error);
   }
 }
 
