@@ -183,15 +183,16 @@ const Organograma = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <div className="mb-4">
+        <div className="flex items-center gap-3 mb-4">
           <Button 
-            variant="ghost" 
+            variant="ghost"
+            size="icon"
             onClick={() => navigate('/')}
-            className="gap-2"
+            className="flex-shrink-0"
           >
-            <ArrowLeft className="h-4 w-4" />
-            Voltar ao Menu
+            <ArrowLeft className="h-5 w-5" />
           </Button>
+          <h1 className="text-2xl font-bold">Organograma</h1>
         </div>
 
         <BreadcrumbOrganograma

@@ -126,15 +126,17 @@ const Agenda = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="bg-[hsl(var(--primary))] text-primary-foreground p-4 sticky top-0 z-10 shadow-md">
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/")}
-          className="mb-2 text-primary-foreground hover:bg-primary-foreground/10"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Voltar
-        </Button>
-        <h1 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-bold">Agenda Regional Vale do Paraiba I</h1>
+        <div className="flex items-center gap-3 mb-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/")}
+            className="flex-shrink-0 text-primary-foreground hover:bg-primary-foreground/10"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-bold">Agenda Regional Vale do Paraiba I</h1>
+        </div>
         
         <div className="flex items-center justify-between mt-4">
           <Button

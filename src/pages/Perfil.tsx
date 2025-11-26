@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { supabase } from "@/integrations/supabase/client";
+import { ArrowLeft } from "lucide-react";
 
 const Perfil = () => {
   const navigate = useNavigate();
@@ -156,15 +157,16 @@ const Perfil = () => {
         {/* Cabeçalho com foto, nome e email */}
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h1 className="text-2xl font-semibold text-foreground">Meu Perfil</h1>
+            <div className="flex items-center gap-3 mb-4">
               <Button 
+                variant="ghost"
+                size="icon"
                 onClick={() => navigate("/")}
-                variant="outline"
-                size="sm"
+                className="flex-shrink-0"
               >
-                Voltar
+                <ArrowLeft className="h-5 w-5" />
               </Button>
+              <h1 className="text-2xl font-semibold text-foreground">Meu Perfil</h1>
             </div>
             
             <div className="flex items-center gap-4">

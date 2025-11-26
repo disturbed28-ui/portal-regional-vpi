@@ -231,23 +231,27 @@ const Relatorios = () => {
     <div className="min-h-screen bg-gradient-to-br from-background to-muted p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Relatório Regional</h1>
-            {relatorioData?.dataCarga && (
-              <p className="text-sm text-muted-foreground">
-                Última atualização: {formatarDataBrasil(relatorioData.dataCarga)}
-              </p>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleExportExcel}>
-              <FileDown className="mr-2 h-4 w-4" />
-              Exportar Excel
+        <div className="mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/')}
+              className="flex-shrink-0"
+            >
+              <ArrowLeft className="h-5 w-5" />
             </Button>
-            <Button variant="outline" onClick={() => navigate('/')}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Voltar
+            <div className="flex-1">
+              <h1 className="text-2xl sm:text-3xl font-bold">Relatório Regional</h1>
+              {relatorioData?.dataCarga && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Última atualização: {formatarDataBrasil(relatorioData.dataCarga)}
+                </p>
+              )}
+            </div>
+            <Button onClick={handleExportExcel} variant="outline" size="sm" className="flex-shrink-0">
+              <FileDown className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Exportar</span>
             </Button>
           </div>
         </div>
