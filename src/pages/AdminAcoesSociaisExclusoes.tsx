@@ -158,28 +158,18 @@ const AdminAcoesSociaisExclusoes = () => {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-8 px-4">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/admin")}
-              className="flex-shrink-0"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </div>
-
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-4xl font-bold text-foreground mb-2 flex items-center gap-3">
-                <AlertTriangle className="h-8 w-8 text-destructive" />
-                Solicitações de Exclusão
-              </h1>
-              <p className="text-muted-foreground">
-                Revise e processe solicitações de exclusão de ações sociais
-              </p>
-            </div>
+        <div className="flex items-center gap-4 mb-8">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/admin")} className="flex-shrink-0">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <AlertTriangle className="h-6 w-6 text-destructive" />
+              Solicitações de Exclusão
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Revise e processe solicitações de exclusão de ações sociais
+            </p>
           </div>
         </div>
 

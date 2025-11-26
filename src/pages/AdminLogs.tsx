@@ -46,26 +46,17 @@ const AdminLogs = () => {
     <div className="min-h-screen bg-background p-3 md:p-4">
       <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl md:text-3xl font-bold flex items-center gap-2">
-              <FileText className="h-6 w-6 md:h-8 md:w-8 flex-shrink-0" />
-              <span className="truncate">Auditoria</span>
-            </h1>
-            <p className="text-xs md:text-sm text-muted-foreground mt-1 hidden md:block">
-              Logs de sistema e envios de email
-            </p>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/admin")} className="flex-shrink-0">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold">Auditoria</h1>
+            <p className="text-sm text-muted-foreground">Logs de sistema e envios de email</p>
           </div>
-          <div className="flex gap-2 flex-shrink-0">
-            <Button onClick={handleRefresh} variant="outline" size="sm" className="h-9 w-9 md:w-auto p-0 md:px-3">
-              <RefreshCw className="h-4 w-4" />
-              <span className="hidden md:inline ml-2">Atualizar</span>
-            </Button>
-            <Button onClick={() => navigate("/admin")} variant="outline" size="sm" className="h-9 w-9 md:w-auto p-0 md:px-3">
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden md:inline ml-2">Voltar</span>
-            </Button>
-          </div>
+          <Button onClick={handleRefresh} variant="outline" size="icon">
+            <RefreshCw className="h-4 w-4" />
+          </Button>
         </div>
 
         {/* Tabs */}
