@@ -36,6 +36,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useComandos, Comando } from "@/hooks/useComandos";
 import { useRegionais, Regional } from "@/hooks/useRegionais";
 import { useDivisoes, Divisao } from "@/hooks/useDivisoes";
+import { ArrowLeft } from "lucide-react";
 import {
   createComando,
   updateComando,
@@ -253,11 +254,16 @@ const AdminEstrutura = () => {
   return (
     <div className="admin-page min-h-screen bg-background p-4">
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Gestao de Estrutura</h1>
-          <Button onClick={() => navigate("/admin")} variant="outline">
-            Voltar
+        <div className="flex items-center gap-3 mb-6">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/admin")}
+            className="flex-shrink-0"
+          >
+            <ArrowLeft className="h-5 w-5" />
           </Button>
+          <h1 className="text-2xl font-bold">Gestao de Estrutura</h1>
         </div>
 
         <Tabs defaultValue="comandos" className="w-full">

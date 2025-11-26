@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useScreenAccess } from "@/hooks/useScreenAccess";
 import { useLinksUteis, LinkUtil } from "@/hooks/useLinksUteis";
-import { Edit, Trash2, Plus, ExternalLink } from "lucide-react";
+import { Edit, Trash2, Plus, ExternalLink, ArrowLeft } from "lucide-react";
 
 const AdminLinksUteis = () => {
   const navigate = useNavigate();
@@ -140,8 +140,16 @@ const AdminLinksUteis = () => {
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-black p-4">
       <Card className="max-w-6xl mx-auto">
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
+          <div className="flex items-center gap-3 mb-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/admin")}
+              className="flex-shrink-0"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex-1">
               <CardTitle className="text-2xl">Gestão de Links Úteis</CardTitle>
               <CardDescription>Gerencie os links úteis exibidos no portal</CardDescription>
             </div>

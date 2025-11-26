@@ -20,9 +20,13 @@ const AdminConfiguracaoDeltas = () => {
             </p>
           </div>
         </div>
-        <Button onClick={() => navigate("/admin")} variant="outline" className="gap-2">
-          <ArrowLeft className="h-4 w-4" />
-          Voltar
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate("/admin")}
+          className="flex-shrink-0"
+        >
+          <ArrowLeft className="h-5 w-5" />
         </Button>
       </div>
 
