@@ -574,12 +574,12 @@ const Admin = () => {
             Configuracao de Deltas
           </Button>
           <Button
-            onClick={() => navigate("/admin/system-logs")}
+            onClick={() => navigate("/admin/logs")}
             variant="outline"
             className="w-full justify-start"
           >
             <Activity className="h-4 w-4 mr-2" />
-            Logs de Sistema
+            Auditoria
           </Button>
         </div>
 

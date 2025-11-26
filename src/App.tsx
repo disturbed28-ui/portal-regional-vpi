@@ -14,8 +14,7 @@ import AdminPermissoes from "./pages/AdminPermissoes";
 import AdminAlertas from "./pages/AdminAlertas";
 import AdminLinksUteis from "./pages/AdminLinksUteis";
 import AdminConfiguracaoDeltas from "./pages/AdminConfiguracaoDeltas";
-import AdminSystemLogs from "./pages/AdminSystemLogs";
-import AdminEmailLogs from "./pages/AdminEmailLogs";
+import AdminLogs from "./pages/AdminLogs";
 import Agenda from "./pages/Agenda";
 import Relatorios from "./pages/Relatorios";
 import Organograma from "./pages/Organograma";
@@ -51,8 +50,7 @@ const App = () => (
           <Route path="/admin/links-uteis" element={<AdminLinksUteis />} />
           <Route path="/admin/configuracao-deltas" element={<AdminConfiguracaoDeltas />} />
           <Route path="/admin/acoes-sociais/solicitacoes-exclusao" element={<AdminAcoesSociaisExclusoes />} />
-          <Route path="/admin/system-logs" element={<AdminSystemLogs />} />
-          <Route path="/admin/email-logs" element={<AdminEmailLogs />} />
+          <Route path="/admin/logs" element={<AdminLogs />} />
           <Route path="/agenda" element={<Agenda />} />
           <Route path="/relatorios" element={<Relatorios />} />
           <Route path="/organograma" element={<Organograma />} />
