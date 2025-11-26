@@ -38,31 +38,18 @@ export default function AdminPermissoes() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(-1)}
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <Shield className="h-8 w-8 text-primary" />
-          <div>
-            <h1 className="text-3xl font-bold">Gerenciamento de Permissões</h1>
-            <p className="text-muted-foreground">
-              Controle quais perfis têm acesso a cada tela do sistema
-            </p>
-          </div>
+      <div className="flex items-center gap-4 mb-6">
+        <Button variant="ghost" size="icon" onClick={() => navigate("/admin")} className="flex-shrink-0">
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold">Gerenciamento de Permissões</h1>
+          <p className="text-sm text-muted-foreground">
+            Controle quais perfis têm acesso a cada tela do sistema
+          </p>
         </div>
-        <Button 
-          onClick={handleRefresh} 
-          disabled={refreshing}
-          variant="outline"
-          size="sm"
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-          Recarregar
+        <Button onClick={handleRefresh} disabled={refreshing} variant="outline" size="icon">
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
         </Button>
       </div>
 

@@ -10,24 +10,16 @@ const AdminConfiguracaoDeltas = () => {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Settings className="h-8 w-8" />
-          <div>
-            <h1 className="text-3xl font-bold">Configuração de Deltas</h1>
-            <p className="text-muted-foreground">
-              Gerencie os tipos de delta e suas ações de resolução
-            </p>
-          </div>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate("/admin")}
-          className="flex-shrink-0"
-        >
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => navigate("/admin")} className="flex-shrink-0">
           <ArrowLeft className="h-5 w-5" />
         </Button>
+        <div>
+          <h1 className="text-2xl font-bold">Configuração de Deltas</h1>
+          <p className="text-sm text-muted-foreground">
+            Gerencie os tipos de delta e suas ações de resolução
+          </p>
+        </div>
       </div>
 
       <Tabs defaultValue="tipos" className="space-y-6">
