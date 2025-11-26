@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { useScreenPermissions } from "@/hooks/useScreenPermissions";
 import { Shield, Loader2, RefreshCw, ArrowLeft } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -19,6 +21,7 @@ const ROLES = [
 
 export default function AdminPermissoes() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { screens, loading, togglePermission, hasPermission, isOperationLoading, refetch } = useScreenPermissions();
   const [refreshing, setRefreshing] = useState(false);
 
@@ -37,13 +40,13 @@ export default function AdminPermissoes() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-4 md:p-6 space-y-6">
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="icon" onClick={() => navigate("/admin")} className="flex-shrink-0">
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold">Gerenciamento de Permissões</h1>
+          <h1 className="text-xl md:text-2xl font-bold">Gerenciamento de Permissões</h1>
           <p className="text-sm text-muted-foreground">
             Controle quais perfis têm acesso a cada tela do sistema
           </p>
@@ -61,63 +64,101 @@ export default function AdminPermissoes() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[300px]">Tela</TableHead>
-                  {ROLES.map(role => (
-                    <TableHead key={role.value} className="text-center">
-                      <Badge className={`${role.color} text-white`}>
-                        {role.label}
-                      </Badge>
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {screens.map(screen => (
-                  <TableRow key={screen.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{screen.nome}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {screen.rota}
-                        </div>
-                        {screen.descricao && (
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {screen.descricao}
+          {isMobile ? (
+            <Accordion type="single" collapsible className="w-full">
+              {screens.map(screen => (
+                <AccordionItem key={screen.id} value={screen.id}>
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex flex-col items-start text-left w-full pr-2">
+                      <div className="font-medium">{screen.nome}</div>
+                      <div className="text-xs text-muted-foreground">{screen.rota}</div>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-3 pt-2">
+                      {ROLES.map(role => (
+                        <div key={role.value} className="flex items-center justify-between p-3 rounded-lg border">
+                          <div className="flex items-center gap-3">
+                            {isOperationLoading(screen.id, role.value) ? (
+                              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                            ) : (
+                              <Checkbox
+                                checked={hasPermission(screen.id, role.value)}
+                                onCheckedChange={() => togglePermission(screen.id, role.value)}
+                                disabled={isOperationLoading(screen.id, role.value)}
+                              />
+                            )}
+                            <span className="text-sm font-medium">{role.label}</span>
                           </div>
-                        )}
-                      </div>
-                    </TableCell>
+                          <Badge className={`${role.color} text-white text-xs`}>
+                            {role.value}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          ) : (
+            <div className="overflow-auto max-h-[60vh] relative">
+              <Table>
+                <TableHeader className="sticky top-0 z-10 bg-background">
+                  <TableRow>
+                    <TableHead className="w-[300px] bg-background">Tela</TableHead>
                     {ROLES.map(role => (
-                      <TableCell key={role.value} className="text-center">
-                        <div className="flex justify-center items-center gap-2">
-                          {isOperationLoading(screen.id, role.value) ? (
-                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                          ) : (
-                            <Checkbox
-                              checked={hasPermission(screen.id, role.value)}
-                              onCheckedChange={() => {
-                                console.log('[AdminPermissoes] Checkbox clicado:', {
-                                  screen: screen.nome,
-                                  role: role.value,
-                                  currentState: hasPermission(screen.id, role.value)
-                                });
-                                togglePermission(screen.id, role.value);
-                              }}
-                              disabled={isOperationLoading(screen.id, role.value)}
-                            />
+                      <TableHead key={role.value} className="text-center bg-background">
+                        <Badge className={`${role.color} text-white`}>
+                          {role.label}
+                        </Badge>
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {screens.map(screen => (
+                    <TableRow key={screen.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{screen.nome}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {screen.rota}
+                          </div>
+                          {screen.descricao && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {screen.descricao}
+                            </div>
                           )}
                         </div>
                       </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                      {ROLES.map(role => (
+                        <TableCell key={role.value} className="text-center">
+                          <div className="flex justify-center items-center gap-2">
+                            {isOperationLoading(screen.id, role.value) ? (
+                              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                            ) : (
+                              <Checkbox
+                                checked={hasPermission(screen.id, role.value)}
+                                onCheckedChange={() => {
+                                  console.log('[AdminPermissoes] Checkbox clicado:', {
+                                    screen: screen.nome,
+                                    role: role.value,
+                                    currentState: hasPermission(screen.id, role.value)
+                                  });
+                                  togglePermission(screen.id, role.value);
+                                }}
+                                disabled={isOperationLoading(screen.id, role.value)}
+                              />
+                            )}
+                          </div>
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
