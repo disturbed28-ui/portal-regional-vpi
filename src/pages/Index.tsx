@@ -25,6 +25,7 @@ const Index = () => {
   const { onlineUsers, totalOnline } = usePresence(user?.id, profile?.nome_colete);
   const { links: linksAtivos } = useLinksUteis(true);
   const { hasAccess: hasAcessoAcoesSociais, loading: loadingAcessoAcoes } = useScreenAccess('/acoes-sociais', user?.id);
+  const { hasAccess: hasAcessoListasPresenca, loading: loadingAcessoListas } = useScreenAccess('/listas-presenca', user?.id);
   const [showQRCode, setShowQRCode] = useState(false);
 
   // Determinar role para pendências
@@ -307,7 +308,7 @@ const Index = () => {
               </Button>
             )}
 
-            {!roleLoading && (isAdmin || isModerator) && (
+            {hasAcessoListasPresenca && !loadingAcessoListas && (
               <Button
                 onClick={handleListasPresenca}
                 disabled={!isLoggedIn || !isActive}

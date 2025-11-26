@@ -4,7 +4,11 @@ import { Switch } from "@/components/ui/switch";
 import { GripVertical } from "lucide-react";
 import { usePesosTiposEvento } from "@/hooks/usePesosTiposEvento";
 
-export const ConfiguracaoTiposEvento = () => {
+interface ConfiguracaoTiposEventoProps {
+  readOnly?: boolean;
+}
+
+export const ConfiguracaoTiposEvento = ({ readOnly = false }: ConfiguracaoTiposEventoProps) => {
   const { tiposEvento, isLoading, update } = usePesosTiposEvento();
 
   if (isLoading) {
@@ -39,6 +43,7 @@ export const ConfiguracaoTiposEvento = () => {
                   <Switch
                     checked={tipo.ativo}
                     onCheckedChange={(checked) => update({ id: tipo.id, updates: { ativo: checked } })}
+                    disabled={readOnly}
                   />
                 </div>
               </div>
@@ -52,6 +57,7 @@ export const ConfiguracaoTiposEvento = () => {
                   max={100}
                   step={5}
                   className="w-full"
+                  disabled={readOnly}
                 />
                 <p className="text-xs text-muted-foreground">{tipo.descricao}</p>
               </div>

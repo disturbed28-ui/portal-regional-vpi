@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useScreenAccess } from "@/hooks/useScreenAccess";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Calendar, BarChart3, User, Settings } from "lucide-react";
@@ -20,19 +21,33 @@ const ListasPresenca = () => {
   const { user } = useAuth();
   const { profile } = useProfile(user?.id);
   const { hasRole, loading: roleLoading } = useUserRole(user?.id);
+  const { hasAccess, loading: loadingAccess } = useScreenAccess('/listas-presenca', user?.id);
 
   const isAdmin = hasRole('admin');
   const isModerator = hasRole('moderator');
 
-  // Verificar acesso
-  if (!roleLoading && !isAdmin && !isModerator) {
-    toast({
-      title: "Acesso Negado",
-      description: "Você não tem permissão para acessar esta página.",
-      variant: "destructive",
-    });
-    navigate("/");
-    return null;
+  // Redirecionar se não tiver acesso
+  useEffect(() => {
+    if (!loadingAccess && !hasAccess) {
+      toast({
+        title: "Acesso Negado",
+        description: "Você não tem permissão para acessar esta página.",
+        variant: "destructive",
+      });
+      navigate('/');
+    }
+  }, [loadingAccess, hasAccess, navigate, toast]);
+
+  // Loading da verificação de permissões
+  if (loadingAccess) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Verificando permissões...</p>
+        </div>
+      </div>
+    );
   }
 
   if (roleLoading) {
@@ -69,7 +84,7 @@ const ListasPresenca = () => {
 
         {/* Tabs de Navegação */}
         <Tabs defaultValue="consulta" className="w-full">
-          <TabsList className={`grid w-full ${isAdmin ? 'max-w-3xl grid-cols-4' : 'max-w-2xl grid-cols-3'}`}>
+          <TabsList className="grid w-full max-w-3xl grid-cols-4">
             <TabsTrigger value="consulta" className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
               Consultar Listas
@@ -82,12 +97,10 @@ const ListasPresenca = () => {
               <User className="h-4 w-4" />
               Frequência Individual
             </TabsTrigger>
-            {isAdmin && (
-              <TabsTrigger value="config" className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                Configurações
-              </TabsTrigger>
-            )}
+            <TabsTrigger value="config" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Configurações
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="consulta" className="mt-6">
@@ -111,12 +124,10 @@ const ListasPresenca = () => {
             />
           </TabsContent>
 
-          {isAdmin && (
-            <TabsContent value="config" className="mt-6 space-y-6">
-              <ConfiguracaoJustificativas />
-              <ConfiguracaoTiposEvento />
-            </TabsContent>
-          )}
+          <TabsContent value="config" className="mt-6 space-y-6">
+            <ConfiguracaoJustificativas readOnly={!isAdmin} />
+            <ConfiguracaoTiposEvento readOnly={!isAdmin} />
+          </TabsContent>
         </Tabs>
       </div>
     </div>
