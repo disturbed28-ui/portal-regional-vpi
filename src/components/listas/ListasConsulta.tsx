@@ -17,6 +17,25 @@ interface ListasConsultaProps {
   userDivisaoId?: string;
 }
 
+/**
+ * Deriva o status de exibição baseado no status real e na justificativa
+ * Regra de negócio:
+ * - presente → "presente"
+ * - visitante → "visitante"
+ * - ausente + justificativa válida → "justificado"
+ * - ausente + sem justificativa ou "nao_justificado" → "ausente"
+ */
+const getStatusExibicao = (status: string, justificativa: string | null): string => {
+  if (status === 'presente') return 'presente';
+  if (status === 'visitante') return 'visitante';
+  
+  // Status = ausente
+  if (justificativa && justificativa !== 'nao_justificado') {
+    return 'justificado';
+  }
+  return 'ausente';
+};
+
 // Funções auxiliares para ordenação
 const romanToNumber = (roman: string | null): number => {
   if (!roman) return 999;
@@ -56,12 +75,13 @@ const getCargoOrder = (cargo: string | null, grau: string | null): number => {
   return 999;
 };
 
-const getStatusOrder = (status: string): number => {
-  switch (status) {
+const getStatusOrder = (status: string, justificativa: string | null): number => {
+  const statusExibicao = getStatusExibicao(status, justificativa);
+  switch (statusExibicao) {
     case 'presente': return 1;
     case 'visitante': return 2;
-    case 'ausente': return 3;
-    case 'justificado': return 4;
+    case 'justificado': return 3;
+    case 'ausente': return 4;
     default: return 999;
   }
 };
@@ -140,8 +160,8 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
     
     return [...presencas].sort((a, b) => {
       // 1. Ordenar por status
-      const statusOrderA = getStatusOrder(a.status);
-      const statusOrderB = getStatusOrder(b.status);
+      const statusOrderA = getStatusOrder(a.status, a.justificativa_ausencia);
+      const statusOrderB = getStatusOrder(b.status, b.justificativa_ausencia);
       if (statusOrderA !== statusOrderB) return statusOrderA - statusOrderB;
       
       // 2. Ordenar por grau
@@ -161,16 +181,17 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
     });
   }, [presencas]);
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
+  const getStatusBadge = (status: string, justificativa: string | null) => {
+    const statusExibicao = getStatusExibicao(status, justificativa);
+    switch (statusExibicao) {
       case 'presente':
         return <Badge className="bg-green-600 hover:bg-green-700">Presente</Badge>;
       case 'visitante':
         return <Badge className="bg-blue-600 hover:bg-blue-700">Visitante</Badge>;
-      case 'ausente':
-        return <Badge variant="destructive">Ausente</Badge>;
       case 'justificado':
         return <Badge className="bg-amber-600 hover:bg-amber-700">Justificado</Badge>;
+      case 'ausente':
+        return <Badge variant="destructive">Ausente</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -178,27 +199,32 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
 
   const estatisticas = presencasOrdenadas ? {
     total: presencasOrdenadas.length,
-    presentes: presencasOrdenadas.filter(p => p.status === 'presente').length,
-    visitantes: presencasOrdenadas.filter(p => p.status === 'visitante').length,
-    ausentes: presencasOrdenadas.filter(p => p.status === 'ausente').length,
-    justificados: presencasOrdenadas.filter(p => p.status === 'justificado').length
+    presentes: presencasOrdenadas.filter(p => getStatusExibicao(p.status, p.justificativa_ausencia) === 'presente').length,
+    visitantes: presencasOrdenadas.filter(p => getStatusExibicao(p.status, p.justificativa_ausencia) === 'visitante').length,
+    justificados: presencasOrdenadas.filter(p => getStatusExibicao(p.status, p.justificativa_ausencia) === 'justificado').length,
+    ausentes: presencasOrdenadas.filter(p => getStatusExibicao(p.status, p.justificativa_ausencia) === 'ausente').length
   } : null;
 
   const handleExportarExcel = () => {
     if (!eventoAtual || !presencasOrdenadas) return;
     
-    const dadosExcel = presencasOrdenadas.map(p => ({
-      'Nome': p.integrantes_portal?.nome_colete || '-',
-      'Divisão': p.integrantes_portal?.divisao_texto || '-',
-      'Cargo': p.integrantes_portal?.cargo_nome || '-',
-      'Grau': p.integrantes_portal?.grau || '-',
-      'Status': p.status,
-      'Confirmado Por': p.confirmado_por || '-',
-      'Data/Hora': p.confirmado_em 
-        ? format(new Date(p.confirmado_em), "dd/MM/yyyy HH:mm", { locale: ptBR })
-        : '-',
-      'Justificativa': p.status === 'presente' ? '-' : (p.justificativa_ausencia || 'Não justificado')
-    }));
+    const dadosExcel = presencasOrdenadas.map(p => {
+      const statusExibicao = getStatusExibicao(p.status, p.justificativa_ausencia);
+      return {
+        'Nome': p.integrantes_portal?.nome_colete || '-',
+        'Divisão': p.integrantes_portal?.divisao_texto || '-',
+        'Cargo': p.integrantes_portal?.cargo_nome || '-',
+        'Grau': p.integrantes_portal?.grau || '-',
+        'Status': statusExibicao.charAt(0).toUpperCase() + statusExibicao.slice(1),
+        'Confirmado Por': p.confirmado_por || '-',
+        'Data/Hora': p.confirmado_em 
+          ? format(new Date(p.confirmado_em), "dd/MM/yyyy HH:mm", { locale: ptBR })
+          : '-',
+        'Justificativa': statusExibicao === 'presente' 
+          ? '-' 
+          : (p.justificativa_ausencia || 'Não justificado')
+      };
+    });
     
     const ws = XLSX.utils.json_to_sheet(dadosExcel);
     const wb = XLSX.utils.book_new();
@@ -366,7 +392,7 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
                         <TableCell>
                           {presenca.integrantes_portal?.grau || '-'}
                         </TableCell>
-                        <TableCell>{getStatusBadge(presenca.status)}</TableCell>
+                        <TableCell>{getStatusBadge(presenca.status, presenca.justificativa_ausencia)}</TableCell>
                         <TableCell>{presenca.confirmado_por || '-'}</TableCell>
                         <TableCell>
                           {presenca.confirmado_em 
