@@ -85,6 +85,7 @@ export type Database = {
           divisao_relatorio_id: string | null
           divisao_relatorio_texto: string
           escopo_acao: string
+          foi_reportada_em_relatorio: boolean | null
           formulario_id: string | null
           google_form_enviado_em: string | null
           google_form_enviado_por: string | null
@@ -111,6 +112,7 @@ export type Database = {
           divisao_relatorio_id?: string | null
           divisao_relatorio_texto: string
           escopo_acao: string
+          foi_reportada_em_relatorio?: boolean | null
           formulario_id?: string | null
           google_form_enviado_em?: string | null
           google_form_enviado_por?: string | null
@@ -137,6 +139,7 @@ export type Database = {
           divisao_relatorio_id?: string | null
           divisao_relatorio_texto?: string
           escopo_acao?: string
+          foi_reportada_em_relatorio?: boolean | null
           formulario_id?: string | null
           google_form_enviado_em?: string | null
           google_form_enviado_por?: string | null

@@ -10,6 +10,7 @@ import { useIntegrantes, useBuscaIntegrante } from "@/hooks/useIntegrantes";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { normalizeText, getSemanaAtual, formatDateToSQL } from "@/lib/normalizeText";
+import { cn } from "@/lib/utils";
 import { useSubmitRelatorioSemanal, SubmitRelatorioParams } from "@/hooks/useRelatorioSemanal";
 import { useAcoesResolucaoDelta } from "@/hooks/useAcoesResolucaoDelta";
 
@@ -635,7 +636,7 @@ const FormularioRelatorioSemanal = () => {
     carregarInadimplencias();
   }, [divisaoSelecionada]);
 
-  // T6: Carregar ações sociais da semana automaticamente
+  // T6: Carregar ações sociais da semana + passivo (semana anterior não reportada)
   useEffect(() => {
     const carregarAcoesSociaisDaSemana = async () => {
       try {
@@ -652,26 +653,38 @@ const FormularioRelatorioSemanal = () => {
 
         const { inicio, fim } = getSemanaAtual();
 
-        const { data, error } = await supabase
+        // Calcular semana anterior
+        const inicioSemanaAnterior = new Date(inicio);
+        inicioSemanaAnterior.setDate(inicioSemanaAnterior.getDate() - 7);
+        const fimSemanaAnterior = new Date(fim);
+        fimSemanaAnterior.setDate(fimSemanaAnterior.getDate() - 7);
+
+        // Buscar ações da SEMANA ATUAL
+        const { data: acoesSemanaAtual, error: errorAtual } = await supabase
           .from("acoes_sociais_registros")
-          .select("id, data_acao, escopo_acao, tipo_acao_nome_snapshot, divisao_relatorio_id")
+          .select("id, data_acao, escopo_acao, tipo_acao_nome_snapshot")
           .eq("divisao_relatorio_id", divisaoSelecionada.id)
           .gte("data_acao", formatDateToSQL(inicio))
           .lte("data_acao", formatDateToSQL(fim));
 
+        // Buscar ações da SEMANA ANTERIOR que NÃO foram reportadas
+        const { data: acoesSemanaAnterior, error: errorAnterior } = await supabase
+          .from("acoes_sociais_registros")
+          .select("id, data_acao, escopo_acao, tipo_acao_nome_snapshot")
+          .eq("divisao_relatorio_id", divisaoSelecionada.id)
+          .gte("data_acao", formatDateToSQL(inicioSemanaAnterior))
+          .lte("data_acao", formatDateToSQL(fimSemanaAnterior))
+          .eq("foi_reportada_em_relatorio", false);
+
         setCarregandoAcoesSociaisAuto(false);
 
-        if (error) {
-          console.error("[FormularioRelatorioSemanal] Erro ao carregar acoes sociais da semana:", error);
+        if (errorAtual || errorAnterior) {
+          console.error("[FormularioRelatorioSemanal] Erro ao carregar ações:", errorAtual || errorAnterior);
           return;
         }
 
-        if (!data || data.length === 0) {
-          console.log("[FormularioRelatorioSemanal] Nenhuma acao social encontrada para a semana atual");
-          return;
-        }
-
-        const itensResumo = data.map((acao: any) => ({
+        // Montar itens da semana atual
+        const itensSemanaAtual = (acoesSemanaAtual || []).map((acao: any) => ({
           data_acao: acao.data_acao,
           titulo: acao.tipo_acao_nome_snapshot
             ? `${acao.tipo_acao_nome_snapshot} - ${acao.escopo_acao}`
@@ -679,15 +692,36 @@ const FormularioRelatorioSemanal = () => {
           status: "Concluída",
           origem: "form_acoes_sociais",
           registro_id: acao.id,
+          marcador_relatorio: "semana_atual",
         }));
 
-        setTeveAcoesSociais(true);
-        setAcoesSociais(itensResumo);
-        
-        console.log("[FormularioRelatorioSemanal] Ações sociais carregadas automaticamente:", itensResumo.length);
+        // Montar itens passivos (semana anterior não reportada)
+        const itensPassivo = (acoesSemanaAnterior || []).map((acao: any) => ({
+          data_acao: acao.data_acao,
+          titulo: acao.tipo_acao_nome_snapshot
+            ? `${acao.tipo_acao_nome_snapshot} - ${acao.escopo_acao}`
+            : acao.escopo_acao,
+          status: "Concluída",
+          origem: "form_acoes_sociais",
+          registro_id: acao.id,
+          marcador_relatorio: "semana_anterior_nao_reportada",
+        }));
+
+        const itensResumo = [...itensSemanaAtual, ...itensPassivo];
+
+        if (itensResumo.length > 0) {
+          setTeveAcoesSociais(true);
+          setAcoesSociais(itensResumo);
+          console.log("[FormularioRelatorioSemanal] Ações carregadas:", {
+            semanaAtual: itensSemanaAtual.length,
+            passivo: itensPassivo.length
+          });
+        } else {
+          console.log("[FormularioRelatorioSemanal] Nenhuma ação social encontrada");
+        }
       } catch (error) {
         setCarregandoAcoesSociaisAuto(false);
-        console.error("[FormularioRelatorioSemanal] Erro inesperado ao carregar acoes sociais da semana:", error);
+        console.error("[FormularioRelatorioSemanal] Erro inesperado ao carregar ações:", error);
       }
     };
 
@@ -831,11 +865,17 @@ const FormularioRelatorioSemanal = () => {
       estatisticas_divisao_json: estatisticas || {}
     };
 
+    // Extrair IDs das ações vindas do form de ações sociais para marcar como reportadas
+    const acoesSociaisParaMarcar = acoesSociais
+      .filter((item) => item.origem === "form_acoes_sociais" && item.registro_id)
+      .map((item) => item.registro_id);
+
     // Preparar parâmetros para o hook
     const params: SubmitRelatorioParams = {
       dados,
       existingReportId: existingReport?.id || null,
-      limiteRespostas: formConfig?.limite_respostas
+      limiteRespostas: formConfig?.limite_respostas,
+      acoesSociaisParaMarcar,
     };
 
     console.log('[FormularioRelatorioSemanal] Enviando relatório:', {
@@ -1317,9 +1357,30 @@ const FormularioRelatorioSemanal = () => {
           {teveAcoesSociais && (
             <div className="space-y-4">
               {acoesSociais.map((acao, idx) => (
-                <Card key={idx} className="p-4 space-y-3 bg-muted/50">
+                <Card 
+                  key={idx} 
+                  className={cn(
+                    "p-4 space-y-3",
+                    acao.marcador_relatorio === "semana_anterior_nao_reportada" 
+                      ? "bg-yellow-50 dark:bg-yellow-950 border-yellow-300 dark:border-yellow-700"
+                      : "bg-muted/50"
+                  )}
+                >
                   <div className="flex justify-between items-start">
-                    <h4 className="text-sm font-medium">Ação Social #{idx + 1}</h4>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-medium">Ação Social #{idx + 1}</h4>
+                      {acao.marcador_relatorio === "semana_anterior_nao_reportada" && (
+                        <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1 font-medium">
+                          ⚠️ Esta ação não foi reportada no relatório da semana anterior. 
+                          Revise e exclua se não fizer sentido manter.
+                        </p>
+                      )}
+                      {acao.origem === "form_acoes_sociais" && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          (Importada do formulário de ações sociais)
+                        </p>
+                      )}
+                    </div>
                     <Button
                       type="button"
                       variant="ghost"
