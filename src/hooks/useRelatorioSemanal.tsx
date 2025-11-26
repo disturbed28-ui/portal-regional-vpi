@@ -30,6 +30,7 @@ export interface SubmitRelatorioParams {
   dados: DadosRelatorioSemanal;
   existingReportId?: string | null;
   limiteRespostas?: 'unica' | 'multipla';
+  acoesSociaisParaMarcar?: string[]; // IDs de ações sociais vindas do form para marcar como reportadas
 }
 
 export const useSubmitRelatorioSemanal = () => {
@@ -37,7 +38,7 @@ export const useSubmitRelatorioSemanal = () => {
 
   return useMutation({
     mutationFn: async (params: SubmitRelatorioParams) => {
-      const { dados, existingReportId, limiteRespostas } = params;
+      const { dados, existingReportId, limiteRespostas, acoesSociaisParaMarcar } = params;
 
       // CASO 1: Não existe relatório → INSERT
       if (!existingReportId) {
@@ -65,6 +66,21 @@ export const useSubmitRelatorioSemanal = () => {
         .single();
       
       if (error) throw error;
+
+      // Após sucesso, marcar ações sociais como reportadas
+      if (acoesSociaisParaMarcar && acoesSociaisParaMarcar.length > 0) {
+        const { error: errorMarcar } = await supabase
+          .from('acoes_sociais_registros')
+          .update({ foi_reportada_em_relatorio: true })
+          .in('id', acoesSociaisParaMarcar);
+
+        if (errorMarcar) {
+          console.error('[RelatorioSemanal] Erro ao marcar ações como reportadas:', errorMarcar);
+        } else {
+          console.log('[RelatorioSemanal] ✅ Ações marcadas como reportadas:', acoesSociaisParaMarcar.length);
+        }
+      }
+
       return data;
     },
     onSuccess: (_, variables) => {
