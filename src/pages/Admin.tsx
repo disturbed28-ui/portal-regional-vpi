@@ -149,7 +149,9 @@ const Admin = () => {
   }, []);
 
   const fetchProfiles = async () => {
+    setLoading(true);
     try {
+      // 1) Buscar perfis com joins e limit de 300
       const { data, error } = await supabase
         .from('profiles')
         .select(`
@@ -163,29 +165,48 @@ const Admin = () => {
             vinculado
           )
         `)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(300);
 
       if (error) throw error;
       
-      if (data) {
-        const profilesWithRoles = await Promise.all(
-          data.map(async (profile) => {
-            const { data: rolesData } = await supabase
-              .from('user_roles')
-              .select('role')
-              .eq('user_id', profile.id);
-            
-            return {
-              ...profile,
-              integrante: Array.isArray(profile.integrante) 
-                ? profile.integrante[0] 
-                : profile.integrante,
-              roles: rolesData?.map(r => r.role) || []
-            };
-          })
-        );
+      if (data && data.length > 0) {
+        // 2) Montar lista de IDs
+        const profileIds = data.map(profile => profile.id);
+        
+        // 3) Fazer UMA única query em user_roles
+        const { data: rolesData, error: rolesError } = await supabase
+          .from('user_roles')
+          .select('user_id, role')
+          .in('user_id', profileIds);
+        
+        if (rolesError) {
+          console.error('Erro ao buscar roles:', rolesError);
+        }
+        
+        // 4) Montar mapa de roles por user_id
+        const rolesByUserId: Record<string, string[]> = {};
+        if (rolesData) {
+          rolesData.forEach(item => {
+            if (!rolesByUserId[item.user_id]) {
+              rolesByUserId[item.user_id] = [];
+            }
+            rolesByUserId[item.user_id].push(item.role);
+          });
+        }
+        
+        // 5) Montar array final de perfis
+        const profilesWithRoles = data.map(profile => ({
+          ...profile,
+          integrante: Array.isArray(profile.integrante) 
+            ? profile.integrante[0] 
+            : profile.integrante,
+          roles: rolesByUserId[profile.id] || []
+        }));
         
         setProfiles(profilesWithRoles as Profile[]);
+      } else {
+        setProfiles([]);
       }
     } catch (error) {
       console.error('Error fetching profiles:', error);
