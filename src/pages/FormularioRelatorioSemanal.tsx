@@ -430,6 +430,7 @@ const FormularioRelatorioSemanal = () => {
   const [conflitos, setConflitos] = useState<any[]>([]);
   const [acoesSociais, setAcoesSociais] = useState<any[]>([]);
   const [estatisticas, setEstatisticas] = useState<any>(null);
+  const [carregandoAcoesSociaisAuto, setCarregandoAcoesSociaisAuto] = useState(false);
 
   // Calcular dia permitido
   const hoje = new Date();
@@ -633,6 +634,70 @@ const FormularioRelatorioSemanal = () => {
 
     carregarInadimplencias();
   }, [divisaoSelecionada]);
+
+  // T6: Carregar ações sociais da semana automaticamente
+  useEffect(() => {
+    const carregarAcoesSociaisDaSemana = async () => {
+      try {
+        // Não sobrescrever quando estiver em modo de edição
+        if (modoEdicao === "editar") return;
+
+        // Se já houver ações carregadas (de relatório existente ou digitadas), não sobrescrever
+        if (acoesSociais && acoesSociais.length > 0) return;
+
+        // Precisamos ter divisaoSelecionada e formConfig carregados
+        if (!divisaoSelecionada || !formConfig) return;
+
+        setCarregandoAcoesSociaisAuto(true);
+
+        const { inicio, fim } = getSemanaAtual();
+
+        const { data, error } = await supabase
+          .from("acoes_sociais_registros")
+          .select("id, data_acao, escopo_acao, tipo_acao_nome_snapshot, divisao_relatorio_id")
+          .eq("divisao_relatorio_id", divisaoSelecionada.id)
+          .gte("data_acao", formatDateToSQL(inicio))
+          .lte("data_acao", formatDateToSQL(fim));
+
+        setCarregandoAcoesSociaisAuto(false);
+
+        if (error) {
+          console.error("[FormularioRelatorioSemanal] Erro ao carregar acoes sociais da semana:", error);
+          return;
+        }
+
+        if (!data || data.length === 0) {
+          console.log("[FormularioRelatorioSemanal] Nenhuma acao social encontrada para a semana atual");
+          return;
+        }
+
+        const itensResumo = data.map((acao: any) => ({
+          data_acao: acao.data_acao,
+          titulo: acao.tipo_acao_nome_snapshot
+            ? `${acao.tipo_acao_nome_snapshot} - ${acao.escopo_acao}`
+            : acao.escopo_acao,
+          status: "Concluída",
+          origem: "form_acoes_sociais",
+          registro_id: acao.id,
+        }));
+
+        setTeveAcoesSociais(true);
+        setAcoesSociais(itensResumo);
+        
+        console.log("[FormularioRelatorioSemanal] Ações sociais carregadas automaticamente:", itensResumo.length);
+      } catch (error) {
+        setCarregandoAcoesSociaisAuto(false);
+        console.error("[FormularioRelatorioSemanal] Erro inesperado ao carregar acoes sociais da semana:", error);
+      }
+    };
+
+    carregarAcoesSociaisDaSemana();
+  }, [
+    divisaoSelecionada,
+    formConfig,
+    modoEdicao,
+    acoesSociais,
+  ]);
 
   // Recarregar relatório existente quando divisão do relatório mudar
   useEffect(() => {
