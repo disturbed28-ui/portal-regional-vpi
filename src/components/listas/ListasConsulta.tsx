@@ -136,6 +136,8 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
           confirmado_por,
           justificativa_ausencia,
           integrante_id,
+          visitante_nome,
+          visitante_tipo,
           integrantes_portal(
             nome_colete,
             divisao_texto,
@@ -174,9 +176,9 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
       const cargoOrderB = getCargoOrder(b.integrantes_portal?.cargo_nome || null, b.integrantes_portal?.grau || null);
       if (cargoOrderA !== cargoOrderB) return cargoOrderA - cargoOrderB;
       
-      // 4. Ordenar por nome
-      const nomeA = a.integrantes_portal?.nome_colete || '';
-      const nomeB = b.integrantes_portal?.nome_colete || '';
+      // 4. Ordenar por nome (considerando visitante externo)
+      const nomeA = a.integrantes_portal?.nome_colete || a.visitante_nome || '';
+      const nomeB = b.integrantes_portal?.nome_colete || b.visitante_nome || '';
       return nomeA.localeCompare(nomeB, 'pt-BR');
     });
   }, [presencas]);
@@ -210,17 +212,27 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
     
     const dadosExcel = presencasOrdenadas.map(p => {
       const statusExibicao = getStatusExibicao(p.status, p.justificativa_ausencia);
+      const isVisitanteExterno = p.visitante_tipo === 'externo';
+      
       return {
-        'Nome': p.integrantes_portal?.nome_colete || '-',
-        'Divisão': p.integrantes_portal?.divisao_texto || '-',
-        'Cargo': p.integrantes_portal?.cargo_nome || '-',
+        'Nome': p.integrantes_portal?.nome_colete 
+          ? removeAccents(p.integrantes_portal.nome_colete)
+          : p.visitante_nome 
+            ? removeAccents(p.visitante_nome)
+            : '-',
+        'Divisão': p.integrantes_portal?.divisao_texto 
+          ? removeAccents(p.integrantes_portal.divisao_texto)
+          : isVisitanteExterno ? 'Externo' : '-',
+        'Cargo': p.integrantes_portal?.cargo_nome 
+          ? removeAccents(p.integrantes_portal.cargo_nome)
+          : isVisitanteExterno ? 'Visitante Externo' : '-',
         'Grau': p.integrantes_portal?.grau || '-',
         'Status': statusExibicao.charAt(0).toUpperCase() + statusExibicao.slice(1),
         'Confirmado Por': p.confirmado_por || '-',
         'Data/Hora': p.confirmado_em 
           ? format(new Date(p.confirmado_em), "dd/MM/yyyy HH:mm", { locale: ptBR })
           : '-',
-        'Justificativa': statusExibicao === 'presente' 
+        'Justificativa': statusExibicao === 'presente' || statusExibicao === 'visitante'
           ? '-' 
           : (p.justificativa_ausencia || 'Não justificado')
       };
@@ -374,21 +386,27 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
                   <TableBody>
                     {presencasOrdenadas.map((presenca) => (
                       <TableRow key={presenca.id}>
-                        <TableCell className="font-medium">
-                          {presenca.integrantes_portal?.nome_colete 
-                            ? removeAccents(presenca.integrantes_portal.nome_colete)
-                            : '-'}
-                        </TableCell>
-                        <TableCell>
-                          {presenca.integrantes_portal?.divisao_texto 
-                            ? removeAccents(presenca.integrantes_portal.divisao_texto)
-                            : '-'}
-                        </TableCell>
-                        <TableCell>
-                          {presenca.integrantes_portal?.cargo_nome 
-                            ? removeAccents(presenca.integrantes_portal.cargo_nome)
-                            : '-'}
-                        </TableCell>
+                <TableCell className="font-medium">
+                  {presenca.integrantes_portal?.nome_colete 
+                    ? removeAccents(presenca.integrantes_portal.nome_colete)
+                    : presenca.visitante_nome 
+                      ? removeAccents(presenca.visitante_nome)
+                      : '-'}
+                </TableCell>
+                <TableCell>
+                  {presenca.integrantes_portal?.divisao_texto 
+                    ? removeAccents(presenca.integrantes_portal.divisao_texto)
+                    : presenca.visitante_tipo === 'externo' 
+                      ? 'Externo' 
+                      : '-'}
+                </TableCell>
+                <TableCell>
+                  {presenca.integrantes_portal?.cargo_nome 
+                    ? removeAccents(presenca.integrantes_portal.cargo_nome)
+                    : presenca.visitante_tipo === 'externo' 
+                      ? 'Visitante Externo' 
+                      : '-'}
+                </TableCell>
                         <TableCell>
                           {presenca.integrantes_portal?.grau || '-'}
                         </TableCell>
@@ -399,11 +417,11 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
                             ? format(new Date(presenca.confirmado_em), "dd/MM/yy HH:mm", { locale: ptBR })
                             : '-'}
                         </TableCell>
-                        <TableCell className="max-w-xs truncate">
-                          {presenca.status === 'presente' 
-                            ? '-' 
-                            : (presenca.justificativa_ausencia || 'Não justificado')}
-                        </TableCell>
+                <TableCell className="max-w-xs truncate">
+                  {presenca.status === 'presente' || presenca.status === 'visitante'
+                    ? '-' 
+                    : (presenca.justificativa_ausencia || 'Não justificado')}
+                </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
