@@ -49,8 +49,14 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     open: false,
     integranteId: null,
   });
+
+  const [visitanteExternoDialog, setVisitanteExternoDialog] = useState({
+    open: false,
+    nome: "",
+  });
+
   const { canManage, loading: loadingPermissions } = useCanManagePresenca();
-  const { evento, presencas, loading, criarEvento, registrarPresenca, removerPresenca, refetch } = useEventoPresenca(event?.id || null);
+  const { evento, presencas, loading, criarEvento, registrarPresenca, removerPresenca, registrarVisitanteExterno, refetch } = useEventoPresenca(event?.id || null);
   const { toast } = useToast();
   const { user } = useAuth();
   
@@ -229,6 +235,18 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     setJustificativaDialog({ open: false, integranteId: null });
   };
 
+  const handleConfirmarVisitanteExterno = async () => {
+    const sucesso = await registrarVisitanteExterno(visitanteExternoDialog.nome);
+    if (sucesso) {
+      setVisitanteExternoDialog({ open: false, nome: "" });
+      setNomeColeteSearch("");
+    }
+  };
+
+  const handleCancelarVisitanteExterno = () => {
+    setVisitanteExternoDialog({ open: false, nome: "" });
+  };
+
   const handleExcluirDaLista = async (integranteId: string, presencaId: string) => {
     if (!evento) return;
     
@@ -285,9 +303,10 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     } else if (data && data.length > 0) {
       setSearchResults(data);
     } else {
-      toast({
-        title: "Não encontrado",
-        description: "Nenhum integrante encontrado com esse nome",
+      // Abrir diálogo para adicionar como visitante externo
+      setVisitanteExternoDialog({
+        open: true,
+        nome: nomeColeteSearch.trim(),
       });
       setSearchResults([]);
     }
@@ -400,14 +419,33 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     }))
     .sort(ordenarPorHierarquia);
 
-  const visitantes = presencas
-    .filter(p => p.status === 'visitante')
+  // Visitantes internos (de outras divisões)
+  const visitantesInternos = presencas
+    .filter(p => p.status === 'visitante' && p.integrante_id !== null)
     .map(p => ({
-      ...p.integrante,
+      ...p.integrante!,
       presencaId: p.id,
       isVisitante: true,
+      isExterno: false,
     }))
     .sort(ordenarPorHierarquia);
+
+  // Visitantes externos (não cadastrados)
+  const visitantesExternos = presencas
+    .filter(p => p.status === 'visitante' && p.integrante_id === null)
+    .map(p => ({
+      id: p.id,
+      nome_colete: p.visitante_nome || 'Visitante Externo',
+      cargo_nome: null,
+      grau: null,
+      divisao_texto: 'Externo',
+      profile_id: null,
+      presencaId: p.id,
+      isVisitante: true,
+      isExterno: true,
+    }));
+
+  const visitantes = [...visitantesInternos, ...visitantesExternos];
 
   const todosPresentes = [...presentes, ...visitantes];
 
@@ -569,8 +607,8 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                             <div className="flex items-center gap-2">
                               {integrante.nome_colete}
                               {integrante.isVisitante && (
-                                <Badge variant="outline" className="text-blue-700 border-blue-700 dark:text-blue-400 dark:border-blue-400 bg-white/50 dark:bg-transparent">
-                                  Visitante
+                                <Badge variant={(integrante as any).isExterno ? "secondary" : "outline"} className={(integrante as any).isExterno ? "" : "text-blue-700 border-blue-700 dark:text-blue-400 dark:border-blue-400 bg-white/50 dark:bg-transparent"}>
+                                  {(integrante as any).isExterno ? 'Visitante (Externo)' : 'Visitante'}
                                 </Badge>
                               )}
                             </div>
@@ -774,6 +812,28 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                 <div className="font-semibold">Não Justificado</div>
                 <div className="text-xs text-muted-foreground">Sem justificativa</div>
               </div>
+            </Button>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Diálogo para Visitante Externo */}
+      <AlertDialog open={visitanteExternoDialog.open} onOpenChange={(open) => !open && handleCancelarVisitanteExterno()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Visitante Externo</AlertDialogTitle>
+            <AlertDialogDescription>
+              O nome "<strong>{visitanteExternoDialog.nome}</strong>" não foi localizado no banco de dados.
+              <br /><br />
+              Deseja incluí-lo como <strong>Visitante (Externo)</strong>?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={handleCancelarVisitanteExterno}>
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmarVisitanteExterno}>
+              Confirmar
             </Button>
           </div>
         </AlertDialogContent>

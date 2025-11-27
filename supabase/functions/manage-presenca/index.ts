@@ -11,16 +11,19 @@ Deno.serve(async (req) => {
 
   try {
     const requestSchema = z.object({
-      action: z.enum(['initialize', 'add', 'remove']),
+      action: z.enum(['initialize', 'add', 'add_visitante_externo', 'remove']),
       user_id: z.string().uuid('ID de usuário inválido'),
       evento_agenda_id: z.string().uuid('ID de evento inválido').optional(),
       integrante_id: z.string().uuid('ID de integrante inválido').optional(),
       profile_id: z.string().optional().nullable(),
       divisao_id: z.string().uuid('ID de divisão inválido').optional(),
-      justificativa_ausencia: z.enum(['saude', 'trabalho', 'familia', 'nao_justificado']).optional()
+      justificativa_ausencia: z.enum(['saude', 'trabalho', 'familia', 'nao_justificado']).optional(),
+      // Novos campos para visitante externo
+      visitante_nome: z.string().min(1).optional(),
+      visitante_tipo: z.enum(['externo']).optional(),
     });
 
-    const { action, user_id, evento_agenda_id, integrante_id, profile_id, divisao_id, justificativa_ausencia } = requestSchema.parse(await req.json());
+    const { action, user_id, evento_agenda_id, integrante_id, profile_id, divisao_id, justificativa_ausencia, visitante_nome, visitante_tipo } = requestSchema.parse(await req.json());
 
     // Criar cliente Supabase com service role (bypassa RLS)
     const supabaseAdmin = createClient(
@@ -539,6 +542,61 @@ function isEventoEspecial(evento: {
       }
       
       console.log('[manage-presenca] Marcado como ausente');
+      return new Response(
+        JSON.stringify({ success: true, data }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (action === 'add_visitante_externo') {
+      console.log('[manage-presenca] Adicionando visitante externo...', { visitante_nome, visitante_tipo });
+      
+      if (!visitante_nome) {
+        return new Response(
+          JSON.stringify({ error: 'Nome do visitante é obrigatório' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Verificar se já existe visitante externo com mesmo nome neste evento
+      const { data: existente } = await supabaseAdmin
+        .from('presencas')
+        .select('id')
+        .eq('evento_agenda_id', evento_agenda_id)
+        .eq('visitante_nome', visitante_nome.trim())
+        .maybeSingle();
+      
+      if (existente) {
+        return new Response(
+          JSON.stringify({ error: 'Visitante externo já registrado neste evento' }),
+          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      const { data, error } = await supabaseAdmin
+        .from('presencas')
+        .insert({
+          evento_agenda_id,
+          integrante_id: null,
+          profile_id: null,
+          status: 'visitante',
+          confirmado_em: new Date().toISOString(),
+          confirmado_por: confirmado_por_nome,
+          visitante_nome: visitante_nome.trim(),
+          visitante_tipo: visitante_tipo || 'externo',
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('[manage-presenca] Erro ao adicionar visitante externo:', error);
+        return new Response(
+          JSON.stringify({ error: 'Erro ao adicionar visitante externo' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      console.log('[manage-presenca] Visitante externo adicionado:', visitante_nome);
       return new Response(
         JSON.stringify({ success: true, data }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
