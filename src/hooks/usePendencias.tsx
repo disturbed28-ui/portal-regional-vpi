@@ -75,17 +75,17 @@ export const usePendencias = (
 
     console.log('[usePendencias] ✅ Iniciando com:', { userId, userRole, regionalId, divisaoId, registroId });
 
-    // Limpar caches antigos (versões v1 e v2)
+    // Limpar caches antigos (versões v1, v2 e v3)
     Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('pendencias_') && !key.includes('_v3_')) {
+      if (key.startsWith('pendencias_') && !key.includes('_v4_')) {
         console.log('[usePendencias] Removendo cache antigo:', key);
         localStorage.removeItem(key);
       }
     });
 
-    // Verificar cache do dia (nova versão v3 com divisao_id)
+    // Verificar cache do dia (nova versão v4 com validação de consistência)
     const data = new Date().toISOString().split('T')[0];
-    const cacheKey = `pendencias_v3_${userId}_${userRole}_${divisaoId || 'no_div'}_${registroId || 'all'}_${data}`;
+    const cacheKey = `pendencias_v4_${userId}_${userRole}_${divisaoId || 'no_div'}_${registroId || 'all'}_${data}`;
     const cached = localStorage.getItem(cacheKey);
     
     console.log('[usePendencias] Cache key:', cacheKey);
@@ -100,13 +100,34 @@ export const usePendencias = (
         const isValidStructure = Array.isArray(parsedData) && 
           (parsedData.length === 0 || parsedData[0]?.detalhes_completos !== undefined);
         
-        if (isValidStructure) {
-          setPendencias(parsedData);
-          setLoading(false);
-          return;
-        } else {
+        if (!isValidStructure) {
           console.log('[usePendencias] Cache com estrutura inválida, buscando novamente...');
           localStorage.removeItem(cacheKey);
+        } else {
+          // Validação de consistência para diretor_divisao
+          // Forçar nova busca se houver pendências de outras divisões no cache
+          if (userRole === 'diretor_divisao' && divisaoId && parsedData.length > 0) {
+            console.log('[usePendencias] Validando consistência do cache para diretor_divisao...');
+            
+            // Verificar se há pendências sem divisao_texto (cache antigo/corrompido)
+            const temPendenciasInvalidas = parsedData.some((p: Pendencia) => !p.divisao_texto);
+            
+            if (temPendenciasInvalidas) {
+              console.warn('[usePendencias] ⚠️ Cache com estrutura antiga detectado, invalidando...');
+              localStorage.removeItem(cacheKey);
+              // Continuar para buscar novamente com filtro correto
+            } else {
+              console.log('[usePendencias] ✅ Cache consistente, usando dados cacheados');
+              setPendencias(parsedData);
+              setLoading(false);
+              return;
+            }
+          } else {
+            // Para outros roles, usar cache normalmente
+            setPendencias(parsedData);
+            setLoading(false);
+            return;
+          }
         }
       } catch (error) {
         console.error('[usePendencias] Erro ao processar cache:', error);
