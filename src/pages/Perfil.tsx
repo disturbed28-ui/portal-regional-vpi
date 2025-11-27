@@ -14,14 +14,16 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
+import { useScreenAccess } from "@/hooks/useScreenAccess";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft } from "lucide-react";
 
 const Perfil = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { profile } = useProfile(user?.id);
+  const { hasAccess, loading: loadingAccess } = useScreenAccess('/perfil', user?.id);
   const [nomeColete, setNomeColete] = useState("");
   const [telefone, setTelefone] = useState("");
   
@@ -69,17 +71,29 @@ const Perfil = () => {
 
   const statusMessage = getStatusMessage();
   
-  // Redirecionar se nao estiver logado
+  // Redirecionar se nao estiver logado OU sem permissao
   useEffect(() => {
-    if (!loading && !user) {
+    // Primeiro: verificar autenticacao
+    if (!authLoading && !user) {
       toast({
         title: "Acesso Negado",
         description: "Voce precisa estar conectado para acessar seu perfil",
         variant: "destructive",
       });
       navigate("/");
+      return;
     }
-  }, [user, loading, navigate, toast]);
+    
+    // Segundo: verificar permissao na matriz
+    if (!loadingAccess && !hasAccess && user) {
+      toast({
+        title: "Acesso Negado",
+        description: "Voce nao tem permissao para acessar esta pagina.",
+        variant: "destructive",
+      });
+      navigate("/");
+    }
+  }, [user, authLoading, loadingAccess, hasAccess, navigate, toast]);
 
   // Dados reais do usuario
   const userName = profile?.name || user?.user_metadata?.full_name || "Visitante";
@@ -150,6 +164,23 @@ const Perfil = () => {
   };
 
   const integrante = profile?.integrante;
+
+  // Loading de autenticacao ou permissoes
+  if (authLoading || loadingAccess) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">
+            {authLoading ? "Verificando autenticacao..." : "Verificando permissoes..."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Sem acesso, nao renderiza nada (useEffect ja redirecionou)
+  if (!hasAccess) return null;
 
   return (
     <div className="min-h-screen bg-background p-4">
