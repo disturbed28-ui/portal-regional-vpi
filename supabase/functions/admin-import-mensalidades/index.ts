@@ -19,6 +19,21 @@ interface RequestBody {
   realizado_por: string;
 }
 
+/**
+ * Normaliza texto removendo acentos para matching com tabela divisoes
+ * Mantém a estrutura do texto, apenas remove diacríticos
+ */
+const normalizarTexto = (texto: string): string => {
+  if (!texto) return '';
+  
+  return texto
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+    .replace(/ç/g, 'c')
+    .replace(/Ç/g, 'C')
+    .trim();
+};
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -121,17 +136,26 @@ Deno.serve(async (req) => {
       (integrantesGrauV || []).map(i => [i.registro_id, i.regional_texto])
     );
 
-    // Corrigir divisao_texto para Grau V
+    // Corrigir divisao_texto para Grau V e normalizar acentos
     const mensalidadesCorrigidas = mensalidades.map(m => {
       const regionalGrauV = grauVMap.get(m.registro_id);
+      
+      // Se for Grau V, usar regional_texto
+      let divisaoFinal = regionalGrauV || m.divisao_texto;
+      
+      // SEMPRE normalizar removendo acentos
+      divisaoFinal = normalizarTexto(divisaoFinal);
+      
       if (regionalGrauV) {
-        console.log(`[GRAU V] Corrigindo ${m.nome_colete}: "${m.divisao_texto}" → "${regionalGrauV}"`);
-        return {
-          ...m,
-          divisao_texto: regionalGrauV
-        };
+        console.log(`[GRAU V] Corrigindo ${m.nome_colete}: "${m.divisao_texto}" → "${divisaoFinal}"`);
+      } else if (divisaoFinal !== m.divisao_texto) {
+        console.log(`[NORMALIZAÇÃO] ${m.nome_colete}: "${m.divisao_texto}" → "${divisaoFinal}"`);
       }
-      return m;
+      
+      return {
+        ...m,
+        divisao_texto: divisaoFinal
+      };
     });
 
     console.log(`[admin-import-mensalidades] ${grauVMap.size} Grau V members corrected`);
