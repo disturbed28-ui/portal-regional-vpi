@@ -65,7 +65,15 @@ export const usePendencias = (
       return;
     }
 
-    console.log('[usePendencias] Iniciando com:', { userId, userRole, regionalId, divisaoId, registroId });
+    // PROTEÇÃO: Diretor de divisão PRECISA ter divisaoId
+    if (userRole === 'diretor_divisao' && !divisaoId) {
+      console.warn('[usePendencias] ⚠️ diretor_divisao sem divisaoId - aguardando profile carregar...');
+      setLoading(false);
+      setPendencias([]);
+      return;
+    }
+
+    console.log('[usePendencias] ✅ Iniciando com:', { userId, userRole, regionalId, divisaoId, registroId });
 
     // Limpar caches antigos (sem _v2)
     Object.keys(localStorage).forEach(key => {
@@ -75,9 +83,9 @@ export const usePendencias = (
       }
     });
 
-    // Verificar cache do dia (nova versão)
+    // Verificar cache do dia (nova versão com divisaoId)
     const data = new Date().toISOString().split('T')[0];
-    const cacheKey = `pendencias_v2_${userId}_${userRole}_${registroId || 'all'}_${data}`;
+    const cacheKey = `pendencias_v2_${userId}_${userRole}_${divisaoId || 'no_div'}_${registroId || 'all'}_${data}`;
     const cached = localStorage.getItem(cacheKey);
     
     console.log('[usePendencias] Cache key:', cacheKey);
@@ -135,17 +143,24 @@ export const usePendencias = (
           }
         }
       } else if (userRole === 'diretor_divisao') {
-        if (divisaoId) {
-          const { data: divisao } = await supabase
-            .from('divisoes')
-            .select('nome')
-            .eq('id', divisaoId)
-            .single();
-          
-          if (divisao) {
-            // Usar ilike para matching robusto (ignora acentos e case)
-            queryMensalidades = queryMensalidades.ilike('divisao_texto', divisao.nome);
-          }
+        if (!divisaoId) {
+          console.error('[usePendencias] ❌ ERRO CRÍTICO: diretor_divisao sem divisaoId no fetchPendencias');
+          setLoading(false);
+          return;
+        }
+        
+        const { data: divisao } = await supabase
+          .from('divisoes')
+          .select('nome')
+          .eq('id', divisaoId)
+          .single();
+        
+        if (divisao) {
+          console.log('[usePendencias] 🎯 Filtro diretor_divisao:', { divisaoId, divisao_nome: divisao.nome });
+          // Usar ilike para matching robusto (ignora acentos e case)
+          queryMensalidades = queryMensalidades.ilike('divisao_texto', divisao.nome);
+        } else {
+          console.error('[usePendencias] ❌ Divisão não encontrada para id:', divisaoId);
         }
       } else if (userRole === 'user' && registroId) {
         // Usuário comum: só vê suas próprias pendências
@@ -271,7 +286,9 @@ export const usePendencias = (
           }
         }
       } else if (userRole === 'diretor_divisao') {
-        if (divisaoId) {
+        if (!divisaoId) {
+          console.error('[usePendencias] ❌ diretor_divisao sem divisaoId - pulando afastados');
+        } else {
           const { data: divisao } = await supabase
             .from('divisoes')
             .select('nome')
@@ -279,7 +296,6 @@ export const usePendencias = (
             .single();
           
           if (divisao) {
-            // Usar ilike para matching robusto (ignora acentos e case)
             queryAfastados = queryAfastados.ilike('divisao_texto', divisao.nome);
           }
         }
@@ -355,7 +371,9 @@ export const usePendencias = (
           }
         }
       } else if (userRole === 'diretor_divisao') {
-        if (divisaoId) {
+        if (!divisaoId) {
+          console.error('[usePendencias] ❌ diretor_divisao sem divisaoId - pulando deltas');
+        } else {
           const { data: divisao } = await supabase
             .from('divisoes')
             .select('nome')
@@ -363,7 +381,6 @@ export const usePendencias = (
             .single();
           
           if (divisao) {
-            // Usar ilike para matching robusto (ignora acentos e case)
             queryDeltas = queryDeltas.ilike('divisao_texto', divisao.nome);
           }
         }
