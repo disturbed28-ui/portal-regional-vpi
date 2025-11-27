@@ -146,7 +146,7 @@ const AdminLinksUteis = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {loadingLinks ? (
             <div className="text-center py-8">Carregando...</div>
           ) : links.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">

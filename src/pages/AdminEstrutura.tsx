@@ -33,6 +33,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { useComandos, Comando } from "@/hooks/useComandos";
 import { useRegionais, Regional } from "@/hooks/useRegionais";
 import { useDivisoes, Divisao } from "@/hooks/useDivisoes";

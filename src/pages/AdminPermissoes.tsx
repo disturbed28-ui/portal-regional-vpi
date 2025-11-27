@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -8,11 +8,8 @@ import { useScreenPermissions } from "@/hooks/useScreenPermissions";
 import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, Loader2, RefreshCw, ArrowLeft } from "lucide-react";
-
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 const ROLES = [
   { value: 'admin' as const, label: 'Admin', color: 'bg-red-500' },
