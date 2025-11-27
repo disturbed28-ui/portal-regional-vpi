@@ -46,13 +46,23 @@ const Index = () => {
         ? "diretor_divisao"
         : "user";
 
+  // PROTEÇÃO CRÍTICA: Só buscar pendências quando dados essenciais estiverem carregados
+  const shouldFetchPendencias = !profileLoading && (
+    // Admin e user sempre podem buscar
+    (pendenciaRole === 'admin' || pendenciaRole === 'user') ||
+    // Regional precisa de regional_id
+    (pendenciaRole === 'regional' && profile?.regional_id) ||
+    // Diretor de divisão PRECISA de divisao_id
+    (pendenciaRole === 'diretor_divisao' && profile?.divisao_id)
+  );
+
   const {
     pendencias,
     loading: pendenciasLoading,
     totalPendencias,
   } = usePendencias(
-    user?.id,
-    pendenciaRole,
+    shouldFetchPendencias ? user?.id : undefined,
+    shouldFetchPendencias ? pendenciaRole : null,
     profile?.regional_id,
     profile?.divisao_id,
     profile?.integrante?.registro_id || undefined,
