@@ -79,6 +79,79 @@ const Admin = () => {
   const [selectedRole, setSelectedRole] = useState<'all' | 'admin' | 'moderator' | 'user'>('all');
   const [activeDivisionKey, setActiveDivisionKey] = useState<string | null>(null);
 
+  // Função para buscar perfis
+  const fetchProfiles = async () => {
+    setLoadingProfiles(true);
+    try {
+      // 1) Buscar perfis com joins e limit de 300
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          *,
+          comandos:comando_id (nome),
+          regionais:regional_id (nome),
+          divisoes:divisao_id (nome),
+          cargos:cargo_id (nome),
+          funcoes:funcao_id (nome),
+          integrante:integrantes_portal!integrantes_portal_profile_id_fkey(
+            vinculado
+          )
+        `)
+        .order('created_at', { ascending: false })
+        .limit(300);
+
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        // 2) Montar lista de IDs
+        const profileIds = data.map(profile => profile.id);
+        
+        // 3) Fazer UMA única query em user_roles
+        const { data: rolesData, error: rolesError } = await supabase
+          .from('user_roles')
+          .select('user_id, role')
+          .in('user_id', profileIds);
+        
+        if (rolesError) {
+          console.error('Erro ao buscar roles:', rolesError);
+        }
+        
+        // 4) Montar mapa de roles por user_id
+        const rolesByUserId: Record<string, string[]> = {};
+        if (rolesData) {
+          rolesData.forEach(item => {
+            if (!rolesByUserId[item.user_id]) {
+              rolesByUserId[item.user_id] = [];
+            }
+            rolesByUserId[item.user_id].push(item.role);
+          });
+        }
+        
+        // 5) Montar array final de perfis
+        const profilesWithRoles = data.map(profile => ({
+          ...profile,
+          integrante: Array.isArray(profile.integrante) 
+            ? profile.integrante[0] 
+            : profile.integrante,
+          roles: rolesByUserId[profile.id] || []
+        }));
+        
+        setProfiles(profilesWithRoles as Profile[]);
+      } else {
+        setProfiles([]);
+      }
+    } catch (error) {
+      console.error('Error fetching profiles:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao carregar perfis",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingProfiles(false);
+    }
+  };
+
   // Verificar se e admin
   useEffect(() => {
     console.log('[Admin] Verificacao de acesso iniciada');
@@ -177,78 +250,6 @@ const Admin = () => {
       </div>
     );
   }
-
-  const fetchProfiles = async () => {
-    setLoadingProfiles(true);
-    try {
-      // 1) Buscar perfis com joins e limit de 300
-      const { data, error } = await supabase
-        .from('profiles')
-        .select(`
-          *,
-          comandos:comando_id (nome),
-          regionais:regional_id (nome),
-          divisoes:divisao_id (nome),
-          cargos:cargo_id (nome),
-          funcoes:funcao_id (nome),
-          integrante:integrantes_portal!integrantes_portal_profile_id_fkey(
-            vinculado
-          )
-        `)
-        .order('created_at', { ascending: false })
-        .limit(300);
-
-      if (error) throw error;
-      
-      if (data && data.length > 0) {
-        // 2) Montar lista de IDs
-        const profileIds = data.map(profile => profile.id);
-        
-        // 3) Fazer UMA única query em user_roles
-        const { data: rolesData, error: rolesError } = await supabase
-          .from('user_roles')
-          .select('user_id, role')
-          .in('user_id', profileIds);
-        
-        if (rolesError) {
-          console.error('Erro ao buscar roles:', rolesError);
-        }
-        
-        // 4) Montar mapa de roles por user_id
-        const rolesByUserId: Record<string, string[]> = {};
-        if (rolesData) {
-          rolesData.forEach(item => {
-            if (!rolesByUserId[item.user_id]) {
-              rolesByUserId[item.user_id] = [];
-            }
-            rolesByUserId[item.user_id].push(item.role);
-          });
-        }
-        
-        // 5) Montar array final de perfis
-        const profilesWithRoles = data.map(profile => ({
-          ...profile,
-          integrante: Array.isArray(profile.integrante) 
-            ? profile.integrante[0] 
-            : profile.integrante,
-          roles: rolesByUserId[profile.id] || []
-        }));
-        
-        setProfiles(profilesWithRoles as Profile[]);
-      } else {
-        setProfiles([]);
-      }
-    } catch (error) {
-      console.error('Error fetching profiles:', error);
-      toast({
-        title: "Erro",
-        description: "Falha ao carregar perfis",
-        variant: "destructive",
-      });
-    } finally {
-      setLoadingProfiles(false);
-    }
-  };
 
   const openDialog = (profile: Profile, action: 'aprovar' | 'recusar' | 'inativar') => {
     setSelectedProfile(profile);
