@@ -139,6 +139,9 @@ const Admin = () => {
 
   if (!hasAccess) return null;
 
+  useEffect(() => {
+    fetchProfiles();
+    
     const channel = supabase
       .channel('admin-profiles')
       .on(

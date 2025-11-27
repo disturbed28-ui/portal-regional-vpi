@@ -27,7 +27,6 @@ import type { ExcelIntegrante } from "@/lib/excelParser";
 import { CargaAfastados } from "@/components/admin/CargaAfastados";
 import { DeltasPendentes } from "@/components/relatorios/DeltasPendentes";
 import { usePendencias } from "@/hooks/usePendencias";
-import { useUserRole } from "@/hooks/useUserRole";
 import { LimparDeltasFalsos } from "@/components/admin/LimparDeltasFalsos";
 import { ProfileDetailDialog } from "@/components/admin/ProfileDetailDialog";
 
@@ -144,6 +143,8 @@ const AdminIntegrantes = () => {
   }
 
   if (!hasAccess) return null;
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 

@@ -141,6 +141,10 @@ const AdminFormularios = () => {
   }
 
   if (!hasAccess) return null;
+
+  const diasSemanaNomes = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+  return (
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
