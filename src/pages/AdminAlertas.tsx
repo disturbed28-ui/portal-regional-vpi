@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useScreenAccess } from "@/hooks/useScreenAccess";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,11 +11,23 @@ import AlertasInadimplencia from "@/components/admin/AlertasInadimplencia";
 
 const AdminAlertas = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { user } = useAuth();
-  const { hasAccess, loading } = useScreenAccess('/admin/alertas', user?.id);
+  const { hasAccess, loading: loadingAccess } = useAdminAccess();
   const [activeTab, setActiveTab] = useState("enviar");
 
-  if (loading) {
+  useEffect(() => {
+    if (!loadingAccess && !hasAccess) {
+      toast({
+        title: "Acesso negado",
+        description: "Você não tem permissão para acessar esta página.",
+        variant: "destructive",
+      });
+      navigate("/");
+    }
+  }, [loadingAccess, hasAccess, navigate, toast]);
+
+  if (loadingAccess) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -25,29 +38,7 @@ const AdminAlertas = () => {
     );
   }
 
-  if (!hasAccess) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="h-5 w-5" />
-              Acesso Negado
-            </CardTitle>
-            <CardDescription>
-              Você não tem permissão para acessar esta página.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => navigate(-1)} variant="outline" className="w-full">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Voltar
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  if (!hasAccess) return null;
 
   return (
     <div className="min-h-screen bg-background">

@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertTriangle, ArrowLeft, Eye, CheckCircle, XCircle, Clock } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useScreenAccess } from "@/hooks/useScreenAccess";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
+import { useToast } from "@/hooks/use-toast";
 import { useSolicitacoesExclusaoAcoesSociais } from "@/hooks/useSolicitacoesExclusaoAcoesSociais";
 import { useProcessarSolicitacaoExclusaoAcaoSocial } from "@/hooks/useProcessarSolicitacaoExclusaoAcaoSocial";
 import { Button } from "@/components/ui/button";
@@ -32,11 +33,9 @@ type StatusFiltro = 'pendente' | 'aprovado' | 'recusado' | 'todos';
 
 const AdminAcoesSociaisExclusoes = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { user } = useAuth();
-  const { hasAccess, loading: loadingAccess } = useScreenAccess(
-    '/admin/acoes-sociais/solicitacoes-exclusao',
-    user?.id
-  );
+  const { hasAccess, loading: loadingAccess } = useAdminAccess();
 
   const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>('pendente');
   const { solicitacoes, loading, refetch } = useSolicitacoesExclusaoAcoesSociais(statusFiltro);
@@ -45,6 +44,17 @@ const AdminAcoesSociaisExclusoes = () => {
   const [solicitacaoSelecionada, setSolicitacaoSelecionada] = useState<any>(null);
   const [mostrarDialog, setMostrarDialog] = useState(false);
   const [observacaoAdmin, setObservacaoAdmin] = useState('');
+
+  useEffect(() => {
+    if (!loadingAccess && !hasAccess) {
+      toast({
+        title: "Acesso negado",
+        description: "Você não tem permissão para acessar esta página.",
+        variant: "destructive",
+      });
+      navigate("/");
+    }
+  }, [loadingAccess, hasAccess, navigate, toast]);
 
   // Proteção de acesso
   if (loadingAccess) {
@@ -58,29 +68,7 @@ const AdminAcoesSociaisExclusoes = () => {
     );
   }
 
-  if (!hasAccess) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="h-5 w-5" />
-              Acesso Negado
-            </CardTitle>
-            <CardDescription>
-              Você não tem permissão para acessar esta página.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => navigate(-1)} variant="outline" className="w-full">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Voltar
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  if (!hasAccess) return null;
 
   const handleVerDetalhes = (solicitacao: any) => {
     setSolicitacaoSelecionada(solicitacao);

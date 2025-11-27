@@ -1,8 +1,12 @@
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useScreenPermissions } from "@/hooks/useScreenPermissions";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
+import { useToast } from "@/hooks/use-toast";
 import { Shield, Loader2, RefreshCw, ArrowLeft } from "lucide-react";
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -21,9 +25,23 @@ const ROLES = [
 
 export default function AdminPermissoes() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { hasAccess, loading: loadingAccess } = useAdminAccess();
   const { screens, loading, togglePermission, hasPermission, isOperationLoading, refetch } = useScreenPermissions();
   const [refreshing, setRefreshing] = useState(false);
+  const [expandedScreen, setExpandedScreen] = useState<string | undefined>();
+
+  useEffect(() => {
+    if (!loadingAccess && !hasAccess) {
+      toast({
+        title: "Acesso negado",
+        description: "Você não tem permissão para acessar esta página.",
+        variant: "destructive",
+      });
+      navigate("/");
+    }
+  }, [loadingAccess, hasAccess, navigate, toast]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -31,13 +49,18 @@ export default function AdminPermissoes() {
     setRefreshing(false);
   };
 
-  if (loading) {
+  if (loadingAccess || loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Verificando permissões...</p>
+        </div>
       </div>
     );
   }
+
+  if (!hasAccess) return null;
 
   return (
     <div className="container mx-auto p-4 md:p-6 space-y-6">

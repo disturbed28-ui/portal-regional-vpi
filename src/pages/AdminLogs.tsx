@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RefreshCw, ArrowLeft, FileText, Mail } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useUserRole } from "@/hooks/useUserRole";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
 import { LogsSystemSection } from "@/components/admin/LogsSystemSection";
@@ -13,34 +13,37 @@ const AdminLogs = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
-  const { hasRole, loading: roleLoading } = useUserRole(user?.id);
+  const { hasAccess, loading: loadingAccess } = useAdminAccess();
   const [activeTab, setActiveTab] = useState("sistema");
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    if (authLoading || roleLoading) return;
-
-    if (!user || !hasRole('admin')) {
+    if (!loadingAccess && !hasAccess) {
       toast({
-        title: "Acesso Negado",
-        description: "Apenas administradores podem acessar esta área",
+        title: "Acesso negado",
+        description: "Você não tem permissão para acessar esta página.",
         variant: "destructive",
       });
       navigate("/");
     }
-  }, [user, hasRole, authLoading, roleLoading, navigate, toast]);
+  }, [loadingAccess, hasAccess, navigate, toast]);
 
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1);
   };
 
-  if (authLoading || roleLoading) {
+  if (loadingAccess) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        Carregando...
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Verificando permissões...</p>
+        </div>
       </div>
     );
   }
+
+  if (!hasAccess) return null;
 
   return (
     <div className="min-h-screen bg-background p-3 md:p-4">

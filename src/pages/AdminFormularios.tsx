@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, Edit, Power } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,10 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useFormulariosAdmin, useFormularioCRUD, FormularioCatalogo } from "@/hooks/useFormulariosCatalogo";
 import { useRegionais } from "@/hooks/useRegionais";
+import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
 const ROLES_DISPONIVEIS = [
@@ -24,6 +28,10 @@ const ROLES_DISPONIVEIS = [
 
 const AdminFormularios = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const { hasRole } = useUserRole(user?.id);
+  const { hasAccess, loading: loadingAccess } = useAdminAccess();
   const { data: formularios, isLoading } = useFormulariosAdmin();
   const { regionais } = useRegionais();
   const { create, update, toggleAtivo, isLoading: isSaving } = useFormularioCRUD();
@@ -43,6 +51,17 @@ const AdminFormularios = () => {
     ativo: true,
     roles_permitidas: null as string[] | null
   });
+
+  useEffect(() => {
+    if (!loadingAccess && !hasAccess) {
+      toast({
+        title: "Acesso negado",
+        description: "Você não tem permissão para acessar esta página.",
+        variant: "destructive",
+      });
+      navigate("/");
+    }
+  }, [loadingAccess, hasAccess, navigate, toast]);
 
   const handleEdit = (formulario: FormularioCatalogo) => {
     setIsEditing(true);
@@ -110,9 +129,18 @@ const AdminFormularios = () => {
     });
   };
 
-  const diasSemanaNomes = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+  if (loadingAccess || isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Verificando permissões...</p>
+        </div>
+      </div>
+    );
+  }
 
-  return (
+  if (!hasAccess) return null;
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
