@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AlertTriangle, CheckCircle } from 'lucide-react';
 import { formatRef } from '@/lib/mensalidadesParser';
 import { formatarDataBrasil } from '@/lib/timezone';
+import { containsNormalized } from '@/lib/utils';
 
 export const HistoricoDevedores = () => {
   const [filtroNome, setFiltroNome] = useState('');
@@ -45,7 +46,7 @@ export const HistoricoDevedores = () => {
 
   // Aplicar filtros
   const historicoFiltrado = historicoCompleto.filter(item => {
-    const matchNome = item.nome_colete.toLowerCase().includes(filtroNome.toLowerCase());
+    const matchNome = containsNormalized(item.nome_colete, filtroNome);
     const matchDivisao = filtroDivisao === 'todos' || item.divisao_texto === filtroDivisao;
     const matchStatus = 
       filtroStatus === 'todos' ||
