@@ -21,7 +21,7 @@ import { QRCodeScanner } from "./QRCodeScanner";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { removeAccents } from "@/lib/utils";
+import { removeAccents, normalizeSearchTerm } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useScreenAccess } from "@/hooks/useScreenAccess";
 
@@ -267,11 +267,12 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     }
 
     setIsSearching(true);
+    const termoBusca = normalizeSearchTerm(nomeColeteSearch);
     const { data, error } = await supabase
       .from('integrantes_portal')
       .select('id, nome_colete, cargo_nome, grau, divisao_texto, profile_id')
       .eq('ativo', true)
-      .ilike('nome_colete', `%${nomeColeteSearch.trim()}%`)
+      .ilike('nome_colete_ascii', `%${termoBusca}%`)
       .limit(10);
 
     if (error) {

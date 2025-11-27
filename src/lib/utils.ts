@@ -24,3 +24,14 @@ export function normalizarNomeDivisao(nome: string): string {
     .trim()                                    // Remove espaços extras
     .replace(/\s+/g, ' ');                    // Normaliza múltiplos espaços em um só
 }
+
+/**
+ * Normaliza termo de busca removendo acentos e convertendo para maiúsculas
+ */
+export function normalizeSearchTerm(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .trim();
+}
