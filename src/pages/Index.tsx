@@ -27,6 +27,8 @@ const Index = () => {
   const { links: linksAtivos } = useLinksUteis(true);
   const { hasAccess: hasAcessoAcoesSociais, loading: loadingAcessoAcoes } = useScreenAccess('/acoes-sociais', user?.id);
   const { hasAccess: hasAcessoListasPresenca, loading: loadingAcessoListas } = useScreenAccess('/listas-presenca', user?.id);
+  const { hasAccess: canSeeRelatorios, loading: loadingRelatoriosAccess } = useScreenAccess('/relatorios', user?.id);
+  const { hasAccess: canSeeOrganograma, loading: loadingOrganogramaAccess } = useScreenAccess('/organograma', user?.id);
   const { hasAccess: canSeeAdmin, loading: loadingAdminAccess } = useAdminAccess();
   const [showQRCode, setShowQRCode] = useState(false);
 
@@ -260,13 +262,15 @@ const Index = () => {
               Formularios
             </Button>
 
-            <Button
-              onClick={handleOrganograma}
-              disabled={!isLoggedIn || !isActive}
-              className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Organograma
-            </Button>
+            {!loadingOrganogramaAccess && canSeeOrganograma && (
+              <Button
+                onClick={handleOrganograma}
+                disabled={!isLoggedIn || !isActive}
+                className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Organograma
+              </Button>
+            )}
 
             <Button
               onClick={handlePerfil}
@@ -300,7 +304,7 @@ const Index = () => {
               </Button>
             )}
 
-            {!roleLoading && (isAdmin || isDiretorDivisao || isModerator || isDiretorRegional) && (
+            {!loadingRelatoriosAccess && canSeeRelatorios && (
               <Button
                 onClick={handleRelatorios}
                 disabled={!isLoggedIn || !isActive}

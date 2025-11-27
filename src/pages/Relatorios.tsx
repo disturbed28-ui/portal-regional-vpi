@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, FileDown } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useScreenAccess } from '@/hooks/useScreenAccess';
 import { useProfile } from '@/hooks/useProfile';
 import { useRelatorioData } from '@/hooks/useRelatorioData';
 import { useHistoricoCargas } from '@/hooks/useHistoricoCargas';
@@ -29,14 +30,12 @@ const Relatorios = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { profile, loading: profileLoading } = useProfile(user?.id);
-  const { hasRole, loading: rolesLoading } = useUserRole(user?.id);
-  
-  // Verificar permissões
-  const isAutorizado = hasRole('admin') || hasRole('diretor_divisao') || hasRole('moderator');
+  const { hasRole, loading: rolesLoading } = useUserRole(user?.id); // mantido para UI interna
+  const { hasAccess, loading: loadingAccess } = useScreenAccess("/relatorios", user?.id);
 
   const { data: relatorioData, isLoading } = useRelatorioData();
   const { data: historicoData, isLoading: isLoadingHistorico } = useHistoricoCargas({
-    enabled: !!user?.id && isAutorizado && !rolesLoading
+    enabled: !!user?.id && hasAccess && !loadingAccess
   });
 
   // Hooks para afastamentos
@@ -46,6 +45,18 @@ const Relatorios = () => {
   const { afastados: proximos30, loading: loadingProximos30 } = useRetornosProximos(30);
   const { registrarRetorno } = useRegistrarRetorno();
   
+  // Redirecionamento em caso de acesso negado
+  useEffect(() => {
+    if (!loadingAccess && !hasAccess) {
+      toast({
+        title: "Acesso negado",
+        description: "Você não tem permissão para acessar esta página.",
+        variant: "destructive",
+      });
+      navigate("/");
+    }
+  }, [loadingAccess, hasAccess, navigate, toast]);
+
   // Redirecionar para perfil se usuário não tiver nome_colete
   useEffect(() => {
     if (user && !profileLoading && profile && !profile.nome_colete) {
@@ -203,22 +214,21 @@ const Relatorios = () => {
     }
   };
 
-  if (!isAutorizado) {
+  // Loading de permissões
+  if (loadingAccess) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
-        <Card className="max-w-md w-full">
-          <CardHeader>
-            <CardTitle>Acesso Negado</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="mb-4">Você não tem permissão para acessar esta página.</p>
-            <Button onClick={() => navigate('/')}>Voltar ao Início</Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Verificando permissões...</p>
+        </div>
       </div>
     );
   }
 
+  if (!hasAccess) return null;
+
+  // Loading de dados
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center">
