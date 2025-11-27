@@ -29,6 +29,7 @@ import { DeltasPendentes } from "@/components/relatorios/DeltasPendentes";
 import { usePendencias } from "@/hooks/usePendencias";
 import { LimparDeltasFalsos } from "@/components/admin/LimparDeltasFalsos";
 import { ProfileDetailDialog } from "@/components/admin/ProfileDetailDialog";
+import { containsNormalized } from "@/lib/utils";
 
 const AdminIntegrantes = () => {
   const navigate = useNavigate();
@@ -74,7 +75,7 @@ const AdminIntegrantes = () => {
   );
 
   const integrantesFiltrados = integrantes.filter((i) =>
-    i.nome_colete.toLowerCase().includes(searchTerm.toLowerCase())
+    containsNormalized(i.nome_colete, searchTerm)
   );
 
   useEffect(() => {

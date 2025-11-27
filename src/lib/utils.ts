@@ -35,3 +35,12 @@ export function normalizeSearchTerm(text: string): string {
     .toUpperCase()
     .trim();
 }
+
+/**
+ * Verifica se o texto contém o termo de busca, ignorando acentos e case
+ */
+export function containsNormalized(text: string, searchTerm: string): boolean {
+  const normalizedText = normalizeSearchTerm(text);
+  const normalizedSearch = normalizeSearchTerm(searchTerm);
+  return normalizedText.includes(normalizedSearch);
+}
