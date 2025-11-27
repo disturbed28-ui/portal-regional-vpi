@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeSearchTerm } from "@/lib/utils";
 
 export interface IntegrantePortal {
   id: string;
@@ -95,7 +96,8 @@ export const useIntegrantes = (options?: UseIntegrantesOptions) => {
     }
 
     if (options?.search) {
-      query = query.ilike('nome_colete', `%${options.search}%`);
+      const termoBusca = normalizeSearchTerm(options.search);
+      query = query.ilike('nome_colete_ascii', `%${termoBusca}%`);
     }
 
     const { data, error } = await query;
@@ -133,10 +135,11 @@ export const useBuscaIntegrante = (nomeColete: string) => {
     const buscar = async () => {
       setLoading(true);
       
+      const termoBusca = normalizeSearchTerm(nomeColete);
       const { data, error } = await supabase
         .from('integrantes_portal')
         .select('*')
-        .ilike('nome_colete', `%${nomeColete}%`)
+        .ilike('nome_colete_ascii', `%${termoBusca}%`)
         .eq('ativo', true)
         .order('nome_colete')
         .limit(10);
