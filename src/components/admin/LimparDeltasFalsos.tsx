@@ -84,9 +84,10 @@ export const LimparDeltasFalsos = () => {
       setObservacao("");
       setPreview(null);
       
-      // Limpar cache
+      // Limpar cache (todas as versões)
       Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('pendencias_v2_')) {
+        if (key.startsWith('pendencias_')) {
+          console.log('[LimparDeltasFalsos] Limpando cache:', key);
           localStorage.removeItem(key);
         }
       });

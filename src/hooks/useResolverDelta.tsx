@@ -20,9 +20,10 @@ export const useResolverDelta = () => {
       
       if (error) throw error;
       
-      // Limpar cache de pendências
+      // Limpar cache de pendências (todas as versões)
       Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('pendencias_v2_')) {
+        if (key.startsWith('pendencias_')) {
+          console.log('[useResolverDelta] Limpando cache:', key);
           localStorage.removeItem(key);
         }
       });
