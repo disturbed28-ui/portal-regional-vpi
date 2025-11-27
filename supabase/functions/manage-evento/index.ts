@@ -112,34 +112,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Se não for admin, validar que o evento é da divisão do usuário
-    const isAdmin = userRolesList.includes('admin');
-    if (!isAdmin && divisao_id) {
-      console.log('[manage-evento] Usuário não é admin, verificando divisão...');
-      
-      const { data: userProfile, error: profileError } = await supabaseAdmin
-        .from('profiles')
-        .select('divisao_id')
-        .eq('id', user_id)
-        .single();
-      
-      if (profileError) {
-        console.error('[manage-evento] Erro ao buscar perfil do usuário:', profileError);
-        return new Response(
-          JSON.stringify({ error: 'Erro ao verificar divisão do usuário' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      if (userProfile?.divisao_id && divisao_id !== userProfile.divisao_id) {
-        console.error('[manage-evento] Divisão do evento não corresponde à divisão do usuário');
-        return new Response(
-          JSON.stringify({ error: 'Você só pode criar eventos da sua própria divisão' }),
-          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
-
     console.log('[manage-evento] Usuário tem permissão, criando evento...');
 
     // Criar evento
