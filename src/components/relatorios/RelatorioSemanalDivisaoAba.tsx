@@ -1,0 +1,255 @@
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
+import { useScreenAccess } from '@/hooks/useScreenAccess';
+import { useRegionais } from '@/hooks/useRegionais';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Loader2 } from 'lucide-react';
+
+const CMD_REGIONAL_ID = 'da8de519-f9c1-45cb-9d26-af56b7c4aa6d';
+
+const MESES = [
+  { value: 1, label: 'Janeiro' },
+  { value: 2, label: 'Fevereiro' },
+  { value: 3, label: 'Março' },
+  { value: 4, label: 'Abril' },
+  { value: 5, label: 'Maio' },
+  { value: 6, label: 'Junho' },
+  { value: 7, label: 'Julho' },
+  { value: 8, label: 'Agosto' },
+  { value: 9, label: 'Setembro' },
+  { value: 10, label: 'Outubro' },
+  { value: 11, label: 'Novembro' },
+  { value: 12, label: 'Dezembro' },
+];
+
+interface DivisaoStatus {
+  id: string;
+  nome: string;
+  regionalNome?: string;
+  enviado: boolean;
+}
+
+export const RelatorioSemanalDivisaoAba = () => {
+  const { user } = useAuth();
+  const { profile } = useProfile(user?.id);
+  const { hasAccess, loading: loadingAccess } = useScreenAccess('/relatorios/semanal-divisao', user?.id);
+  const { regionais } = useRegionais();
+
+  const [regionalSelecionada, setRegionalSelecionada] = useState<string>('');
+  const [mesSelecionado, setMesSelecionado] = useState(new Date().getMonth() + 1);
+  const [anoSelecionado, setAnoSelecionado] = useState(new Date().getFullYear());
+  const [semanaSelecionada, setSemanaSelecionada] = useState(1);
+  
+  const [divisoesStatus, setDivisoesStatus] = useState<DivisaoStatus[]>([]);
+  const [loading, setLoading] = useState(false);
+  
+  const isUsuarioCMD = profile?.regional_id === CMD_REGIONAL_ID;
+
+  // Pré-selecionar regional do usuário (se não for CMD)
+  useEffect(() => {
+    if (!isUsuarioCMD && profile?.regional_id) {
+      setRegionalSelecionada(profile.regional_id);
+    } else if (isUsuarioCMD) {
+      setRegionalSelecionada('todas');
+    }
+  }, [profile, isUsuarioCMD]);
+
+  const buscarStatus = async () => {
+    if (!regionalSelecionada) return;
+    
+    setLoading(true);
+    
+    try {
+      // 1. Buscar divisões
+      let divisoesQuery = supabase
+        .from('divisoes')
+        .select('id, nome, regional_id, regionais(nome)')
+        .order('nome');
+      
+      if (regionalSelecionada !== 'todas') {
+        divisoesQuery = divisoesQuery.eq('regional_id', regionalSelecionada);
+      }
+      
+      const { data: divisoes, error: divisoesError } = await divisoesQuery;
+      
+      if (divisoesError) {
+        console.error('Erro ao buscar divisões:', divisoesError);
+        setLoading(false);
+        return;
+      }
+
+      // 2. Buscar relatórios existentes para o período
+      const { data: relatorios, error: relatoriosError } = await supabase
+        .from('relatorios_semanais_divisao')
+        .select('divisao_relatorio_id')
+        .eq('ano_referencia', anoSelecionado)
+        .eq('mes_referencia', mesSelecionado)
+        .eq('semana_no_mes', semanaSelecionada);
+      
+      if (relatoriosError) {
+        console.error('Erro ao buscar relatórios:', relatoriosError);
+        setLoading(false);
+        return;
+      }
+
+      // 3. Criar Set de divisões que enviaram
+      const divisoesEnviaram = new Set(relatorios?.map(r => r.divisao_relatorio_id) || []);
+
+      // 4. Mapear status
+      const status: DivisaoStatus[] = divisoes?.map(d => ({
+        id: d.id,
+        nome: d.nome,
+        regionalNome: (d.regionais as any)?.nome,
+        enviado: divisoesEnviaram.has(d.id)
+      })) || [];
+
+      setDivisoesStatus(status);
+    } catch (error) {
+      console.error('Erro ao buscar status:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loadingAccess) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Filtros */}
+      <Card>
+        <CardContent className="pt-4">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            {/* Combo Regional */}
+            <div className="col-span-2 sm:col-span-1">
+              <Select 
+                value={regionalSelecionada}
+                onValueChange={setRegionalSelecionada}
+                disabled={!isUsuarioCMD}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Regional" />
+                </SelectTrigger>
+                <SelectContent>
+                  {isUsuarioCMD && <SelectItem value="todas">Todas as Regionais</SelectItem>}
+                  {regionais.map(r => (
+                    <SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Combo Mês */}
+            <div>
+              <Select 
+                value={mesSelecionado.toString()}
+                onValueChange={(v) => setMesSelecionado(parseInt(v))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Mês" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MESES.map(m => (
+                    <SelectItem key={m.value} value={m.value.toString()}>{m.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Campo Ano */}
+            <div>
+              <Input
+                type="number"
+                value={anoSelecionado}
+                onChange={(e) => setAnoSelecionado(parseInt(e.target.value))}
+                min={2020}
+                max={2099}
+                placeholder="Ano"
+              />
+            </div>
+
+            {/* Combo Semana */}
+            <div>
+              <Select 
+                value={semanaSelecionada.toString()}
+                onValueChange={(v) => setSemanaSelecionada(parseInt(v))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Semana" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5].map(s => (
+                    <SelectItem key={s} value={s.toString()}>Semana {s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Botão Aplicar */}
+            <div className="col-span-2 sm:col-span-1">
+              <Button 
+                onClick={buscarStatus} 
+                disabled={loading || !regionalSelecionada}
+                className="w-full"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Carregando...
+                  </>
+                ) : (
+                  'Aplicar'
+                )}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Grid de Cards */}
+      {divisoesStatus.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          {divisoesStatus.map(divisao => (
+            <Card 
+              key={divisao.id} 
+              className={divisao.enviado ? 'border-green-500' : 'border-orange-500'}
+            >
+              <CardContent className="p-4 space-y-2">
+                <div className="font-medium">{divisao.nome}</div>
+                {regionalSelecionada === 'todas' && divisao.regionalNome && (
+                  <div className="text-sm text-muted-foreground">{divisao.regionalNome}</div>
+                )}
+                <Badge variant={divisao.enviado ? 'default' : 'destructive'}>
+                  {divisao.enviado ? 'Enviado' : 'Pendente'}
+                </Badge>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {divisoesStatus.length === 0 && !loading && (
+        <Card>
+          <CardContent className="p-8 text-center text-muted-foreground">
+            Selecione os filtros e clique em "Aplicar" para visualizar o status dos relatórios.
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+};

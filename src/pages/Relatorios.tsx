@@ -15,6 +15,7 @@ import { DashboardInadimplencia } from '@/components/relatorios/DashboardInadimp
 import { EstatisticasEspeciais } from '@/components/relatorios/EstatisticasEspeciais';
 import { GraficoEvolucao } from '@/components/relatorios/GraficoEvolucao';
 import { TabelaComparativa } from '@/components/relatorios/TabelaComparativa';
+import { RelatorioSemanalDivisaoAba } from '@/components/relatorios/RelatorioSemanalDivisaoAba';
 import { formatarDataBrasil } from '@/lib/timezone';
 import * as XLSX from 'xlsx';
 import { toast } from '@/hooks/use-toast';
@@ -32,6 +33,7 @@ const Relatorios = () => {
   const { profile, loading: profileLoading } = useProfile(user?.id);
   const { hasRole, loading: rolesLoading } = useUserRole(user?.id); // mantido para UI interna
   const { hasAccess, loading: loadingAccess } = useScreenAccess("/relatorios", user?.id);
+  const { hasAccess: hasAccessSemanalAba, loading: loadingAccessSemanalAba } = useScreenAccess('/relatorios/semanal-divisao', user?.id);
 
   const { data: relatorioData, isLoading } = useRelatorioData();
   const { data: historicoData, isLoading: isLoadingHistorico } = useHistoricoCargas({
@@ -268,13 +270,16 @@ const Relatorios = () => {
 
         {/* Conteúdo Principal */}
         {relatorioData && (
-          <Tabs defaultValue="relatorio" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="relatorio">Relatório</TabsTrigger>
-              <TabsTrigger value="evolucao">Evolução Histórica</TabsTrigger>
-              <TabsTrigger value="inadimplencia">Inadimplência</TabsTrigger>
-              <TabsTrigger value="afastamentos">Afastamentos</TabsTrigger>
-            </TabsList>
+        <Tabs defaultValue="relatorio" className="w-full">
+          <TabsList className={`grid w-full ${hasAccessSemanalAba ? 'grid-cols-5' : 'grid-cols-4'}`}>
+            <TabsTrigger value="relatorio">Relatório</TabsTrigger>
+            <TabsTrigger value="evolucao">Evolução Histórica</TabsTrigger>
+            <TabsTrigger value="inadimplencia">Inadimplência</TabsTrigger>
+            <TabsTrigger value="afastamentos">Afastamentos</TabsTrigger>
+            {hasAccessSemanalAba && (
+              <TabsTrigger value="semanal">Rel. Semanal</TabsTrigger>
+            )}
+          </TabsList>
               
               <TabsContent value="relatorio">
                 <div className="space-y-6">
@@ -616,6 +621,12 @@ const Relatorios = () => {
                   </TabsContent>
                 </Tabs>
               </TabsContent>
+
+            {hasAccessSemanalAba && (
+              <TabsContent value="semanal">
+                <RelatorioSemanalDivisaoAba />
+              </TabsContent>
+            )}
             </Tabs>
         )}
 
