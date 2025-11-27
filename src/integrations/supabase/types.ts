@@ -513,6 +513,7 @@ export type Database = {
           cargo_grau_texto: string | null
           created_at: string
           dados_adicionais: Json | null
+          divisao_id: string | null
           divisao_texto: string
           id: string
           nome_colete: string
@@ -530,6 +531,7 @@ export type Database = {
           cargo_grau_texto?: string | null
           created_at?: string
           dados_adicionais?: Json | null
+          divisao_id?: string | null
           divisao_texto: string
           id?: string
           nome_colete: string
@@ -547,6 +549,7 @@ export type Database = {
           cargo_grau_texto?: string | null
           created_at?: string
           dados_adicionais?: Json | null
+          divisao_id?: string | null
           divisao_texto?: string
           id?: string
           nome_colete?: string
@@ -567,6 +570,20 @@ export type Database = {
             referencedRelation: "cargas_historico"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "deltas_pendentes_divisao_id_fkey"
+            columns: ["divisao_id"]
+            isOneToOne: false
+            referencedRelation: "divisoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deltas_pendentes_divisao_id_fkey"
+            columns: ["divisao_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["divisao_id"]
+          },
         ]
       }
       divisoes: {
@@ -574,19 +591,25 @@ export type Database = {
           created_at: string | null
           id: string
           nome: string
+          nome_ascii: string | null
           regional_id: string
+          slug: string | null
         }
         Insert: {
           created_at?: string | null
           id?: string
           nome: string
+          nome_ascii?: string | null
           regional_id: string
+          slug?: string | null
         }
         Update: {
           created_at?: string | null
           id?: string
           nome?: string
+          nome_ascii?: string | null
           regional_id?: string
+          slug?: string | null
         }
         Relationships: [
           {
@@ -817,6 +840,7 @@ export type Database = {
           data_afastamento: string
           data_retorno_efetivo: string | null
           data_retorno_prevista: string
+          divisao_id: string | null
           divisao_texto: string
           id: string
           nome_colete: string
@@ -833,6 +857,7 @@ export type Database = {
           data_afastamento: string
           data_retorno_efetivo?: string | null
           data_retorno_prevista: string
+          divisao_id?: string | null
           divisao_texto: string
           id?: string
           nome_colete: string
@@ -849,6 +874,7 @@ export type Database = {
           data_afastamento?: string
           data_retorno_efetivo?: string | null
           data_retorno_prevista?: string
+          divisao_id?: string | null
           divisao_texto?: string
           id?: string
           nome_colete?: string
@@ -864,6 +890,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "cargas_historico"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integrantes_afastados_divisao_id_fkey"
+            columns: ["divisao_id"]
+            isOneToOne: false
+            referencedRelation: "divisoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integrantes_afastados_divisao_id_fkey"
+            columns: ["divisao_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["divisao_id"]
           },
         ]
       }
@@ -940,6 +980,7 @@ export type Database = {
           data_entrada: string | null
           data_inativacao: string | null
           data_vinculacao: string | null
+          divisao_id: string | null
           divisao_texto: string
           grau: string | null
           id: string
@@ -948,8 +989,10 @@ export type Database = {
             | Database["public"]["Enums"]["motivo_inativacao"]
             | null
           nome_colete: string
+          nome_colete_ascii: string | null
           observacoes: string | null
           profile_id: string | null
+          regional_id: string | null
           regional_texto: string
           registro_id: number
           sgt_armas: boolean | null
@@ -973,6 +1016,7 @@ export type Database = {
           data_entrada?: string | null
           data_inativacao?: string | null
           data_vinculacao?: string | null
+          divisao_id?: string | null
           divisao_texto: string
           grau?: string | null
           id?: string
@@ -981,8 +1025,10 @@ export type Database = {
             | Database["public"]["Enums"]["motivo_inativacao"]
             | null
           nome_colete: string
+          nome_colete_ascii?: string | null
           observacoes?: string | null
           profile_id?: string | null
+          regional_id?: string | null
           regional_texto: string
           registro_id: number
           sgt_armas?: boolean | null
@@ -1006,6 +1052,7 @@ export type Database = {
           data_entrada?: string | null
           data_inativacao?: string | null
           data_vinculacao?: string | null
+          divisao_id?: string | null
           divisao_texto?: string
           grau?: string | null
           id?: string
@@ -1014,8 +1061,10 @@ export type Database = {
             | Database["public"]["Enums"]["motivo_inativacao"]
             | null
           nome_colete?: string
+          nome_colete_ascii?: string | null
           observacoes?: string | null
           profile_id?: string | null
+          regional_id?: string | null
           regional_texto?: string
           registro_id?: number
           sgt_armas?: boolean | null
@@ -1026,6 +1075,20 @@ export type Database = {
           vinculado?: boolean | null
         }
         Relationships: [
+          {
+            foreignKeyName: "integrantes_portal_divisao_id_fkey"
+            columns: ["divisao_id"]
+            isOneToOne: false
+            referencedRelation: "divisoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integrantes_portal_divisao_id_fkey"
+            columns: ["divisao_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["divisao_id"]
+          },
           {
             foreignKeyName: "integrantes_portal_profile_id_fkey"
             columns: ["profile_id"]
@@ -1039,6 +1102,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_user_effective_roles"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "integrantes_portal_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "regionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integrantes_portal_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["regional_id"]
           },
         ]
       }
@@ -1118,6 +1195,7 @@ export type Database = {
           data_carga: string
           data_liquidacao: string | null
           data_vencimento: string | null
+          divisao_id: string | null
           divisao_texto: string
           id: string
           liquidado: boolean | null
@@ -1134,6 +1212,7 @@ export type Database = {
           data_carga?: string
           data_liquidacao?: string | null
           data_vencimento?: string | null
+          divisao_id?: string | null
           divisao_texto: string
           id?: string
           liquidado?: boolean | null
@@ -1150,6 +1229,7 @@ export type Database = {
           data_carga?: string
           data_liquidacao?: string | null
           data_vencimento?: string | null
+          divisao_id?: string | null
           divisao_texto?: string
           id?: string
           liquidado?: boolean | null
@@ -1160,7 +1240,22 @@ export type Database = {
           situacao?: string | null
           valor?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "mensalidades_atraso_divisao_id_fkey"
+            columns: ["divisao_id"]
+            isOneToOne: false
+            referencedRelation: "divisoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mensalidades_atraso_divisao_id_fkey"
+            columns: ["divisao_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["divisao_id"]
+          },
+        ]
       }
       presencas: {
         Row: {
@@ -1378,18 +1473,24 @@ export type Database = {
           created_at: string | null
           id: string
           nome: string
+          nome_ascii: string | null
+          slug: string | null
         }
         Insert: {
           comando_id: string
           created_at?: string | null
           id?: string
           nome: string
+          nome_ascii?: string | null
+          slug?: string | null
         }
         Update: {
           comando_id?: string
           created_at?: string | null
           id?: string
           nome?: string
+          nome_ascii?: string | null
+          slug?: string | null
         }
         Relationships: [
           {
