@@ -1263,33 +1263,39 @@ export type Database = {
           confirmado_por: string | null
           evento_agenda_id: string
           id: string
-          integrante_id: string
+          integrante_id: string | null
           justificativa_ausencia: string | null
           justificativa_tipo: string | null
           profile_id: string | null
           status: string
+          visitante_nome: string | null
+          visitante_tipo: string | null
         }
         Insert: {
           confirmado_em?: string | null
           confirmado_por?: string | null
           evento_agenda_id: string
           id?: string
-          integrante_id: string
+          integrante_id?: string | null
           justificativa_ausencia?: string | null
           justificativa_tipo?: string | null
           profile_id?: string | null
           status?: string
+          visitante_nome?: string | null
+          visitante_tipo?: string | null
         }
         Update: {
           confirmado_em?: string | null
           confirmado_por?: string | null
           evento_agenda_id?: string
           id?: string
-          integrante_id?: string
+          integrante_id?: string | null
           justificativa_ausencia?: string | null
           justificativa_tipo?: string | null
           profile_id?: string | null
           status?: string
+          visitante_nome?: string | null
+          visitante_tipo?: string | null
         }
         Relationships: [
           {

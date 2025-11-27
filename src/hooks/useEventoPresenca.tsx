@@ -15,10 +15,12 @@ interface EventoAgenda {
 
 interface Presenca {
   id: string;
-  integrante_id: string;
+  integrante_id: string | null;
   status: string;
   confirmado_em: string;
   justificativa_ausencia?: string | null;
+  visitante_nome?: string | null;
+  visitante_tipo?: string | null;
   integrante: {
     id: string;
     nome_colete: string;
@@ -26,7 +28,7 @@ interface Presenca {
     grau: string | null;
     divisao_texto: string;
     profile_id: string | null;
-  };
+  } | null;
 }
 
 export const useEventoPresenca = (eventoId: string | null) => {
@@ -76,6 +78,8 @@ export const useEventoPresenca = (eventoId: string | null) => {
         status,
         confirmado_em,
         justificativa_ausencia,
+        visitante_nome,
+        visitante_tipo,
         integrante:integrantes_portal (
           id,
           nome_colete,
@@ -287,6 +291,53 @@ export const useEventoPresenca = (eventoId: string | null) => {
     }
   };
 
+  const registrarVisitanteExterno = async (nome: string) => {
+    if (!evento || !user) return false;
+
+    const userId = user.id;
+    console.log('[registrarVisitanteExterno] Registrando visitante externo...', {
+      evento_agenda_id: evento.id,
+      visitante_nome: nome,
+      user_id: userId
+    });
+
+    const { data, error } = await supabase.functions.invoke('manage-presenca', {
+      body: {
+        action: 'add_visitante_externo',
+        user_id: userId,
+        evento_agenda_id: evento.id,
+        visitante_nome: nome,
+        visitante_tipo: 'externo',
+      }
+    });
+
+    if (error) {
+      console.error('[registrarVisitanteExterno] Erro:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível adicionar o visitante externo",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    if (data?.error) {
+      toast({
+        title: "Erro",
+        description: data.error,
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    toast({
+      title: "Visitante adicionado",
+      description: `${nome} foi adicionado como Visitante (Externo)`,
+    });
+    fetchPresencas(evento.id);
+    return true;
+  };
+
   return {
     evento,
     presencas,
@@ -294,6 +345,7 @@ export const useEventoPresenca = (eventoId: string | null) => {
     criarEvento,
     registrarPresenca,
     removerPresenca,
+    registrarVisitanteExterno,
     refetch: fetchEvento,
   };
 };
