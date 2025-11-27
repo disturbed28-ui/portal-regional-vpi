@@ -16,8 +16,11 @@ export interface DadosRelatorioSemanal {
   divisao_relatorio_texto: string;
   regional_relatorio_id?: string;
   regional_relatorio_texto: string;
-  semana_inicio: string; // YYYY-MM-DD
-  semana_fim: string; // YYYY-MM-DD
+  semana_inicio: string; // YYYY-MM-DD (Domingo)
+  semana_fim: string; // YYYY-MM-DD (Sábado)
+  ano_referencia: number; // Ano do sábado
+  mes_referencia: number; // Mês do sábado (1-12)
+  semana_no_mes: number; // Número da semana dentro do mês (1-5)
   entradas_json: any[];
   saidas_json: any[];
   inadimplencias_json: any[];

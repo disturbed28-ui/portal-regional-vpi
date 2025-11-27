@@ -9,7 +9,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useIntegrantes, useBuscaIntegrante } from "@/hooks/useIntegrantes";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { normalizeText, getSemanaAtual, formatDateToSQL } from "@/lib/normalizeText";
+import { normalizeText, calcularSemanaOperacional, formatDateToSQL } from "@/lib/normalizeText";
 import { cn } from "@/lib/utils";
 import { useSubmitRelatorioSemanal, SubmitRelatorioParams } from "@/hooks/useRelatorioSemanal";
 import { useAcoesResolucaoDelta } from "@/hooks/useAcoesResolucaoDelta";
@@ -513,15 +513,15 @@ const FormularioRelatorioSemanal = () => {
 
         // Buscar relatório existente da semana atual para a divisão inicial
         if (formulario?.id && divisaoIntegrante?.id) {
-          const { inicio, fim } = getSemanaAtual();
+          const semana = calcularSemanaOperacional();
           
           const { data: relatorioExistente } = await supabase
             .from('relatorios_semanais_divisao')
             .select('*')
             .eq('formulario_id', formulario.id)
             .eq('divisao_relatorio_id', divisaoIntegrante.id)
-            .eq('semana_inicio', formatDateToSQL(inicio))
-            .eq('semana_fim', formatDateToSQL(fim))
+            .eq('semana_inicio', formatDateToSQL(semana.periodo_inicio))
+            .eq('semana_fim', formatDateToSQL(semana.periodo_fim))
             .maybeSingle();
           
           if (relatorioExistente) {
@@ -651,12 +651,12 @@ const FormularioRelatorioSemanal = () => {
 
         setCarregandoAcoesSociaisAuto(true);
 
-        const { inicio, fim } = getSemanaAtual();
+        const semana = calcularSemanaOperacional();
 
         // Calcular semana anterior
-        const inicioSemanaAnterior = new Date(inicio);
+        const inicioSemanaAnterior = new Date(semana.periodo_inicio);
         inicioSemanaAnterior.setDate(inicioSemanaAnterior.getDate() - 7);
-        const fimSemanaAnterior = new Date(fim);
+        const fimSemanaAnterior = new Date(semana.periodo_fim);
         fimSemanaAnterior.setDate(fimSemanaAnterior.getDate() - 7);
 
         // Buscar ações da SEMANA ATUAL
@@ -664,8 +664,8 @@ const FormularioRelatorioSemanal = () => {
           .from("acoes_sociais_registros")
           .select("id, data_acao, escopo_acao, tipo_acao_nome_snapshot")
           .eq("divisao_relatorio_id", divisaoSelecionada.id)
-          .gte("data_acao", formatDateToSQL(inicio))
-          .lte("data_acao", formatDateToSQL(fim));
+          .gte("data_acao", formatDateToSQL(semana.periodo_inicio))
+          .lte("data_acao", formatDateToSQL(semana.periodo_fim));
 
         // Buscar ações da SEMANA ANTERIOR que NÃO foram reportadas
         const { data: acoesSemanaAnterior, error: errorAnterior } = await supabase
@@ -738,15 +738,15 @@ const FormularioRelatorioSemanal = () => {
     if (!divisaoSelecionada?.id || !formularioId) return;
 
     const verificarRelatorioExistente = async () => {
-      const { inicio, fim } = getSemanaAtual();
+      const semana = calcularSemanaOperacional();
       
       const { data: relatorioExistente } = await supabase
         .from('relatorios_semanais_divisao')
         .select('*')
         .eq('formulario_id', formularioId)
         .eq('divisao_relatorio_id', divisaoSelecionada.id)
-        .eq('semana_inicio', formatDateToSQL(inicio))
-        .eq('semana_fim', formatDateToSQL(fim))
+        .eq('semana_inicio', formatDateToSQL(semana.periodo_inicio))
+        .eq('semana_fim', formatDateToSQL(semana.periodo_fim))
         .maybeSingle();
       
       if (relatorioExistente) {
@@ -839,7 +839,7 @@ const FormularioRelatorioSemanal = () => {
       return;
     }
 
-    const { inicio, fim } = getSemanaAtual();
+    const semana = calcularSemanaOperacional();
 
     // T1: Montar dados com estatisticas_divisao_json
     const dados = {
@@ -855,8 +855,11 @@ const FormularioRelatorioSemanal = () => {
       divisao_relatorio_texto: divisaoSelecionada.nome,
       regional_relatorio_id: dadosResponsavel.regional_id,
       regional_relatorio_texto: dadosResponsavel.regional_nome,
-      semana_inicio: formatDateToSQL(inicio),
-      semana_fim: formatDateToSQL(fim),
+      semana_inicio: formatDateToSQL(semana.periodo_inicio),
+      semana_fim: formatDateToSQL(semana.periodo_fim),
+      ano_referencia: semana.ano_referencia,
+      mes_referencia: semana.mes_referencia,
+      semana_no_mes: semana.semana_no_mes,
       entradas_json: teveEntradas ? entradas : [],
       saidas_json: teveSaidas ? saidas : [],
       inadimplencias_json: inadimplencias,
