@@ -75,17 +75,17 @@ export const usePendencias = (
 
     console.log('[usePendencias] ✅ Iniciando com:', { userId, userRole, regionalId, divisaoId, registroId });
 
-    // Limpar caches antigos (sem _v2)
+    // Limpar caches antigos (versões v1 e v2)
     Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('pendencias_') && !key.includes('_v2_')) {
+      if (key.startsWith('pendencias_') && !key.includes('_v3_')) {
         console.log('[usePendencias] Removendo cache antigo:', key);
         localStorage.removeItem(key);
       }
     });
 
-    // Verificar cache do dia (nova versão com divisaoId)
+    // Verificar cache do dia (nova versão v3 com divisao_id)
     const data = new Date().toISOString().split('T')[0];
-    const cacheKey = `pendencias_v2_${userId}_${userRole}_${divisaoId || 'no_div'}_${registroId || 'all'}_${data}`;
+    const cacheKey = `pendencias_v3_${userId}_${userRole}_${divisaoId || 'no_div'}_${registroId || 'all'}_${data}`;
     const cached = localStorage.getItem(cacheKey);
     
     console.log('[usePendencias] Cache key:', cacheKey);
@@ -149,19 +149,8 @@ export const usePendencias = (
           return;
         }
         
-        const { data: divisao } = await supabase
-          .from('divisoes')
-          .select('nome')
-          .eq('id', divisaoId)
-          .single();
-        
-        if (divisao) {
-          console.log('[usePendencias] 🎯 Filtro diretor_divisao:', { divisaoId, divisao_nome: divisao.nome });
-          // Usar ilike para matching robusto (ignora acentos e case)
-          queryMensalidades = queryMensalidades.ilike('divisao_texto', divisao.nome);
-        } else {
-          console.error('[usePendencias] ❌ Divisão não encontrada para id:', divisaoId);
-        }
+        console.log('[usePendencias] 🎯 Filtro diretor_divisao por divisao_id:', divisaoId);
+        queryMensalidades = queryMensalidades.eq('divisao_id', divisaoId);
       } else if (userRole === 'user' && registroId) {
         // Usuário comum: só vê suas próprias pendências
         queryMensalidades = queryMensalidades.eq('registro_id', registroId);
@@ -289,15 +278,7 @@ export const usePendencias = (
         if (!divisaoId) {
           console.error('[usePendencias] ❌ diretor_divisao sem divisaoId - pulando afastados');
         } else {
-          const { data: divisao } = await supabase
-            .from('divisoes')
-            .select('nome')
-            .eq('id', divisaoId)
-            .single();
-          
-          if (divisao) {
-            queryAfastados = queryAfastados.ilike('divisao_texto', divisao.nome);
-          }
+          queryAfastados = queryAfastados.eq('divisao_id', divisaoId);
         }
       } else if (userRole === 'user' && registroId) {
         // Usuário comum: só vê seus próprios afastamentos
@@ -374,15 +355,7 @@ export const usePendencias = (
         if (!divisaoId) {
           console.error('[usePendencias] ❌ diretor_divisao sem divisaoId - pulando deltas');
         } else {
-          const { data: divisao } = await supabase
-            .from('divisoes')
-            .select('nome')
-            .eq('id', divisaoId)
-            .single();
-          
-          if (divisao) {
-            queryDeltas = queryDeltas.ilike('divisao_texto', divisao.nome);
-          }
+          queryDeltas = queryDeltas.eq('divisao_id', divisaoId);
         }
       } else if (userRole === 'user' && registroId) {
         queryDeltas = queryDeltas.eq('registro_id', registroId);
