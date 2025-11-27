@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useScreenAccess } from "@/hooks/useScreenAccess";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { useToast } from "@/hooks/use-toast";
 import { usePresence } from "@/hooks/usePresence";
 import { OnlineUsersModal } from "@/components/OnlineUsersModal";
@@ -26,6 +27,7 @@ const Index = () => {
   const { links: linksAtivos } = useLinksUteis(true);
   const { hasAccess: hasAcessoAcoesSociais, loading: loadingAcessoAcoes } = useScreenAccess('/acoes-sociais', user?.id);
   const { hasAccess: hasAcessoListasPresenca, loading: loadingAcessoListas } = useScreenAccess('/listas-presenca', user?.id);
+  const { hasAccess: canSeeAdmin, loading: loadingAdminAccess } = useAdminAccess();
   const [showQRCode, setShowQRCode] = useState(false);
 
   // Determinar role para pendências
@@ -288,7 +290,7 @@ const Index = () => {
     </Button>
   )}
 
-            {isAdmin && (
+            {canSeeAdmin && !loadingAdminAccess && (
               <Button
                 onClick={handleAdmin}
                 disabled={!isLoggedIn || !isActive}

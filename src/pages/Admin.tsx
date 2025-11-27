@@ -23,6 +23,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { ProfileStatus } from "@/types/profile";
@@ -64,6 +65,7 @@ const Admin = () => {
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
   const { roles, hasRole, loading: roleLoading } = useUserRole(user?.id);
+  const { hasAccess, loading: loadingAccess } = useAdminAccess();
   
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -124,9 +126,18 @@ const Admin = () => {
     }
   }, [user, roles, authLoading, roleLoading, hasRole, navigate, toast]);
 
-  // Carregar perfis
-  useEffect(() => {
-    fetchProfiles();
+  if (loadingAccess || authLoading || roleLoading || loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Verificando permissões...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!hasAccess) return null;
 
     const channel = supabase
       .channel('admin-profiles')

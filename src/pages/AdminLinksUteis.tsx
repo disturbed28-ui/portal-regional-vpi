@@ -10,29 +10,28 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { useScreenAccess } from "@/hooks/useScreenAccess";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { useLinksUteis, LinkUtil } from "@/hooks/useLinksUteis";
 import { Edit, Trash2, Plus, ExternalLink, ArrowLeft } from "lucide-react";
 
 const AdminLinksUteis = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, loading: authLoading } = useAuth();
-  const { hasAccess, loading: accessLoading } = useScreenAccess('/admin/links-uteis', user?.id);
-  const { links, loading, addLink, updateLink, toggleAtivo, deleteLink } = useLinksUteis(false);
+  const { user } = useAuth();
+  const { hasAccess, loading: loadingAccess } = useAdminAccess();
+  const { links, loading: loadingLinks, addLink, updateLink, toggleAtivo, deleteLink } = useLinksUteis(false);
 
   // ===== DEBUG: Log detalhado de permissão =====
   useEffect(() => {
-    console.log("[AdminLinksUteis] ===== PERMISSÃO DEBUG =====", {
-      pathAtual: window.location.pathname,
-      routeUsada: '/admin/links-uteis',
-      userId: user?.id,
-      hasAccess,
-      accessLoading,
-      authLoading,
-      timestamp: new Date().toISOString()
-    });
-  }, [user, hasAccess, accessLoading, authLoading]);
+    if (!loadingAccess && !hasAccess) {
+      toast({
+        title: "Acesso negado",
+        description: "Você não tem permissão para acessar esta página.",
+        variant: "destructive",
+      });
+      navigate("/");
+    }
+  }, [loadingAccess, hasAccess, navigate, toast]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -44,19 +43,6 @@ const AdminLinksUteis = () => {
     url: "",
     ativo: true,
   });
-
-  useEffect(() => {
-    if (authLoading || accessLoading) return;
-
-    if (!user || !hasAccess) {
-      toast({
-        title: "Acesso Negado",
-        description: "Você não tem permissão para acessar esta página",
-        variant: "destructive",
-      });
-      navigate("/");
-    }
-  }, [user, hasAccess, authLoading, accessLoading, navigate, toast]);
 
   const isValidUrl = (url: string): boolean => {
     return url.startsWith('http://') || url.startsWith('https://');
@@ -128,7 +114,7 @@ const AdminLinksUteis = () => {
     await toggleAtivo(link.id, link.ativo);
   };
 
-  if (authLoading || accessLoading) {
+  if (loadingAccess) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-black flex items-center justify-center">
         <div className="text-white">Verificando permissões...</div>

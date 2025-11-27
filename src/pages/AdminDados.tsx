@@ -32,6 +32,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { useCargos, Cargo } from "@/hooks/useCargos";
 import { useFuncoes, Funcao } from "@/hooks/useFuncoes";
 import { ArrowLeft } from "lucide-react";
@@ -51,6 +52,7 @@ const AdminDados = () => {
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
   const { hasRole, loading: roleLoading } = useUserRole(user?.id);
+  const { hasAccess, loading: loadingAccess } = useAdminAccess();
 
   // Estado dos diálogos
   const [cargoDialogOpen, setCargoDialogOpen] = useState(false);
@@ -70,17 +72,15 @@ const AdminDados = () => {
 
   // Verificar acesso admin
   useEffect(() => {
-    if (authLoading || roleLoading) return;
-
-    if (!user || !hasRole('admin')) {
+    if (!loadingAccess && !hasAccess) {
       toast({
-        title: "Acesso Negado",
-        description: "Apenas administradores podem acessar esta área",
+        title: "Acesso negado",
+        description: "Você não tem permissão para acessar esta página.",
         variant: "destructive",
       });
       navigate("/");
     }
-  }, [user, hasRole, authLoading, roleLoading, navigate, toast]);
+  }, [loadingAccess, hasAccess, navigate, toast]);
 
   // === CARGO CRUD ===
   const openCargoDialog = (cargo?: Cargo) => {
@@ -198,9 +198,18 @@ const AdminDados = () => {
     }
   };
 
-  if (authLoading || roleLoading || cargosLoading || funcoesLoading) {
-    return <div className="flex justify-center items-center min-h-screen">Carregando...</div>;
+  if (loadingAccess || authLoading || roleLoading || cargosLoading || funcoesLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Verificando permissões...</p>
+        </div>
+      </div>
+    );
   }
+
+  if (!hasAccess) return null;
 
   return (
     <div className="admin-page min-h-screen bg-background p-4">

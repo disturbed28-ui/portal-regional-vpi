@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useIntegrantes } from "@/hooks/useIntegrantes";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { supabase } from "@/integrations/supabase/client";
 import { parseExcelFile, processDelta, parseCargoGrau } from "@/lib/excelParser";
 import { parseMensalidadesExcel, formatRef, ParseResult } from "@/lib/mensalidadesParser";
@@ -35,6 +37,7 @@ const AdminIntegrantes = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mensalidadesInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
+  const { hasAccess, loading: loadingAccess } = useAdminAccess();
   
   const { integrantes, loading, stats, refetch } = useIntegrantes({ ativo: true });
   const [searchTerm, setSearchTerm] = useState("");
@@ -74,6 +77,17 @@ const AdminIntegrantes = () => {
   const integrantesFiltrados = integrantes.filter((i) =>
     i.nome_colete.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  useEffect(() => {
+    if (!loadingAccess && !hasAccess) {
+      toast({
+        title: "Acesso negado",
+        description: "Você não tem permissão para acessar esta página.",
+        variant: "destructive",
+      });
+      navigate("/");
+    }
+  }, [loadingAccess, hasAccess, navigate, toast]);
 
   const handleOpenProfile = async (integrante: IntegrantePortal) => {
     // Se não está vinculado, mostrar mensagem
@@ -118,7 +132,18 @@ const AdminIntegrantes = () => {
     }
   };
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  if (loadingAccess || loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Verificando permissões...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!hasAccess) return null;
     const file = e.target.files?.[0];
     if (!file) return;
 
