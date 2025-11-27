@@ -1518,6 +1518,7 @@ export type Database = {
       relatorios_semanais_divisao: {
         Row: {
           acoes_sociais_json: Json | null
+          ano_referencia: number | null
           conflitos_json: Json | null
           created_at: string | null
           divisao_relatorio_id: string | null
@@ -1528,6 +1529,7 @@ export type Database = {
           id: string
           inadimplencias_json: Json | null
           integrante_portal_id: string | null
+          mes_referencia: number | null
           profile_id: string
           regional_relatorio_id: string | null
           regional_relatorio_texto: string
@@ -1539,10 +1541,12 @@ export type Database = {
           saidas_json: Json | null
           semana_fim: string
           semana_inicio: string
+          semana_no_mes: number | null
           updated_at: string | null
         }
         Insert: {
           acoes_sociais_json?: Json | null
+          ano_referencia?: number | null
           conflitos_json?: Json | null
           created_at?: string | null
           divisao_relatorio_id?: string | null
@@ -1553,6 +1557,7 @@ export type Database = {
           id?: string
           inadimplencias_json?: Json | null
           integrante_portal_id?: string | null
+          mes_referencia?: number | null
           profile_id: string
           regional_relatorio_id?: string | null
           regional_relatorio_texto: string
@@ -1564,10 +1569,12 @@ export type Database = {
           saidas_json?: Json | null
           semana_fim: string
           semana_inicio: string
+          semana_no_mes?: number | null
           updated_at?: string | null
         }
         Update: {
           acoes_sociais_json?: Json | null
+          ano_referencia?: number | null
           conflitos_json?: Json | null
           created_at?: string | null
           divisao_relatorio_id?: string | null
@@ -1578,6 +1585,7 @@ export type Database = {
           id?: string
           inadimplencias_json?: Json | null
           integrante_portal_id?: string | null
+          mes_referencia?: number | null
           profile_id?: string
           regional_relatorio_id?: string | null
           regional_relatorio_texto?: string
@@ -1589,6 +1597,7 @@ export type Database = {
           saidas_json?: Json | null
           semana_fim?: string
           semana_inicio?: string
+          semana_no_mes?: number | null
           updated_at?: string | null
         }
         Relationships: [
