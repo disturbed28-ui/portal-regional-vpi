@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useScreenAccess } from '@/hooks/useScreenAccess';
 import { useOrganogramaData } from '@/hooks/useOrganogramaData';
 import { HierarchyCard } from '@/components/organograma/HierarchyCard';
 import { IntegranteListItem } from '@/components/organograma/IntegranteListItem';
@@ -33,12 +34,23 @@ const Organograma = () => {
   const { user } = useAuth();
   const { profile, loading: profileLoading } = useProfile(user?.id);
   const { hasRole, loading: roleLoading } = useUserRole(user?.id);
+  const { hasAccess, loading: loadingAccess } = useScreenAccess("/organograma", user?.id);
   
   const [nivel, setNivel] = useState<Nivel>('regional');
   const [tipoLista, setTipoLista] = useState<TipoLista>(null);
   const [divisaoSelecionada, setDivisaoSelecionada] = useState<string | null>(null);
 
   const [regionalUsuario, setRegionalUsuario] = useState<string | null>(null);
+
+  // Redirecionamento em caso de acesso negado
+  useEffect(() => {
+    if (!loadingAccess && !hasAccess) {
+      toast.error("Acesso negado", {
+        description: "Você não tem permissão para acessar esta página.",
+      });
+      navigate("/");
+    }
+  }, [loadingAccess, hasAccess, navigate]);
 
   // Redirecionar para perfil se usuário não tiver nome_colete
   useEffect(() => {
@@ -139,16 +151,20 @@ const Organograma = () => {
     setDivisaoSelecionada(null);
   };
 
-  if (profileLoading || dataLoading || roleLoading) {
+  if (loadingAccess || profileLoading || dataLoading || roleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Carregando organograma...</p>
+          <p className="text-muted-foreground">
+            {loadingAccess ? "Verificando permissões..." : "Carregando organograma..."}
+          </p>
         </div>
       </div>
     );
   }
+
+  if (!hasAccess) return null;
 
   if (!regionalUsuario) {
     return (
