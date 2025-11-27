@@ -1859,6 +1859,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      normalizar_divisao_texto: { Args: { texto: string }; Returns: string }
       unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
