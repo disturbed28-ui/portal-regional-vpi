@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
 
     console.log('[manage-evento] Verificando se usuário tem permissão...');
 
-    // Verificar se o user_id tem role admin ou moderator
+    // Buscar roles do usuário
     const { data: userRoles, error: rolesError } = await supabaseAdmin
       .from('user_roles')
       .select('role')
@@ -70,16 +70,74 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('[manage-evento] Roles encontradas:', userRoles);
+    console.log('[manage-evento] Roles do usuário:', userRoles);
 
-    const hasPermission = userRoles?.some(r => r.role === 'admin' || r.role === 'moderator');
+    // Buscar roles permitidas da matriz de permissões para a tela "Gerenciar Lista de Presença"
+    console.log('[manage-evento] Buscando permissões da matriz para "/lista-presenca"...');
+    
+    const { data: allowedPermissions, error: permError } = await supabaseAdmin
+      .from('screen_permissions')
+      .select(`
+        role,
+        system_screens!inner (
+          id,
+          rota
+        )
+      `)
+      .eq('system_screens.rota', '/lista-presenca');
+
+    if (permError) {
+      console.error('[manage-evento] Erro ao buscar permissões da matriz:', permError);
+      return new Response(
+        JSON.stringify({ error: 'Erro ao verificar permissões do sistema' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Extrair roles permitidas
+    const allowedRoles = allowedPermissions?.map(p => p.role) || [];
+    console.log('[manage-evento] Roles permitidas pela matriz:', allowedRoles);
+
+    // Verificar se o usuário tem alguma das roles permitidas
+    const userRolesList = userRoles?.map(r => r.role) || [];
+    const hasPermission = userRolesList.some(role => allowedRoles.includes(role));
+
+    console.log('[manage-evento] Tem permissão?', hasPermission);
 
     if (!hasPermission) {
       console.error('[manage-evento] Usuário não tem permissão');
       return new Response(
-        JSON.stringify({ error: 'Apenas administradores e moderadores podem criar eventos' }),
+        JSON.stringify({ error: 'Você não tem permissão para gerenciar listas de presença' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Se não for admin, validar que o evento é da divisão do usuário
+    const isAdmin = userRolesList.includes('admin');
+    if (!isAdmin && divisao_id) {
+      console.log('[manage-evento] Usuário não é admin, verificando divisão...');
+      
+      const { data: userProfile, error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .select('divisao_id')
+        .eq('id', user_id)
+        .single();
+      
+      if (profileError) {
+        console.error('[manage-evento] Erro ao buscar perfil do usuário:', profileError);
+        return new Response(
+          JSON.stringify({ error: 'Erro ao verificar divisão do usuário' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (userProfile?.divisao_id && divisao_id !== userProfile.divisao_id) {
+        console.error('[manage-evento] Divisão do evento não corresponde à divisão do usuário');
+        return new Response(
+          JSON.stringify({ error: 'Você só pode criar eventos da sua própria divisão' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     console.log('[manage-evento] Usuário tem permissão, criando evento...');
