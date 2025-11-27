@@ -68,7 +68,7 @@ const Admin = () => {
   const { hasAccess, loading: loadingAccess } = useAdminAccess();
   
   const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [actionType, setActionType] = useState<'aprovar' | 'recusar' | 'inativar' | null>(null);
@@ -126,7 +126,34 @@ const Admin = () => {
     }
   }, [user, roles, authLoading, roleLoading, hasRole, navigate, toast]);
 
-  if (loadingAccess || authLoading || roleLoading || loading) {
+  // Buscar perfis quando tiver acesso confirmado
+  useEffect(() => {
+    if (!loadingAccess && hasAccess) {
+      fetchProfiles();
+      
+      const channel = supabase
+        .channel('admin-profiles')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'profiles',
+          },
+          () => {
+            fetchProfiles();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [loadingAccess, hasAccess]);
+
+  // Loading de permissões
+  if (loadingAccess || authLoading || roleLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -139,31 +166,20 @@ const Admin = () => {
 
   if (!hasAccess) return null;
 
-  useEffect(() => {
-    fetchProfiles();
-    
-    const channel = supabase
-      .channel('admin-profiles')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'profiles',
-        },
-        () => {
-          fetchProfiles();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+  // Loading de dados
+  if (loadingProfiles) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando perfis...</p>
+        </div>
+      </div>
+    );
+  }
 
   const fetchProfiles = async () => {
-    setLoading(true);
+    setLoadingProfiles(true);
     try {
       // 1) Buscar perfis com joins e limit de 300
       const { data, error } = await supabase
@@ -230,7 +246,7 @@ const Admin = () => {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setLoadingProfiles(false);
     }
   };
 
@@ -511,10 +527,6 @@ const Admin = () => {
       </Card>
     );
   };
-
-  if (loading || authLoading || roleLoading) {
-    return <div className="flex justify-center items-center min-h-screen">Carregando...</div>;
-  }
 
   return (
     <div className="admin-page min-h-screen bg-background p-4">
