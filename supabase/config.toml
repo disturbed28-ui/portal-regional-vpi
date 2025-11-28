@@ -3,6 +3,9 @@ project_id = "bnkbnpiuzpftflfmnsge"
 [functions.export-relatorio-cmd]
 verify_jwt = false
 
+[functions.cleanup-drive-files]
+verify_jwt = false
+
 [functions.migrate-user-on-login]
 verify_jwt = false
 

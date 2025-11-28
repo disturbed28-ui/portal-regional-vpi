@@ -168,14 +168,51 @@ async function exportAsXlsx(accessToken: string, spreadsheetId: string): Promise
 }
 
 // Deleta arquivo temporário do Google Drive
-async function deleteFile(accessToken: string, fileId: string): Promise<void> {
-  await fetch(
-    `https://www.googleapis.com/drive/v3/files/${fileId}`,
-    {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${accessToken}` }
+async function deleteFile(accessToken: string, fileId: string): Promise<boolean> {
+  try {
+    const response = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${fileId}`,
+      {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      }
+    );
+
+    if (response.ok || response.status === 404) {
+      console.log(`[Delete File] ✅ Arquivo ${fileId} deletado com sucesso`);
+      return true;
+    } else {
+      const errorText = await response.text();
+      console.error(`[Delete File] ❌ Falha ao deletar ${fileId}: ${errorText}`);
+      return false;
     }
-  );
+  } catch (error) {
+    console.error(`[Delete File] ❌ Erro ao deletar ${fileId}:`, error);
+    return false;
+  }
+}
+
+// Tenta deletar arquivo com retry
+async function deleteFileWithRetry(
+  accessToken: string, 
+  fileId: string, 
+  maxRetries: number = 1
+): Promise<void> {
+  console.log(`[Delete Retry] 🗑️ Tentando deletar ${fileId}...`);
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const success = await deleteFile(accessToken, fileId);
+    if (success) {
+      return;
+    }
+    
+    if (attempt < maxRetries) {
+      console.log(`[Delete Retry] ⏳ Tentativa ${attempt + 1} falhou, aguardando 1s...`);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+  
+  console.error(`[Delete Retry] ⚠️ Falha ao deletar ${fileId} após ${maxRetries + 1} tentativas`);
 }
 
 // Busca dados de movimentação via Supabase
@@ -403,6 +440,9 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let accessToken: string | null = null;
+  let newSpreadsheetId: string | null = null;
+
   try {
     const { regional_id, ano, mes, semana } = await req.json();
 
@@ -430,11 +470,11 @@ Deno.serve(async (req) => {
     }
 
     console.log('[Export CMD] Autenticando com Google...');
-    const accessToken = await getGoogleAccessToken(serviceAccountEmail, privateKey);
+    accessToken = await getGoogleAccessToken(serviceAccountEmail, privateKey);
 
     console.log('[Export CMD] Clonando template...');
     const newTitle = `Relatório CMD - Ano ${ano} - Mês ${mes} - Semana ${semana}`;
-    const newSpreadsheetId = await cloneTemplate(accessToken, templateId, newTitle);
+    newSpreadsheetId = await cloneTemplate(accessToken, templateId, newTitle);
 
     console.log('[Export CMD] Novo spreadsheet criado:', newSpreadsheetId);
 
@@ -448,9 +488,6 @@ Deno.serve(async (req) => {
 
     console.log('[Export CMD] Exportando como XLSX...');
     const xlsxBuffer = await exportAsXlsx(accessToken, newSpreadsheetId);
-
-    console.log('[Export CMD] Deletando arquivo temporário...');
-    await deleteFile(accessToken, newSpreadsheetId);
 
     console.log('[Export CMD] Sucesso!');
 
@@ -474,5 +511,11 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
+  } finally {
+    // GARANTIR deleção do arquivo temporário SEMPRE
+    if (newSpreadsheetId && accessToken) {
+      console.log('[Export CMD] 🧹 Limpando arquivo temporário no finally...');
+      await deleteFileWithRetry(accessToken, newSpreadsheetId);
+    }
   }
 });
