@@ -1,6 +1,7 @@
 import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+// Last updated: 2025-01-28T23:00:00Z - Force redeploy with guaranteed cleanup
 // Interfaces
 interface DadosMovimentacaoDivisao {
   divisao_nome: string;
