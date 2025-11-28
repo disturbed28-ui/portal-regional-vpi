@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { RelatorioSemanalDetalheDialog } from './RelatorioSemanalDetalheDialog';
 
 const CMD_REGIONAL_ID = 'da8de519-f9c1-45cb-9d26-af56b7c4aa6d';
 
@@ -48,6 +50,10 @@ export const RelatorioSemanalDivisaoAba = () => {
   
   const [divisoesStatus, setDivisoesStatus] = useState<DivisaoStatus[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  // Estados para controle do dialog de detalhes
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [divisaoSelecionadaDialog, setDivisaoSelecionadaDialog] = useState<string | null>(null);
   
   const isUsuarioCMD = profile?.regional_id === CMD_REGIONAL_ID;
 
@@ -227,7 +233,16 @@ export const RelatorioSemanalDivisaoAba = () => {
           {divisoesStatus.map(divisao => (
             <Card 
               key={divisao.id} 
-              className={divisao.enviado ? 'border-green-500' : 'border-orange-500'}
+              className={cn(
+                divisao.enviado ? 'border-green-500' : 'border-orange-500',
+                divisao.enviado && 'cursor-pointer hover:shadow-md transition-shadow'
+              )}
+              onClick={() => {
+                if (divisao.enviado) {
+                  setDivisaoSelecionadaDialog(divisao.id);
+                  setDialogOpen(true);
+                }
+              }}
             >
               <CardContent className="p-4 space-y-2">
                 <div className="font-medium">{divisao.nome}</div>
@@ -250,6 +265,18 @@ export const RelatorioSemanalDivisaoAba = () => {
           </CardContent>
         </Card>
       )}
+
+      <RelatorioSemanalDetalheDialog
+        open={dialogOpen}
+        onClose={() => {
+          setDialogOpen(false);
+          setDivisaoSelecionadaDialog(null);
+        }}
+        divisaoId={divisaoSelecionadaDialog || ''}
+        ano={anoSelecionado}
+        mes={mesSelecionado}
+        semana={semanaSelecionada}
+      />
     </div>
   );
 };
