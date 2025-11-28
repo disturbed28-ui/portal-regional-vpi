@@ -99,7 +99,7 @@ async function generateGoogleJWT(
 async function getGoogleAccessToken(email: string, privateKey: string): Promise<string> {
   const scopes = [
     'https://www.googleapis.com/auth/spreadsheets',
-    'https://www.googleapis.com/auth/drive.file'
+    'https://www.googleapis.com/auth/drive'
   ];
 
   const jwt = await generateGoogleJWT(email, privateKey, scopes);
