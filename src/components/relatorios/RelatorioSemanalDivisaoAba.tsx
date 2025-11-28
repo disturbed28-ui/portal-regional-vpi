@@ -9,9 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2 } from 'lucide-react';
+import { Loader2, FileSpreadsheet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { RelatorioSemanalDetalheDialog } from './RelatorioSemanalDetalheDialog';
+import { toast } from 'sonner';
 
 const CMD_REGIONAL_ID = 'da8de519-f9c1-45cb-9d26-af56b7c4aa6d';
 
@@ -50,6 +51,7 @@ export const RelatorioSemanalDivisaoAba = () => {
   
   const [divisoesStatus, setDivisoesStatus] = useState<DivisaoStatus[]>([]);
   const [loading, setLoading] = useState(false);
+  const [exportando, setExportando] = useState(false);
   
   // Estados para controle do dialog de detalhes
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -120,6 +122,57 @@ export const RelatorioSemanalDivisaoAba = () => {
       console.error('Erro ao buscar status:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExportarRelatorioCMD = async () => {
+    if (!regionalSelecionada || regionalSelecionada === 'todas') {
+      toast.error('Selecione uma regional específica para exportar');
+      return;
+    }
+    
+    setExportando(true);
+    try {
+      console.log('[Export] Invocando edge function...', {
+        regional_id: regionalSelecionada,
+        ano: anoSelecionado,
+        mes: mesSelecionado,
+        semana: semanaSelecionada
+      });
+
+      const { data, error } = await supabase.functions.invoke('export-relatorio-cmd', {
+        body: {
+          regional_id: regionalSelecionada,
+          ano: anoSelecionado,
+          mes: mesSelecionado,
+          semana: semanaSelecionada
+        }
+      });
+
+      if (error) {
+        console.error('[Export] Erro na invocação:', error);
+        throw error;
+      }
+
+      // Criar blob e fazer download
+      const blob = new Blob([data], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Relatorio_CMD_${anoSelecionado}_${mesSelecionado}_Sem${semanaSelecionada}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success('Relatório exportado com sucesso!');
+    } catch (error) {
+      console.error('[Export] Erro ao exportar:', error);
+      toast.error('Erro ao exportar relatório. Verifique os logs.');
+    } finally {
+      setExportando(false);
     }
   };
 
@@ -224,6 +277,30 @@ export const RelatorioSemanalDivisaoAba = () => {
               </Button>
             </div>
           </div>
+          
+          {/* Botão Exportar Relatório CMD */}
+          {isUsuarioCMD && regionalSelecionada && regionalSelecionada !== 'todas' && (
+            <div className="mt-3 pt-3 border-t">
+              <Button 
+                onClick={handleExportarRelatorioCMD}
+                disabled={exportando || !regionalSelecionada || regionalSelecionada === 'todas'}
+                variant="outline"
+                className="w-full gap-2"
+              >
+                {exportando ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Gerando relatório...
+                  </>
+                ) : (
+                  <>
+                    <FileSpreadsheet className="h-4 w-4" />
+                    Exportar Relatório CMD
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
