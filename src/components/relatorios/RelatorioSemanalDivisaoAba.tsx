@@ -278,8 +278,8 @@ export const RelatorioSemanalDivisaoAba = () => {
             </div>
           </div>
           
-          {/* Botão Exportar Relatório CMD */}
-          {isUsuarioCMD && regionalSelecionada && regionalSelecionada !== 'todas' && (
+        {/* Botão Exportar Relatório CMD */}
+        {regionalSelecionada && regionalSelecionada !== 'todas' && (
             <div className="mt-3 pt-3 border-t">
               <Button 
                 onClick={handleExportarRelatorioCMD}
