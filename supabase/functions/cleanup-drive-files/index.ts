@@ -1,5 +1,6 @@
 import { corsHeaders } from '../_shared/cors.ts';
 
+// Last updated: 2025-01-28T23:00:00Z - Initial deployment for Drive cleanup
 interface CleanupOptions {
   dryRun?: boolean;           // Se true, só lista sem deletar
   olderThanHours?: number;    // Deletar arquivos criados há mais de X horas
