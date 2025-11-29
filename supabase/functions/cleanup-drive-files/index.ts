@@ -1,10 +1,11 @@
 import { corsHeaders } from '../_shared/cors.ts';
 
-// Last updated: 2025-01-28T23:00:00Z - Initial deployment for Drive cleanup
+// Last updated: 2025-01-29T00:00:00Z - Added emptyTrash functionality
 interface CleanupOptions {
   dryRun?: boolean;           // Se true, só lista sem deletar
   olderThanHours?: number;    // Deletar arquivos criados há mais de X horas
   nameContains?: string;      // Filtrar arquivos por nome
+  emptyTrash?: boolean;       // Se true, esvazia a lixeira do Drive
 }
 
 interface FileInfo {
@@ -19,6 +20,7 @@ interface CleanupResult {
   success: boolean;
   filesFound: number;
   filesDeleted: number;
+  trashEmptied?: boolean;
   errors: string[];
   details: FileInfo[];
 }
@@ -107,6 +109,33 @@ async function getGoogleAccessToken(email: string, privateKey: string): Promise<
   return data.access_token;
 }
 
+// Esvazia a lixeira do Google Drive
+async function emptyDriveTrash(accessToken: string): Promise<boolean> {
+  console.log('[Cleanup] Esvaziando lixeira do Drive...');
+  
+  try {
+    const response = await fetch(
+      'https://www.googleapis.com/drive/v3/files/trash',
+      {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[Empty Trash Error]', { status: response.status, error: errorText });
+      return false;
+    }
+
+    console.log('[Cleanup] ✅ Lixeira esvaziada com sucesso');
+    return true;
+  } catch (error) {
+    console.error('[Empty Trash Error]', error);
+    return false;
+  }
+}
+
 // Lista arquivos do Drive da Service Account
 async function listDriveFiles(
   accessToken: string,
@@ -161,10 +190,21 @@ async function cleanupDriveFiles(
   const {
     dryRun = false,
     olderThanHours = 1,
-    nameContains = 'Relatório CMD'
+    nameContains = 'Relatório CMD',
+    emptyTrash = false
   } = options;
 
-  console.log('[Cleanup] Iniciando limpeza com opções:', { dryRun, olderThanHours, nameContains });
+  console.log('[Cleanup] Iniciando limpeza com opções:', { dryRun, olderThanHours, nameContains, emptyTrash });
+
+  let trashEmptied = false;
+  
+  // Esvaziar lixeira se solicitado
+  if (emptyTrash) {
+    trashEmptied = await emptyDriveTrash(accessToken);
+    if (!trashEmptied) {
+      console.warn('[Cleanup] ⚠️ Não foi possível esvaziar a lixeira, continuando com limpeza de arquivos...');
+    }
+  }
 
   // Listar arquivos
   const files = await listDriveFiles(accessToken, nameContains);
@@ -182,6 +222,7 @@ async function cleanupDriveFiles(
     success: true,
     filesFound: files.length,
     filesDeleted: 0,
+    trashEmptied: emptyTrash ? trashEmptied : undefined,
     errors: [],
     details: []
   };
