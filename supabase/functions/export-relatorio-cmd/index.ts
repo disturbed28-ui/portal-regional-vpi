@@ -1,7 +1,7 @@
 import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-// Last updated: 2025-01-28T23:00:00Z - Force redeploy with guaranteed cleanup
+// Last updated: 2025-01-28T23:30:00Z - Added detailed clone error handling
 // Interfaces
 interface DadosMovimentacaoDivisao {
   divisao_nome: string;
@@ -121,12 +121,20 @@ async function getGoogleAccessToken(email: string, privateKey: string): Promise<
   return data.access_token;
 }
 
+// Interface para erro de clone
+interface CloneTemplateError extends Error {
+  reason?: string;
+  googleResponse?: any;
+}
+
 // Clona o template do Google Sheets
 async function cloneTemplate(
   accessToken: string, 
   templateId: string, 
   newTitle: string
 ): Promise<string> {
+  console.log('[export-relatorio-cmd] copying template', { templateId, newTitle });
+  
   const response = await fetch(
     `https://www.googleapis.com/drive/v3/files/${templateId}/copy`,
     {
@@ -140,12 +148,38 @@ async function cloneTemplate(
   );
 
   if (!response.ok) {
-    const errorText = await response.text();
-    console.error('[Clone Template Error]', errorText);
-    throw new Error('Falha ao clonar template');
+    let googleResponse: any = null;
+    let reason: string | undefined;
+    let message: string = `HTTP ${response.status}`;
+    
+    try {
+      const responseText = await response.text();
+      googleResponse = JSON.parse(responseText);
+      
+      const googleError = googleResponse?.error;
+      const googleErrors = googleError?.errors as { reason?: string; message?: string }[] | undefined;
+      
+      reason = googleErrors?.[0]?.reason;
+      message = googleErrors?.[0]?.message ?? googleError?.message ?? responseText;
+    } catch (parseErr) {
+      message = await response.text().catch(() => `HTTP ${response.status}`);
+    }
+    
+    console.error('[export-relatorio-cmd] clone template error', {
+      reason,
+      message,
+      googleResponse,
+    });
+    
+    const error = new Error(message) as CloneTemplateError;
+    error.name = 'clone_template_failed';
+    error.reason = reason;
+    error.googleResponse = googleResponse;
+    throw error;
   }
 
   const data = await response.json();
+  console.log('[export-relatorio-cmd] template cloned', { clonedId: data.id });
   return data.id;
 }
 
@@ -502,6 +536,31 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
+    const anyErr = error as any;
+    
+    // Tratamento específico para erro de clone do template
+    if (anyErr.name === 'clone_template_failed' || anyErr?.reason) {
+      console.error('[export-relatorio-cmd] clone template error caught in handler', {
+        reason: anyErr.reason,
+        message: anyErr.message,
+        google: anyErr.googleResponse
+      });
+      
+      return new Response(
+        JSON.stringify({
+          error: 'clone_template_failed',
+          reason: anyErr.reason || null,
+          message: anyErr.message || 'Unknown clone error',
+          google: anyErr.googleResponse || null,
+        }),
+        { 
+          status: 502,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+    
+    // Tratamento genérico para outros erros
     console.error('[Export CMD] Erro:', error);
     return new Response(
       JSON.stringify({ 
