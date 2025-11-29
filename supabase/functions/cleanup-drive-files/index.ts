@@ -1,11 +1,12 @@
 import { corsHeaders } from '../_shared/cors.ts';
 
-// Last updated: 2025-01-29T00:00:00Z - Added emptyTrash functionality
+// Last updated: 2025-01-29T01:00:00Z - Added deleteByIds functionality
 interface CleanupOptions {
   dryRun?: boolean;           // Se true, só lista sem deletar
   olderThanHours?: number;    // Deletar arquivos criados há mais de X horas
   nameContains?: string;      // Filtrar arquivos por nome
   emptyTrash?: boolean;       // Se true, esvazia a lixeira do Drive
+  deleteByIds?: string[];     // Array de IDs específicos para deletar
 }
 
 interface FileInfo {
@@ -20,6 +21,7 @@ interface CleanupResult {
   success: boolean;
   filesFound: number;
   filesDeleted: number;
+  filesByIdDeleted?: number;
   trashEmptied?: boolean;
   errors: string[];
   details: FileInfo[];
@@ -191,23 +193,47 @@ async function cleanupDriveFiles(
     dryRun = false,
     olderThanHours = 1,
     nameContains = 'Relatório CMD',
-    emptyTrash = false
+    emptyTrash = false,
+    deleteByIds = []
   } = options;
 
-  console.log('[Cleanup] Iniciando limpeza com opções:', { dryRun, olderThanHours, nameContains, emptyTrash });
+  console.log('[Cleanup] Iniciando limpeza com opções:', { dryRun, olderThanHours, nameContains, emptyTrash, deleteByIds });
 
   let trashEmptied = false;
+  let filesByIdDeleted = 0;
   
-  // Esvaziar lixeira se solicitado
-  if (emptyTrash) {
+  // Deletar arquivos por ID específico primeiro (se fornecido)
+  if (deleteByIds.length > 0) {
+    console.log(`[Cleanup] Deletando ${deleteByIds.length} arquivo(s) por ID específico...`);
+    
+    for (const fileId of deleteByIds) {
+      if (dryRun) {
+        console.log(`[Cleanup] [DRY RUN] Deletaria arquivo com ID: ${fileId}`);
+        filesByIdDeleted++;
+      } else {
+        const deleted = await deleteFile(accessToken, fileId);
+        if (deleted) {
+          filesByIdDeleted++;
+          console.log(`[Cleanup] ✅ Arquivo ${fileId} deletado com sucesso`);
+        } else {
+          console.error(`[Cleanup] ❌ Falha ao deletar arquivo ${fileId}`);
+        }
+      }
+    }
+    
+    console.log(`[Cleanup] ${filesByIdDeleted}/${deleteByIds.length} arquivo(s) deletados por ID`);
+  }
+  
+  // Esvaziar lixeira se solicitado (após deletar por ID)
+  if (emptyTrash && !dryRun) {
     trashEmptied = await emptyDriveTrash(accessToken);
     if (!trashEmptied) {
       console.warn('[Cleanup] ⚠️ Não foi possível esvaziar a lixeira, continuando com limpeza de arquivos...');
     }
   }
 
-  // Listar arquivos
-  const files = await listDriveFiles(accessToken, nameContains);
+  // Listar arquivos (se não estamos apenas deletando por ID)
+  const files = nameContains || olderThanHours > 0 ? await listDriveFiles(accessToken, nameContains) : [];
   console.log(`[Cleanup] Encontrados ${files.length} arquivos no total`);
 
   // Filtrar por idade
@@ -222,6 +248,7 @@ async function cleanupDriveFiles(
     success: true,
     filesFound: files.length,
     filesDeleted: 0,
+    filesByIdDeleted: deleteByIds.length > 0 ? filesByIdDeleted : undefined,
     trashEmptied: emptyTrash ? trashEmptied : undefined,
     errors: [],
     details: []
