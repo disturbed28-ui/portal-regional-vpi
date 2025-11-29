@@ -131,10 +131,16 @@ interface CloneTemplateError extends Error {
 async function cloneTemplate(
   accessToken: string, 
   templateId: string, 
-  newTitle: string
+  newTitle: string,
+  folderId?: string
 ): Promise<string> {
-  console.log('[export-relatorio-cmd] copying template', { templateId, newTitle });
+  console.log('[export-relatorio-cmd] copying template', { templateId, newTitle, folderId });
   
+  const requestBody: { name: string; parents?: string[] } = { name: newTitle };
+  if (folderId) {
+    requestBody.parents = [folderId];
+  }
+
   const response = await fetch(
     `https://www.googleapis.com/drive/v3/files/${templateId}/copy`,
     {
@@ -143,7 +149,7 @@ async function cloneTemplate(
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ name: newTitle })
+      body: JSON.stringify(requestBody)
     }
   );
 
@@ -495,6 +501,7 @@ Deno.serve(async (req) => {
     const serviceAccountEmail = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_EMAIL');
     const privateKey = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY');
     const templateId = Deno.env.get('GOOGLE_SHEETS_TEMPLATE_ID');
+    const folderId = Deno.env.get('GOOGLE_DRIVE_FOLDER_ID');
 
     if (!serviceAccountEmail || !privateKey || !templateId) {
       console.error('[Export CMD] Secrets não configurados');
@@ -509,7 +516,7 @@ Deno.serve(async (req) => {
 
     console.log('[Export CMD] Clonando template...');
     const newTitle = `Relatório CMD - Ano ${ano} - Mês ${mes} - Semana ${semana}`;
-    newSpreadsheetId = await cloneTemplate(accessToken, templateId, newTitle);
+    newSpreadsheetId = await cloneTemplate(accessToken, templateId, newTitle, folderId);
 
     console.log('[Export CMD] Novo spreadsheet criado:', newSpreadsheetId);
 
