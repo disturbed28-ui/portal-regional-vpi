@@ -121,72 +121,144 @@ async function getGoogleAccessToken(email: string, privateKey: string): Promise<
   return data.access_token;
 }
 
-// Interface para erro de clone
-interface CloneTemplateError extends Error {
-  reason?: string;
-  googleResponse?: any;
-}
-
-// Clona o template do Google Sheets
-async function cloneTemplate(
-  accessToken: string, 
-  templateId: string, 
+// Cria planilha a partir do template usando Sheets API
+async function createSpreadsheetFromTemplate(
+  accessToken: string,
+  templateId: string,
   newTitle: string,
-  folderId?: string
+  folderId: string
 ): Promise<string> {
-  console.log('[export-relatorio-cmd] copying template', { templateId, newTitle, folderId });
-  
-  const requestBody: { name: string; parents?: string[] } = { name: newTitle };
-  if (folderId) {
-    requestBody.parents = [folderId];
+  console.log('[export-relatorio-cmd] creating spreadsheet from template', { templateId, newTitle, folderId });
+
+  // 1. Obter informações das sheets do template
+  const templateResponse = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${templateId}`,
+    {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      }
+    }
+  );
+
+  if (!templateResponse.ok) {
+    const errorText = await templateResponse.text();
+    console.error('[export-relatorio-cmd] error reading template', errorText);
+    throw new Error(`Falha ao ler template: ${errorText}`);
   }
 
-  const response = await fetch(
-    `https://www.googleapis.com/drive/v3/files/${templateId}/copy`,
+  const templateData = await templateResponse.json();
+  const templateSheets = templateData.sheets || [];
+  console.log('[export-relatorio-cmd] template has sheets:', templateSheets.length);
+
+  // 2. Criar nova planilha vazia na pasta do usuário
+  const createResponse = await fetch(
+    'https://sheets.googleapis.com/v4/spreadsheets',
     {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify({
+        properties: {
+          title: newTitle
+        }
+      })
     }
   );
 
-  if (!response.ok) {
-    let googleResponse: any = null;
-    let reason: string | undefined;
-    let message: string = `HTTP ${response.status}`;
-    
-    try {
-      const responseText = await response.text();
-      googleResponse = JSON.parse(responseText);
-      
-      const googleError = googleResponse?.error;
-      const googleErrors = googleError?.errors as { reason?: string; message?: string }[] | undefined;
-      
-      reason = googleErrors?.[0]?.reason;
-      message = googleErrors?.[0]?.message ?? googleError?.message ?? responseText;
-    } catch (parseErr) {
-      message = await response.text().catch(() => `HTTP ${response.status}`);
-    }
-    
-    console.error('[export-relatorio-cmd] clone template error', {
-      reason,
-      message,
-      googleResponse,
-    });
-    
-    const error = new Error(message) as CloneTemplateError;
-    error.name = 'clone_template_failed';
-    error.reason = reason;
-    error.googleResponse = googleResponse;
-    throw error;
+  if (!createResponse.ok) {
+    const errorText = await createResponse.text();
+    console.error('[export-relatorio-cmd] error creating spreadsheet', errorText);
+    throw new Error(`Falha ao criar planilha: ${errorText}`);
   }
 
-  const data = await response.json();
-  console.log('[export-relatorio-cmd] template cloned', { clonedId: data.id });
-  return data.id;
+  const newSpreadsheet = await createResponse.json();
+  const newSpreadsheetId = newSpreadsheet.spreadsheetId;
+  console.log('[export-relatorio-cmd] new spreadsheet created', { newSpreadsheetId });
+
+  // 3. Mover a planilha para a pasta especificada usando Drive API
+  const moveResponse = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${newSpreadsheetId}?addParents=${folderId}&fields=id,parents`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      }
+    }
+  );
+
+  if (!moveResponse.ok) {
+    const errorText = await moveResponse.text();
+    console.warn('[export-relatorio-cmd] warning moving to folder', errorText);
+    // Não lançar erro, pois a planilha já foi criada
+  } else {
+    console.log('[export-relatorio-cmd] spreadsheet moved to folder');
+  }
+
+  // 4. Copiar sheets do template para a nova planilha
+  const defaultSheetId = newSpreadsheet.sheets[0].properties.sheetId;
+  
+  for (const sheet of templateSheets) {
+    const sourceSheetId = sheet.properties.sheetId;
+    const sheetTitle = sheet.properties.title;
+    
+    console.log(`[export-relatorio-cmd] copying sheet: ${sheetTitle}`);
+    
+    const copyResponse = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${templateId}/sheets/${sourceSheetId}:copyTo`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          destinationSpreadsheetId: newSpreadsheetId
+        })
+      }
+    );
+
+    if (!copyResponse.ok) {
+      const errorText = await copyResponse.text();
+      console.error(`[export-relatorio-cmd] error copying sheet ${sheetTitle}`, errorText);
+      // Continuar com próxima sheet
+      continue;
+    }
+
+    console.log(`[export-relatorio-cmd] sheet ${sheetTitle} copied successfully`);
+  }
+
+  // 5. Deletar a sheet padrão criada automaticamente
+  const deleteResponse = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${newSpreadsheetId}:batchUpdate`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        requests: [
+          {
+            deleteSheet: {
+              sheetId: defaultSheetId
+            }
+          }
+        ]
+      })
+    }
+  );
+
+  if (!deleteResponse.ok) {
+    const errorText = await deleteResponse.text();
+    console.warn('[export-relatorio-cmd] warning deleting default sheet', errorText);
+    // Não lançar erro, a planilha funcional já está criada
+  }
+
+  console.log('[export-relatorio-cmd] spreadsheet creation completed', { newSpreadsheetId });
+  return newSpreadsheetId;
 }
 
 // Exporta planilha como XLSX via Google Drive API
@@ -514,9 +586,17 @@ Deno.serve(async (req) => {
     console.log('[Export CMD] Autenticando com Google...');
     accessToken = await getGoogleAccessToken(serviceAccountEmail, privateKey);
 
-    console.log('[Export CMD] Clonando template...');
+    if (!folderId) {
+      console.error('[Export CMD] GOOGLE_DRIVE_FOLDER_ID não configurado');
+      return new Response(
+        JSON.stringify({ error: 'Configuração ausente: GOOGLE_DRIVE_FOLDER_ID' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('[Export CMD] Criando planilha a partir do template...');
     const newTitle = `Relatório CMD - Ano ${ano} - Mês ${mes} - Semana ${semana}`;
-    newSpreadsheetId = await cloneTemplate(accessToken, templateId, newTitle, folderId);
+    newSpreadsheetId = await createSpreadsheetFromTemplate(accessToken, templateId, newTitle, folderId);
 
     console.log('[Export CMD] Novo spreadsheet criado:', newSpreadsheetId);
 
