@@ -151,9 +151,9 @@ async function createSpreadsheetFromTemplate(
   const templateSheets = templateData.sheets || [];
   console.log('[export-relatorio-cmd] template has sheets:', templateSheets.length);
 
-  // 2. Criar nova planilha vazia na pasta do usuário
+  // 2. Criar nova planilha vazia diretamente na pasta do usuário usando Drive API
   const createResponse = await fetch(
-    'https://sheets.googleapis.com/v4/spreadsheets',
+    'https://www.googleapis.com/drive/v3/files',
     {
       method: 'POST',
       headers: {
@@ -161,44 +161,45 @@ async function createSpreadsheetFromTemplate(
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        properties: {
-          title: newTitle
-        }
+        name: newTitle,
+        mimeType: 'application/vnd.google-apps.spreadsheet',
+        parents: [folderId]  // Cria diretamente na pasta do usuário
       })
     }
   );
 
   if (!createResponse.ok) {
     const errorText = await createResponse.text();
-    console.error('[export-relatorio-cmd] error creating spreadsheet', errorText);
+    console.error('[export-relatorio-cmd] error creating spreadsheet via Drive API', errorText);
     throw new Error(`Falha ao criar planilha: ${errorText}`);
   }
 
-  const newSpreadsheet = await createResponse.json();
-  const newSpreadsheetId = newSpreadsheet.spreadsheetId;
-  console.log('[export-relatorio-cmd] new spreadsheet created', { newSpreadsheetId });
+  const driveFile = await createResponse.json();
+  const newSpreadsheetId = driveFile.id;
+  console.log('[export-relatorio-cmd] new spreadsheet created in user folder', { newSpreadsheetId, folderId });
 
-  // 3. Mover a planilha para a pasta especificada usando Drive API
-  const moveResponse = await fetch(
-    `https://www.googleapis.com/drive/v3/files/${newSpreadsheetId}?addParents=${folderId}&fields=id,parents`,
+  // 3. Obter informações da planilha recém-criada para pegar a sheet padrão
+  const spreadsheetInfoResponse = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${newSpreadsheetId}`,
     {
-      method: 'PATCH',
+      method: 'GET',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
       }
     }
   );
 
-  if (!moveResponse.ok) {
-    const errorText = await moveResponse.text();
-    console.warn('[export-relatorio-cmd] warning moving to folder', errorText);
-    // Não lançar erro, pois a planilha já foi criada
-  } else {
-    console.log('[export-relatorio-cmd] spreadsheet moved to folder');
+  if (!spreadsheetInfoResponse.ok) {
+    const errorText = await spreadsheetInfoResponse.text();
+    console.error('[export-relatorio-cmd] error getting spreadsheet info', errorText);
+    throw new Error(`Falha ao obter info da planilha: ${errorText}`);
   }
 
+  const spreadsheetInfo = await spreadsheetInfoResponse.json();
+  const defaultSheetId = spreadsheetInfo.sheets[0].properties.sheetId;
+  console.log('[export-relatorio-cmd] default sheet id', { defaultSheetId });
+
   // 4. Copiar sheets do template para a nova planilha
-  const defaultSheetId = newSpreadsheet.sheets[0].properties.sheetId;
   
   for (const sheet of templateSheets) {
     const sourceSheetId = sheet.properties.sheetId;
