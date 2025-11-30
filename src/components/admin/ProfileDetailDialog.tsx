@@ -101,6 +101,7 @@ export function ProfileDetailDialog({
   const [integranteAtualmenteVinculado, setIntegranteAtualmenteVinculado] = useState<IntegrantePortal | null>(null);
   const [showIntegranteLookup, setShowIntegranteLookup] = useState(false);
   const [desvincularIntegrante, setDesvincularIntegrante] = useState<boolean>(false);
+  const [combateInsano, setCombateInsano] = useState<boolean>(false);
   
   // Estados para cascata
   const [selectedComandoId, setSelectedComandoId] = useState<string>('');
@@ -175,6 +176,13 @@ export function ProfileDetailDialog({
       }
     }
   }, [profile, open]);
+
+  // Carregar combate_insano quando integrante vinculado é carregado
+  useEffect(() => {
+    if (integranteAtualmenteVinculado) {
+      setCombateInsano(integranteAtualmenteVinculado.combate_insano || false);
+    }
+  }, [integranteAtualmenteVinculado]);
 
   const handleDesvincular = () => {
     if (!integranteAtualmenteVinculado) return;
@@ -363,6 +371,7 @@ export function ProfileDetailDialog({
             grau: formData.grau,
             profile_status: formData.profile_status,
             observacao: formData.observacao,
+            combate_insano: integranteAtualmenteVinculado ? combateInsano : undefined,
           }),
         }
       );
@@ -749,6 +758,25 @@ export function ProfileDetailDialog({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Combate Insano - só aparece se houver integrante vinculado */}
+          {integranteAtualmenteVinculado && (
+            <div className="space-y-2">
+              <Label htmlFor="combate_insano">Combate Insano</Label>
+              <Select
+                value={combateInsano ? "sim" : "nao"}
+                onValueChange={(value) => setCombateInsano(value === "sim")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="nao">Não</SelectItem>
+                  <SelectItem value="sim">Sim</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Observacao */}
           <div className="space-y-2">

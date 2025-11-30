@@ -101,7 +101,8 @@ Deno.serve(async (req) => {
       data_entrada: z.string().optional().nullable(),
       grau: z.string().max(50).optional(),
       profile_status: z.string().max(50).optional(),
-      observacao: z.string().max(1000).optional().nullable()
+      observacao: z.string().max(1000).optional().nullable(),
+      combate_insano: z.boolean().optional()
     });
 
     const {
@@ -124,6 +125,7 @@ Deno.serve(async (req) => {
       grau,
       profile_status,
       observacao,
+      combate_insano,
     } = requestSchema.parse(await req.json());
 
     console.log('Checking admin role for user:', admin_user_id);
@@ -260,6 +262,21 @@ Deno.serve(async (req) => {
         console.error('Error linking integrante_portal:', linkError);
       } else {
         console.log('Integrante vinculado com sucesso');
+      }
+    }
+
+    // Atualizar combate_insano no integrante vinculado (se fornecido e não estamos desvinculando)
+    if (combate_insano !== undefined && !desvincular) {
+      const { error: updateIntegranteError } = await supabase
+        .from('integrantes_portal')
+        .update({ combate_insano })
+        .eq('profile_id', profile_id)
+        .eq('vinculado', true);
+
+      if (updateIntegranteError) {
+        console.error('Error updating integrante combate_insano:', updateIntegranteError);
+      } else {
+        console.log('Combate Insano atualizado:', combate_insano);
       }
     }
 
