@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, FileSpreadsheet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { RelatorioSemanalDetalheDialog } from './RelatorioSemanalDetalheDialog';
+import { RelatorioSemanalResumo } from './RelatorioSemanalResumo';
 import { toast } from 'sonner';
 
 const CMD_REGIONAL_ID = 'da8de519-f9c1-45cb-9d26-af56b7c4aa6d';
@@ -349,6 +350,16 @@ export const RelatorioSemanalDivisaoAba = () => {
             </Card>
           ))}
         </div>
+      )}
+
+      {/* Resumo do Relatório - aparece após os cards */}
+      {divisoesStatus.length > 0 && regionalSelecionada && regionalSelecionada !== 'todas' && (
+        <RelatorioSemanalResumo
+          regionalId={regionalSelecionada}
+          ano={anoSelecionado}
+          mes={mesSelecionado}
+          semana={semanaSelecionada}
+        />
       )}
 
       {divisoesStatus.length === 0 && !loading && (
