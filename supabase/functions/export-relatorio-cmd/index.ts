@@ -26,6 +26,20 @@ interface DadosMesAnterior {
   [divisao_nome_normalizado: string]: number;
 }
 
+interface DadosIntegrantesAtivos {
+  [divisao_nome: string]: {
+    total: number;
+    moto: number;
+    carro: number;
+    sem_veiculo: number;
+    sgt_armas: number;
+    combate_insano: number;
+    batedores: number;
+    caveiras: number;
+    caveiras_suplentes: number;
+  };
+}
+
 interface DadosRelatorio {
   regional_nome: string;
   regional_numero_romano: string;
@@ -35,8 +49,8 @@ interface DadosRelatorio {
   divisoes: DivisaoCompleta[];
   total_mes_anterior: number;
   dados_mes_anterior: DadosMesAnterior;
-  dados_mes_atual: DadosMesAnterior;
-  total_mes_atual: number;
+  dados_integrantes_ativos: DadosIntegrantesAtivos;
+  total_integrantes_ativos: number;
 }
 
 // Extrai número romano do nome da regional
@@ -142,35 +156,47 @@ async function fetchDadosRelatorio(
     console.log('[Fetch Dados] Total mês anterior:', totalMesAnterior);
   }
 
-  // 5. Buscar dados do MÊS ATUAL de cargas_historico
-  const { data: cargaMesAtual } = await supabase
-    .from('cargas_historico')
-    .select('dados_snapshot, data_carga')
-    .eq('tipo_carga', 'integrantes')
-    .gte('data_carga', `${ano}-${String(mes).padStart(2, '0')}-01`)
-    .lte('data_carga', `${ano}-${String(mes).padStart(2, '0')}-31`)
-    .order('data_carga', { ascending: false })
-    .limit(1)
-    .single();
+  // 5. Buscar integrantes ATIVOS da regional (dados em tempo real)
+  const { data: integrantesAtivos, error: integrantesError } = await supabase
+    .from('integrantes_portal')
+    .select('divisao_texto, tem_moto, tem_carro, sgt_armas, combate_insano, batedor, caveira, caveira_suplente')
+    .eq('ativo', true)
+    .eq('regional_id', regional_id);
 
-  // Montar mapa de divisão -> total do mês atual
-  const dadosMesAtual: DadosMesAnterior = {};
-  let totalMesAtual = 0;
+  if (integrantesError) throw new Error(`Erro ao buscar integrantes: ${integrantesError.message}`);
 
-  if (cargaMesAtual && cargaMesAtual.dados_snapshot) {
-    const snapshot = cargaMesAtual.dados_snapshot as any;
-    const divisoesSnapshot = snapshot.divisoes || [];
+  // Processar dados por divisão
+  const dadosIntegrantesAtivos: DadosIntegrantesAtivos = {};
+  let totalGeralAtivos = 0;
+
+  (integrantesAtivos || []).forEach(integrante => {
+    const divisao = integrante.divisao_texto;
+    if (!dadosIntegrantesAtivos[divisao]) {
+      dadosIntegrantesAtivos[divisao] = {
+        total: 0, moto: 0, carro: 0, sem_veiculo: 0,
+        sgt_armas: 0, combate_insano: 0, batedores: 0,
+        caveiras: 0, caveiras_suplentes: 0
+      };
+    }
     
-    divisoesSnapshot.forEach((div: any) => {
-      const nomeNormalizado = (div.divisao || '').toLowerCase().trim();
-      const total = div.total || 0;
-      dadosMesAtual[nomeNormalizado] = total;
-      totalMesAtual += total;
-    });
+    const stats = dadosIntegrantesAtivos[divisao];
+    stats.total++;
+    totalGeralAtivos++;
     
-    console.log('[Fetch Dados] Carga mês atual:', cargaMesAtual.data_carga);
-    console.log('[Fetch Dados] Total mês atual:', totalMesAtual);
-  }
+    // Veículos (prioridade: moto > carro > sem veículo)
+    if (integrante.tem_moto) stats.moto++;
+    else if (integrante.tem_carro) stats.carro++;
+    else stats.sem_veiculo++;
+    
+    // Times especiais
+    if (integrante.sgt_armas) stats.sgt_armas++;
+    if (integrante.combate_insano) stats.combate_insano++;
+    if (integrante.batedor) stats.batedores++;
+    if (integrante.caveira) stats.caveiras++;
+    if (integrante.caveira_suplente) stats.caveiras_suplentes++;
+  });
+
+  console.log('[Fetch Dados] Total integrantes ativos:', totalGeralAtivos);
 
   // 6. Fazer merge: todas divisões + relatórios
   const divisoesCompletas: DivisaoCompleta[] = (divisoes || []).map(div => {
@@ -199,8 +225,8 @@ async function fetchDadosRelatorio(
     divisoes: ordenarDivisoes(divisoesCompletas),
     total_mes_anterior: totalMesAnterior,
     dados_mes_anterior: dadosMesAnterior,
-    dados_mes_atual: dadosMesAtual,
-    total_mes_atual: totalMesAtual
+    dados_integrantes_ativos: dadosIntegrantesAtivos,
+    total_integrantes_ativos: totalGeralAtivos
   };
 }
 
@@ -260,7 +286,10 @@ function adicionarBlocoCrescimentoAtual(wsData: any[][], dados: DadosRelatorio, 
   dados.divisoes.forEach(div => {
     const nomeNormalizado = div.divisao_nome.toLowerCase().trim();
     const mesAnterior = dados.dados_mes_anterior[nomeNormalizado] || 0;
-    const totalAtual = dados.dados_mes_atual[nomeNormalizado] || 0;
+    
+    // Buscar total atual de integrantes ativos
+    const statsAtivos = dados.dados_integrantes_ativos[div.divisao_nome] || { total: 0 };
+    const totalAtual = statsAtivos.total;
     
     const crescimentoDiv = mesAnterior > 0 
       ? ((totalAtual - mesAnterior) / mesAnterior * 100).toFixed(1) + '%'
@@ -291,17 +320,16 @@ function adicionarBlocoEfetivo(wsData: any[][], dados: DadosRelatorio, row: numb
   let totalSemVeiculo = 0;
   
   dados.divisoes.forEach(div => {
-    const stats = div.relatorio?.estatisticas_divisao_json || {};
-    const moto = stats.total_tem_moto || 0;
-    const carro = stats.total_tem_carro || 0;
-    const semVeiculo = stats.total_sem_veiculo || 0;
-    const total = moto + carro + semVeiculo;
+    // Buscar de integrantes ativos
+    const stats = dados.dados_integrantes_ativos[div.divisao_nome] || {
+      moto: 0, carro: 0, sem_veiculo: 0, total: 0
+    };
     
-    wsData[row++] = [div.divisao_nome, moto, carro, semVeiculo, total];
+    wsData[row++] = [div.divisao_nome, stats.moto, stats.carro, stats.sem_veiculo, stats.total];
     
-    totalMoto += moto;
-    totalCarro += carro;
-    totalSemVeiculo += semVeiculo;
+    totalMoto += stats.moto;
+    totalCarro += stats.carro;
+    totalSemVeiculo += stats.sem_veiculo;
   });
   
   wsData[row++] = ['TOTAL', totalMoto, totalCarro, totalSemVeiculo, totalMoto + totalCarro + totalSemVeiculo];
@@ -495,8 +523,9 @@ function adicionarBlocoBatedores(wsData: any[][], dados: DadosRelatorio, row: nu
   let total = 0;
   
   dados.divisoes.forEach(div => {
-    const stats = div.relatorio?.estatisticas_divisao_json || {};
-    const qtd = stats.total_batedores || 0;
+    // Buscar de integrantes ativos
+    const stats = dados.dados_integrantes_ativos[div.divisao_nome] || { batedores: 0 };
+    const qtd = stats.batedores;
     
     wsData[row++] = [div.divisao_nome, qtd];
     total += qtd;
@@ -516,14 +545,15 @@ function adicionarBlocoCaveiras(wsData: any[][], dados: DadosRelatorio, row: num
   let totalSuplentes = 0;
   
   dados.divisoes.forEach(div => {
-    const stats = div.relatorio?.estatisticas_divisao_json || {};
-    const caveiras = stats.total_caveiras || 0;
-    const suplentes = stats.total_suplentes_caveira || 0;
+    // Buscar de integrantes ativos
+    const stats = dados.dados_integrantes_ativos[div.divisao_nome] || { 
+      caveiras: 0, caveiras_suplentes: 0 
+    };
     
-    wsData[row++] = [div.divisao_nome, caveiras, suplentes];
+    wsData[row++] = [div.divisao_nome, stats.caveiras, stats.caveiras_suplentes];
     
-    totalCaveiras += caveiras;
-    totalSuplentes += suplentes;
+    totalCaveiras += stats.caveiras;
+    totalSuplentes += stats.caveiras_suplentes;
   });
   
   wsData[row++] = ['TOTAL', totalCaveiras, totalSuplentes];
@@ -531,7 +561,28 @@ function adicionarBlocoCaveiras(wsData: any[][], dados: DadosRelatorio, row: num
   return row;
 }
 
-// Bloco 14: Combate Insano
+// Bloco 14: Sgt Armas
+function adicionarBlocoSgtArmas(wsData: any[][], dados: DadosRelatorio, row: number): number {
+  wsData[row++] = ['SGT ARMAS'];
+  wsData[row++] = ['Divisão', 'Quantidade'];
+  
+  let total = 0;
+  
+  dados.divisoes.forEach(div => {
+    // Buscar de integrantes ativos
+    const stats = dados.dados_integrantes_ativos[div.divisao_nome] || { sgt_armas: 0 };
+    const qtd = stats.sgt_armas;
+    
+    wsData[row++] = [div.divisao_nome, qtd];
+    total += qtd;
+  });
+  
+  wsData[row++] = ['TOTAL', total];
+  wsData[row++] = [];
+  return row;
+}
+
+// Bloco 15: Combate Insano
 function adicionarBlocoCombateInsano(wsData: any[][], dados: DadosRelatorio, row: number): number {
   wsData[row++] = ['COMBATE INSANO'];
   wsData[row++] = ['Divisão', 'Quantidade'];
@@ -539,8 +590,9 @@ function adicionarBlocoCombateInsano(wsData: any[][], dados: DadosRelatorio, row
   let total = 0;
   
   dados.divisoes.forEach(div => {
-    const stats = div.relatorio?.estatisticas_divisao_json || {};
-    const qtd = stats.total_combate_insano || 0;
+    // Buscar de integrantes ativos
+    const stats = dados.dados_integrantes_ativos[div.divisao_nome] || { combate_insano: 0 };
+    const qtd = stats.combate_insano;
     
     wsData[row++] = [div.divisao_nome, qtd];
     total += qtd;
@@ -572,6 +624,7 @@ function generateXlsxReport(dados: DadosRelatorio): ArrayBuffer {
   row = adicionarBlocoAcoesSociais(wsData, dados, row);
   row = adicionarBlocoBatedores(wsData, dados, row);
   row = adicionarBlocoCaveiras(wsData, dados, row);
+  row = adicionarBlocoSgtArmas(wsData, dados, row);
   row = adicionarBlocoCombateInsano(wsData, dados, row);
   
   // Criar worksheet
