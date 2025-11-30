@@ -105,14 +105,14 @@ export const useRelatorioData = (regionalTexto?: string) => {
         }
       });
       
-      // Mapear total anterior por divisão (usando nome_ascii para comparação normalizada)
+      // Mapear total anterior por divisão (usando chave MAIÚSCULA para match com divisao_texto)
       const totaisPorDivisao = new Map<string, number>();
       divisoesSnapshot.forEach((d: any) => {
         const nomeSnapshotNormalizado = d.divisao?.toUpperCase();
-        const nomeOriginal = mapNomeAsciiParaNome.get(nomeSnapshotNormalizado);
         
-        if (nomeOriginal) {
-          totaisPorDivisao.set(nomeOriginal, d.total || 0);
+        // Verifica se existe no mapa (validação de existência)
+        if (mapNomeAsciiParaNome.has(nomeSnapshotNormalizado)) {
+          totaisPorDivisao.set(nomeSnapshotNormalizado, d.total || 0);
         }
       });
 

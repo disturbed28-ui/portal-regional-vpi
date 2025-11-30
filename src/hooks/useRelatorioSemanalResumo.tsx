@@ -67,14 +67,14 @@ export const useRelatorioSemanalResumo = (regionalId: string) => {
       const snapshotAnterior = cargaMesAnterior?.dados_snapshot as any;
       const divisoesSnapshot = snapshotAnterior?.divisoes || [];
       
-      // Mapear total anterior por divisão (usando nome_ascii para comparação normalizada)
+      // Mapear total anterior por divisão (usando chave MAIÚSCULA para match com divisao_texto)
       const totaisPorDivisao = new Map<string, number>();
       divisoesSnapshot.forEach((d: any) => {
         const nomeSnapshotNormalizado = d.divisao?.toUpperCase();
-        const nomeOriginal = mapNomeAsciiParaNome.get(nomeSnapshotNormalizado);
         
-        if (nomeOriginal) {
-          totaisPorDivisao.set(nomeOriginal, d.total || 0);
+        // Verifica se pertence à regional usando o mapa
+        if (mapNomeAsciiParaNome.has(nomeSnapshotNormalizado)) {
+          totaisPorDivisao.set(nomeSnapshotNormalizado, d.total || 0);
         }
       });
 
