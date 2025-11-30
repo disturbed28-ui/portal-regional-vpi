@@ -8,9 +8,9 @@ interface RelatorioSemanalResumoData {
   dataCarga?: string;
 }
 
-export const useRelatorioSemanalResumo = (regionalId: string) => {
+export const useRelatorioSemanalResumo = (regionalId: string, ano?: number, mes?: number, semana?: number) => {
   return useQuery({
-    queryKey: ['relatorio-semanal-resumo', regionalId],
+    queryKey: ['relatorio-semanal-resumo', regionalId, ano, mes, semana],
     queryFn: async (): Promise<RelatorioSemanalResumoData> => {
       // 1. Buscar última carga histórica
       const { data: ultimaCarga } = await supabase
@@ -56,7 +56,20 @@ export const useRelatorioSemanalResumo = (regionalId: string) => {
         .eq('ativo', true)
         .eq('regional_id', regionalId);
 
-      // 4. Buscar apenas mensalidades ATIVAS e NÃO LIQUIDADAS
+      // 4. Buscar relatórios semanais do período (para entradas/saídas)
+      let relatoriosSemanais: any[] = [];
+      if (ano && mes && semana) {
+        const { data: relatoriosData = [] } = await supabase
+          .from('relatorios_semanais_divisao')
+          .select('divisao_relatorio_texto, entradas_json, saidas_json')
+          .eq('regional_relatorio_id', regionalId)
+          .eq('ano_referencia', ano)
+          .eq('mes_referencia', mes)
+          .eq('semana_no_mes', semana);
+        relatoriosSemanais = relatoriosData;
+      }
+
+      // 5. Buscar apenas mensalidades ATIVAS e NÃO LIQUIDADAS
       const { data: mensalidadesData = [] } = await supabase
         .from('mensalidades_atraso')
         .select('*')
@@ -129,7 +142,17 @@ export const useRelatorioSemanalResumo = (regionalId: string) => {
         if (integrante.caveira_suplente) divisaoData.caveiras_suplentes++;
       });
 
-      // Calcular totais anteriores e entradas/saídas
+      // Mapear entradas/saídas dos relatórios semanais por divisão
+      const entradasSaidasPorDivisao = new Map<string, { entradas: number; saidas: number }>();
+      relatoriosSemanais.forEach((rel: any) => {
+        const divisao = rel.divisao_relatorio_texto;
+        entradasSaidasPorDivisao.set(divisao, {
+          entradas: (rel.entradas_json || []).length,
+          saidas: (rel.saidas_json || []).length
+        });
+      });
+
+      // Calcular totais anteriores
       const idsAtuais = new Set(integrantesAtuais.map((i) => i.registro_id));
       const idsAnteriores = new Set(integrantesAnteriores.map((i: any) => i.registro_id));
 
@@ -169,18 +192,14 @@ export const useRelatorioSemanalResumo = (regionalId: string) => {
         if (totaisPorDivisao.size === 0) {
           divisaoData.total_anterior++;
         }
-
-        // Calcular saídas
-        if (!idsAtuais.has(integrante.registro_id)) {
-          divisaoData.saida++;
-        }
       });
 
-      // Calcular entradas
-      integrantesAtuais.forEach((integrante) => {
-        if (!idsAnteriores.has(integrante.registro_id)) {
-          const divisaoData = divisoesMap.get(integrante.divisao_texto)!;
-          divisaoData.entrada++;
+      // Preencher entradas/saídas dos relatórios semanais (se existirem)
+      divisoesMap.forEach((divisaoData, nomeDivisao) => {
+        const dados = entradasSaidasPorDivisao.get(nomeDivisao);
+        if (dados) {
+          divisaoData.entrada = dados.entradas;
+          divisaoData.saida = dados.saidas;
         }
       });
 

@@ -19,7 +19,7 @@ interface RelatorioSemanalResumoProps {
 
 export const RelatorioSemanalResumo = ({ regionalId, ano, mes, semana }: RelatorioSemanalResumoProps) => {
   // Buscar dados do relatório (mesma lógica da aba "Relatório")
-  const { data: dadosRelatorio, isLoading: loadingRelatorio } = useRelatorioSemanalResumo(regionalId);
+  const { data: dadosRelatorio, isLoading: loadingRelatorio } = useRelatorioSemanalResumo(regionalId, ano, mes, semana);
 
   // Buscar nome da regional
   const { data: regional } = useQuery({
