@@ -54,17 +54,17 @@ export const useRelatorioData = (regionalTexto?: string) => {
         .limit(1)
         .maybeSingle();
 
-      // 2. Buscar última carga do MÊS ANTERIOR
+      // 2. Buscar última carga do MÊS ANTERIOR (usar data_carga)
       const hoje = new Date();
-      const mesAnterior = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
-      const fimMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth(), 0);
+      const primeiroDiaMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+      const ultimoDiaMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth(), 0, 23, 59, 59);
       
       const { data: penultimaCarga } = await supabase
         .from('cargas_historico')
         .select('*')
         .eq('tipo_carga', 'integrantes')
-        .gte('data_carga', mesAnterior.toISOString())
-        .lte('data_carga', fimMesAnterior.toISOString())
+        .gte('data_carga', primeiroDiaMesAnterior.toISOString())
+        .lte('data_carga', ultimoDiaMesAnterior.toISOString())
         .order('data_carga', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -88,8 +88,17 @@ export const useRelatorioData = (regionalTexto?: string) => {
         .eq('ativo', true)
         .eq('liquidado', false);
 
-      // Processar dados
+      // Processar dados - usar divisoes do snapshot (para compatibilidade com cargas antigas)
       const snapshotAnterior = penultimaCarga?.dados_snapshot as any;
+      const divisoesSnapshot = snapshotAnterior?.divisoes || [];
+      
+      // Mapear total anterior por divisão
+      const totaisPorDivisao = new Map<string, number>();
+      divisoesSnapshot.forEach((d: any) => {
+        totaisPorDivisao.set(d.divisao, d.total || 0);
+      });
+
+      // Fallback: tentar integrantes se divisoes não existir
       const integrantesAnteriores = snapshotAnterior?.integrantes || [];
       
       // Agrupar por divisão
@@ -142,6 +151,14 @@ export const useRelatorioData = (regionalTexto?: string) => {
       const idsAtuais = new Set(integrantesAtuais.map((i) => i.registro_id));
       const idsAnteriores = new Set(integrantesAnteriores.map((i: any) => i.registro_id));
 
+      // Se temos totais do snapshot, usar diretamente
+      if (totaisPorDivisao.size > 0) {
+        divisoesMap.forEach((divisaoData, nomeDivisao) => {
+          divisaoData.total_anterior = totaisPorDivisao.get(nomeDivisao) || 0;
+        });
+      }
+
+      // Se temos integrantes anteriores, processar normalmente
       integrantesAnteriores.forEach((integrante: any) => {
         const divisao = integrante.divisao_texto;
         if (!divisoesMap.has(divisao)) {
@@ -165,7 +182,11 @@ export const useRelatorioData = (regionalTexto?: string) => {
         }
 
         const divisaoData = divisoesMap.get(divisao)!;
-        divisaoData.total_anterior++;
+        
+        // Se não temos totais do snapshot, contar manualmente
+        if (totaisPorDivisao.size === 0) {
+          divisaoData.total_anterior++;
+        }
 
         // Calcular saídas
         if (!idsAtuais.has(integrante.registro_id)) {
