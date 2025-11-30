@@ -140,24 +140,40 @@ export const RelatorioSemanalDivisaoAba = () => {
         semana: semanaSelecionada
       });
 
-      const { data, error } = await supabase.functions.invoke('export-relatorio-cmd', {
-        body: {
-          regional_id: regionalSelecionada,
-          ano: anoSelecionado,
-          mes: mesSelecionado,
-          semana: semanaSelecionada
-        }
-      });
+      // Obter session token para autenticação
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
 
-      if (error) {
-        console.error('[Export] Erro na invocação:', error);
-        throw error;
+      if (!token) {
+        throw new Error('Não autenticado');
       }
 
-      // Criar blob e fazer download
-      const blob = new Blob([data], { 
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-      });
+      // Fazer requisição direta para obter dados binários sem parsing automático
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/export-relatorio-cmd`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            regional_id: regionalSelecionada,
+            ano: anoSelecionado,
+            mes: mesSelecionado,
+            semana: semanaSelecionada
+          })
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Export] Erro HTTP:', response.status, errorText);
+        throw new Error(`Erro ao exportar relatório: ${response.status}`);
+      }
+
+      // Obter blob diretamente da resposta
+      const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
