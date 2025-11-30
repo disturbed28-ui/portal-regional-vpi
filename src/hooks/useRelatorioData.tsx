@@ -92,10 +92,28 @@ export const useRelatorioData = (regionalTexto?: string) => {
       const snapshotAnterior = penultimaCarga?.dados_snapshot as any;
       const divisoesSnapshot = snapshotAnterior?.divisoes || [];
       
-      // Mapear total anterior por divisão
+      // Buscar nomes e nomes_ascii de todas as divisões
+      const { data: todasDivisoes } = await supabase
+        .from('divisoes')
+        .select('nome, nome_ascii');
+
+      // Criar mapa de nome_ascii -> nome (para lookup normalizado)
+      const mapNomeAsciiParaNome = new Map<string, string>();
+      todasDivisoes?.forEach(d => {
+        if (d.nome_ascii) {
+          mapNomeAsciiParaNome.set(d.nome_ascii, d.nome);
+        }
+      });
+      
+      // Mapear total anterior por divisão (usando nome_ascii para comparação normalizada)
       const totaisPorDivisao = new Map<string, number>();
       divisoesSnapshot.forEach((d: any) => {
-        totaisPorDivisao.set(d.divisao, d.total || 0);
+        const nomeSnapshotNormalizado = d.divisao?.toUpperCase();
+        const nomeOriginal = mapNomeAsciiParaNome.get(nomeSnapshotNormalizado);
+        
+        if (nomeOriginal) {
+          totaisPorDivisao.set(nomeOriginal, d.total || 0);
+        }
       });
 
       // Fallback: tentar integrantes se divisoes não existir
