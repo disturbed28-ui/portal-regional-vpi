@@ -149,11 +149,11 @@ export const RelatorioSemanalResumo = ({ regionalId, ano, mes, semana }: Relator
                       {entradasDetalhadas.map((entrada, idx) => (
                         <TableRow key={idx}>
                           <TableCell>{entrada.divisao}</TableCell>
-                          <TableCell>{entrada.nome}</TableCell>
+                          <TableCell>{entrada.nome_colete}</TableCell>
                           <TableCell>
-                            {entrada.data && format(new Date(entrada.data), 'dd/MM/yyyy', { locale: ptBR })}
+                            {entrada.data_entrada && format(new Date(entrada.data_entrada), 'dd/MM/yyyy', { locale: ptBR })}
                           </TableCell>
-                          <TableCell>{entrada.motivo}</TableCell>
+                          <TableCell>{entrada.motivo_entrada || '-'}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -182,11 +182,11 @@ export const RelatorioSemanalResumo = ({ regionalId, ano, mes, semana }: Relator
                       {saidasDetalhadas.map((saida, idx) => (
                         <TableRow key={idx}>
                           <TableCell>{saida.divisao}</TableCell>
-                          <TableCell>{saida.nome}</TableCell>
+                          <TableCell>{saida.nome_colete}</TableCell>
                           <TableCell>
-                            {saida.data && format(new Date(saida.data), 'dd/MM/yyyy', { locale: ptBR })}
+                            {saida.data_saida && format(new Date(saida.data_saida), 'dd/MM/yyyy', { locale: ptBR })}
                           </TableCell>
-                          <TableCell>{saida.motivo}</TableCell>
+                          <TableCell>{saida.justificativa || saida.motivo_codigo || '-'}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -214,8 +214,8 @@ export const RelatorioSemanalResumo = ({ regionalId, ano, mes, semana }: Relator
                       {inadimplencias.map((inad, idx) => (
                         <TableRow key={idx}>
                           <TableCell>{inad.divisao}</TableCell>
-                          <TableCell>{inad.nome}</TableCell>
-                          <TableCell>{inad.acao}</TableCell>
+                          <TableCell>{inad.nome_colete}</TableCell>
+                          <TableCell>{inad.acao_cobranca || '-'}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -309,9 +309,9 @@ export const RelatorioSemanalResumo = ({ regionalId, ano, mes, semana }: Relator
                       {acoesSociais.map((acao, idx) => (
                         <TableRow key={idx}>
                           <TableCell>{acao.divisao}</TableCell>
-                          <TableCell>{acao.titulo}</TableCell>
+                          <TableCell>{acao.titulo || '-'}</TableCell>
                           <TableCell>
-                            {acao.data && format(new Date(acao.data), 'dd/MM/yyyy', { locale: ptBR })}
+                            {acao.data_acao && format(new Date(acao.data_acao), 'dd/MM/yyyy', { locale: ptBR })}
                           </TableCell>
                         </TableRow>
                       ))}
