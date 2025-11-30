@@ -51,6 +51,7 @@ interface DadosRelatorio {
   dados_mes_anterior: DadosMesAnterior;
   dados_integrantes_ativos: DadosIntegrantesAtivos;
   total_integrantes_ativos: number;
+  mapNomeParaNomeAscii: Map<string, string>;
 }
 
 // Extrai número romano do nome da regional
@@ -93,14 +94,20 @@ async function fetchDadosRelatorio(
 
   if (regionalError) throw new Error(`Erro ao buscar regional: ${regionalError.message}`);
 
-  // 2. Buscar TODAS as divisões da regional
+  // 2. Buscar TODAS as divisões da regional (COM nome_ascii para normalização)
   const { data: divisoes, error: divisoesError } = await supabase
     .from('divisoes')
-    .select('id, nome')
+    .select('id, nome, nome_ascii')
     .eq('regional_id', regional_id)
     .order('nome');
 
   if (divisoesError) throw new Error(`Erro ao buscar divisões: ${divisoesError.message}`);
+
+  // 2.1. Criar mapa de nome → nome_ascii (para normalização)
+  const mapNomeParaNomeAscii = new Map<string, string>();
+  divisoes?.forEach(d => {
+    mapNomeParaNomeAscii.set(d.nome, d.nome_ascii || d.nome.toUpperCase());
+  });
 
   // 3. Buscar relatórios semanais das divisões
   const { data: relatorios, error: relatoriosError } = await supabase
@@ -166,20 +173,21 @@ async function fetchDadosRelatorio(
   if (integrantesError) throw new Error(`Erro ao buscar integrantes: ${integrantesError.message}`);
 
   // Processar dados por divisão
+  // IMPORTANTE: usar divisao_texto como chave (já está MAIÚSCULO sem acentos)
   const dadosIntegrantesAtivos: DadosIntegrantesAtivos = {};
   let totalGeralAtivos = 0;
 
   (integrantesAtivos || []).forEach(integrante => {
-    const divisao = integrante.divisao_texto;
-    if (!dadosIntegrantesAtivos[divisao]) {
-      dadosIntegrantesAtivos[divisao] = {
+    const divisaoChave = integrante.divisao_texto; // JÁ está MAIÚSCULO sem acentos
+    if (!dadosIntegrantesAtivos[divisaoChave]) {
+      dadosIntegrantesAtivos[divisaoChave] = {
         total: 0, moto: 0, carro: 0, sem_veiculo: 0,
         sgt_armas: 0, combate_insano: 0, batedores: 0,
         caveiras: 0, caveiras_suplentes: 0
       };
     }
     
-    const stats = dadosIntegrantesAtivos[divisao];
+    const stats = dadosIntegrantesAtivos[divisaoChave];
     stats.total++;
     totalGeralAtivos++;
     
@@ -226,7 +234,8 @@ async function fetchDadosRelatorio(
     total_mes_anterior: totalMesAnterior,
     dados_mes_anterior: dadosMesAnterior,
     dados_integrantes_ativos: dadosIntegrantesAtivos,
-    total_integrantes_ativos: totalGeralAtivos
+    total_integrantes_ativos: totalGeralAtivos,
+    mapNomeParaNomeAscii: mapNomeParaNomeAscii // Retornar mapa para uso nos blocos
   };
 }
 
@@ -284,11 +293,14 @@ function adicionarBlocoCrescimentoAtual(wsData: any[][], dados: DadosRelatorio, 
   let totalAtualGeral = 0;
   
   dados.divisoes.forEach(div => {
-    const nomeNormalizado = div.divisao_nome.toLowerCase().trim();
+    // Normalizar nome da divisão para MAIÚSCULO sem acentos
+    const nomeAscii = dados.mapNomeParaNomeAscii.get(div.divisao_nome) || div.divisao_nome.toUpperCase();
+    const nomeNormalizado = nomeAscii.toLowerCase().trim();
     const mesAnterior = dados.dados_mes_anterior[nomeNormalizado] || 0;
     
-    // Buscar total atual de integrantes ativos
-    const statsAtivos = dados.dados_integrantes_ativos[div.divisao_nome] || { total: 0 };
+    // Buscar total atual de integrantes ativos usando chave normalizada (MAIÚSCULO)
+    const chaveAtivos = nomeAscii.toUpperCase();
+    const statsAtivos = dados.dados_integrantes_ativos[chaveAtivos] || { total: 0 };
     const totalAtual = statsAtivos.total;
     
     const crescimentoDiv = mesAnterior > 0 
@@ -320,8 +332,12 @@ function adicionarBlocoEfetivo(wsData: any[][], dados: DadosRelatorio, row: numb
   let totalSemVeiculo = 0;
   
   dados.divisoes.forEach(div => {
-    // Buscar de integrantes ativos
-    const stats = dados.dados_integrantes_ativos[div.divisao_nome] || {
+    // Normalizar nome da divisão para buscar dados ativos
+    const nomeAscii = dados.mapNomeParaNomeAscii.get(div.divisao_nome) || div.divisao_nome.toUpperCase();
+    const chaveAtivos = nomeAscii.toUpperCase();
+    
+    // Buscar de integrantes ativos usando chave normalizada
+    const stats = dados.dados_integrantes_ativos[chaveAtivos] || {
       moto: 0, carro: 0, sem_veiculo: 0, total: 0
     };
     
@@ -523,8 +539,12 @@ function adicionarBlocoBatedores(wsData: any[][], dados: DadosRelatorio, row: nu
   let total = 0;
   
   dados.divisoes.forEach(div => {
-    // Buscar de integrantes ativos
-    const stats = dados.dados_integrantes_ativos[div.divisao_nome] || { batedores: 0 };
+    // Normalizar nome da divisão para buscar dados ativos
+    const nomeAscii = dados.mapNomeParaNomeAscii.get(div.divisao_nome) || div.divisao_nome.toUpperCase();
+    const chaveAtivos = nomeAscii.toUpperCase();
+    
+    // Buscar de integrantes ativos usando chave normalizada
+    const stats = dados.dados_integrantes_ativos[chaveAtivos] || { batedores: 0 };
     const qtd = stats.batedores;
     
     wsData[row++] = [div.divisao_nome, qtd];
@@ -545,8 +565,12 @@ function adicionarBlocoCaveiras(wsData: any[][], dados: DadosRelatorio, row: num
   let totalSuplentes = 0;
   
   dados.divisoes.forEach(div => {
-    // Buscar de integrantes ativos
-    const stats = dados.dados_integrantes_ativos[div.divisao_nome] || { 
+    // Normalizar nome da divisão para buscar dados ativos
+    const nomeAscii = dados.mapNomeParaNomeAscii.get(div.divisao_nome) || div.divisao_nome.toUpperCase();
+    const chaveAtivos = nomeAscii.toUpperCase();
+    
+    // Buscar de integrantes ativos usando chave normalizada
+    const stats = dados.dados_integrantes_ativos[chaveAtivos] || { 
       caveiras: 0, caveiras_suplentes: 0 
     };
     
@@ -569,8 +593,12 @@ function adicionarBlocoSgtArmas(wsData: any[][], dados: DadosRelatorio, row: num
   let total = 0;
   
   dados.divisoes.forEach(div => {
-    // Buscar de integrantes ativos
-    const stats = dados.dados_integrantes_ativos[div.divisao_nome] || { sgt_armas: 0 };
+    // Normalizar nome da divisão para buscar dados ativos
+    const nomeAscii = dados.mapNomeParaNomeAscii.get(div.divisao_nome) || div.divisao_nome.toUpperCase();
+    const chaveAtivos = nomeAscii.toUpperCase();
+    
+    // Buscar de integrantes ativos usando chave normalizada
+    const stats = dados.dados_integrantes_ativos[chaveAtivos] || { sgt_armas: 0 };
     const qtd = stats.sgt_armas;
     
     wsData[row++] = [div.divisao_nome, qtd];
@@ -590,8 +618,12 @@ function adicionarBlocoCombateInsano(wsData: any[][], dados: DadosRelatorio, row
   let total = 0;
   
   dados.divisoes.forEach(div => {
-    // Buscar de integrantes ativos
-    const stats = dados.dados_integrantes_ativos[div.divisao_nome] || { combate_insano: 0 };
+    // Normalizar nome da divisão para buscar dados ativos
+    const nomeAscii = dados.mapNomeParaNomeAscii.get(div.divisao_nome) || div.divisao_nome.toUpperCase();
+    const chaveAtivos = nomeAscii.toUpperCase();
+    
+    // Buscar de integrantes ativos usando chave normalizada
+    const stats = dados.dados_integrantes_ativos[chaveAtivos] || { combate_insano: 0 };
     const qtd = stats.combate_insano;
     
     wsData[row++] = [div.divisao_nome, qtd];
