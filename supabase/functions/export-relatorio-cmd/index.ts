@@ -382,8 +382,9 @@ function generateXlsxReport(dados: DadosRelatorio): ArrayBuffer {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Relatório CMD');
   
-  // Gerar buffer
-  return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as ArrayBuffer;
+  // Gerar buffer usando type: 'array' para compatibilidade com Deno
+  const uint8Array = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+  return new Uint8Array(uint8Array).buffer;
 }
 
 // ============================================================================
