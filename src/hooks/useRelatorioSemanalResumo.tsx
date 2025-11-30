@@ -145,11 +145,13 @@ export const useRelatorioSemanalResumo = (regionalId: string, ano?: number, mes?
       // Mapear entradas/saídas dos relatórios semanais por divisão
       const entradasSaidasPorDivisao = new Map<string, { entradas: number; saidas: number }>();
       relatoriosSemanais.forEach((rel: any) => {
-        const divisao = rel.divisao_relatorio_texto;
-        entradasSaidasPorDivisao.set(divisao, {
-          entradas: (rel.entradas_json || []).length,
-          saidas: (rel.saidas_json || []).length
-        });
+        const divisao = rel.divisao_relatorio_texto?.toUpperCase();
+        if (divisao) {
+          entradasSaidasPorDivisao.set(divisao, {
+            entradas: (rel.entradas_json || []).length,
+            saidas: (rel.saidas_json || []).length
+          });
+        }
       });
 
       // Calcular totais anteriores
