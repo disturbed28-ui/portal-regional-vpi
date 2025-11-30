@@ -1,53 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { DivisaoRelatorio, TotaisRelatorio } from './useRelatorioData';
 
-export interface DivisaoRelatorio {
-  nome: string;
-  entrada: number;
-  saida: number;
-  saldo: number;
-  total_anterior: number;
-  total_atual: number;
-  sem_veiculo: number;
-  com_moto: number;
-  com_carro: number;
-  sgt_armas: number;
-  combate_insano: number;
-  batedores: number;
-  caveiras: number;
-  caveiras_suplentes: number;
-  devedores: number;
-}
-
-export interface TotaisRelatorio {
-  entrada: number;
-  saida: number;
-  saldo: number;
-  total_anterior: number;
-  total_atual: number;
-  sem_veiculo: number;
-  com_moto: number;
-  com_carro: number;
-  sgt_armas: number;
-  combate_insano: number;
-  batedores: number;
-  caveiras: number;
-  caveiras_suplentes: number;
-  devedores: number;
-}
-
-export interface RelatorioData {
+interface RelatorioSemanalResumoData {
   divisoes: DivisaoRelatorio[];
   totais: TotaisRelatorio;
   dataCarga?: string;
 }
 
-export const useRelatorioData = (regionalTexto?: string) => {
+export const useRelatorioSemanalResumo = (regionalId: string) => {
   return useQuery({
-    queryKey: ['relatorio-data', regionalTexto],
-    queryFn: async (): Promise<RelatorioData> => {
+    queryKey: ['relatorio-semanal-resumo', regionalId],
+    queryFn: async (): Promise<RelatorioSemanalResumoData> => {
       // 1. Buscar última carga histórica
-      const { data: ultimaCarga, error: erroUltimaCarga } = await supabase
+      const { data: ultimaCarga } = await supabase
         .from('cargas_historico')
         .select('*')
         .order('data_carga', { ascending: false })
@@ -59,7 +25,7 @@ export const useRelatorioData = (regionalTexto?: string) => {
       const mesAnterior = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
       const fimMesAnterior = new Date(hoje.getFullYear(), hoje.getMonth(), 0);
       
-      const { data: penultimaCarga } = await supabase
+      const { data: cargaMesAnterior } = await supabase
         .from('cargas_historico')
         .select('*')
         .eq('tipo_carga', 'integrantes')
@@ -69,17 +35,12 @@ export const useRelatorioData = (regionalTexto?: string) => {
         .limit(1)
         .maybeSingle();
 
-      // 3. Buscar integrantes atuais
-      let queryAtual = supabase
+      // 3. Buscar integrantes atuais filtrados por regional_id
+      const { data: integrantesAtuais = [] } = await supabase
         .from('integrantes_portal')
         .select('*')
-        .eq('ativo', true);
-
-      if (regionalTexto) {
-        queryAtual = queryAtual.eq('regional_texto', regionalTexto);
-      }
-
-      const { data: integrantesAtuais = [] } = await queryAtual;
+        .eq('ativo', true)
+        .eq('regional_id', regionalId);
 
       // 4. Buscar apenas mensalidades ATIVAS e NÃO LIQUIDADAS
       const { data: mensalidadesData = [] } = await supabase
@@ -89,8 +50,10 @@ export const useRelatorioData = (regionalTexto?: string) => {
         .eq('liquidado', false);
 
       // Processar dados
-      const snapshotAnterior = penultimaCarga?.dados_snapshot as any;
-      const integrantesAnteriores = snapshotAnterior?.integrantes || [];
+      const snapshotAnterior = cargaMesAnterior?.dados_snapshot as any;
+      const integrantesAnteriores = (snapshotAnterior?.integrantes || []).filter(
+        (i: any) => i.regional_id === regionalId
+      );
       
       // Agrupar por divisão
       const divisoesMap = new Map<string, DivisaoRelatorio>();
@@ -106,11 +69,11 @@ export const useRelatorioData = (regionalTexto?: string) => {
             saldo: 0,
             total_anterior: 0,
             total_atual: 0,
-          sem_veiculo: 0,
-          com_moto: 0,
-          com_carro: 0,
-          sgt_armas: 0,
-          combate_insano: 0,
+            sem_veiculo: 0,
+            com_moto: 0,
+            com_carro: 0,
+            sgt_armas: 0,
+            combate_insano: 0,
             batedores: 0,
             caveiras: 0,
             caveiras_suplentes: 0,
@@ -181,18 +144,16 @@ export const useRelatorioData = (regionalTexto?: string) => {
         }
       });
 
-      // Calcular devedores ÚNICOS por divisão usando registro_id do integrante atual
+      // Calcular devedores ÚNICOS por divisão
       const devedoresPorDivisao = new Map<string, Set<number>>();
       mensalidadesData.forEach((m) => {
-        // Buscar integrante atual pelo registro_id
         const integrante = integrantesAtuais.find(i => i.registro_id === m.registro_id);
         
         if (integrante) {
-          const divisao = integrante.divisao_texto; // Usar divisão do integrante atual
+          const divisao = integrante.divisao_texto;
           if (!devedoresPorDivisao.has(divisao)) {
             devedoresPorDivisao.set(divisao, new Set());
           }
-          // Usar Set para garantir unicidade por registro_id
           devedoresPorDivisao.get(divisao)!.add(m.registro_id);
         }
       });
@@ -221,11 +182,11 @@ export const useRelatorioData = (regionalTexto?: string) => {
           saldo: acc.saldo + div.saldo,
           total_anterior: acc.total_anterior + div.total_anterior,
           total_atual: acc.total_atual + div.total_atual,
-        sem_veiculo: acc.sem_veiculo + div.sem_veiculo,
-        com_moto: acc.com_moto + div.com_moto,
-        com_carro: acc.com_carro + div.com_carro,
-        sgt_armas: acc.sgt_armas + div.sgt_armas,
-        combate_insano: acc.combate_insano + div.combate_insano,
+          sem_veiculo: acc.sem_veiculo + div.sem_veiculo,
+          com_moto: acc.com_moto + div.com_moto,
+          com_carro: acc.com_carro + div.com_carro,
+          sgt_armas: acc.sgt_armas + div.sgt_armas,
+          combate_insano: acc.combate_insano + div.combate_insano,
           batedores: acc.batedores + div.batedores,
           caveiras: acc.caveiras + div.caveiras,
           caveiras_suplentes: acc.caveiras_suplentes + div.caveiras_suplentes,
@@ -237,11 +198,11 @@ export const useRelatorioData = (regionalTexto?: string) => {
           saldo: 0,
           total_anterior: 0,
           total_atual: 0,
-        sem_veiculo: 0,
-        com_moto: 0,
-        com_carro: 0,
-        sgt_armas: 0,
-        combate_insano: 0,
+          sem_veiculo: 0,
+          com_moto: 0,
+          com_carro: 0,
+          sgt_armas: 0,
+          combate_insano: 0,
           batedores: 0,
           caveiras: 0,
           caveiras_suplentes: 0,
@@ -255,6 +216,6 @@ export const useRelatorioData = (regionalTexto?: string) => {
         dataCarga: ultimaCarga?.data_carga,
       };
     },
-    enabled: true,
+    enabled: !!regionalId,
   });
 };
