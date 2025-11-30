@@ -35,13 +35,19 @@ export const useRelatorioSemanalResumo = (regionalId: string) => {
         .limit(1)
         .maybeSingle();
 
-      // 2.1. Buscar nomes das divisões da regional para filtrar snapshot
+      // 2.1. Buscar nomes e nomes_ascii das divisões da regional para filtrar snapshot
       const { data: divisoesRegional } = await supabase
         .from('divisoes')
-        .select('nome')
+        .select('nome, nome_ascii')
         .eq('regional_id', regionalId);
 
-      const nomesDivisoes = divisoesRegional?.map(d => d.nome) || [];
+      // Criar mapa de nome_ascii -> nome (para lookup normalizado)
+      const mapNomeAsciiParaNome = new Map<string, string>();
+      divisoesRegional?.forEach(d => {
+        if (d.nome_ascii) {
+          mapNomeAsciiParaNome.set(d.nome_ascii, d.nome);
+        }
+      });
 
       // 3. Buscar integrantes atuais filtrados por regional_id
       const { data: integrantesAtuais = [] } = await supabase
@@ -61,11 +67,14 @@ export const useRelatorioSemanalResumo = (regionalId: string) => {
       const snapshotAnterior = cargaMesAnterior?.dados_snapshot as any;
       const divisoesSnapshot = snapshotAnterior?.divisoes || [];
       
-      // Mapear total anterior por divisão (filtrar pelo nome das divisões da regional)
+      // Mapear total anterior por divisão (usando nome_ascii para comparação normalizada)
       const totaisPorDivisao = new Map<string, number>();
       divisoesSnapshot.forEach((d: any) => {
-        if (nomesDivisoes.includes(d.divisao)) {
-          totaisPorDivisao.set(d.divisao, d.total || 0);
+        const nomeSnapshotNormalizado = d.divisao?.toUpperCase();
+        const nomeOriginal = mapNomeAsciiParaNome.get(nomeSnapshotNormalizado);
+        
+        if (nomeOriginal) {
+          totaisPorDivisao.set(nomeOriginal, d.total || 0);
         }
       });
 
