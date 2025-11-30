@@ -22,6 +22,10 @@ interface DivisaoCompleta {
   relatorio?: RelatorioSemanalDivisao;
 }
 
+interface DadosMesAnterior {
+  [divisao_nome_normalizado: string]: number;
+}
+
 interface DadosRelatorio {
   regional_nome: string;
   regional_numero_romano: string;
@@ -30,6 +34,7 @@ interface DadosRelatorio {
   semana: number;
   divisoes: DivisaoCompleta[];
   total_mes_anterior: number;
+  dados_mes_anterior: DadosMesAnterior;
 }
 
 // Extrai número romano do nome da regional
@@ -102,29 +107,37 @@ async function fetchDadosRelatorio(
 
   if (relatoriosError) throw new Error(`Erro ao buscar relatórios: ${relatoriosError.message}`);
 
-  // 4. Buscar total do mês anterior (última semana do mês anterior)
+  // 4. Buscar dados do mês anterior de cargas_historico
   const mesAnterior = mes === 1 ? 12 : mes - 1;
   const anoAnterior = mes === 1 ? ano - 1 : ano;
   
-  const { data: relatoriosMesAnterior } = await supabase
-    .from('relatorios_semanais_divisao')
-    .select('estatisticas_divisao_json, semana_no_mes')
-    .eq('regional_relatorio_id', regional_id)
-    .eq('ano_referencia', anoAnterior)
-    .eq('mes_referencia', mesAnterior)
-    .order('semana_no_mes', { ascending: false })
-    .limit(15); // Pegar última semana de cada divisão
+  const { data: cargaMesAnterior } = await supabase
+    .from('cargas_historico')
+    .select('dados_snapshot, data_carga')
+    .eq('tipo_carga', 'integrantes')
+    .gte('data_carga', `${anoAnterior}-${String(mesAnterior).padStart(2, '0')}-01`)
+    .lt('data_carga', `${ano}-${String(mes).padStart(2, '0')}-01`)
+    .order('data_carga', { ascending: false })
+    .limit(1)
+    .single();
 
+  // Montar mapa de divisão -> total do mês anterior
+  const dadosMesAnterior: DadosMesAnterior = {};
   let totalMesAnterior = 0;
-  if (relatoriosMesAnterior && relatoriosMesAnterior.length > 0) {
-    // Agrupar por semana e pegar a última
-    const ultimaSemana = Math.max(...relatoriosMesAnterior.map(r => r.semana_no_mes));
-    const relatoriosUltimaSemana = relatoriosMesAnterior.filter(r => r.semana_no_mes === ultimaSemana);
+  
+  if (cargaMesAnterior && cargaMesAnterior.dados_snapshot) {
+    const snapshot = cargaMesAnterior.dados_snapshot as any;
+    const divisoesSnapshot = snapshot.divisoes || [];
     
-    relatoriosUltimaSemana.forEach(rel => {
-      const stats = rel.estatisticas_divisao_json || {};
-      totalMesAnterior += (stats.total_tem_moto || 0) + (stats.total_tem_carro || 0) + (stats.total_sem_veiculo || 0);
+    divisoesSnapshot.forEach((div: any) => {
+      const nomeNormalizado = (div.divisao || '').toLowerCase().trim();
+      const total = div.total || 0;
+      dadosMesAnterior[nomeNormalizado] = total;
+      totalMesAnterior += total;
     });
+    
+    console.log('[Fetch Dados] Carga mês anterior:', cargaMesAnterior.data_carga);
+    console.log('[Fetch Dados] Total mês anterior:', totalMesAnterior);
   }
 
   // 5. Fazer merge: todas divisões + relatórios
@@ -152,7 +165,8 @@ async function fetchDadosRelatorio(
     mes,
     semana,
     divisoes: ordenarDivisoes(divisoesCompletas),
-    total_mes_anterior: totalMesAnterior
+    total_mes_anterior: totalMesAnterior,
+    dados_mes_anterior: dadosMesAnterior
   };
 }
 
@@ -206,51 +220,50 @@ function adicionarBlocoCrescimentoAtual(wsData: any[][], dados: DadosRelatorio, 
   wsData[row++] = ['CRESCIMENTO ATUAL'];
   wsData[row++] = ['Divisão', 'Mês Anterior', 'Total Atual', 'Crescimento'];
   
+  let totalMesAnteriorGeral = 0;
   let totalAtualGeral = 0;
   
   dados.divisoes.forEach(div => {
     const stats = div.relatorio?.estatisticas_divisao_json || {};
     const totalAtual = (stats.total_tem_moto || 0) + (stats.total_tem_carro || 0) + (stats.total_sem_veiculo || 0);
     
+    // Buscar no mapa normalizado
+    const nomeNormalizado = div.divisao_nome.toLowerCase().trim();
+    const mesAnterior = dados.dados_mes_anterior[nomeNormalizado] || 0;
+    
+    const crescimentoDiv = mesAnterior > 0 
+      ? ((totalAtual - mesAnterior) / mesAnterior * 100).toFixed(1) + '%'
+      : (totalAtual > 0 ? '+100%' : '-');
+    
     wsData[row++] = [
       div.divisao_nome,
-      '-', // Não temos por divisão individual do mês anterior
+      mesAnterior,
       totalAtual,
-      '-'
+      crescimentoDiv
     ];
     
+    totalMesAnteriorGeral += mesAnterior;
     totalAtualGeral += totalAtual;
   });
   
-  const crescimento = dados.total_mes_anterior > 0 
-    ? ((totalAtualGeral - dados.total_mes_anterior) / dados.total_mes_anterior * 100).toFixed(1) + '%'
+  const crescimentoTotal = totalMesAnteriorGeral > 0 
+    ? ((totalAtualGeral - totalMesAnteriorGeral) / totalMesAnteriorGeral * 100).toFixed(1) + '%'
     : '-';
   
-  wsData[row++] = ['TOTAL', dados.total_mes_anterior, totalAtualGeral, crescimento];
+  wsData[row++] = ['TOTAL', totalMesAnteriorGeral, totalAtualGeral, crescimentoTotal];
   wsData[row++] = [];
   return row;
 }
 
-// Bloco 5: Efetivo por Veículo
+// Bloco 5: Efetivo por Veículo (SEM PERCENTUAIS)
 function adicionarBlocoEfetivo(wsData: any[][], dados: DadosRelatorio, row: number): number {
   wsData[row++] = ['EFETIVO POR VEÍCULO'];
-  wsData[row++] = ['Divisão', 'Moto', '%', 'Carro', '%', 'Sem Veículo', '%', 'Total'];
+  wsData[row++] = ['Divisão', 'Moto', 'Carro', 'Sem Veículo', 'Total'];
   
   let totalMoto = 0;
   let totalCarro = 0;
   let totalSemVeiculo = 0;
-  let totalGeral = 0;
   
-  // Calcular totais primeiro
-  dados.divisoes.forEach(div => {
-    const stats = div.relatorio?.estatisticas_divisao_json || {};
-    totalMoto += stats.total_tem_moto || 0;
-    totalCarro += stats.total_tem_carro || 0;
-    totalSemVeiculo += stats.total_sem_veiculo || 0;
-  });
-  totalGeral = totalMoto + totalCarro + totalSemVeiculo;
-  
-  // Adicionar linhas com percentuais
   dados.divisoes.forEach(div => {
     const stats = div.relatorio?.estatisticas_divisao_json || {};
     const moto = stats.total_tem_moto || 0;
@@ -258,14 +271,14 @@ function adicionarBlocoEfetivo(wsData: any[][], dados: DadosRelatorio, row: numb
     const semVeiculo = stats.total_sem_veiculo || 0;
     const total = moto + carro + semVeiculo;
     
-    const percMoto = totalGeral > 0 ? ((moto / totalGeral) * 100).toFixed(1) + '%' : '0%';
-    const percCarro = totalGeral > 0 ? ((carro / totalGeral) * 100).toFixed(1) + '%' : '0%';
-    const percSem = totalGeral > 0 ? ((semVeiculo / totalGeral) * 100).toFixed(1) + '%' : '0%';
+    wsData[row++] = [div.divisao_nome, moto, carro, semVeiculo, total];
     
-    wsData[row++] = [div.divisao_nome, moto, percMoto, carro, percCarro, semVeiculo, percSem, total];
+    totalMoto += moto;
+    totalCarro += carro;
+    totalSemVeiculo += semVeiculo;
   });
   
-  wsData[row++] = ['TOTAL', totalMoto, '100%', totalCarro, '100%', totalSemVeiculo, '100%', totalGeral];
+  wsData[row++] = ['TOTAL', totalMoto, totalCarro, totalSemVeiculo, totalMoto + totalCarro + totalSemVeiculo];
   wsData[row++] = [];
   return row;
 }
