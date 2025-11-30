@@ -35,6 +35,8 @@ interface DadosRelatorio {
   divisoes: DivisaoCompleta[];
   total_mes_anterior: number;
   dados_mes_anterior: DadosMesAnterior;
+  dados_mes_atual: DadosMesAnterior;
+  total_mes_atual: number;
 }
 
 // Extrai número romano do nome da regional
@@ -140,7 +142,37 @@ async function fetchDadosRelatorio(
     console.log('[Fetch Dados] Total mês anterior:', totalMesAnterior);
   }
 
-  // 5. Fazer merge: todas divisões + relatórios
+  // 5. Buscar dados do MÊS ATUAL de cargas_historico
+  const { data: cargaMesAtual } = await supabase
+    .from('cargas_historico')
+    .select('dados_snapshot, data_carga')
+    .eq('tipo_carga', 'integrantes')
+    .gte('data_carga', `${ano}-${String(mes).padStart(2, '0')}-01`)
+    .lte('data_carga', `${ano}-${String(mes).padStart(2, '0')}-31`)
+    .order('data_carga', { ascending: false })
+    .limit(1)
+    .single();
+
+  // Montar mapa de divisão -> total do mês atual
+  const dadosMesAtual: DadosMesAnterior = {};
+  let totalMesAtual = 0;
+
+  if (cargaMesAtual && cargaMesAtual.dados_snapshot) {
+    const snapshot = cargaMesAtual.dados_snapshot as any;
+    const divisoesSnapshot = snapshot.divisoes || [];
+    
+    divisoesSnapshot.forEach((div: any) => {
+      const nomeNormalizado = (div.divisao || '').toLowerCase().trim();
+      const total = div.total || 0;
+      dadosMesAtual[nomeNormalizado] = total;
+      totalMesAtual += total;
+    });
+    
+    console.log('[Fetch Dados] Carga mês atual:', cargaMesAtual.data_carga);
+    console.log('[Fetch Dados] Total mês atual:', totalMesAtual);
+  }
+
+  // 6. Fazer merge: todas divisões + relatórios
   const divisoesCompletas: DivisaoCompleta[] = (divisoes || []).map(div => {
     const relatorio = relatorios?.find(rel => 
       rel.divisao_relatorio_id === div.id || 
@@ -166,7 +198,9 @@ async function fetchDadosRelatorio(
     semana,
     divisoes: ordenarDivisoes(divisoesCompletas),
     total_mes_anterior: totalMesAnterior,
-    dados_mes_anterior: dadosMesAnterior
+    dados_mes_anterior: dadosMesAnterior,
+    dados_mes_atual: dadosMesAtual,
+    total_mes_atual: totalMesAtual
   };
 }
 
@@ -224,23 +258,15 @@ function adicionarBlocoCrescimentoAtual(wsData: any[][], dados: DadosRelatorio, 
   let totalAtualGeral = 0;
   
   dados.divisoes.forEach(div => {
-    const stats = div.relatorio?.estatisticas_divisao_json || {};
-    const totalAtual = (stats.total_tem_moto || 0) + (stats.total_tem_carro || 0) + (stats.total_sem_veiculo || 0);
-    
-    // Buscar no mapa normalizado
     const nomeNormalizado = div.divisao_nome.toLowerCase().trim();
     const mesAnterior = dados.dados_mes_anterior[nomeNormalizado] || 0;
+    const totalAtual = dados.dados_mes_atual[nomeNormalizado] || 0;
     
     const crescimentoDiv = mesAnterior > 0 
       ? ((totalAtual - mesAnterior) / mesAnterior * 100).toFixed(1) + '%'
       : (totalAtual > 0 ? '+100%' : '-');
     
-    wsData[row++] = [
-      div.divisao_nome,
-      mesAnterior,
-      totalAtual,
-      crescimentoDiv
-    ];
+    wsData[row++] = [div.divisao_nome, mesAnterior, totalAtual, crescimentoDiv];
     
     totalMesAnteriorGeral += mesAnterior;
     totalAtualGeral += totalAtual;
@@ -248,7 +274,7 @@ function adicionarBlocoCrescimentoAtual(wsData: any[][], dados: DadosRelatorio, 
   
   const crescimentoTotal = totalMesAnteriorGeral > 0 
     ? ((totalAtualGeral - totalMesAnteriorGeral) / totalMesAnteriorGeral * 100).toFixed(1) + '%'
-    : '-';
+    : (totalAtualGeral > 0 ? '+100%' : '-');
   
   wsData[row++] = ['TOTAL', totalMesAnteriorGeral, totalAtualGeral, crescimentoTotal];
   wsData[row++] = [];
