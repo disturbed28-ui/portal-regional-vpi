@@ -165,25 +165,20 @@ function adicionarBlocoEfetivo(wsData: any[][], dados: DadosRelatorio, row: numb
 // Bloco 5: Inadimplência
 function adicionarBlocoInadimplencia(wsData: any[][], dados: DadosRelatorio, row: number): number {
   wsData[row++] = ['INADIMPLÊNCIA POR DIVISÃO'];
-  wsData[row++] = ['Divisão', 'Quantidade', 'Valor Total (R$)'];
+  wsData[row++] = ['Divisão', 'Quantidade'];
   
   let totalQtd = 0;
-  let totalValor = 0;
   
   dados.relatorios.forEach(rel => {
     const inadimplencias = rel.inadimplencias_json || [];
     const qtd = inadimplencias.length;
-    const valor = inadimplencias.reduce((sum: number, inad: any) => 
-      sum + (parseFloat(inad.valor_total) || 0), 0
-    );
     
-    wsData[row++] = [rel.divisao_relatorio_texto, qtd, valor];
+    wsData[row++] = [rel.divisao_relatorio_texto, qtd];
     
     totalQtd += qtd;
-    totalValor += valor;
   });
   
-  wsData[row++] = ['TOTAL', totalQtd, totalValor];
+  wsData[row++] = ['TOTAL', totalQtd];
   wsData[row++] = [];
   return row;
 }
@@ -191,7 +186,7 @@ function adicionarBlocoInadimplencia(wsData: any[][], dados: DadosRelatorio, row
 // Bloco 6: Ações de Inadimplência
 function adicionarBlocoAcoesInadimplencia(wsData: any[][], dados: DadosRelatorio, row: number): number {
   wsData[row++] = ['AÇÕES DE INADIMPLÊNCIA'];
-  wsData[row++] = ['Divisão', 'Nome', 'Ação de Cobrança', 'Valor (R$)'];
+  wsData[row++] = ['Divisão', 'Nome', 'Ação de Cobrança'];
   
   dados.relatorios.forEach(rel => {
     const inadimplencias = rel.inadimplencias_json || [];
@@ -200,8 +195,7 @@ function adicionarBlocoAcoesInadimplencia(wsData: any[][], dados: DadosRelatorio
         wsData[row++] = [
           rel.divisao_relatorio_texto,
           inad.nome_colete || '',
-          inad.acao_cobranca || '',
-          parseFloat(inad.valor_total) || 0
+          inad.acao_cobranca || ''
         ];
       }
     });
@@ -224,8 +218,8 @@ function adicionarBlocoEntradasSaidas(wsData: any[][], dados: DadosRelatorio, ro
         'ENTRADA',
         rel.divisao_relatorio_texto,
         entrada.nome_colete || '',
-        entrada.data || '',
-        entrada.motivo || ''
+        entrada.data_entrada || '',
+        entrada.motivo_entrada || ''
       ];
     });
     
@@ -236,8 +230,8 @@ function adicionarBlocoEntradasSaidas(wsData: any[][], dados: DadosRelatorio, ro
         'SAÍDA',
         rel.divisao_relatorio_texto,
         saida.nome_colete || '',
-        saida.data || '',
-        saida.motivo || ''
+        saida.data_saida || '',
+        saida.justificativa || saida.motivo_codigo || ''
       ];
     });
   });
@@ -270,17 +264,15 @@ function adicionarBlocoConflitos(wsData: any[][], dados: DadosRelatorio, row: nu
 // Bloco 9: Ações Sociais
 function adicionarBlocoAcoesSociais(wsData: any[][], dados: DadosRelatorio, row: number): number {
   wsData[row++] = ['AÇÕES SOCIAIS'];
-  wsData[row++] = ['Divisão', 'Tipo', 'Descrição', 'Data', 'Status'];
+  wsData[row++] = ['Divisão', 'Título', 'Data'];
   
   dados.relatorios.forEach(rel => {
     const acoes = rel.acoes_sociais_json || [];
     acoes.forEach((acao: any) => {
       wsData[row++] = [
         rel.divisao_relatorio_texto,
-        acao.tipo || '',
-        acao.descricao || '',
-        acao.data || '',
-        acao.status || ''
+        acao.titulo || '',
+        acao.data_acao || ''
       ];
     });
   });
