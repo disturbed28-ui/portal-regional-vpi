@@ -112,8 +112,9 @@ Deno.serve(async (req) => {
       email: config.email_formulario
     });
 
-    // Extrair mês e dia da data_acao
+    // Extrair ano, mês e dia da data_acao
     const dataAcao = new Date(registro.data_acao);
+    const ano = dataAcao.getFullYear();
     const mes = dataAcao.getMonth() + 1; // Janeiro = 1
     const dia = dataAcao.getDate();
 
@@ -131,6 +132,7 @@ Deno.serve(async (req) => {
     // Montar payload para Google Forms (com mapeamento correto)
     const formData = new URLSearchParams({
       'emailAddress': config.email_formulario,
+      'entry.1698025551_year': ano.toString(),
       'entry.1698025551_month': mes.toString(),
       'entry.1698025551_day': dia.toString(),
       'entry.1818867636': registro.regional_relatorio_texto || '',    // Regional
