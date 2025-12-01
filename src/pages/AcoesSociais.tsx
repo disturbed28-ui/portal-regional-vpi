@@ -344,8 +344,9 @@ export default function AcoesSociais() {
               </Button>
             )}
 
-                      {/* BOTÃO SOLICITAR EXCLUSÃO - Apenas se não houver solicitação pendente */}
-                      {(!getSolicitacaoStatus(registro) || getSolicitacaoStatus(registro)?.status !== 'pendente') && (
+                      {/* BOTÃO SOLICITAR EXCLUSÃO - Apenas se não foi enviado e não houver solicitação pendente */}
+                      {registro.google_form_status !== 'enviado' &&
+                       (!getSolicitacaoStatus(registro) || getSolicitacaoStatus(registro)?.status !== 'pendente') && (
                         <Button
                           size="sm"
                           variant="destructive"
