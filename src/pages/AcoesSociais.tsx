@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Heart, Calendar, Users, MapPin, Send, Trash2, Eye, Plus } from "lucide-react";
+import { ArrowLeft, Heart, Calendar, Users, MapPin, Send, Trash2, Eye, Plus, RefreshCw, AlertCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useScreenAccess } from "@/hooks/useScreenAccess";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -31,6 +31,7 @@ export default function AcoesSociais() {
   const [justificativaExclusao, setJustificativaExclusao] = useState("");
   const [mostrarConfirmacaoEnvio, setMostrarConfirmacaoEnvio] = useState(false);
   const [registroParaEnvio, setRegistroParaEnvio] = useState<any>(null);
+  const [filtroStatus, setFiltroStatus] = useState<string | null>(null);
 
   // Protecao de acesso
   if (loadingAccess || loadingRoles) {
@@ -155,6 +156,19 @@ export default function AcoesSociais() {
     );
   };
 
+  // Contagens para os filtros
+  const contagens = {
+    todos: registros.length,
+    nao_enviado: registros.filter(r => r.google_form_status === 'nao_enviado').length,
+    enviado: registros.filter(r => r.google_form_status === 'enviado').length,
+    erro: registros.filter(r => r.google_form_status === 'erro').length,
+  };
+
+  // Aplicar filtro
+  const registrosFiltrados = filtroStatus 
+    ? registros.filter(r => r.google_form_status === filtroStatus)
+    : registros;
+
   return (
     <div className="min-h-screen bg-background p-3 sm:p-4">
       <div className="max-w-full sm:max-w-4xl mx-auto space-y-4">
@@ -171,7 +185,7 @@ export default function AcoesSociais() {
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className="h-8 px-3">
-              {registros.length} {registros.length === 1 ? 'acao' : 'acoes'}
+              {filtroStatus ? `${registrosFiltrados.length} de ${registros.length}` : registros.length} {registrosFiltrados.length === 1 ? 'ação' : 'ações'}
             </Badge>
             <Button
               size="sm"
@@ -182,6 +196,43 @@ export default function AcoesSociais() {
             </Button>
           </div>
         </div>
+
+        {/* Filtros de Status */}
+        {!loading && registros.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant={filtroStatus === null ? 'default' : 'outline'}
+              onClick={() => setFiltroStatus(null)}
+            >
+              Todos ({contagens.todos})
+            </Button>
+            <Button
+              size="sm"
+              variant={filtroStatus === 'nao_enviado' ? 'default' : 'outline'}
+              onClick={() => setFiltroStatus('nao_enviado')}
+              className={filtroStatus !== 'nao_enviado' ? 'border-yellow-500/50 text-yellow-600 hover:bg-yellow-500/10' : ''}
+            >
+              Não Enviados ({contagens.nao_enviado})
+            </Button>
+            <Button
+              size="sm"
+              variant={filtroStatus === 'enviado' ? 'default' : 'outline'}
+              onClick={() => setFiltroStatus('enviado')}
+              className={filtroStatus !== 'enviado' ? 'border-green-500/50 text-green-600 hover:bg-green-500/10' : ''}
+            >
+              Enviados ({contagens.enviado})
+            </Button>
+            <Button
+              size="sm"
+              variant={filtroStatus === 'erro' ? 'default' : 'outline'}
+              onClick={() => setFiltroStatus('erro')}
+              className={filtroStatus !== 'erro' ? 'border-red-500/50 text-red-600 hover:bg-red-500/10' : ''}
+            >
+              Com Erro ({contagens.erro})
+            </Button>
+          </div>
+        )}
 
         {/* Loading State */}
         {loading && (
@@ -202,9 +253,27 @@ export default function AcoesSociais() {
           </Card>
         )}
 
+        {/* Empty State com Filtro */}
+        {!loading && registros.length > 0 && registrosFiltrados.length === 0 && (
+          <Card className="p-12 text-center">
+            <Heart className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+            <h3 className="text-lg font-semibold mb-2">Nenhuma ação com este status</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Não há ações sociais com o filtro "{filtroStatus === 'nao_enviado' ? 'Não Enviados' : filtroStatus === 'enviado' ? 'Enviados' : 'Com Erro'}" selecionado.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setFiltroStatus(null)}
+            >
+              Limpar Filtro
+            </Button>
+          </Card>
+        )}
+
         {/* Grid de Cards */}
         <div className="grid gap-4">
-          {registros.map((registro) => (
+          {registrosFiltrados.map((registro) => (
             <Card key={registro.id} className="hover:border-primary/50 transition-colors">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-2">
@@ -256,17 +325,22 @@ export default function AcoesSociais() {
                   {/* BOTÕES APENAS PARA MODERADOR/ADMIN */}
                   {isModeradorOuAdmin && (
                     <>
-            {/* BOTÃO ENVIAR AO FORM - Apenas se não enviado E sem solicitação pendente */}
-            {registro.google_form_status === 'nao_enviado' && 
+            {/* BOTÃO ENVIAR AO FORM / TENTAR NOVAMENTE */}
+            {(registro.google_form_status === 'nao_enviado' || registro.google_form_status === 'erro') && 
              getSolicitacaoStatus(registro)?.status !== 'pendente' && (
               <Button
                 size="sm"
-                variant="default"
+                variant={registro.google_form_status === 'erro' ? 'outline' : 'default'}
                 onClick={() => handleAbrirConfirmacaoEnvio(registro)}
                 disabled={enviarMutation.isPending}
+                className={registro.google_form_status === 'erro' ? 'border-orange-500 text-orange-600 hover:bg-orange-500/10' : ''}
               >
-                <Send className="h-4 w-4 mr-2" />
-                Enviar ao Form
+                {registro.google_form_status === 'erro' ? (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                ) : (
+                  <Send className="h-4 w-4 mr-2" />
+                )}
+                {registro.google_form_status === 'erro' ? 'Tentar Novamente' : 'Enviar ao Form'}
               </Button>
             )}
 
@@ -374,6 +448,38 @@ export default function AcoesSociais() {
                           <p className="text-xs text-muted-foreground">
                             Em {new Date(registroSelecionado.google_form_enviado_em).toLocaleString('pt-BR')}
                           </p>
+                        )}
+                      </div>
+                    </>
+                  )}
+
+                  {/* SEÇÃO DE ERRO */}
+                  {registroSelecionado.google_form_status === 'erro' && (
+                    <>
+                      <Separator />
+                      <div className="bg-red-500/10 p-3 rounded-md">
+                        <div className="flex items-center gap-2 mb-2">
+                          <AlertCircle className="h-4 w-4 text-red-500" />
+                          <p className="text-red-500 font-medium">Erro ao Enviar ao Formulário</p>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-3">
+                          Houve um problema ao enviar esta ação para o formulário oficial. 
+                          Você pode tentar novamente.
+                        </p>
+                        {isModeradorOuAdmin && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-orange-500 text-orange-600 hover:bg-orange-500/10"
+                            onClick={() => {
+                              setMostrarDetalhes(false);
+                              handleAbrirConfirmacaoEnvio(registroSelecionado);
+                            }}
+                            disabled={enviarMutation.isPending}
+                          >
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Tentar Novamente
+                          </Button>
                         )}
                       </div>
                     </>
