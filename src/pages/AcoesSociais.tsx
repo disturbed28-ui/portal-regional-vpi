@@ -33,7 +33,7 @@ export default function AcoesSociais() {
   const umMesAtras = subMonths(hoje, 1);
   const [dataInicio, setDataInicio] = useState<Date | undefined>(umMesAtras);
   const [dataFim, setDataFim] = useState<Date | undefined>(hoje);
-  const [divisaoFiltro, setDivisaoFiltro] = useState<string>('');
+  const [divisaoFiltro, setDivisaoFiltro] = useState<string>('todas');
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
 
   // Buscar dados
@@ -41,7 +41,7 @@ export default function AcoesSociais() {
   const { registros, loading, refetch } = useAcoesSociaisLista({
     dataInicio,
     dataFim,
-    divisaoId: divisaoFiltro || undefined,
+    divisaoId: divisaoFiltro === 'todas' ? undefined : divisaoFiltro,
   });
   const enviarMutation = useEnviarAcaoSocialParaFormClube();
   const solicitarExclusaoMutation = useSolicitarExclusaoAcaoSocial();
@@ -115,7 +115,7 @@ export default function AcoesSociais() {
   const limparFiltros = () => {
     setDataInicio(subMonths(new Date(), 1));
     setDataFim(new Date());
-    setDivisaoFiltro('');
+    setDivisaoFiltro('todas');
   };
 
   const getSolicitacaoStatus = (registro: any) => {
@@ -303,7 +303,7 @@ export default function AcoesSociais() {
                       <SelectValue placeholder="Todas as divisões" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Todas as divisões</SelectItem>
+                      <SelectItem value="todas">Todas as divisões</SelectItem>
                       {divisoes.map((d) => (
                         <SelectItem key={d.id} value={d.id}>{d.nome}</SelectItem>
                       ))}
