@@ -3,8 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserRole } from "@/hooks/useUserRole";
+import { format } from "date-fns";
 
-export const useAcoesSociaisLista = () => {
+interface FiltrosAcoesSociais {
+  dataInicio?: Date;
+  dataFim?: Date;
+  divisaoId?: string;
+}
+
+export const useAcoesSociaisLista = (filtros?: FiltrosAcoesSociais) => {
   const { user } = useAuth();
   const { profile } = useProfile(user?.id);
   const { roles } = useUserRole(user?.id);
@@ -89,6 +96,17 @@ export const useAcoesSociaisLista = () => {
       return [];
     }
 
+    // Aplicar filtros de período
+    if (filtros?.dataInicio) {
+      query = query.gte('data_acao', format(filtros.dataInicio, 'yyyy-MM-dd'));
+    }
+    if (filtros?.dataFim) {
+      query = query.lte('data_acao', format(filtros.dataFim, 'yyyy-MM-dd'));
+    }
+    if (filtros?.divisaoId) {
+      query = query.eq('divisao_relatorio_id', filtros.divisaoId);
+    }
+
     const { data, error } = await query;
 
     if (error) {
@@ -101,7 +119,15 @@ export const useAcoesSociaisLista = () => {
   };
 
   const { data: registros, isLoading, error, refetch } = useQuery({
-    queryKey: ['acoes-sociais-lista', user?.id, profile?.id, roles],
+    queryKey: [
+      'acoes-sociais-lista', 
+      user?.id, 
+      profile?.id, 
+      roles,
+      filtros?.dataInicio?.toISOString(),
+      filtros?.dataFim?.toISOString(),
+      filtros?.divisaoId
+    ],
     queryFn: fetchAcoes,
     enabled: !!user?.id && !!profile,
   });

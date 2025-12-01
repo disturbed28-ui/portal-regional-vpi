@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Heart, Calendar, Users, MapPin, Send, Trash2, Eye, Plus, RefreshCw, AlertCircle } from "lucide-react";
+import { ArrowLeft, Heart, Calendar, Users, MapPin, Send, Trash2, Eye, Plus, RefreshCw, AlertCircle, X, Filter, CalendarIcon } from "lucide-react";
+import { format, subMonths } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
 import { useScreenAccess } from "@/hooks/useScreenAccess";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useAcoesSociaisLista } from "@/hooks/useAcoesSociaisLista";
+import { useDivisoes } from "@/hooks/useDivisoes";
 import { useEnviarAcaoSocialParaFormClube } from "@/hooks/useEnviarAcaoSocialParaFormClube";
 import { useSolicitarExclusaoAcaoSocial } from "@/hooks/useSolicitarExclusaoAcaoSocial";
 import { Button } from "@/components/ui/button";
@@ -14,6 +17,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function AcoesSociais() {
   const navigate = useNavigate();
@@ -21,7 +27,22 @@ export default function AcoesSociais() {
   const { hasAccess, loading: loadingAccess } = useScreenAccess('/acoes-sociais', user?.id);
   const { roles, loading: loadingRoles } = useUserRole(user?.id);
   const isModeradorOuAdmin = roles.includes('moderator') || roles.includes('admin');
-  const { registros, loading, refetch } = useAcoesSociaisLista();
+
+  // Estados de filtro de período e divisão
+  const hoje = new Date();
+  const umMesAtras = subMonths(hoje, 1);
+  const [dataInicio, setDataInicio] = useState<Date | undefined>(umMesAtras);
+  const [dataFim, setDataFim] = useState<Date | undefined>(hoje);
+  const [divisaoFiltro, setDivisaoFiltro] = useState<string>('');
+  const [mostrarFiltros, setMostrarFiltros] = useState(false);
+
+  // Buscar dados
+  const { divisoes } = useDivisoes();
+  const { registros, loading, refetch } = useAcoesSociaisLista({
+    dataInicio,
+    dataFim,
+    divisaoId: divisaoFiltro || undefined,
+  });
   const enviarMutation = useEnviarAcaoSocialParaFormClube();
   const solicitarExclusaoMutation = useSolicitarExclusaoAcaoSocial();
 
@@ -89,6 +110,12 @@ export default function AcoesSociais() {
     setRegistroSelecionado(null);
     setJustificativaExclusao("");
     refetch();
+  };
+
+  const limparFiltros = () => {
+    setDataInicio(subMonths(new Date(), 1));
+    setDataFim(new Date());
+    setDivisaoFiltro('');
   };
 
   const getSolicitacaoStatus = (registro: any) => {
@@ -172,65 +199,167 @@ export default function AcoesSociais() {
   return (
     <div className="min-h-screen bg-background p-3 sm:p-4">
       <div className="max-w-full sm:max-w-4xl mx-auto space-y-4">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        {/* Header - Mobile First */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold">Acoes Sociais</h1>
-              <p className="text-sm text-muted-foreground">Consulta e gerenciamento</p>
+            <div className="flex-1">
+              <h1 className="text-lg sm:text-2xl font-bold">Ações Sociais</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground">Consulta e gerenciamento</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="h-8 px-3">
-              {filtroStatus ? `${registrosFiltrados.length} de ${registros.length}` : registros.length} {registrosFiltrados.length === 1 ? 'ação' : 'ações'}
-            </Badge>
+          
+          {/* Ações do Header - Empilhadas em mobile */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex gap-2">
+              <Badge variant="secondary" className="h-8 px-3 text-xs sm:text-sm">
+                {filtroStatus ? `${registrosFiltrados.length}/${registros.length}` : registros.length} {registrosFiltrados.length === 1 ? 'ação' : 'ações'}
+              </Badge>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setMostrarFiltros(!mostrarFiltros)}
+                className="sm:hidden flex-1"
+              >
+                <Filter className="h-4 w-4 mr-1" />
+                Filtros
+              </Button>
+            </div>
             <Button
               size="sm"
               onClick={() => navigate('/formularios/acoes_sociais')}
+              className="w-full sm:w-auto"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Nova Acao Social
+              <span>Nova Ação</span>
             </Button>
           </div>
         </div>
 
-        {/* Filtros de Status */}
+        {/* Filtros de Período e Divisão - Colapsável em mobile */}
+        {(mostrarFiltros || window.innerWidth >= 640) && (
+          <Card className="p-3 sm:p-4">
+            <div className="flex flex-col gap-3">
+              {/* Linha 1: Datas */}
+              <div className="grid grid-cols-2 gap-2">
+                {/* Data Início */}
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">De</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        className="w-full justify-start text-left text-xs sm:text-sm h-9"
+                      >
+                        <CalendarIcon className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
+                        {dataInicio ? format(dataInicio, 'dd/MM/yy', { locale: ptBR }) : 'Início'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={dataInicio}
+                        onSelect={setDataInicio}
+                        locale={ptBR}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* Data Fim */}
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Até</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        className="w-full justify-start text-left text-xs sm:text-sm h-9"
+                      >
+                        <CalendarIcon className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
+                        {dataFim ? format(dataFim, 'dd/MM/yy', { locale: ptBR }) : 'Fim'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                      <CalendarComponent
+                        mode="single"
+                        selected={dataFim}
+                        onSelect={setDataFim}
+                        locale={ptBR}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+
+              {/* Linha 2: Divisão + Limpar */}
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Select value={divisaoFiltro} onValueChange={setDivisaoFiltro}>
+                    <SelectTrigger className="h-9 text-xs sm:text-sm">
+                      <SelectValue placeholder="Todas as divisões" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Todas as divisões</SelectItem>
+                      {divisoes.map((d) => (
+                        <SelectItem key={d.id} value={d.id}>{d.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={limparFiltros}
+                  className="h-9 px-2"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Filtros de Status - Scroll horizontal em mobile */}
         {!loading && registros.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              variant={filtroStatus === null ? 'default' : 'outline'}
-              onClick={() => setFiltroStatus(null)}
-            >
-              Todos ({contagens.todos})
-            </Button>
-            <Button
-              size="sm"
-              variant={filtroStatus === 'nao_enviado' ? 'default' : 'outline'}
-              onClick={() => setFiltroStatus('nao_enviado')}
-              className={filtroStatus !== 'nao_enviado' ? 'border-yellow-500/50 text-yellow-600 hover:bg-yellow-500/10' : ''}
-            >
-              Não Enviados ({contagens.nao_enviado})
-            </Button>
-            <Button
-              size="sm"
-              variant={filtroStatus === 'enviado' ? 'default' : 'outline'}
-              onClick={() => setFiltroStatus('enviado')}
-              className={filtroStatus !== 'enviado' ? 'border-green-500/50 text-green-600 hover:bg-green-500/10' : ''}
-            >
-              Enviados ({contagens.enviado})
-            </Button>
-            <Button
-              size="sm"
-              variant={filtroStatus === 'erro' ? 'default' : 'outline'}
-              onClick={() => setFiltroStatus('erro')}
-              className={filtroStatus !== 'erro' ? 'border-red-500/50 text-red-600 hover:bg-red-500/10' : ''}
-            >
-              Com Erro ({contagens.erro})
-            </Button>
+          <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+            <div className="flex gap-2 min-w-max sm:flex-wrap">
+              <Button
+                size="sm"
+                variant={filtroStatus === null ? 'default' : 'outline'}
+                onClick={() => setFiltroStatus(null)}
+                className="text-xs sm:text-sm"
+              >
+                Todos ({contagens.todos})
+              </Button>
+              <Button
+                size="sm"
+                variant={filtroStatus === 'nao_enviado' ? 'default' : 'outline'}
+                onClick={() => setFiltroStatus('nao_enviado')}
+                className={`text-xs sm:text-sm ${filtroStatus !== 'nao_enviado' ? 'border-yellow-500/50 text-yellow-600 hover:bg-yellow-500/10' : ''}`}
+              >
+                Não Enviados ({contagens.nao_enviado})
+              </Button>
+              <Button
+                size="sm"
+                variant={filtroStatus === 'enviado' ? 'default' : 'outline'}
+                onClick={() => setFiltroStatus('enviado')}
+                className={`text-xs sm:text-sm ${filtroStatus !== 'enviado' ? 'border-green-500/50 text-green-600 hover:bg-green-500/10' : ''}`}
+              >
+                Enviados ({contagens.enviado})
+              </Button>
+              <Button
+                size="sm"
+                variant={filtroStatus === 'erro' ? 'default' : 'outline'}
+                onClick={() => setFiltroStatus('erro')}
+                className={`text-xs sm:text-sm ${filtroStatus !== 'erro' ? 'border-red-500/50 text-red-600 hover:bg-red-500/10' : ''}`}
+              >
+                Com Erro ({contagens.erro})
+              </Button>
+            </div>
           </div>
         )}
 
@@ -275,36 +404,36 @@ export default function AcoesSociais() {
         <div className="grid gap-4">
           {registrosFiltrados.map((registro) => (
             <Card key={registro.id} className="hover:border-primary/50 transition-colors">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2 flex-1">
-                    <Calendar className="h-4 w-4 text-primary" />
-                    <CardTitle className="text-base">
+              <CardHeader className="pb-2 px-3 sm:px-6">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-primary shrink-0" />
+                    <CardTitle className="text-sm sm:text-base">
                       {new Date(registro.data_acao).toLocaleDateString('pt-BR')}
                     </CardTitle>
                   </div>
-                  <div className="flex gap-2 flex-wrap justify-end">
+                  <div className="flex gap-1 flex-wrap">
                     {getStatusBadge(registro.google_form_status)}
                     {getEscopoBadge(registro.escopo_acao)}
                     {getSolicitacaoBadge(registro)}
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 px-3 sm:px-6">
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center gap-2">
-                    <Heart className="h-4 w-4 text-muted-foreground" />
+                    <Heart className="h-4 w-4 text-muted-foreground shrink-0" />
                     <span className="font-medium">{registro.tipo_acao_nome_snapshot}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span>{registro.divisao_relatorio_texto}</span>
+                    <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="text-xs sm:text-sm">{registro.divisao_relatorio_texto}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span>{registro.responsavel_nome_colete}</span>
+                    <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="text-xs sm:text-sm">{registro.responsavel_nome_colete}</span>
                     {registro.responsavel_cargo_nome && (
-                      <span className="text-muted-foreground">• {registro.responsavel_cargo_nome}</span>
+                      <span className="text-muted-foreground text-xs">• {registro.responsavel_cargo_nome}</span>
                     )}
                   </div>
                 </div>
@@ -317,8 +446,9 @@ export default function AcoesSociais() {
                     size="sm"
                     variant="outline"
                     onClick={() => handleVerDetalhes(registro)}
+                    className="text-xs sm:text-sm"
                   >
-                    <Eye className="h-4 w-4 mr-2" />
+                    <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     Detalhes
                   </Button>
 
@@ -333,14 +463,14 @@ export default function AcoesSociais() {
                 variant={registro.google_form_status === 'erro' ? 'outline' : 'default'}
                 onClick={() => handleAbrirConfirmacaoEnvio(registro)}
                 disabled={enviarMutation.isPending}
-                className={registro.google_form_status === 'erro' ? 'border-orange-500 text-orange-600 hover:bg-orange-500/10' : ''}
+                className={`text-xs sm:text-sm ${registro.google_form_status === 'erro' ? 'border-orange-500 text-orange-600 hover:bg-orange-500/10' : ''}`}
               >
                 {registro.google_form_status === 'erro' ? (
-                  <RefreshCw className="h-4 w-4 mr-2" />
+                  <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 ) : (
-                  <Send className="h-4 w-4 mr-2" />
+                  <Send className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 )}
-                {registro.google_form_status === 'erro' ? 'Tentar Novamente' : 'Enviar ao Form'}
+                {registro.google_form_status === 'erro' ? 'Tentar' : 'Enviar'}
               </Button>
             )}
 
@@ -352,10 +482,10 @@ export default function AcoesSociais() {
                           variant="destructive"
                           onClick={() => handleSolicitarExclusao(registro)}
                           disabled={solicitarExclusaoMutation.isPending || getSolicitacaoStatus(registro)?.status === 'pendente'}
-                          className="col-span-2"
+                          className="col-span-2 text-xs sm:text-sm"
                         >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Solicitar Exclusao
+                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                          Solicitar Exclusão
                         </Button>
                       )}
                     </>
@@ -368,14 +498,14 @@ export default function AcoesSociais() {
 
         {/* Modal de Detalhes */}
         <Dialog open={mostrarDetalhes} onOpenChange={setMostrarDetalhes}>
-          <DialogContent className="max-w-2xl max-h-[90vh]">
+          <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh]">
             <DialogHeader>
               <DialogTitle>Detalhes da Acao Social</DialogTitle>
             </DialogHeader>
             {registroSelecionado && (
               <ScrollArea className="max-h-[70vh] pr-4">
                 <div className="space-y-4 text-sm">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <span className="text-muted-foreground">Data da Acao:</span>
                       <p className="font-medium">
