@@ -8,7 +8,9 @@ export interface IntegrantePortal {
   nome_colete: string;
   comando_texto: string;
   regional_texto: string;
+  regional_id: string | null;
   divisao_texto: string;
+  divisao_id: string | null;
   cargo_grau_texto: string;
   cargo_nome: string | null;
   grau: string | null;
