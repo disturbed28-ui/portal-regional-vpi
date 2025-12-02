@@ -224,7 +224,7 @@ export const useIntegrantesRelatorio = (userId: string | undefined): UseIntegran
         const divisoesRegional = divisoes.filter(d => d.regional_id === regional.id);
         divisoesRegional.forEach(divisao => {
           const integrantesDivisao = integrantesFiltradosPorSelecao.filter(
-            i => i.divisao_id === divisao.id
+            i => i.divisao_id === divisao.id && i.divisao_texto !== i.regional_texto
           );
 
           if (integrantesDivisao.length > 0) {
@@ -267,7 +267,7 @@ export const useIntegrantesRelatorio = (userId: string | undefined): UseIntegran
       const divisoesRegional = divisoes.filter(d => d.regional_id === id);
       divisoesRegional.forEach(divisao => {
         const integrantesDivisao = integrantesFiltradosPorSelecao.filter(
-          i => i.divisao_id === divisao.id
+          i => i.divisao_id === divisao.id && i.divisao_texto !== i.regional_texto
         );
         
         if (integrantesDivisao.length > 0) {
