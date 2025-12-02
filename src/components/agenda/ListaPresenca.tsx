@@ -367,12 +367,6 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
       if (cargoLower.includes('armas') || cargoLower.includes('sgt')) return 5;
     }
     
-    // Grau X - PP vem antes de Camiseta
-    if (grau === 'X') {
-      if (cargoLower === 'pp' || cargoLower.includes('sgt armas pp')) return 1;
-      if (cargoLower.includes('camiseta')) return 2;
-    }
-    
     // Para outros graus, retornar 999 para usar ordem alfabética
     return 999;
   };
@@ -387,7 +381,23 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
       return grauA - grauB;
     }
     
-    // 2. Se grau igual, ordenar por prioridade de cargo específica
+    // 2. Se grau igual, ordenar por tipo de grau (PP > Full > Camiseta)
+    const getTipoGrau = (cargo: string | null): number => {
+      if (!cargo) return 3;
+      const cargoUpper = cargo.toUpperCase();
+      if (cargoUpper.includes('PP')) return 1;
+      if (cargoUpper.includes('FULL')) return 2;
+      return 3;
+    };
+    
+    const tipoA = getTipoGrau(a.cargo_nome);
+    const tipoB = getTipoGrau(b.cargo_nome);
+    
+    if (tipoA !== tipoB) {
+      return tipoA - tipoB;
+    }
+    
+    // 3. Se tipo igual, ordenar por prioridade de cargo específica
     const ordemCargoA = getCargoOrder(a.cargo_nome, a.grau);
     const ordemCargoB = getCargoOrder(b.cargo_nome, b.grau);
     
@@ -395,7 +405,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
       return ordemCargoA - ordemCargoB;
     }
     
-    // 3. Se prioridade igual (999), usar ordem alfabética do cargo
+    // 4. Se prioridade igual (999), usar ordem alfabética do cargo
     const cargoA = a.cargo_nome || '';
     const cargoB = b.cargo_nome || '';
     
@@ -403,7 +413,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
       return cargoA.localeCompare(cargoB, 'pt-BR');
     }
     
-    // 4. Se cargo igual, ordenar por nome
+    // 5. Se cargo igual, ordenar por nome
     const nomeA = a.nome_colete || '';
     const nomeB = b.nome_colete || '';
     return nomeA.localeCompare(nomeB, 'pt-BR');

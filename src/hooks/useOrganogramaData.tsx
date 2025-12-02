@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { ordenarIntegrantes } from '@/lib/integranteOrdering';
 
 export interface IntegranteComFoto {
   id: string;
@@ -96,34 +97,7 @@ export const useOrganogramaData = (regionalUsuario: string | null) => {
           combate_insano: i.combate_insano || false,
         }));
 
-        // 4. Ordenar integrantes
-        const ordenarIntegrantes = (a: IntegranteComFoto, b: IntegranteComFoto) => {
-        // Por cargo
-        const ordemCargos: Record<string, number> = {
-          'Diretor Divisão': 1,
-          'Sub Diretor Divisão': 2,
-          'Social Divisão': 3,
-          'Adm. Divisão': 4,
-          'Sgt.Armas Divisão': 5,
-          'Sgt Armas Full': 6,
-          'Sgt Armas PP': 7
-        };
-          const cargoA = ordemCargos[a.cargo_nome || ''] || 99;
-          const cargoB = ordemCargos[b.cargo_nome || ''] || 99;
-          if (cargoA !== cargoB) return cargoA - cargoB;
-          
-          // Por grau
-          const grauA = a.grau ? parseInt(a.grau) : 99;
-          const grauB = b.grau ? parseInt(b.grau) : 99;
-          if (grauA !== grauB) return grauA - grauB;
-          
-          // Por data de entrada (mais antigo primeiro)
-          const dataA = a.data_entrada ? new Date(a.data_entrada).getTime() : 0;
-          const dataB = b.data_entrada ? new Date(b.data_entrada).getTime() : 0;
-          return dataA - dataB;
-        };
-
-        // 5. Separar por hierarquia
+        // 4. Separar por hierarquia
         const hierarquia: HierarquiaRegional = {
           diretor_regional: integrantesComFoto.find(i => i.cargo_nome === 'Diretor Regional') || null,
           operacional_regional: integrantesComFoto.find(i => i.cargo_nome === 'Operacional Regional') || null,

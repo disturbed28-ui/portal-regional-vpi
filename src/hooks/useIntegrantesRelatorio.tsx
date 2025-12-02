@@ -3,8 +3,9 @@ import { useIntegrantes } from './useIntegrantes';
 import { useDivisoes } from './useDivisoes';
 import { useRegionais } from './useRegionais';
 import { useProfile } from './useProfile';
-import { getNivelAcesso, romanToNumber, type NivelAcesso } from '@/lib/grauUtils';
+import { getNivelAcesso, type NivelAcesso } from '@/lib/grauUtils';
 import { normalizeSearchTerm } from '@/lib/utils';
+import { ordenarIntegrantes } from '@/lib/integranteOrdering';
 
 export interface OpcaoFiltro {
   value: string;
@@ -45,43 +46,6 @@ export const useIntegrantesRelatorio = (userId: string | undefined): UseIntegran
 
   // Determinar se combo deve estar desabilitado (Grau VI+)
   const comboDesabilitado = nivelAcesso === 'divisao';
-
-  // Função de ordenação hierárquica (mesma lógica do organograma)
-  const ordenarIntegrantes = (a: any, b: any) => {
-    // 1. Por cargo
-    const ordemCargos: Record<string, number> = {
-      // Regional (Grau V)
-      'Diretor Regional': 1,
-      'Operacional Regional': 2,
-      'Social Regional': 3,
-      'Adm. Regional': 4,
-      'Comunicação': 5,
-      // Divisão (Grau VI)
-      'Diretor Divisão': 10,
-      'Sub Diretor Divisão': 11,
-      'Social Divisão': 12,
-      'Adm. Divisão': 13,
-      'Sgt.Armas Divisão': 14,
-      'Sgt Armas Full': 15,
-      'Sgt Armas PP': 16,
-    };
-    const cargoA = ordemCargos[a.cargo_nome || ''] || 99;
-    const cargoB = ordemCargos[b.cargo_nome || ''] || 99;
-    if (cargoA !== cargoB) return cargoA - cargoB;
-    
-    // 2. Por grau
-    const grauA = romanToNumber(a.grau);
-    const grauB = romanToNumber(b.grau);
-    if (grauA !== grauB) return grauA - grauB;
-    
-    // 3. Por data de entrada (mais antigo primeiro)
-    const dataA = a.data_entrada ? new Date(a.data_entrada).getTime() : Infinity;
-    const dataB = b.data_entrada ? new Date(b.data_entrada).getTime() : Infinity;
-    if (dataA !== dataB) return dataA - dataB;
-    
-    // 4. Por nome (desempate final)
-    return (a.nome_colete || '').localeCompare(b.nome_colete || '');
-  };
 
   // Filtrar integrantes baseado no nível de acesso
   const integrantesFiltrados = useMemo(() => {
