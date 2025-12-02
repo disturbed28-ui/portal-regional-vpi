@@ -30,7 +30,7 @@ export const IntegrantesTab = () => {
       const opcaoAtual = opcoesFiltragem.find(o => o.value === filtroAtivo);
       const filtroNome = opcaoAtual?.label || 'todos';
       
-      exportarIntegrantesExcel(integrantes, filtroNome);
+      exportarIntegrantesExcel(integrantes, filtroNome, integrantesAgrupados);
       toast.success('Excel exportado com sucesso!');
     } catch (error) {
       console.error('Erro ao exportar Excel:', error);
@@ -127,7 +127,7 @@ export const IntegrantesTab = () => {
 
               {/* Total do Bloco */}
               <div className="flex items-center justify-end px-2 py-1">
-                <span className="text-xs text-foreground/80 font-medium italic">
+                <span className="text-xs font-semibold" style={{ color: '#000000' }}>
                   Total {grupo.nome}: {grupo.integrantes.length} {grupo.integrantes.length === 1 ? 'integrante' : 'integrantes'}
                 </span>
               </div>
@@ -136,7 +136,7 @@ export const IntegrantesTab = () => {
 
           {/* Total Geral */}
           <div className="flex items-center justify-center px-2 py-3 mt-4 border-t">
-            <span className="text-sm font-semibold text-foreground">
+            <span className="text-sm font-bold" style={{ color: '#000000' }}>
               Total Geral: {integrantes.length} {integrantes.length === 1 ? 'integrante' : 'integrantes'}
             </span>
           </div>

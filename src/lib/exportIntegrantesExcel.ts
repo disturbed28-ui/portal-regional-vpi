@@ -27,41 +27,180 @@ interface IntegranteExport {
   observacoes: string | null;
 }
 
+interface GrupoIntegrantes {
+  id: string;
+  nome: string;
+  tipo: 'regional' | 'divisao';
+  integrantes: IntegranteExport[];
+}
+
 /**
- * Exporta lista de integrantes para arquivo Excel
+ * Exporta lista de integrantes para arquivo Excel com totalizadores
  * @param integrantes - Lista de integrantes a exportar
  * @param filtroNome - Nome do filtro aplicado (para o nome do arquivo)
+ * @param grupos - Lista de grupos (opcional) para incluir totalizadores por bloco
  */
 export const exportarIntegrantesExcel = (
   integrantes: IntegranteExport[],
-  filtroNome: string
+  filtroNome: string,
+  grupos?: GrupoIntegrantes[]
 ): void => {
-  // Preparar dados para exportação
-  const dadosExportacao = integrantes.map(integrante => ({
-    'Registro': integrante.registro_id,
-    'Nome Colete': integrante.nome_colete,
-    'Cargo': integrante.cargo_nome || '',
-    'Grau': integrante.grau || '',
-    'Comando': integrante.comando_texto,
-    'Regional': integrante.regional_texto,
-    'Divisão': integrante.divisao_texto,
-    'Ativo': integrante.ativo ? 'Sim' : 'Não',
-    'Vinculado': integrante.vinculado ? 'Sim' : 'Não',
-    'Data Entrada': integrante.data_entrada || '',
-    'Data Vinculação': integrante.data_vinculacao || '',
-    'Data Inativação': integrante.data_inativacao || '',
-    'Motivo Inativação': integrante.motivo_inativacao || '',
-    'Sgt. Armas': integrante.sgt_armas ? 'Sim' : 'Não',
-    'Caveira': integrante.caveira ? 'Sim' : 'Não',
-    'Caveira Suplente': integrante.caveira_suplente ? 'Sim' : 'Não',
-    'Batedor': integrante.batedor ? 'Sim' : 'Não',
-    'Lobo': integrante.lobo ? 'Sim' : 'Não',
-    'Ursinho': integrante.ursinho ? 'Sim' : 'Não',
-    'Combate Insano': integrante.combate_insano ? 'Sim' : 'Não',
-    'Tem Carro': integrante.tem_carro ? 'Sim' : 'Não',
-    'Tem Moto': integrante.tem_moto ? 'Sim' : 'Não',
-    'Observações': integrante.observacoes || ''
-  }));
+  const dadosExportacao: any[] = [];
+
+  if (grupos && grupos.length > 0) {
+    // Exportação com grupos e totalizadores
+    grupos.forEach((grupo, index) => {
+      // Adicionar integrantes do grupo
+      grupo.integrantes.forEach(integrante => {
+        dadosExportacao.push({
+          'Registro': integrante.registro_id,
+          'Nome Colete': integrante.nome_colete,
+          'Cargo': integrante.cargo_nome || '',
+          'Grau': integrante.grau || '',
+          'Comando': integrante.comando_texto,
+          'Regional': integrante.regional_texto,
+          'Divisão': integrante.divisao_texto,
+          'Ativo': integrante.ativo ? 'Sim' : 'Não',
+          'Vinculado': integrante.vinculado ? 'Sim' : 'Não',
+          'Data Entrada': integrante.data_entrada || '',
+          'Data Vinculação': integrante.data_vinculacao || '',
+          'Data Inativação': integrante.data_inativacao || '',
+          'Motivo Inativação': integrante.motivo_inativacao || '',
+          'Sgt. Armas': integrante.sgt_armas ? 'Sim' : 'Não',
+          'Caveira': integrante.caveira ? 'Sim' : 'Não',
+          'Caveira Suplente': integrante.caveira_suplente ? 'Sim' : 'Não',
+          'Batedor': integrante.batedor ? 'Sim' : 'Não',
+          'Lobo': integrante.lobo ? 'Sim' : 'Não',
+          'Ursinho': integrante.ursinho ? 'Sim' : 'Não',
+          'Combate Insano': integrante.combate_insano ? 'Sim' : 'Não',
+          'Tem Carro': integrante.tem_carro ? 'Sim' : 'Não',
+          'Tem Moto': integrante.tem_moto ? 'Sim' : 'Não',
+          'Observações': integrante.observacoes || ''
+        });
+      });
+
+      // Adicionar linha de totalizador do bloco
+      dadosExportacao.push({
+        'Registro': '',
+        'Nome Colete': `TOTAL ${grupo.nome.toUpperCase()}: ${grupo.integrantes.length} ${grupo.integrantes.length === 1 ? 'INTEGRANTE' : 'INTEGRANTES'}`,
+        'Cargo': '',
+        'Grau': '',
+        'Comando': '',
+        'Regional': '',
+        'Divisão': '',
+        'Ativo': '',
+        'Vinculado': '',
+        'Data Entrada': '',
+        'Data Vinculação': '',
+        'Data Inativação': '',
+        'Motivo Inativação': '',
+        'Sgt. Armas': '',
+        'Caveira': '',
+        'Caveira Suplente': '',
+        'Batedor': '',
+        'Lobo': '',
+        'Ursinho': '',
+        'Combate Insano': '',
+        'Tem Carro': '',
+        'Tem Moto': '',
+        'Observações': ''
+      });
+
+      // Adicionar linha vazia entre grupos (exceto após o último)
+      if (index < grupos.length - 1) {
+        dadosExportacao.push({
+          'Registro': '', 'Nome Colete': '', 'Cargo': '', 'Grau': '',
+          'Comando': '', 'Regional': '', 'Divisão': '', 'Ativo': '',
+          'Vinculado': '', 'Data Entrada': '', 'Data Vinculação': '',
+          'Data Inativação': '', 'Motivo Inativação': '', 'Sgt. Armas': '',
+          'Caveira': '', 'Caveira Suplente': '', 'Batedor': '', 'Lobo': '',
+          'Ursinho': '', 'Combate Insano': '', 'Tem Carro': '', 'Tem Moto': '',
+          'Observações': ''
+        });
+      }
+    });
+
+    // Adicionar total geral
+    dadosExportacao.push({
+      'Registro': '',
+      'Nome Colete': '',
+      'Cargo': '',
+      'Grau': '',
+      'Comando': '',
+      'Regional': '',
+      'Divisão': '',
+      'Ativo': '',
+      'Vinculado': '',
+      'Data Entrada': '',
+      'Data Vinculação': '',
+      'Data Inativação': '',
+      'Motivo Inativação': '',
+      'Sgt. Armas': '',
+      'Caveira': '',
+      'Caveira Suplente': '',
+      'Batedor': '',
+      'Lobo': '',
+      'Ursinho': '',
+      'Combate Insano': '',
+      'Tem Carro': '',
+      'Tem Moto': '',
+      'Observações': ''
+    });
+    dadosExportacao.push({
+      'Registro': '',
+      'Nome Colete': `TOTAL GERAL: ${integrantes.length} ${integrantes.length === 1 ? 'INTEGRANTE' : 'INTEGRANTES'}`,
+      'Cargo': '',
+      'Grau': '',
+      'Comando': '',
+      'Regional': '',
+      'Divisão': '',
+      'Ativo': '',
+      'Vinculado': '',
+      'Data Entrada': '',
+      'Data Vinculação': '',
+      'Data Inativação': '',
+      'Motivo Inativação': '',
+      'Sgt. Armas': '',
+      'Caveira': '',
+      'Caveira Suplente': '',
+      'Batedor': '',
+      'Lobo': '',
+      'Ursinho': '',
+      'Combate Insano': '',
+      'Tem Carro': '',
+      'Tem Moto': '',
+      'Observações': ''
+    });
+  } else {
+    // Exportação simples sem grupos
+    integrantes.forEach(integrante => {
+      dadosExportacao.push({
+        'Registro': integrante.registro_id,
+        'Nome Colete': integrante.nome_colete,
+        'Cargo': integrante.cargo_nome || '',
+        'Grau': integrante.grau || '',
+        'Comando': integrante.comando_texto,
+        'Regional': integrante.regional_texto,
+        'Divisão': integrante.divisao_texto,
+        'Ativo': integrante.ativo ? 'Sim' : 'Não',
+        'Vinculado': integrante.vinculado ? 'Sim' : 'Não',
+        'Data Entrada': integrante.data_entrada || '',
+        'Data Vinculação': integrante.data_vinculacao || '',
+        'Data Inativação': integrante.data_inativacao || '',
+        'Motivo Inativação': integrante.motivo_inativacao || '',
+        'Sgt. Armas': integrante.sgt_armas ? 'Sim' : 'Não',
+        'Caveira': integrante.caveira ? 'Sim' : 'Não',
+        'Caveira Suplente': integrante.caveira_suplente ? 'Sim' : 'Não',
+        'Batedor': integrante.batedor ? 'Sim' : 'Não',
+        'Lobo': integrante.lobo ? 'Sim' : 'Não',
+        'Ursinho': integrante.ursinho ? 'Sim' : 'Não',
+        'Combate Insano': integrante.combate_insano ? 'Sim' : 'Não',
+        'Tem Carro': integrante.tem_carro ? 'Sim' : 'Não',
+        'Tem Moto': integrante.tem_moto ? 'Sim' : 'Não',
+        'Observações': integrante.observacoes || ''
+      });
+    });
+  }
 
   // Criar workbook e worksheet
   const worksheet = XLSX.utils.json_to_sheet(dadosExportacao);
