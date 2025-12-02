@@ -56,12 +56,12 @@ export const useIntegrantesRelatorio = (userId: string | undefined): UseIntegran
     if (nivelAcesso === 'regional') {
       // Grau V: apenas regional do usuário
       filtrados = filtrados.filter(
-        i => normalizeSearchTerm(i.regional_texto) === normalizeSearchTerm(profile.regional || '')
+        i => i.regional_id === profile.regional_id
       );
     } else if (nivelAcesso === 'divisao') {
       // Grau VI+: apenas divisão do usuário
       filtrados = filtrados.filter(
-        i => normalizeSearchTerm(i.divisao_texto) === normalizeSearchTerm(profile.divisao || '')
+        i => i.divisao_id === profile.divisao_id
       );
     }
 
@@ -158,20 +158,14 @@ export const useIntegrantesRelatorio = (userId: string | undefined): UseIntegran
     const [tipo, id] = filtroAtivo.split('_');
 
     if (tipo === 'regional') {
-      const regional = regionais?.find(r => r.id === id);
-      if (!regional) return [];
-      
       return integrantesFiltrados.filter(
-        i => normalizeSearchTerm(i.regional_texto) === normalizeSearchTerm(regional.nome)
+        i => i.regional_id === id
       );
     }
 
     if (tipo === 'divisao') {
-      const divisao = divisoes?.find(d => d.id === id);
-      if (!divisao) return [];
-      
       return integrantesFiltrados.filter(
-        i => normalizeSearchTerm(i.divisao_texto) === normalizeSearchTerm(divisao.nome)
+        i => i.divisao_id === id
       );
     }
 
@@ -188,8 +182,8 @@ export const useIntegrantesRelatorio = (userId: string | undefined): UseIntegran
 
       regionais.forEach(regional => {
         const integrantesRegional = integrantesFiltradosPorSelecao.filter(
-          i => normalizeSearchTerm(i.regional_texto) === normalizeSearchTerm(regional.nome) &&
-               normalizeSearchTerm(i.divisao_texto) === normalizeSearchTerm(regional.nome)
+          i => i.regional_id === regional.id && 
+               i.divisao_texto === i.regional_texto
         );
 
         if (integrantesRegional.length > 0) {
@@ -205,7 +199,7 @@ export const useIntegrantesRelatorio = (userId: string | undefined): UseIntegran
         const divisoesRegional = divisoes.filter(d => d.regional_id === regional.id);
         divisoesRegional.forEach(divisao => {
           const integrantesDivisao = integrantesFiltradosPorSelecao.filter(
-            i => normalizeSearchTerm(i.divisao_texto) === normalizeSearchTerm(divisao.nome)
+            i => i.divisao_id === divisao.id
           );
 
           if (integrantesDivisao.length > 0) {
