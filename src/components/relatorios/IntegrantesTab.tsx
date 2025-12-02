@@ -124,8 +124,22 @@ export const IntegrantesTab = () => {
                   />
                 ))}
               </div>
+
+              {/* Total do Bloco */}
+              <div className="flex items-center justify-end px-2 py-1">
+                <span className="text-xs text-muted-foreground italic">
+                  Total {grupo.nome}: {grupo.integrantes.length} {grupo.integrantes.length === 1 ? 'integrante' : 'integrantes'}
+                </span>
+              </div>
             </div>
           ))}
+
+          {/* Total Geral */}
+          <div className="flex items-center justify-center px-2 py-3 mt-4 border-t">
+            <span className="text-sm font-semibold text-primary">
+              Total Geral: {integrantes.length} {integrantes.length === 1 ? 'integrante' : 'integrantes'}
+            </span>
+          </div>
         </div>
       )}
 
