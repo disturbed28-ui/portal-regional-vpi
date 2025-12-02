@@ -1,11 +1,15 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
-import { useMensalidades } from '@/hooks/useMensalidades';
+import { useInadimplenciaFiltrada } from '@/hooks/useInadimplenciaFiltrada';
 import { AlertTriangle, TrendingUp, Users, DollarSign, ChevronDown } from 'lucide-react';
 
-export const DashboardInadimplencia = () => {
-  const { ultimaCargaInfo, devedoresAtivos, devedoresCronicos } = useMensalidades();
+interface DashboardInadimplenciaProps {
+  userId: string | undefined;
+}
+
+export const DashboardInadimplencia = ({ userId }: DashboardInadimplenciaProps) => {
+  const { ultimaCargaInfo, devedoresAtivos, devedoresCronicos } = useInadimplenciaFiltrada(userId);
 
   // Calcular totais a partir da view vw_devedores_ativos
   const totalDevedores = devedoresAtivos.length;
