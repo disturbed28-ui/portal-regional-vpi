@@ -206,11 +206,11 @@ export const RelatorioSemanalDivisaoAba = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {/* Filtros */}
       <Card>
-        <CardContent className="pt-4">
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <CardContent className="p-3 sm:pt-4">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3">
             {/* Combo Regional */}
             <div className="col-span-2 sm:col-span-1">
               <Select 

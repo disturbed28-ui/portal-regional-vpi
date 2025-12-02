@@ -87,34 +87,34 @@ export const TabelaComparativa = ({ cargas, divisoesUnicas }: TabelaComparativaP
   return (
     <Card>
       <CardContent className="p-0">
-        <div className="overflow-x-auto">
-          <Table>
+        <div className="overflow-x-auto -mx-2 sm:mx-0">
+          <Table className="text-xs sm:text-sm">
             <TableHeader>
               <TableRow>
-                <TableHead className="font-bold">Divisão</TableHead>
+                <TableHead className="font-bold text-xs sm:text-sm sticky left-0 bg-background z-10">Divisão</TableHead>
                 {cargas.map(carga => (
-                  <TableHead key={carga.data_carga} className="text-center">
+                  <TableHead key={carga.data_carga} className="text-center text-xs sm:text-sm whitespace-nowrap">
                     {format(new Date(carga.data_carga), "MMM/yy", { locale: ptBR })}
                   </TableHead>
                 ))}
-                <TableHead className="text-center font-bold">Variação</TableHead>
+                <TableHead className="text-center font-bold text-xs sm:text-sm whitespace-nowrap">Var.</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {linhasDivisoes.map(linha => (
                 <TableRow key={linha.divisao}>
-                  <TableCell className="font-medium text-sm">
+                  <TableCell className="font-medium text-xs sm:text-sm sticky left-0 bg-background z-10">
                     {linha.divisao}
                   </TableCell>
                   {linha.valores.map((valor, index) => (
-                    <TableCell key={index} className="text-center">
+                    <TableCell key={index} className="text-center text-xs sm:text-sm">
                       {valor}
                     </TableCell>
                   ))}
                   <TableCell className="text-center">
-                    <div className="flex items-center justify-center gap-1">
+                    <div className="flex items-center justify-center gap-0.5 sm:gap-1">
                       {renderIndicador(linha.variacaoTotal)}
-                      <span className={getCorVariacao(linha.variacaoTotal)}>
+                      <span className={`text-xs sm:text-sm ${getCorVariacao(linha.variacaoTotal)}`}>
                         {linha.variacaoTotal > 0 ? '+' : ''}{linha.variacaoTotal}
                       </span>
                     </div>
@@ -124,16 +124,16 @@ export const TabelaComparativa = ({ cargas, divisoesUnicas }: TabelaComparativaP
               
               {/* Linha de total regional */}
               <TableRow className="bg-muted/50 font-bold">
-                <TableCell className="text-muted-foreground">TOTAL REGIONAL</TableCell>
+                <TableCell className="text-muted-foreground text-xs sm:text-sm sticky left-0 bg-muted/50 z-10">TOTAL</TableCell>
                 {totaisRegionais.map((total, index) => (
-                  <TableCell key={index} className="text-center text-muted-foreground">
+                  <TableCell key={index} className="text-center text-muted-foreground text-xs sm:text-sm">
                     {total}
                   </TableCell>
                 ))}
                 <TableCell className="text-center">
-                  <div className="flex items-center justify-center gap-1">
+                  <div className="flex items-center justify-center gap-0.5 sm:gap-1">
                     {renderIndicador(variacaoTotalRegional)}
-                    <span className={getCorVariacao(variacaoTotalRegional)}>
+                    <span className={`text-xs sm:text-sm ${getCorVariacao(variacaoTotalRegional)}`}>
                       {variacaoTotalRegional > 0 ? '+' : ''}{variacaoTotalRegional}
                     </span>
                   </div>

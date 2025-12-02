@@ -14,6 +14,7 @@ import { DashboardInadimplencia } from '@/components/relatorios/DashboardInadimp
 import { GraficoEvolucao } from '@/components/relatorios/GraficoEvolucao';
 import { TabelaComparativa } from '@/components/relatorios/TabelaComparativa';
 import { RelatorioSemanalDivisaoAba } from '@/components/relatorios/RelatorioSemanalDivisaoAba';
+import { IntegrantesTab } from '@/components/relatorios/IntegrantesTab';
 import { formatarDataBrasil } from '@/lib/timezone';
 import { toast } from '@/hooks/use-toast';
 import { useAfastadosAtivos, useAfastadosHistorico, useRetornosProximos, useRegistrarRetorno } from '@/hooks/useAfastados';
@@ -31,6 +32,7 @@ const Relatorios = () => {
   const { hasRole, loading: rolesLoading } = useUserRole(user?.id); // mantido para UI interna
   const { hasAccess, loading: loadingAccess } = useScreenAccess("/relatorios", user?.id);
   const { hasAccess: hasAccessSemanalAba, loading: loadingAccessSemanalAba } = useScreenAccess('/relatorios/semanal-divisao', user?.id);
+  const { hasAccess: hasAccessIntegrantes } = useScreenAccess('/relatorios/integrantes', user?.id);
 
   const { data: relatorioData, isLoading } = useRelatorioData();
   const { data: historicoData, isLoading: isLoadingHistorico } = useHistoricoCargas({
@@ -125,23 +127,23 @@ const Relatorios = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted p-2 sm:p-4 md:p-8">
+      <div className="max-w-7xl mx-auto space-y-3 sm:space-y-6">
         {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-4">
+        <div className="mb-3 sm:mb-6">
+          <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-4">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate('/')}
-              className="flex-shrink-0"
+              className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10"
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
-            <div className="flex-1">
-              <h1 className="text-2xl sm:text-3xl font-bold">Relatório Regional</h1>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg sm:text-2xl md:text-3xl font-bold truncate">Relatórios</h1>
               {relatorioData?.dataCarga && (
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 truncate">
                   Última atualização: {formatarDataBrasil(relatorioData.dataCarga)}
                 </p>
               )}
@@ -151,15 +153,36 @@ const Relatorios = () => {
 
         {/* Conteúdo Principal */}
         {relatorioData && (
-        <Tabs defaultValue="evolucao" className="w-full">
-          <TabsList className={`grid w-full ${hasAccessSemanalAba ? 'grid-cols-4' : 'grid-cols-3'}`}>
-            <TabsTrigger value="evolucao">Evolução Histórica</TabsTrigger>
-            <TabsTrigger value="inadimplencia">Inadimplência</TabsTrigger>
-            <TabsTrigger value="afastamentos">Afastamentos</TabsTrigger>
-            {hasAccessSemanalAba && (
-              <TabsTrigger value="semanal">Rel. Semanal</TabsTrigger>
-            )}
-          </TabsList>
+        <Tabs defaultValue={hasAccessIntegrantes ? "integrantes" : "evolucao"} className="w-full">
+          <div className="overflow-x-auto -mx-2 px-2 sm:mx-0 sm:px-0">
+            <TabsList className="inline-flex min-w-max gap-0.5 sm:gap-1">
+              {hasAccessIntegrantes && (
+                <TabsTrigger value="integrantes" className="text-xs sm:text-sm px-2 sm:px-3">
+                  Integrantes
+                </TabsTrigger>
+              )}
+              <TabsTrigger value="evolucao" className="text-xs sm:text-sm px-2 sm:px-3">
+                Evolução
+              </TabsTrigger>
+              <TabsTrigger value="inadimplencia" className="text-xs sm:text-sm px-2 sm:px-3">
+                Inadimplência
+              </TabsTrigger>
+              <TabsTrigger value="afastamentos" className="text-xs sm:text-sm px-2 sm:px-3">
+                Afastamentos
+              </TabsTrigger>
+              {hasAccessSemanalAba && (
+                <TabsTrigger value="semanal" className="text-xs sm:text-sm px-2 sm:px-3">
+                  Rel. Semanal
+                </TabsTrigger>
+              )}
+            </TabsList>
+          </div>
+          
+          {hasAccessIntegrantes && (
+            <TabsContent value="integrantes" className="mt-3 sm:mt-6">
+              <IntegrantesTab />
+            </TabsContent>
+          )}
               
               <TabsContent value="evolucao">
                 {isLoadingHistorico ? (

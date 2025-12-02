@@ -13,97 +13,97 @@ export const DashboardInadimplencia = () => {
   const totalCronicos = devedoresCronicos.length;
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div className="space-y-3 sm:space-y-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
         {/* Total Devedores */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Devedores Ativos</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 px-3 sm:px-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">Devedores</CardTitle>
+            <Users className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{totalDevedores}</div>
-            <p className="text-xs text-muted-foreground">pessoas com débitos ativos</p>
+          <CardContent className="px-3 sm:px-6">
+            <div className="text-xl sm:text-2xl font-bold text-orange-600">{totalDevedores}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">com débitos</p>
           </CardContent>
         </Card>
 
         {/* Total Débitos */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total em Débitos</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 px-3 sm:px-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">Total</CardTitle>
+            <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
+          <CardContent className="px-3 sm:px-6">
+            <div className="text-lg sm:text-2xl font-bold text-red-600">
               R$ {totalDebito.toFixed(2)}
             </div>
-            <p className="text-xs text-muted-foreground">valor total de mensalidades em atraso</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">em atraso</p>
           </CardContent>
         </Card>
 
         {/* Devedores Crônicos */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Devedores Crônicos</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 px-3 sm:px-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">Crônicos</CardTitle>
+            <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-700">{totalCronicos}</div>
-            <p className="text-xs text-muted-foreground">deveram 3+ meses diferentes</p>
+          <CardContent className="px-3 sm:px-6">
+            <div className="text-xl sm:text-2xl font-bold text-red-700">{totalCronicos}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">3+ meses</p>
           </CardContent>
         </Card>
 
         {/* Média por Devedor */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Média por Devedor</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 px-3 sm:px-6">
+            <CardTitle className="text-xs sm:text-sm font-medium">Média</CardTitle>
+            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+          <CardContent className="px-3 sm:px-6">
+            <div className="text-lg sm:text-2xl font-bold">
               R$ {totalDevedores > 0 ? (totalDebito / totalDevedores).toFixed(2) : '0.00'}
             </div>
-            <p className="text-xs text-muted-foreground">valor médio de débito</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">por devedor</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Top 10 Devedores Crônicos */}
       <Card>
-        <CardHeader>
-          <CardTitle>Top 10 Devedores Crônicos</CardTitle>
-          <CardDescription>
-            Integrantes que deveram mensalidades em 3 ou mais meses diferentes
+        <CardHeader className="px-3 sm:px-6 py-3 sm:py-6">
+          <CardTitle className="text-base sm:text-lg">Top 10 Devedores Crônicos</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
+            Integrantes que deveram em 3 ou mais meses diferentes
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
+        <CardContent className="px-3 sm:px-6">
+          <div className="space-y-2 sm:space-y-3">
             {devedoresCronicos.slice(0, 10).map((devedor, index) => (
               <div 
                 key={devedor.registro_id}
-                className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                className="flex items-center justify-between p-2 sm:p-3 border rounded-lg hover:bg-muted/50 transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <Badge variant="destructive" className="text-lg font-bold w-8 h-8 flex items-center justify-center">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                  <Badge variant="destructive" className="text-sm sm:text-lg font-bold w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center flex-shrink-0">
                     {index + 1}
                   </Badge>
-                  <div>
-                    <p className="font-semibold text-foreground">{devedor.nome_colete}</p>
-                    <p className="text-sm text-foreground/80">{devedor.divisao_texto}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-xs sm:text-sm text-foreground truncate">{devedor.nome_colete}</p>
+                    <p className="text-[10px] sm:text-sm text-foreground/80 truncate">{devedor.divisao_texto}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-bold text-red-600">
-                    {devedor.total_meses_historico} meses
+                <div className="text-right flex-shrink-0">
+                  <p className="font-bold text-red-600 text-xs sm:text-base">
+                    {devedor.total_meses_historico}m
                   </p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-[10px] sm:text-sm text-muted-foreground">
                     R$ {devedor.total_historico_devido?.toFixed(2) || '0.00'}
                   </p>
                 </div>
               </div>
             ))}
             {devedoresCronicos.length === 0 && (
-              <p className="text-center text-muted-foreground py-8">
+              <p className="text-center text-muted-foreground py-6 sm:py-8 text-xs sm:text-sm">
                 Nenhum devedor crônico identificado
               </p>
             )}
@@ -113,13 +113,13 @@ export const DashboardInadimplencia = () => {
 
       {/* Devedores Ativos por Divisão */}
       <Card>
-        <CardHeader>
-          <CardTitle>Distribuição por Divisão</CardTitle>
-          <CardDescription>
+        <CardHeader className="px-3 sm:px-6 py-3 sm:py-6">
+          <CardTitle className="text-base sm:text-lg">Distribuição por Divisão</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
             Quantidade de devedores ativos em cada divisão
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-3 sm:px-6">
           <div className="space-y-2">
             {(() => {
               // Agrupar devedores por divisão mantendo os objetos completos
@@ -138,36 +138,36 @@ export const DashboardInadimplencia = () => {
                   <Collapsible key={divisao}>
                     <div className="border rounded-lg overflow-hidden">
                       <CollapsibleTrigger className="w-full hover:bg-muted/50 transition-colors">
-                        <div className="flex items-center justify-between p-3 border-l-4 border-orange-500">
+                        <div className="flex items-center justify-between p-2 sm:p-3 border-l-4 border-orange-500">
                           <div className="flex items-center gap-2">
-                            <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
-                            <span className="text-sm font-medium">{divisao}</span>
+                            <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 transition-transform data-[state=open]:rotate-180" />
+                            <span className="text-xs sm:text-sm font-medium truncate">{divisao}</span>
                           </div>
-                          <Badge variant="secondary">
-                            {devedores.length} {devedores.length === 1 ? 'devedor' : 'devedores'}
+                          <Badge variant="secondary" className="text-[10px] sm:text-xs">
+                            {devedores.length}
                           </Badge>
                         </div>
                       </CollapsibleTrigger>
                       
                       <CollapsibleContent>
-                        <div className="px-4 py-3 space-y-2 bg-muted/20 border-t">
+                        <div className="px-2 sm:px-4 py-2 sm:py-3 space-y-2 bg-muted/20 border-t">
                           {devedores.map((devedor) => (
                             <div 
                               key={devedor.registro_id} 
                               className="flex items-center justify-between p-2 bg-background rounded border"
                             >
-                              <div className="flex flex-col">
-                                <span className="font-medium text-foreground">{devedor.nome_colete}</span>
-                                <span className="font-mono text-xs text-muted-foreground">
+                              <div className="flex flex-col min-w-0 flex-1">
+                                <span className="font-medium text-xs sm:text-sm text-foreground truncate">{devedor.nome_colete}</span>
+                                <span className="font-mono text-[10px] sm:text-xs text-muted-foreground">
                                   ID: {devedor.registro_id}
                                 </span>
                               </div>
-                              <div className="text-right">
-                                <div className="text-sm font-semibold text-red-600">
+                              <div className="text-right flex-shrink-0">
+                                <div className="text-xs sm:text-sm font-semibold text-red-600">
                                   R$ {devedor.total_devido?.toFixed(2)}
                                 </div>
-                                <div className="text-xs font-medium text-foreground/70">
-                                  {devedor.meses_devendo} {devedor.meses_devendo === 1 ? 'mês' : 'meses'}
+                                <div className="text-[10px] sm:text-xs font-medium text-foreground/70">
+                                  {devedor.meses_devendo}m
                                 </div>
                               </div>
                             </div>

@@ -110,12 +110,12 @@ export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps
 
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {/* Filtro de visualização */}
-      <div className="flex items-center gap-3">
-        <label className="text-sm font-medium">Visualizar:</label>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+        <label className="text-xs sm:text-sm font-medium">Visualizar:</label>
         <Select value={visualizacao} onValueChange={setVisualizacao}>
-          <SelectTrigger className="w-[350px]">
+          <SelectTrigger className="w-full sm:w-[350px]">
             <SelectValue placeholder="Selecione..." />
           </SelectTrigger>
           <SelectContent>
@@ -130,7 +130,7 @@ export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps
       </div>
 
       {/* Gráfico */}
-      <ChartContainer config={chartConfig} className="h-[400px]">
+      <ChartContainer config={chartConfig} className="h-[250px] sm:h-[400px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={dadosGrafico}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
