@@ -3,6 +3,7 @@ import { useMensalidades } from './useMensalidades';
 import { useProfile } from './useProfile';
 import { useDivisoes } from './useDivisoes';
 import { getNivelAcesso } from '@/lib/grauUtils';
+import { normalizeText } from '@/lib/normalizeText';
 
 export const useInadimplenciaFiltrada = (userId: string | undefined) => {
   const { profile } = useProfile(userId);
@@ -18,7 +19,7 @@ export const useInadimplenciaFiltrada = (userId: string | undefined) => {
   const mapaDivisaoRegional = useMemo(() => {
     const mapa: Record<string, string> = {};
     divisoes?.forEach(d => {
-      mapa[d.nome.toLowerCase()] = d.regional_id;
+      mapa[normalizeText(d.nome)] = d.regional_id;
     });
     return mapa;
   }, [divisoes]);
@@ -32,15 +33,15 @@ export const useInadimplenciaFiltrada = (userId: string | undefined) => {
     if (nivelAcesso === 'regional') {
       // Grau V: filtra pela regional do usuário
       return devedoresAtivos.filter(d => {
-        const regionalId = mapaDivisaoRegional[d.divisao_texto?.toLowerCase() || ''];
+        const regionalId = mapaDivisaoRegional[normalizeText(d.divisao_texto || '')];
         return regionalId === profile.regional_id;
       });
     }
 
     // Grau VI+: filtra pela divisão do usuário
-    const divisaoNome = profile.divisao?.toLowerCase();
+    const divisaoNomeNormalizado = normalizeText(profile.divisao || '');
     return devedoresAtivos.filter(d => 
-      d.divisao_texto?.toLowerCase() === divisaoNome
+      normalizeText(d.divisao_texto || '') === divisaoNomeNormalizado
     );
   }, [devedoresAtivos, profile, nivelAcesso, mapaDivisaoRegional]);
 
@@ -52,14 +53,14 @@ export const useInadimplenciaFiltrada = (userId: string | undefined) => {
 
     if (nivelAcesso === 'regional') {
       return devedoresCronicos.filter(d => {
-        const regionalId = mapaDivisaoRegional[d.divisao_texto?.toLowerCase() || ''];
+        const regionalId = mapaDivisaoRegional[normalizeText(d.divisao_texto || '')];
         return regionalId === profile.regional_id;
       });
     }
 
-    const divisaoNome = profile.divisao?.toLowerCase();
+    const divisaoNomeNormalizado = normalizeText(profile.divisao || '');
     return devedoresCronicos.filter(d => 
-      d.divisao_texto?.toLowerCase() === divisaoNome
+      normalizeText(d.divisao_texto || '') === divisaoNomeNormalizado
     );
   }, [devedoresCronicos, profile, nivelAcesso, mapaDivisaoRegional]);
 
