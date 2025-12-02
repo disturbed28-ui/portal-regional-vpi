@@ -136,17 +136,18 @@ export const ConfiguracaoJustificativas = ({ readOnly = false }: ConfiguracaoJus
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label>Total de Eventos no Período</Label>
+            <Label className="text-sm">Total de Eventos no Período</Label>
             <Input
               type="number"
               min={1}
               value={simulacao.totalEventos}
               onChange={(e) => setSimulacao(prev => ({ ...prev, totalEventos: parseInt(e.target.value) || 0 }))}
               disabled={readOnly}
+              className="mt-1"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4">
             <div>
               <Label>Presente</Label>
               <Input
