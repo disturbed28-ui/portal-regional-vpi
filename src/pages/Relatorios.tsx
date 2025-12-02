@@ -222,7 +222,7 @@ const Relatorios = () => {
               </TabsContent>
               
               <TabsContent value="inadimplencia">
-                <DashboardInadimplencia />
+                <DashboardInadimplencia userId={user?.id} />
               </TabsContent>
 
               {/* Nova aba Afastamentos */}
