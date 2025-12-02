@@ -360,97 +360,98 @@ export const FrequenciaIndividual = ({ isAdmin, userDivisaoId }: FrequenciaIndiv
               Nenhum dado encontrado para o período selecionado
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Divisão</TableHead>
-                  <TableHead className="text-center">Eventos</TableHead>
-                  <TableHead className="text-right">Pontos</TableHead>
-                  <TableHead className="text-right">Máximo</TableHead>
-                  <TableHead>Aproveitamento</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {dadosFrequencia.map((integrante) => (
-                  <>
-                    <TableRow key={integrante.integrante_id}>
-                      <TableCell className="font-medium">{integrante.nome_colete}</TableCell>
-                      <TableCell>{integrante.divisao}</TableCell>
-                      <TableCell className="text-center">{integrante.totalEventos}</TableCell>
-                      <TableCell className="text-right">{integrante.pontosObtidos.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">{integrante.pontosMaximos.toFixed(2)}</TableCell>
-                      <TableCell>
-                        <div className="space-y-2">
+            <div className="overflow-x-auto -mx-4 md:mx-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[100px]">Nome</TableHead>
+                    <TableHead className="hidden md:table-cell">Divisão</TableHead>
+                    <TableHead className="text-center">Eventos</TableHead>
+                    <TableHead className="hidden sm:table-cell text-right">Pontos</TableHead>
+                    <TableHead className="hidden sm:table-cell text-right">Máximo</TableHead>
+                    <TableHead className="min-w-[140px]">Aproveitamento</TableHead>
+                    <TableHead className="w-10"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {dadosFrequencia.map((integrante) => (
+                    <>
+                      <TableRow key={integrante.integrante_id}>
+                        <TableCell className="font-medium text-sm">{integrante.nome_colete}</TableCell>
+                        <TableCell className="hidden md:table-cell">{integrante.divisao}</TableCell>
+                        <TableCell className="text-center">{integrante.totalEventos}</TableCell>
+                        <TableCell className="hidden sm:table-cell text-right">{integrante.pontosObtidos.toFixed(2)}</TableCell>
+                        <TableCell className="hidden sm:table-cell text-right">{integrante.pontosMaximos.toFixed(2)}</TableCell>
+                        <TableCell>
                           <div className="flex items-center gap-2">
                             <Progress 
                               value={integrante.percentual} 
-                              className="flex-1"
+                              className="flex-1 min-w-[60px]"
                             />
-                            <Badge variant={getVariantAproveitamento(integrante.percentual)}>
+                            <Badge variant={getVariantAproveitamento(integrante.percentual)} className="text-xs">
                               {integrante.percentual.toFixed(1)}%
                             </Badge>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleRow(integrante.integrante_id)}
-                        >
-                          <ChevronDown
-                            className={cn(
-                              "h-4 w-4 transition-transform",
-                              expandedRows.has(integrante.integrante_id) && "rotate-180"
-                            )}
-                          />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                    
-                    {expandedRows.has(integrante.integrante_id) && (
-                      <TableRow>
-                        <TableCell colSpan={7} className="bg-muted/50">
-                          <div className="p-4 space-y-2">
-                            <h4 className="font-medium text-sm mb-3 text-muted-foreground">Detalhamento de Eventos</h4>
-                            <div className="space-y-2">
-                              {integrante.eventos.map((evento, idx) => (
-                                <div key={idx} className="flex items-center justify-between text-sm p-2 bg-background rounded border">
-                                  <div className="flex-1">
-                                    <div className="font-medium">{evento.titulo}</div>
-                                    <div className="text-xs text-muted-foreground">
-                                      {format(new Date(evento.data), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <Badge variant={evento.status === 'presente' ? 'default' : 'secondary'}>
-                                      {evento.status}
-                                    </Badge>
-                                    {evento.justificativa && (
-                                      <Badge variant="outline">{evento.justificativa}</Badge>
-                                    )}
-                                    <div className="text-right">
-                                      <div className="text-xs text-muted-foreground">
-                                        Peso: {evento.pesoEvento.toFixed(2)} × {evento.pesoPresenca.toFixed(2)}
-                                      </div>
-                                      <div className="font-medium">
-                                        {evento.pontos.toFixed(2)} pts
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => toggleRow(integrante.integrante_id)}
+                          >
+                            <ChevronDown
+                              className={cn(
+                                "h-4 w-4 transition-transform",
+                                expandedRows.has(integrante.integrante_id) && "rotate-180"
+                              )}
+                            />
+                          </Button>
                         </TableCell>
                       </TableRow>
-                    )}
-                  </>
-                ))}
-              </TableBody>
-            </Table>
+                      
+                      {expandedRows.has(integrante.integrante_id) && (
+                        <TableRow>
+                          <TableCell colSpan={7} className="bg-muted/50 p-0">
+                            <div className="p-3 md:p-4 space-y-2">
+                              <h4 className="font-medium text-sm mb-3 text-muted-foreground">Detalhamento de Eventos</h4>
+                              <div className="space-y-2">
+                                {integrante.eventos.map((evento, idx) => (
+                                  <div key={idx} className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm p-2 bg-background rounded border gap-2">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="font-medium truncate">{evento.titulo}</div>
+                                      <div className="text-xs text-muted-foreground">
+                                        {format(new Date(evento.data), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                                      </div>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <Badge variant={evento.status === 'presente' ? 'default' : 'secondary'} className="text-xs">
+                                        {evento.status}
+                                      </Badge>
+                                      {evento.justificativa && (
+                                        <Badge variant="outline" className="text-xs">{evento.justificativa}</Badge>
+                                      )}
+                                      <div className="text-right ml-auto sm:ml-0">
+                                        <div className="text-xs text-muted-foreground">
+                                          Peso: {evento.pesoEvento.toFixed(2)} × {evento.pesoPresenca.toFixed(2)}
+                                        </div>
+                                        <div className="font-medium">
+                                          {evento.pontos.toFixed(2)} pts
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

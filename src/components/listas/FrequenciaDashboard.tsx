@@ -298,7 +298,7 @@ export const FrequenciaDashboard = ({ isAdmin, userDivisaoId }: FrequenciaDashbo
 
       {/* Cards de Resumo */}
       {estatisticas && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total de Eventos</CardTitle>
@@ -352,21 +352,21 @@ export const FrequenciaDashboard = ({ isAdmin, userDivisaoId }: FrequenciaDashbo
 
       {/* Gráficos */}
       {estatisticas && estatisticas.dadosGraficoBarras.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
           {/* Gráfico de Barras */}
           <Card>
-            <CardHeader>
-              <CardTitle>Frequência por Período</CardTitle>
-              <CardDescription>Distribuição de presenças ao longo do tempo</CardDescription>
+            <CardHeader className="pb-2 md:pb-6">
+              <CardTitle className="text-base md:text-lg">Frequência por Período</CardTitle>
+              <CardDescription className="text-xs md:text-sm">Distribuição de presenças ao longo do tempo</CardDescription>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+            <CardContent className="px-2 md:px-6">
+              <ResponsiveContainer width="100%" height={250} className="md:!h-[300px]">
                 <BarChart data={estatisticas.dadosGraficoBarras}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="mes" />
-                  <YAxis />
+                  <XAxis dataKey="mes" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} />
                   <Tooltip />
-                  <Legend />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} />
                   <Bar dataKey="Presentes" fill={COLORS.presente} />
                   <Bar dataKey="Justificados" fill={COLORS.justificado} />
                   <Bar dataKey="Ausentes" fill={COLORS.ausente} />
@@ -377,12 +377,12 @@ export const FrequenciaDashboard = ({ isAdmin, userDivisaoId }: FrequenciaDashbo
 
           {/* Gráfico de Pizza */}
           <Card>
-            <CardHeader>
-              <CardTitle>Distribuição Geral</CardTitle>
-              <CardDescription>Proporção de cada status no período</CardDescription>
+            <CardHeader className="pb-2 md:pb-6">
+              <CardTitle className="text-base md:text-lg">Distribuição Geral</CardTitle>
+              <CardDescription className="text-xs md:text-sm">Proporção de cada status no período</CardDescription>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+            <CardContent className="px-2 md:px-6">
+              <ResponsiveContainer width="100%" height={250} className="md:!h-[300px]">
                 <PieChart>
                   <Pie
                     data={estatisticas.dadosGraficoPizza}
@@ -390,7 +390,7 @@ export const FrequenciaDashboard = ({ isAdmin, userDivisaoId }: FrequenciaDashbo
                     cy="50%"
                     labelLine={false}
                     label={({ name, porcentagem }) => `${name}: ${porcentagem}%`}
-                    outerRadius={80}
+                    outerRadius={70}
                     fill="#8884d8"
                     dataKey="value"
                   >

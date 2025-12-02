@@ -369,59 +369,59 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
             ) : presencasOrdenadas && presencasOrdenadas.length > 0 ? (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto -mx-4 md:mx-0">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Divisão</TableHead>
-                      <TableHead>Cargo</TableHead>
-                      <TableHead>Grau</TableHead>
+                      <TableHead className="min-w-[120px]">Nome</TableHead>
+                      <TableHead className="hidden md:table-cell">Divisão</TableHead>
+                      <TableHead className="hidden lg:table-cell">Cargo</TableHead>
+                      <TableHead className="hidden lg:table-cell">Grau</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Confirmado Por</TableHead>
-                      <TableHead>Data/Hora</TableHead>
-                      <TableHead>Justificativa</TableHead>
+                      <TableHead className="hidden md:table-cell">Confirmado Por</TableHead>
+                      <TableHead className="hidden lg:table-cell">Data/Hora</TableHead>
+                      <TableHead className="hidden sm:table-cell">Justificativa</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {presencasOrdenadas.map((presenca) => (
                       <TableRow key={presenca.id}>
-                <TableCell className="font-medium">
-                  {presenca.integrantes_portal?.nome_colete 
-                    ? removeAccents(presenca.integrantes_portal.nome_colete)
-                    : presenca.visitante_nome 
-                      ? removeAccents(presenca.visitante_nome)
-                      : '-'}
-                </TableCell>
-                <TableCell>
-                  {presenca.integrantes_portal?.divisao_texto 
-                    ? removeAccents(presenca.integrantes_portal.divisao_texto)
-                    : presenca.visitante_tipo === 'externo' 
-                      ? 'Externo' 
-                      : '-'}
-                </TableCell>
-                <TableCell>
-                  {presenca.integrantes_portal?.cargo_nome 
-                    ? removeAccents(presenca.integrantes_portal.cargo_nome)
-                    : presenca.visitante_tipo === 'externo' 
-                      ? 'Visitante Externo' 
-                      : '-'}
-                </TableCell>
-                        <TableCell>
+                        <TableCell className="font-medium text-sm">
+                          {presenca.integrantes_portal?.nome_colete 
+                            ? removeAccents(presenca.integrantes_portal.nome_colete)
+                            : presenca.visitante_nome 
+                              ? removeAccents(presenca.visitante_nome)
+                              : '-'}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {presenca.integrantes_portal?.divisao_texto 
+                            ? removeAccents(presenca.integrantes_portal.divisao_texto)
+                            : presenca.visitante_tipo === 'externo' 
+                              ? 'Externo' 
+                              : '-'}
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          {presenca.integrantes_portal?.cargo_nome 
+                            ? removeAccents(presenca.integrantes_portal.cargo_nome)
+                            : presenca.visitante_tipo === 'externo' 
+                              ? 'Visitante Externo' 
+                              : '-'}
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">
                           {presenca.integrantes_portal?.grau || '-'}
                         </TableCell>
                         <TableCell>{getStatusBadge(presenca.status, presenca.justificativa_ausencia)}</TableCell>
-                        <TableCell>{presenca.confirmado_por || '-'}</TableCell>
-                        <TableCell>
+                        <TableCell className="hidden md:table-cell">{presenca.confirmado_por || '-'}</TableCell>
+                        <TableCell className="hidden lg:table-cell">
                           {presenca.confirmado_em 
                             ? format(new Date(presenca.confirmado_em), "dd/MM/yy HH:mm", { locale: ptBR })
                             : '-'}
                         </TableCell>
-                <TableCell className="max-w-xs truncate">
-                  {presenca.status === 'presente' || presenca.status === 'visitante'
-                    ? '-' 
-                    : (presenca.justificativa_ausencia || 'Não justificado')}
-                </TableCell>
+                        <TableCell className="hidden sm:table-cell max-w-xs truncate">
+                          {presenca.status === 'presente' || presenca.status === 'visitante'
+                            ? '-' 
+                            : (presenca.justificativa_ausencia || 'Não justificado')}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

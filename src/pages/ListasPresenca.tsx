@@ -65,18 +65,18 @@ const ListasPresenca = () => {
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate("/")}
-            className="hover:bg-secondary"
+            className="hover:bg-secondary shrink-0"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Listas de Presença</h1>
-            <p className="text-muted-foreground mt-1">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate">Listas de Presença</h1>
+            <p className="text-muted-foreground text-sm sm:text-base mt-1 truncate">
               {isAdmin ? "Visualização completa de todas as divisões" : "Visualização da sua divisão"}
             </p>
           </div>
@@ -84,22 +84,26 @@ const ListasPresenca = () => {
 
         {/* Tabs de Navegação */}
         <Tabs defaultValue="consulta" className="w-full">
-          <TabsList className="grid w-full max-w-3xl grid-cols-4">
-            <TabsTrigger value="consulta" className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              Consultar Listas
+          <TabsList className="grid w-full max-w-3xl grid-cols-4 h-auto">
+            <TabsTrigger value="consulta" className="flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 sm:px-3">
+              <Calendar className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline text-xs sm:text-sm">Consultar Listas</span>
+              <span className="sm:hidden text-xs">Listas</span>
             </TabsTrigger>
-            <TabsTrigger value="dashboard" className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" />
-              Dashboard
+            <TabsTrigger value="dashboard" className="flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 sm:px-3">
+              <BarChart3 className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline text-xs sm:text-sm">Dashboard</span>
+              <span className="sm:hidden text-xs">Dash</span>
             </TabsTrigger>
-            <TabsTrigger value="individual" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Frequência Individual
+            <TabsTrigger value="individual" className="flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 sm:px-3">
+              <User className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline text-xs sm:text-sm">Frequência Individual</span>
+              <span className="sm:hidden text-xs">Freq.</span>
             </TabsTrigger>
-            <TabsTrigger value="config" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Configurações
+            <TabsTrigger value="config" className="flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 sm:px-3">
+              <Settings className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline text-xs sm:text-sm">Configurações</span>
+              <span className="sm:hidden text-xs">Config</span>
             </TabsTrigger>
           </TabsList>
 
