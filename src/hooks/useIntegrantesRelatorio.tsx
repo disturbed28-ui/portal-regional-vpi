@@ -32,11 +32,11 @@ export interface UseIntegrantesRelatorioResult {
 
 export const useIntegrantesRelatorio = (userId: string | undefined): UseIntegrantesRelatorioResult => {
   const { profile } = useProfile(userId);
-  const { integrantes: todosIntegrantes, loading: loadingIntegrantes } = useIntegrantes();
+  const { integrantes: todosIntegrantes, loading: loadingIntegrantes } = useIntegrantes({ ativo: true });
   const { divisoes, loading: loadingDivisoes } = useDivisoes();
   const { regionais, loading: loadingRegionais } = useRegionais();
   
-  const [filtroAtivo, setFiltroAtivo] = useState<string>('todos');
+  const [filtroAtivo, setFiltroAtivo] = useState<string>('');
 
   // Determinar nível de acesso baseado no grau
   const nivelAcesso = useMemo(() => {
@@ -45,6 +45,43 @@ export const useIntegrantesRelatorio = (userId: string | undefined): UseIntegran
 
   // Determinar se combo deve estar desabilitado (Grau VI+)
   const comboDesabilitado = nivelAcesso === 'divisao';
+
+  // Função de ordenação hierárquica (mesma lógica do organograma)
+  const ordenarIntegrantes = (a: any, b: any) => {
+    // 1. Por cargo
+    const ordemCargos: Record<string, number> = {
+      // Regional (Grau V)
+      'Diretor Regional': 1,
+      'Operacional Regional': 2,
+      'Social Regional': 3,
+      'Adm. Regional': 4,
+      'Comunicação': 5,
+      // Divisão (Grau VI)
+      'Diretor Divisão': 10,
+      'Sub Diretor Divisão': 11,
+      'Social Divisão': 12,
+      'Adm. Divisão': 13,
+      'Sgt.Armas Divisão': 14,
+      'Sgt Armas Full': 15,
+      'Sgt Armas PP': 16,
+    };
+    const cargoA = ordemCargos[a.cargo_nome || ''] || 99;
+    const cargoB = ordemCargos[b.cargo_nome || ''] || 99;
+    if (cargoA !== cargoB) return cargoA - cargoB;
+    
+    // 2. Por grau
+    const grauA = romanToNumber(a.grau);
+    const grauB = romanToNumber(b.grau);
+    if (grauA !== grauB) return grauA - grauB;
+    
+    // 3. Por data de entrada (mais antigo primeiro)
+    const dataA = a.data_entrada ? new Date(a.data_entrada).getTime() : Infinity;
+    const dataB = b.data_entrada ? new Date(b.data_entrada).getTime() : Infinity;
+    if (dataA !== dataB) return dataA - dataB;
+    
+    // 4. Por nome (desempate final)
+    return (a.nome_colete || '').localeCompare(b.nome_colete || '');
+  };
 
   // Filtrar integrantes baseado no nível de acesso
   const integrantesFiltrados = useMemo(() => {
@@ -65,17 +102,8 @@ export const useIntegrantesRelatorio = (userId: string | undefined): UseIntegran
       );
     }
 
-    // Ordenar por grau (IV → V → VI → ...) e depois por nome
-    return filtrados.sort((a, b) => {
-      const grauA = romanToNumber(a.grau);
-      const grauB = romanToNumber(b.grau);
-      
-      if (grauA !== grauB) {
-        return grauA - grauB;
-      }
-      
-      return (a.nome_colete || '').localeCompare(b.nome_colete || '');
-    });
+    // Aplicar ordenação hierárquica
+    return filtrados.sort(ordenarIntegrantes);
   }, [todosIntegrantes, profile, nivelAcesso]);
 
   // Gerar opções de filtragem baseado no nível de acesso
@@ -111,6 +139,8 @@ export const useIntegrantesRelatorio = (userId: string | undefined): UseIntegran
 
     } else if (nivelAcesso === 'regional') {
       // Grau V: sua regional + divisões
+      opcoes.push({ value: 'todos', label: 'Todos', tipo: 'todos' });
+      
       opcoes.push({
         value: `regional_${profile.regional_id}`,
         label: 'Regional',
@@ -142,12 +172,7 @@ export const useIntegrantesRelatorio = (userId: string | undefined): UseIntegran
     return opcoes;
   }, [profile, divisoes, regionais, nivelAcesso]);
 
-  // Setar filtro inicial baseado no nível de acesso
-  useEffect(() => {
-    if (opcoesFiltragem.length > 0 && !filtroAtivo) {
-      setFiltroAtivo(opcoesFiltragem[0].value);
-    }
-  }, [opcoesFiltragem, filtroAtivo]);
+  // Não setar filtro inicial automaticamente - deixar vazio para placeholder
 
   // Aplicar filtro selecionado
   const integrantesFiltradosPorSelecao = useMemo(() => {
@@ -176,7 +201,7 @@ export const useIntegrantesRelatorio = (userId: string | undefined): UseIntegran
   const integrantesAgrupados = useMemo((): IntegranteAgrupado[] => {
     if (!regionais || !divisoes) return [];
 
-    if (filtroAtivo === 'todos') {
+    if (!filtroAtivo || filtroAtivo === 'todos') {
       // Agrupar por regional e depois por divisão
       const grupos: IntegranteAgrupado[] = [];
 
@@ -191,7 +216,7 @@ export const useIntegrantesRelatorio = (userId: string | undefined): UseIntegran
             tipo: 'regional',
             id: regional.id,
             nome: regional.nome,
-            integrantes: integrantesRegional
+            integrantes: integrantesRegional.sort(ordenarIntegrantes)
           });
         }
 
@@ -207,7 +232,7 @@ export const useIntegrantesRelatorio = (userId: string | undefined): UseIntegran
               tipo: 'divisao',
               id: divisao.id,
               nome: divisao.nome,
-              integrantes: integrantesDivisao
+              integrantes: integrantesDivisao.sort(ordenarIntegrantes)
             });
           }
         });
@@ -222,12 +247,40 @@ export const useIntegrantesRelatorio = (userId: string | undefined): UseIntegran
       const regional = regionais.find(r => r.id === id);
       if (!regional) return [];
 
-      return [{
-        tipo: 'regional',
-        id: regional.id,
-        nome: regional.nome,
-        integrantes: integrantesFiltradosPorSelecao
-      }];
+      const grupos: IntegranteAgrupado[] = [];
+      
+      // 1. Bloco da Regional (quem está diretamente nela)
+      const integrantesRegional = integrantesFiltradosPorSelecao.filter(
+        i => i.divisao_texto === i.regional_texto
+      );
+      
+      if (integrantesRegional.length > 0) {
+        grupos.push({
+          tipo: 'regional',
+          id: regional.id,
+          nome: regional.nome,
+          integrantes: integrantesRegional.sort(ordenarIntegrantes)
+        });
+      }
+      
+      // 2. Blocos das Divisões dessa Regional
+      const divisoesRegional = divisoes.filter(d => d.regional_id === id);
+      divisoesRegional.forEach(divisao => {
+        const integrantesDivisao = integrantesFiltradosPorSelecao.filter(
+          i => i.divisao_id === divisao.id
+        );
+        
+        if (integrantesDivisao.length > 0) {
+          grupos.push({
+            tipo: 'divisao',
+            id: divisao.id,
+            nome: divisao.nome,
+            integrantes: integrantesDivisao.sort(ordenarIntegrantes)
+          });
+        }
+      });
+      
+      return grupos;
     }
 
     if (tipo === 'divisao') {
@@ -238,7 +291,7 @@ export const useIntegrantesRelatorio = (userId: string | undefined): UseIntegran
         tipo: 'divisao',
         id: divisao.id,
         nome: divisao.nome,
-        integrantes: integrantesFiltradosPorSelecao
+        integrantes: integrantesFiltradosPorSelecao.sort(ordenarIntegrantes)
       }];
     }
 

@@ -56,7 +56,7 @@ export const IntegrantesTab = () => {
       {/* Header com Filtro e Exportar */}
       <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
         <Select
-          value={filtroAtivo}
+          value={filtroAtivo || undefined}
           onValueChange={setFiltro}
           disabled={comboDesabilitado}
         >
