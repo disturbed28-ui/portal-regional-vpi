@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
       integrante_portal_id: z.string().uuid().optional().nullable(),
       desvincular: z.boolean().optional(),
       name: z.string().max(200).optional(),
-      nome_colete: z.string().max(100).optional(),
+      nome_colete: z.string().max(100).optional().nullable(),
       comando_id: z.string().uuid().optional().nullable(),
       regional: z.string().max(100).optional(),
       divisao: z.string().max(100).optional(),
@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
       cargo_id: z.string().uuid().optional().nullable(),
       funcao_id: z.string().uuid().optional().nullable(),
       data_entrada: z.string().optional().nullable(),
-      grau: z.string().max(50).optional(),
+      grau: z.string().max(50).optional().nullable(),
       profile_status: z.string().max(50).optional(),
       observacao: z.string().max(1000).optional().nullable(),
       combate_insano: z.boolean().optional()
