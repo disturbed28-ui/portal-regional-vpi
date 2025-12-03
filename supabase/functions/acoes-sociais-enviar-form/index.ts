@@ -90,28 +90,22 @@ Deno.serve(async (req) => {
 
     // Funcao para converter regional do banco para formato Google Forms
     const normalizeRegionalForGoogleForms = (regional: string): string => {
-      // Mapeamento direto para valores conhecidos
       const mapeamento: Record<string, string> = {
         'REGIONAL VALE DO PARAIBA I - SP': 'Vale do Paraíba 1',
         'REGIONAL VALE DO PARAIBA II - SP': 'Vale do Paraíba 2',
         'REGIONAL LITORAL NORTE - SP': 'Litoral Norte - SP',
-        // Futuramente:
-        // 'REGIONAL VALE DO PARAIBA III - SP': 'Vale do Paraíba 3',
       };
       
-      // Tenta mapeamento direto primeiro
       const upperRegional = regional.toUpperCase().trim();
       if (mapeamento[upperRegional]) {
         return mapeamento[upperRegional];
       }
       
-      // Fallback: normalizacao generica para outras regionais
       let normalized = regional
         .replace(/^REGIONAL\s+/i, '')
         .replace(/\s+-\s+SP$/i, '')
         .trim();
       
-      // Converte algarismos romanos para numeros
       const romanMap: Record<string, string> = {
         ' I': ' 1', ' II': ' 2', ' III': ' 3', ' IV': ' 4', ' V': ' 5'
       };
@@ -123,12 +117,40 @@ Deno.serve(async (req) => {
         }
       }
       
-      // Normaliza para title case com acentos corretos
       return normalized
         .toLowerCase()
         .replace(/\b\w/g, c => c.toUpperCase())
         .replace(/\bDo\b/g, 'do')
         .replace(/Paraiba/gi, 'Paraíba');
+    };
+
+    // Funcao para normalizar tipo de acao para Google Forms (fallback)
+    const normalizeTipoAcaoForGoogleForms = (tipo: string): string => {
+      const mapeamento: Record<string, string> = {
+        'doação de sangue': 'Doação de Sangue',
+        'mega campanha de doação de sangue': 'Mega Campanha de Doação de Sangue',
+        'cestas básicas, mantimentos, alimentos, leite': 'Cestas Básicas , Mantimentos, alimentos , Leite',
+        'ação emergencial': 'Ação Emergencial',
+        'medicamentos e produtos de saúde': 'Medicamentos e produtos de saúde',
+        'arrecadação para causas diversas': 'Arrecadação para Causas diversas',
+        'fralda geriátricas': 'Fralda Geriátricas',
+        'ações solidárias diversas': 'Ações Solidárias Diversas',
+        'enxoval para gestantes': 'Enxoval para Gestantes',
+        'ação pet, resgate de animais, apoio à adoção, doações (ração, higiene para abrigos)': 'Açao Pet , resgate de animais , apoioa adoação . doações ( ração , produtos de higiene para abrigos )',
+        'atividades recreativas, palestras, oficinas': 'Atividades recretivas, Palestras, Oficina Educativa e afins...',
+        'cadeira de rodas, muleta, andador': 'Cadeira de rodas , muleta, andador',
+        'contenção e apoio operacional': 'Contenção e apoio operacional para realização da ação social de parceiro',
+        'distribuição de marmitex, lanches, café da manhã, sopa': 'Distribuição de Marmitex, Lanches , Café da manhã, Sopa',
+        'doação de móveis e eletrodomésticos': 'Doação de itens de mobiliário e eletrodomésticos',
+        'material escolar': 'Material Escolar',
+        'produtos de higiene pessoal ou produtos de limpeza': 'Produtos de Higiene pessoal ou Produtos de Limpeza',
+        'reconstrução/reforma de habitação': 'Reconstrução/Reforma de habitação',
+        'roupas, agasalhos, calçados ou cobertores': 'Roupas, Agasalhos, Calçados ou Cobertores',
+        'visita de humanização': 'Visita de Humanização',
+      };
+      
+      const tipoLower = tipo.toLowerCase().trim();
+      return mapeamento[tipoLower] || tipo;
     };
 
     // Encontrar config com match normalizado
@@ -175,9 +197,12 @@ Deno.serve(async (req) => {
     // Normalizar regional para formato Google Forms
     const regionalNormalizada = normalizeRegionalForGoogleForms(registro.regional_relatorio_texto || '');
     
-    console.log('[enviar-form] Regional normalizada:', {
-      original: registro.regional_relatorio_texto,
-      normalizada: regionalNormalizada
+    // Normalizar tipo de acao para formato Google Forms
+    const tipoAcaoNormalizado = normalizeTipoAcaoForGoogleForms(registro.tipo_acao_nome_snapshot || '');
+    
+    console.log('[enviar-form] Valores normalizados:', {
+      regional: { original: registro.regional_relatorio_texto, normalizada: regionalNormalizada },
+      tipoAcao: { original: registro.tipo_acao_nome_snapshot, normalizado: tipoAcaoNormalizado }
     });
 
     // Montar payload para Google Forms (com mapeamento correto)
@@ -191,7 +216,7 @@ Deno.serve(async (req) => {
       'entry.577779066': registro.responsavel_nome_colete || '',      // Responsavel
       'entry.122607591': registro.descricao_acao || '',               // Descricao
       'entry.1873990495': escopoFormulario,                           // Escopo (mapeado)
-      'entry.2045537139': registro.tipo_acao_nome_snapshot || '',     // Tipo de Acao (ja corrigido no banco)
+      'entry.2045537139': tipoAcaoNormalizado,                        // Tipo de Acao (normalizado)
     });
 
     console.log('[enviar-form] Enviando para Google Forms...', {
