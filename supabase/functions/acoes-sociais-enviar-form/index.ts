@@ -23,24 +23,24 @@ Deno.serve(async (req) => {
     // Validar JWT e obter user
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      throw new Error('Não autenticado');
+      throw new Error('Nao autenticado');
     }
 
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
-      console.error('[enviar-form] Erro de autenticação:', authError);
-      throw new Error('Não autenticado');
+      console.error('[enviar-form] Erro de autenticacao:', authError);
+      throw new Error('Nao autenticado');
     }
 
     const { registro_id } = await req.json() as EnviarFormPayload;
 
     if (!registro_id) {
-      throw new Error('registro_id é obrigatório');
+      throw new Error('registro_id e obrigatorio');
     }
 
-    console.log(`[enviar-form] Processando registro ${registro_id} para usuário ${user.id}`);
+    console.log(`[enviar-form] Processando registro ${registro_id} para usuario ${user.id}`);
 
     // Buscar registro
     const { data: registro, error: registroError } = await supabase
@@ -51,20 +51,20 @@ Deno.serve(async (req) => {
 
     if (registroError || !registro) {
       console.error('[enviar-form] Erro ao buscar registro:', registroError);
-      throw new Error('Registro não encontrado');
+      throw new Error('Registro nao encontrado');
     }
 
     // Verificar ownership
     if (registro.profile_id !== user.id) {
-      throw new Error('Você não tem permissão para enviar este registro');
+      throw new Error('Voce nao tem permissao para enviar este registro');
     }
 
-    // Verificar se já foi enviado
+    // Verificar se ja foi enviado
     if (registro.google_form_status === 'enviado') {
-      throw new Error('Este registro já foi enviado ao formulário');
+      throw new Error('Este registro ja foi enviado ao formulario');
     }
 
-    // Buscar todas as configurações ativas
+    // Buscar todas as configuracoes ativas
     const { data: configs, error: configError } = await supabase
       .from('acoes_sociais_config_regional')
       .select('email_formulario, regional_texto')
@@ -72,10 +72,10 @@ Deno.serve(async (req) => {
 
     if (configError) {
       console.error('[enviar-form] Erro ao buscar configs:', configError);
-      throw new Error('Erro ao buscar configurações de email');
+      throw new Error('Erro ao buscar configuracoes de email');
     }
 
-    // Função para normalizar texto de regional
+    // Funcao para normalizar texto de regional
     const normalizeRegional = (text: string): string => {
       return text
         .toLowerCase()
@@ -103,22 +103,22 @@ Deno.serve(async (req) => {
           normalizado: normalizeRegional(c.regional_texto)
         }))
       });
-      throw new Error(`Configuração de email não encontrada para a regional: ${registro.regional_relatorio_texto}`);
+      throw new Error(`Configuracao de email nao encontrada para a regional: ${registro.regional_relatorio_texto}`);
     }
 
-    console.log('[enviar-form] ✅ Config encontrada:', {
+    console.log('[enviar-form] Config encontrada:', {
       registroRegional: registro.regional_relatorio_texto,
       configRegional: config.regional_texto,
       email: config.email_formulario
     });
 
-    // Extrair ano, mês e dia da data_acao
+    // Extrair ano, mes e dia da data_acao
     const dataAcao = new Date(registro.data_acao);
     const ano = dataAcao.getFullYear();
     const mes = dataAcao.getMonth() + 1; // Janeiro = 1
     const dia = dataAcao.getDate();
 
-    // Mapear escopo_acao para texto exato do formulário Google
+    // Mapear escopo_acao para texto exato do formulario Google
     const mapearEscopo = (escopo: string): string => {
       const mapeamento: Record<string, string> = {
         'interna': 'Interna ( ajuda ao integrante)',
@@ -136,26 +136,25 @@ Deno.serve(async (req) => {
       'entry.1698025551_month': mes.toString(),
       'entry.1698025551_day': dia.toString(),
       'entry.1818867636': registro.regional_relatorio_texto || '',    // Regional
-      'entry.354405432': registro.divisao_relatorio_texto || '',      // Divisão
-      'entry.577779066': registro.responsavel_nome_colete || '',      // Responsável
-      'entry.122607591': registro.descricao_acao || '',               // Descrição
+      'entry.354405432': registro.divisao_relatorio_texto || '',      // Divisao
+      'entry.577779066': registro.responsavel_nome_colete || '',      // Responsavel
+      'entry.122607591': registro.descricao_acao || '',               // Descricao
       'entry.1873990495': escopoFormulario,                           // Escopo (mapeado)
-      'entry.2045537139': registro.tipo_acao_nome_snapshot || '',     // Tipo de Ação
+      'entry.2045537139': registro.tipo_acao_nome_snapshot || '',     // Tipo de Acao
     });
 
     console.log('[enviar-form] Enviando para Google Forms...', {
       dadosEnviados: Object.fromEntries(formData)
     });
 
-    // Enviar para Google Forms usando no-cors
-    // Google Forms não suporta CORS - com no-cors não podemos ler a resposta,
-    // mas os dados são enviados e registrados na planilha
+    // Enviar para Google Forms COM validacao de resposta HTTP
+    // REMOVIDO mode: 'no-cors' - Edge Function (Deno) pode fazer cross-origin requests
+    // e precisamos validar o status HTTP da resposta
     try {
-      await fetch(
+      const response = await fetch(
         'https://docs.google.com/forms/d/e/1FAIpQLScgIgriBBDQpzI5h3JdHia6-RL2zz8kl3pWNsZA9P8kkob2UA/formResponse',
         {
           method: 'POST',
-          mode: 'no-cors', // Ignora CORS - resposta será opaque
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
@@ -163,23 +162,61 @@ Deno.serve(async (req) => {
         }
       );
 
-      // Se chegou aqui sem erro de rede, a requisição foi enviada com sucesso
-      // Google Forms registra os dados mesmo sem confirmação via resposta
-      console.log('[enviar-form] ✅ Requisição enviada ao Google Forms (modo no-cors)');
+      console.log('[enviar-form] Google Forms response:', {
+        status: response.status,
+        statusText: response.statusText,
+      });
+
+      // Validar status HTTP - sucesso apenas se 2xx ou 3xx
+      if (response.status < 200 || response.status >= 400) {
+        console.error('[enviar-form] Google Forms retornou status invalido:', {
+          status: response.status,
+          statusText: response.statusText,
+        });
+
+        // Marcar como erro no banco
+        const { error: updateErrorStatus } = await supabase
+          .from('acoes_sociais_registros')
+          .update({ google_form_status: 'erro' })
+          .eq('id', registro_id);
+
+        if (updateErrorStatus) {
+          console.error('[enviar-form] Falha ao atualizar status para erro:', updateErrorStatus);
+        }
+
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Google Forms retornou erro (HTTP ${response.status})`,
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 500,
+          }
+        );
+      }
+
+      // Sucesso confirmado via status HTTP
+      console.log('[enviar-form] Google Forms aceitou a requisicao (HTTP ' + response.status + ')');
 
     } catch (networkError) {
-      // Apenas erros de rede reais (DNS, timeout, etc) serão capturados
-      console.error('[enviar-form] ❌ Erro de rede ao enviar ao Google Forms:', networkError);
+      // Erro de rede real (DNS, timeout, conexao recusada, etc)
+      console.error('[enviar-form] Erro de rede ao enviar ao Google Forms:', networkError);
       
-      await supabase
+      // Marcar como erro no banco
+      const { error: updateNetworkError } = await supabase
         .from('acoes_sociais_registros')
         .update({ google_form_status: 'erro' })
         .eq('id', registro_id);
 
+      if (updateNetworkError) {
+        console.error('[enviar-form] Falha ao atualizar status para erro:', updateNetworkError);
+      }
+
       return new Response(
         JSON.stringify({
           success: false,
-          error: 'Falha na conexão com Google Forms',
+          error: 'Falha na conexao com Google Forms',
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -188,7 +225,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Atualizar status do registro como enviado
+    // SOMENTE APOS validacao de sucesso (status 2xx/3xx), atualizar como enviado
     const { error: updateError } = await supabase
       .from('acoes_sociais_registros')
       .update({
@@ -199,16 +236,26 @@ Deno.serve(async (req) => {
       .eq('id', registro_id);
 
     if (updateError) {
-      console.error('[enviar-form] Erro ao atualizar status:', updateError);
-      throw new Error('Erro ao atualizar status do registro');
+      console.error('[enviar-form] Erro ao atualizar status para enviado:', updateError);
+      
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Registro enviado ao Google Forms, mas falhou ao atualizar status no banco',
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
 
-    console.log('[enviar-form] ✅ Registro marcado como enviado com sucesso');
+    console.log('[enviar-form] Registro marcado como enviado com sucesso');
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Ação social enviada ao formulário oficial com sucesso' 
+        message: 'Acao social enviada ao formulario oficial com sucesso' 
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -217,7 +264,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[enviar-form] ❌ Erro:', error);
+    console.error('[enviar-form] Erro:', error);
     return new Response(
       JSON.stringify({ 
         success: false, 
