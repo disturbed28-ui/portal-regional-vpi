@@ -401,69 +401,76 @@ function isEventoEspecial(evento: {
           divisaoEvento = divisaoData?.nome || null;
         }
 
-    // Verificar se é evento especial (CMD ou REGIONAL)
-    const isEspecialAdd = isEventoEspecial(evento, divisaoEvento);
-    console.log('[manage-presenca] Add - Evento Especial (CMD/Regional):', isEspecialAdd);
+    // ========================================================================
+    // REGRA: Integrantes cadastrados SEMPRE recebem status 'presente'
+    // Se a divisão for diferente, adiciona justificativa_tipo = '(outra divisão)'
+    // ========================================================================
     
-    // Determinar o status
-    let novoStatus = 'visitante'; // padrão
-
-    if (isEspecialAdd) {
-      // ✅ EVENTOS ESPECIAIS (CMD/REGIONAL): sempre 'presente', nunca 'visitante'
-      novoStatus = 'presente';
-      console.log('[manage-presenca] Evento Especial (CMD/Regional) - status forçado para "presente"');
-        } else if (integrante?.divisao_texto && divisaoEvento) {
-          // Eventos normais: verificar divisão
-          const divisaoIntegranteNorm = integrante.divisao_texto
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .toLowerCase()
-            .trim();
-          
-          const divisaoEventoNorm = divisaoEvento
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .toLowerCase()
-            .trim();
-          
-          if (divisaoIntegranteNorm === divisaoEventoNorm) {
-            novoStatus = 'presente';
-          }
-        }
+    // Normalizar divisões para comparação
+    const divisaoIntegranteNorm = (integrante?.divisao_texto || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+    
+    const divisaoEventoNorm = (divisaoEvento || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+    
+    // Verificar se divisões são diferentes
+    const divisaoDiferente = divisaoEventoNorm && divisaoIntegranteNorm && 
+      divisaoIntegranteNorm !== divisaoEventoNorm;
+    
+    // Determinar justificativa_tipo
+    const justificativaTipo = divisaoDiferente ? '(outra divisão)' : null;
+    
+    console.log(`[manage-presenca] Integrante divisão: ${integrante?.divisao_texto}, Evento divisão: ${divisaoEvento}, Divisão diferente: ${divisaoDiferente}`);
         
-        console.log(`[manage-presenca] Integrante divisão: ${integrante?.divisao_texto}, Evento divisão: ${divisaoEvento}, Status: ${novoStatus}`);
+    // Atualizar registro - SEMPRE status 'presente' para integrantes cadastrados
+    const { data, error } = await supabaseAdmin
+      .from('presencas')
+      .update({ 
+        status: 'presente',
+        confirmado_em: new Date().toISOString(),
+        confirmado_por: confirmado_por_nome,
+        justificativa_ausencia: null,
+        justificativa_tipo: justificativaTipo,
+      })
+      .eq('id', existente.id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('[manage-presenca] Erro ao atualizar:', error);
+      return new Response(
+        JSON.stringify({ error: 'Erro ao atualizar presença' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const tipoLog = divisaoDiferente ? 'presente (outra divisão)' : 'presente';
+    console.log(`[manage-presenca] Presença atualizada para ${tipoLog}`);
+    return new Response(
+      JSON.stringify({ success: true, data }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+      } else {
+        // ========================================================================
+        // Não existe registro - criar novo
+        // REGRA: Integrantes cadastrados SEMPRE recebem status 'presente'
+        // Se a divisão for diferente, adiciona justificativa_tipo = '(outra divisão)'
+        // ========================================================================
         
-        // Atualizar status baseado na verificação de divisão
-        const { data, error } = await supabaseAdmin
-          .from('presencas')
-          .update({ 
-            status: novoStatus,
-            confirmado_em: new Date().toISOString(),
-            confirmado_por: confirmado_por_nome,
-            justificativa_ausencia: null,
-            justificativa_tipo: null,
-          })
-          .eq('id', existente.id)
-          .select()
+        // Buscar dados do integrante para verificar sua divisão
+        const { data: integranteNovo } = await supabaseAdmin
+          .from('integrantes_portal')
+          .select('divisao_texto')
+          .eq('id', integrante_id)
           .single();
         
-        if (error) {
-          console.error('[manage-presenca] Erro ao atualizar:', error);
-          return new Response(
-            JSON.stringify({ error: 'Erro ao atualizar presença' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-        
-        console.log(`[manage-presenca] Presença atualizada para ${novoStatus}`);
-        return new Response(
-          JSON.stringify({ success: true, data }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      } else {
-        // Não existe registro - precisa criar novo
-        
-        // Buscar dados do evento para detectar CMD
+        // Buscar dados do evento
         const { data: eventoNovo } = await supabaseAdmin
           .from('eventos_agenda')
           .select('divisao_id, titulo, tipo_evento')
@@ -481,22 +488,38 @@ function isEventoEspecial(evento: {
           divisaoEventoNomeNovo = divisaoData?.nome || null;
         }
         
-  // Verificar se é evento especial (CMD ou REGIONAL)
-  const isEspecialNovo = isEventoEspecial(eventoNovo, divisaoEventoNomeNovo);
-  
-  // Definir status inicial
-  const statusInicial = isEspecialNovo ? 'presente' : 'visitante';
-  console.log('[manage-presenca] Novo registro - Evento Especial (CMD/Regional):', isEspecialNovo, '- Status:', statusInicial);
+        // Normalizar divisões para comparação
+        const divisaoIntegranteNormNovo = (integranteNovo?.divisao_texto || '')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .trim();
         
-        // Inserir novo registro
+        const divisaoEventoNormNovo = (divisaoEventoNomeNovo || '')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .trim();
+        
+        // Verificar se divisões são diferentes
+        const divisaoDiferenteNovo = divisaoEventoNormNovo && divisaoIntegranteNormNovo && 
+          divisaoIntegranteNormNovo !== divisaoEventoNormNovo;
+        
+        // Determinar justificativa_tipo
+        const justificativaTipoNovo = divisaoDiferenteNovo ? '(outra divisão)' : null;
+        
+        console.log(`[manage-presenca] Novo registro - Integrante divisão: ${integranteNovo?.divisao_texto}, Evento divisão: ${divisaoEventoNomeNovo}, Divisão diferente: ${divisaoDiferenteNovo}`);
+        
+        // Inserir novo registro - SEMPRE status 'presente' para integrantes cadastrados
         const { data, error } = await supabaseAdmin
           .from('presencas')
           .insert({
             evento_agenda_id,
             integrante_id,
             profile_id: profile_id || null,
-            status: statusInicial,
+            status: 'presente',
             confirmado_por: confirmado_por_nome,
+            justificativa_tipo: justificativaTipoNovo,
           })
           .select()
           .single();
@@ -509,8 +532,8 @@ function isEventoEspecial(evento: {
           );
         }
         
-  const tipoPresenca = isEspecialNovo ? 'presente em evento especial (CMD/Regional)' : 'visitante';
-  console.log(`[manage-presenca] Presença adicionada (${tipoPresenca})`);
+        const tipoPresencaNovo = divisaoDiferenteNovo ? 'presente (outra divisão)' : 'presente';
+        console.log(`[manage-presenca] Presença adicionada (${tipoPresencaNovo})`);
         return new Response(
           JSON.stringify({ success: true, data }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
