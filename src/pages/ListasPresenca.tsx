@@ -14,6 +14,7 @@ import { ListasConsulta } from "@/components/listas/ListasConsulta";
 import { FrequenciaIndividual } from "@/components/listas/FrequenciaIndividual";
 import { ConfiguracaoJustificativas } from "@/components/listas/ConfiguracaoJustificativas";
 import { ConfiguracaoTiposEvento } from "@/components/listas/ConfiguracaoTiposEvento";
+import { getNivelAcesso } from "@/lib/grauUtils";
 
 const ListasPresenca = () => {
   const navigate = useNavigate();
@@ -24,7 +25,22 @@ const ListasPresenca = () => {
   const { hasAccess, loading: loadingAccess } = useScreenAccess('/listas-presenca', user?.id);
 
   const isAdmin = hasRole('admin');
-  const isModerator = hasRole('moderator');
+  const isDiretorRegional = hasRole('diretor_regional');
+  
+  // Quem pode editar configurações: Admin ou Diretor Regional
+  const canEditConfig = isAdmin || isDiretorRegional;
+  
+  // Determinar nível de acesso baseado no grau
+  const nivelAcesso = getNivelAcesso(profile?.grau);
+
+  // Gerar subtítulo dinâmico baseado no escopo
+  const getSubtitulo = () => {
+    if (isAdmin) return "Visualização completa de todas as divisões";
+    if (nivelAcesso === 'comando') return "Visualização completa (CMD)";
+    if (nivelAcesso === 'regional') return `Visualização da Regional ${profile?.regional || ''}`;
+    if (nivelAcesso === 'divisao') return `Visualização da ${profile?.divisao || ''}`;
+    return "Visualização limitada";
+  };
 
   // Redirecionar se não tiver acesso
   useEffect(() => {
@@ -77,7 +93,7 @@ const ListasPresenca = () => {
           <div className="min-w-0">
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground truncate">Listas de Presença</h1>
             <p className="text-muted-foreground text-sm sm:text-base mt-1 truncate">
-              {isAdmin ? "Visualização completa de todas as divisões" : "Visualização da sua divisão"}
+              {getSubtitulo()}
             </p>
           </div>
         </div>
@@ -109,28 +125,34 @@ const ListasPresenca = () => {
 
           <TabsContent value="consulta" className="mt-6">
             <ListasConsulta 
+              grau={profile?.grau}
+              regionalId={profile?.regional_id}
+              divisaoId={profile?.divisao_id}
               isAdmin={isAdmin}
-              userDivisaoId={profile?.divisao_id}
             />
           </TabsContent>
 
           <TabsContent value="dashboard" className="mt-6">
             <FrequenciaDashboard 
+              grau={profile?.grau}
+              regionalId={profile?.regional_id}
+              divisaoId={profile?.divisao_id}
               isAdmin={isAdmin}
-              userDivisaoId={profile?.divisao_id}
             />
           </TabsContent>
 
           <TabsContent value="individual" className="mt-6">
             <FrequenciaIndividual 
+              grau={profile?.grau}
+              regionalId={profile?.regional_id}
+              divisaoId={profile?.divisao_id}
               isAdmin={isAdmin}
-              userDivisaoId={profile?.divisao_id}
             />
           </TabsContent>
 
           <TabsContent value="config" className="mt-6 space-y-6">
-            <ConfiguracaoJustificativas readOnly={!isAdmin} />
-            <ConfiguracaoTiposEvento readOnly={!isAdmin} />
+            <ConfiguracaoJustificativas readOnly={!canEditConfig} />
+            <ConfiguracaoTiposEvento readOnly={!canEditConfig} />
           </TabsContent>
         </Tabs>
       </div>

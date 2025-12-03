@@ -10,12 +10,14 @@ import { CalendarIcon, TrendingUp, Users, CheckCircle2, XCircle } from "lucide-r
 import { format, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { useAuth } from "@/hooks/useAuth";
-import { useProfile } from "@/hooks/useProfile";
+import { getNivelAcesso } from "@/lib/grauUtils";
+import { useDivisoesPorRegional } from "@/hooks/useDivisoesPorRegional";
 
 interface FrequenciaDashboardProps {
-  isAdmin: boolean;
-  userDivisaoId?: string;
+  grau?: string | null;
+  regionalId?: string | null;
+  divisaoId?: string | null;
+  isAdmin?: boolean;
 }
 
 type PeriodoPreset = 'mes_atual' | 'mes_anterior' | 'trimestre' | 'ano' | 'personalizado';
@@ -26,40 +28,48 @@ const COLORS = {
   justificado: '#f59e0b'
 };
 
-export const FrequenciaDashboard = ({ isAdmin, userDivisaoId }: FrequenciaDashboardProps) => {
+export const FrequenciaDashboard = ({ grau, regionalId, divisaoId, isAdmin = false }: FrequenciaDashboardProps) => {
   const hoje = new Date();
-  const { user } = useAuth();
-  const { profile } = useProfile(user?.id);
   
   const [periodoPreset, setPeriodoPreset] = useState<PeriodoPreset>('mes_atual');
   const [dataInicio, setDataInicio] = useState<Date>(startOfMonth(hoje));
   const [dataFim, setDataFim] = useState<Date>(endOfMonth(hoje));
-  const [divisaoSelecionada, setDivisaoSelecionada] = useState<string>(isAdmin ? 'todas' : userDivisaoId || '');
+  const [divisaoSelecionada, setDivisaoSelecionada] = useState<string>('todas');
 
-  // Buscar divisões (todas para admin, ou da regional do usuário)
-  const { data: divisoes } = useQuery({
-    queryKey: ['divisoes-lista', isAdmin, profile?.regional_id],
+  // Determinar nível de acesso
+  const nivelAcesso = getNivelAcesso(grau);
+  
+  // Buscar divisões da regional (para graus V e VI)
+  const { divisoes: divisoesDaRegional, divisaoIds: divisaoIdsDaRegional } = useDivisoesPorRegional(
+    (nivelAcesso === 'regional' || nivelAcesso === 'divisao') ? regionalId : null
+  );
+
+  // Buscar todas as divisões (para admin ou CMD)
+  const { data: todasDivisoes } = useQuery({
+    queryKey: ['todas-divisoes'],
     queryFn: async () => {
-      let query = supabase
+      const { data, error } = await supabase
         .from('divisoes')
         .select('id, nome')
         .order('nome');
       
-      // Se não for admin e tiver regional_id, filtrar pela regional
-      if (!isAdmin && profile?.regional_id) {
-        query = query.eq('regional_id', profile.regional_id);
-      }
-      
-      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
-    enabled: isAdmin || !!profile?.regional_id
+    enabled: isAdmin || nivelAcesso === 'comando'
   });
+
+  // Determinar quais divisões mostrar no seletor
+  const divisoesParaSelecao = useMemo(() => {
+    if (isAdmin || nivelAcesso === 'comando') {
+      return todasDivisoes || [];
+    }
+    return divisoesDaRegional;
+  }, [isAdmin, nivelAcesso, todasDivisoes, divisoesDaRegional]);
 
   // Buscar eventos e presenças do período (limitado até hoje)
   const { data: dadosFrequencia, isLoading } = useQuery({
-    queryKey: ['frequencia-dashboard', dataInicio, dataFim, divisaoSelecionada, divisoes],
+    queryKey: ['frequencia-dashboard', dataInicio, dataFim, divisaoSelecionada, isAdmin, nivelAcesso, divisaoIdsDaRegional, divisaoId],
     queryFn: async () => {
       const hoje = new Date();
       hoje.setHours(23, 59, 59, 999);
@@ -84,25 +94,30 @@ export const FrequenciaDashboard = ({ isAdmin, userDivisaoId }: FrequenciaDashbo
         .lte('data_evento', dataFimReal.toISOString())
         .order('data_evento', { ascending: true });
 
-      if (!isAdmin) {
-        // Se houver divisões da regional (usuário não-admin), usar todas essas divisões
-        if (divisoes && divisoes.length > 0) {
-          const divisaoIds = divisoes.map(d => d.id);
-          query = query.in('divisao_id', divisaoIds);
-        } else if (userDivisaoId) {
-          // Fallback: usar apenas a divisão do usuário
-          query = query.eq('divisao_id', userDivisaoId);
-        }
-      } else if (divisaoSelecionada && divisaoSelecionada !== 'todas') {
-        // Admin: filtrar pela divisão selecionada
+      // Aplicar filtro de divisão selecionada
+      if (divisaoSelecionada && divisaoSelecionada !== 'todas') {
         query = query.eq('divisao_id', divisaoSelecionada);
+      } else {
+        // Aplicar filtro baseado no nível de acesso
+        if (!isAdmin) {
+          if (nivelAcesso === 'comando') {
+            // Graus I-IV: ver todos (sem filtro adicional)
+          } else if ((nivelAcesso === 'regional' || nivelAcesso === 'divisao') && divisaoIdsDaRegional.length > 0) {
+            // Graus V e VI: ver eventos da regional inteira
+            query = query.in('divisao_id', divisaoIdsDaRegional);
+          } else if (divisaoId) {
+            // Fallback: apenas a divisão do usuário
+            query = query.eq('divisao_id', divisaoId);
+          }
+        }
       }
 
       const { data, error } = await query;
       
       if (error) throw error;
       return data;
-    }
+    },
+    enabled: isAdmin || nivelAcesso === 'comando' || divisaoIdsDaRegional.length > 0 || !!divisaoId
   });
 
   // Processar dados para gráficos
@@ -187,6 +202,12 @@ export const FrequenciaDashboard = ({ isAdmin, userDivisaoId }: FrequenciaDashbo
         setDataFim(hoje);
         break;
     }
+  };
+
+  // Label do seletor de divisão
+  const getDivisaoPlaceholder = () => {
+    if (isAdmin || nivelAcesso === 'comando') return "Todas as Divisões";
+    return "Todas da Regional";
   };
 
   if (isLoading) {
@@ -276,16 +297,17 @@ export const FrequenciaDashboard = ({ isAdmin, userDivisaoId }: FrequenciaDashbo
               </>
             )}
 
-            {(isAdmin || (divisoes && divisoes.length > 1)) && (
+            {/* Mostrar seletor de divisão se houver mais de uma opção */}
+            {divisoesParaSelecao.length > 1 && (
               <div className="space-y-2">
                 <label className="text-sm font-medium">Divisão</label>
                 <Select value={divisaoSelecionada} onValueChange={setDivisaoSelecionada}>
                   <SelectTrigger>
-                    <SelectValue placeholder={isAdmin ? "Todas as divisões" : "Todas da Regional"} />
+                    <SelectValue placeholder={getDivisaoPlaceholder()} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="todas">{isAdmin ? "Todas as Divisões" : "Todas da Regional"}</SelectItem>
-                    {divisoes?.map(div => (
+                    <SelectItem value="todas">{getDivisaoPlaceholder()}</SelectItem>
+                    {divisoesParaSelecao.map(div => (
                       <SelectItem key={div.id} value={div.id}>{div.nome}</SelectItem>
                     ))}
                   </SelectContent>

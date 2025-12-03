@@ -10,41 +10,28 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar, Users, FileSpreadsheet } from "lucide-react";
 import { removeAccents } from "@/lib/utils";
+import { getNivelAcesso, romanToNumber } from "@/lib/grauUtils";
+import { useDivisoesPorRegional } from "@/hooks/useDivisoesPorRegional";
 import * as XLSX from 'xlsx';
 
 interface ListasConsultaProps {
-  isAdmin: boolean;
-  userDivisaoId?: string;
+  grau?: string | null;
+  regionalId?: string | null;
+  divisaoId?: string | null;
+  isAdmin?: boolean;
 }
 
 /**
  * Deriva o status de exibição baseado no status real e na justificativa
- * Regra de negócio:
- * - presente → "presente"
- * - visitante → "visitante"
- * - ausente + justificativa válida → "justificado"
- * - ausente + sem justificativa ou "nao_justificado" → "ausente"
  */
 const getStatusExibicao = (status: string, justificativa: string | null): string => {
   if (status === 'presente') return 'presente';
   if (status === 'visitante') return 'visitante';
   
-  // Status = ausente
   if (justificativa && justificativa !== 'nao_justificado') {
     return 'justificado';
   }
   return 'ausente';
-};
-
-// Funções auxiliares para ordenação
-const romanToNumber = (roman: string | null): number => {
-  if (!roman) return 999;
-  const romanMap: { [key: string]: number } = {
-    'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5,
-    'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10,
-    'XI': 11, 'XII': 12
-  };
-  return romanMap[roman.toUpperCase()] || 999;
 };
 
 const getCargoOrder = (cargo: string | null, grau: string | null): number => {
@@ -86,15 +73,22 @@ const getStatusOrder = (status: string, justificativa: string | null): number =>
   }
 };
 
-export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) => {
+export const ListasConsulta = ({ grau, regionalId, divisaoId, isAdmin = false }: ListasConsultaProps) => {
   const [eventoSelecionado, setEventoSelecionado] = useState<string>('');
+  
+  // Determinar nível de acesso
+  const nivelAcesso = getNivelAcesso(grau);
+  
+  // Buscar divisões da regional (para graus V e VI)
+  const { divisaoIds: divisoesDaRegional } = useDivisoesPorRegional(
+    (nivelAcesso === 'regional' || nivelAcesso === 'divisao') ? regionalId : null
+  );
 
   // Buscar eventos disponíveis (apenas passados ou de hoje)
   const { data: eventos, isLoading: loadingEventos } = useQuery({
-    queryKey: ['eventos-lista', userDivisaoId],
+    queryKey: ['eventos-lista', isAdmin, nivelAcesso, divisoesDaRegional, divisaoId],
     queryFn: async () => {
       const hoje = new Date();
-      // Criar data limite em UTC corretamente (fim do dia de hoje)
       const dataLimite = new Date(Date.UTC(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 23, 59, 59, 999));
       
       let query = supabase
@@ -110,15 +104,25 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
         .order('data_evento', { ascending: false })
         .limit(50);
 
-      if (!isAdmin && userDivisaoId) {
-        query = query.eq('divisao_id', userDivisaoId);
+      // Aplicar filtro baseado no nível de acesso
+      if (!isAdmin) {
+        if (nivelAcesso === 'comando') {
+          // Graus I-IV: ver todos (sem filtro adicional)
+        } else if ((nivelAcesso === 'regional' || nivelAcesso === 'divisao') && divisoesDaRegional.length > 0) {
+          // Graus V e VI: ver eventos da regional inteira
+          query = query.in('divisao_id', divisoesDaRegional);
+        } else if (divisaoId) {
+          // Fallback: apenas a divisão do usuário
+          query = query.eq('divisao_id', divisaoId);
+        }
       }
 
       const { data, error } = await query;
       
       if (error) throw error;
       return data;
-    }
+    },
+    enabled: isAdmin || nivelAcesso === 'comando' || divisoesDaRegional.length > 0 || !!divisaoId
   });
 
   // Buscar presenças do evento selecionado
@@ -161,22 +165,18 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
     if (!presencas) return [];
     
     return [...presencas].sort((a, b) => {
-      // 1. Ordenar por status
       const statusOrderA = getStatusOrder(a.status, a.justificativa_ausencia);
       const statusOrderB = getStatusOrder(b.status, b.justificativa_ausencia);
       if (statusOrderA !== statusOrderB) return statusOrderA - statusOrderB;
       
-      // 2. Ordenar por grau
       const grauA = romanToNumber(a.integrantes_portal?.grau || null);
       const grauB = romanToNumber(b.integrantes_portal?.grau || null);
       if (grauA !== grauB) return grauA - grauB;
       
-      // 3. Ordenar por cargo
       const cargoOrderA = getCargoOrder(a.integrantes_portal?.cargo_nome || null, a.integrantes_portal?.grau || null);
       const cargoOrderB = getCargoOrder(b.integrantes_portal?.cargo_nome || null, b.integrantes_portal?.grau || null);
       if (cargoOrderA !== cargoOrderB) return cargoOrderA - cargoOrderB;
       
-      // 4. Ordenar por nome (considerando visitante externo)
       const nomeA = a.integrantes_portal?.nome_colete || a.visitante_nome || '';
       const nomeB = b.integrantes_portal?.nome_colete || b.visitante_nome || '';
       return nomeA.localeCompare(nomeB, 'pt-BR');
@@ -417,10 +417,11 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
                             ? format(new Date(presenca.confirmado_em), "dd/MM/yy HH:mm", { locale: ptBR })
                             : '-'}
                         </TableCell>
-                        <TableCell className="hidden sm:table-cell max-w-xs truncate">
-                          {presenca.status === 'presente' || presenca.status === 'visitante'
-                            ? '-' 
-                            : (presenca.justificativa_ausencia || 'Não justificado')}
+                        <TableCell className="hidden sm:table-cell text-sm">
+                          {getStatusExibicao(presenca.status, presenca.justificativa_ausencia) === 'presente' ||
+                           getStatusExibicao(presenca.status, presenca.justificativa_ausencia) === 'visitante'
+                            ? '-'
+                            : presenca.justificativa_ausencia || 'Não justificado'}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -429,7 +430,7 @@ export const ListasConsulta = ({ isAdmin, userDivisaoId }: ListasConsultaProps) 
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
-                Nenhuma presença registrada para este evento
+                Nenhum registro de presença encontrado para este evento
               </div>
             )}
           </CardContent>
