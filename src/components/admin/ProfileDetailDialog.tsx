@@ -320,6 +320,30 @@ export function ProfileDetailDialog({
       return;
     }
 
+    // Validação condicional: só exigir campos se NÃO for recusa/inativação
+    const isRecusaOuInativacao = 
+      formData.profile_status === 'Recusado' || 
+      formData.profile_status === 'Inativo';
+    
+    if (!isRecusaOuInativacao && !formData.nome_colete?.trim()) {
+      toast({
+        title: "Campo obrigatório",
+        description: "Nome de Colete é obrigatório para aprovar ou manter ativo",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Para recusa/inativação, exigir observação
+    if (isRecusaOuInativacao && !formData.observacao?.trim()) {
+      toast({
+        title: "Campo obrigatório",
+        description: "Observação é obrigatória para recusar ou inativar",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       console.log('📤 Enviando para edge function:', {
@@ -568,7 +592,6 @@ export function ProfileDetailDialog({
               id="name"
               value={formData.name || ''}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
             />
           </div>
 

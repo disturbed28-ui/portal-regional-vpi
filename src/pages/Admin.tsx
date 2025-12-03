@@ -477,6 +477,15 @@ const Admin = () => {
                   ].filter(Boolean).join(' • ')}
                 </p>
               )}
+              <p className="text-xs text-muted-foreground mt-1">
+                📅 Cadastrado em: {new Date(profile.created_at).toLocaleString('pt-BR', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </p>
               {profile.observacao && (
                 <p className="text-xs text-muted-foreground mt-1 italic">
                   Obs: {profile.observacao}
