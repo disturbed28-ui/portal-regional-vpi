@@ -24,6 +24,9 @@ export interface IntegranteFrequencia {
   integrante_id: string;
   nome_colete: string;
   divisao: string;
+  divisao_id?: string;
+  regional_id?: string;
+  regional_texto?: string;
   eventos: EventoDetalhe[];
   pontosObtidos: number;
   pontosMaximos: number;
@@ -102,6 +105,9 @@ export const useFrequenciaPonderada = ({
           integrantes_portal!inner(
             nome_colete,
             divisao_texto,
+            divisao_id,
+            regional_id,
+            regional_texto,
             cargo_nome,
             grau,
             ativo
@@ -135,6 +141,9 @@ export const useFrequenciaPonderada = ({
             integrante_id: key,
             nome_colete: p.integrantes_portal.nome_colete,
             divisao: p.integrantes_portal.divisao_texto,
+            divisao_id: p.integrantes_portal.divisao_id,
+            regional_id: p.integrantes_portal.regional_id,
+            regional_texto: p.integrantes_portal.regional_texto,
             eventos: [],
             pontosObtidos: 0,
             pontosMaximos: 0,
