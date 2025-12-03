@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
       throw new Error('Erro ao buscar configuracoes de email');
     }
 
-    // Funcao para normalizar texto de regional
+    // Funcao para normalizar texto de regional (para match interno)
     const normalizeRegional = (text: string): string => {
       return text
         .toLowerCase()
@@ -86,6 +86,49 @@ Deno.serve(async (req) => {
         .replace(/\biii\b/g, '3')
         .replace(/\biv\b/g, '4')
         .replace(/\bv\b/g, '5');
+    };
+
+    // Funcao para converter regional do banco para formato Google Forms
+    const normalizeRegionalForGoogleForms = (regional: string): string => {
+      // Mapeamento direto para valores conhecidos
+      const mapeamento: Record<string, string> = {
+        'REGIONAL VALE DO PARAIBA I - SP': 'Vale do Paraíba 1',
+        'REGIONAL VALE DO PARAIBA II - SP': 'Vale do Paraíba 2',
+        'REGIONAL LITORAL NORTE - SP': 'Litoral Norte - SP',
+        // Futuramente:
+        // 'REGIONAL VALE DO PARAIBA III - SP': 'Vale do Paraíba 3',
+      };
+      
+      // Tenta mapeamento direto primeiro
+      const upperRegional = regional.toUpperCase().trim();
+      if (mapeamento[upperRegional]) {
+        return mapeamento[upperRegional];
+      }
+      
+      // Fallback: normalizacao generica para outras regionais
+      let normalized = regional
+        .replace(/^REGIONAL\s+/i, '')
+        .replace(/\s+-\s+SP$/i, '')
+        .trim();
+      
+      // Converte algarismos romanos para numeros
+      const romanMap: Record<string, string> = {
+        ' I': ' 1', ' II': ' 2', ' III': ' 3', ' IV': ' 4', ' V': ' 5'
+      };
+      
+      for (const [roman, num] of Object.entries(romanMap)) {
+        if (normalized.toUpperCase().endsWith(roman)) {
+          normalized = normalized.slice(0, -roman.length) + num;
+          break;
+        }
+      }
+      
+      // Normaliza para title case com acentos corretos
+      return normalized
+        .toLowerCase()
+        .replace(/\b\w/g, c => c.toUpperCase())
+        .replace(/\bDo\b/g, 'do')
+        .replace(/Paraiba/gi, 'Paraíba');
     };
 
     // Encontrar config com match normalizado
@@ -129,18 +172,26 @@ Deno.serve(async (req) => {
 
     const escopoFormulario = mapearEscopo(registro.escopo_acao);
 
+    // Normalizar regional para formato Google Forms
+    const regionalNormalizada = normalizeRegionalForGoogleForms(registro.regional_relatorio_texto || '');
+    
+    console.log('[enviar-form] Regional normalizada:', {
+      original: registro.regional_relatorio_texto,
+      normalizada: regionalNormalizada
+    });
+
     // Montar payload para Google Forms (com mapeamento correto)
     const formData = new URLSearchParams({
       'emailAddress': config.email_formulario,
       'entry.1698025551_year': ano.toString(),
       'entry.1698025551_month': mes.toString(),
       'entry.1698025551_day': dia.toString(),
-      'entry.1818867636': registro.regional_relatorio_texto || '',    // Regional
+      'entry.1818867636': regionalNormalizada,                        // Regional (normalizada)
       'entry.354405432': registro.divisao_relatorio_texto || '',      // Divisao
       'entry.577779066': registro.responsavel_nome_colete || '',      // Responsavel
       'entry.122607591': registro.descricao_acao || '',               // Descricao
       'entry.1873990495': escopoFormulario,                           // Escopo (mapeado)
-      'entry.2045537139': registro.tipo_acao_nome_snapshot || '',     // Tipo de Acao
+      'entry.2045537139': registro.tipo_acao_nome_snapshot || '',     // Tipo de Acao (ja corrigido no banco)
     });
 
     console.log('[enviar-form] Enviando para Google Forms...', {
