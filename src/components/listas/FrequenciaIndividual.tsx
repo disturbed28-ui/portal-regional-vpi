@@ -84,16 +84,25 @@ export const FrequenciaIndividual = ({ grau, regionalId, divisaoId, isAdmin = fa
   }, [divisaoSelecionada, isAdmin, nivelAcesso, divisaoId, divisaoIdsDaRegional]);
 
   // Determinar quais divisões mostrar no seletor
+  // IMPORTANTE: Priorizar nivelAcesso sobre isAdmin para que Grau V veja apenas divisões da sua regional
   const divisoesParaSelecao = useMemo(() => {
-    if (isAdmin || nivelAcesso === 'comando') {
-      return todasDivisoes || [];
+    // Grau VI: não mostrar seletor (apenas sua divisão)
+    if (nivelAcesso === 'divisao') {
+      return [];
     }
+    
+    // Grau V (Regional): apenas divisões da sua regional (independente de role admin)
     if (nivelAcesso === 'regional') {
       return divisoesDaRegional;
     }
-    // Grau VI: não mostrar seletor (apenas sua divisão)
+    
+    // CMD (Graus I-IV) ou Admin sem grau definido: todas as divisões
+    if (isAdmin || nivelAcesso === 'comando') {
+      return todasDivisoes || [];
+    }
+    
     return [];
-  }, [isAdmin, nivelAcesso, todasDivisoes, divisoesDaRegional]);
+  }, [nivelAcesso, isAdmin, todasDivisoes, divisoesDaRegional]);
 
   const { data: dadosFrequencia, isLoading } = useFrequenciaPonderada({
     dataInicio,
