@@ -72,7 +72,7 @@ export const ConfiguracaoJustificativas = ({ readOnly = false }: ConfiguracaoJus
           {readOnly && (
             <Alert className="mb-4">
               <AlertDescription>
-                Você está visualizando as configurações. Apenas administradores podem fazer alterações.
+                Você está visualizando as configurações. Apenas Administradores e Diretores Regionais podem fazer alterações.
               </AlertDescription>
             </Alert>
           )}

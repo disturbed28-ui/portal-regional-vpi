@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { GripVertical } from "lucide-react";
 import { usePesosTiposEvento } from "@/hooks/usePesosTiposEvento";
 
@@ -24,6 +25,13 @@ export const ConfiguracaoTiposEvento = ({ readOnly = false }: ConfiguracaoTiposE
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {readOnly && (
+          <Alert className="mb-4">
+            <AlertDescription>
+              Você está visualizando as configurações. Apenas Administradores e Diretores Regionais podem fazer alterações.
+            </AlertDescription>
+          </Alert>
+        )}
         {tiposEvento.map((tipo) => (
           <div
             key={tipo.id}
