@@ -1,0 +1,589 @@
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { Heart, ArrowLeft, Upload, FileSpreadsheet, CheckCircle, XCircle, AlertTriangle, Eye, Clock, Settings } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
+import { useAdminAccess } from "@/hooks/useAdminAccess";
+import { useToast } from "@/hooks/use-toast";
+import { useSolicitacoesExclusaoAcoesSociais } from "@/hooks/useSolicitacoesExclusaoAcoesSociais";
+import { useProcessarSolicitacaoExclusaoAcaoSocial } from "@/hooks/useProcessarSolicitacaoExclusaoAcaoSocial";
+import { useImportarAcoesSociais } from "@/hooks/useImportarAcoesSociais";
+import { parseAcoesSociaisExcel } from "@/lib/excelAcoesSociaisParser";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+type StatusFiltro = 'pendente' | 'aprovado' | 'recusado' | 'todos';
+
+interface ImportResult {
+  success: boolean;
+  inseridos: number;
+  duplicados: number;
+  erros: { linha: number; motivo: string }[];
+  total_processados: number;
+}
+
+const AdminGestaoAcoesSociais = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const { profile } = useProfile(user?.id);
+  const { hasAccess, loading: loadingAccess } = useAdminAccess();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Estados de importação
+  const [arquivoSelecionado, setArquivoSelecionado] = useState<File | null>(null);
+  const [importando, setImportando] = useState(false);
+  const [resultadoImportacao, setResultadoImportacao] = useState<ImportResult | null>(null);
+  const [emailBase, setEmailBase] = useState<string>('');
+  const [editandoEmail, setEditandoEmail] = useState(false);
+  const [novoEmailBase, setNovoEmailBase] = useState('');
+
+  // Estados de solicitações de exclusão
+  const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>('pendente');
+  const { solicitacoes, loading: loadingSolicitacoes, refetch } = useSolicitacoesExclusaoAcoesSociais(statusFiltro);
+  const processarMutation = useProcessarSolicitacaoExclusaoAcaoSocial();
+  const importarMutation = useImportarAcoesSociais();
+
+  const [solicitacaoSelecionada, setSolicitacaoSelecionada] = useState<any>(null);
+  const [mostrarDialog, setMostrarDialog] = useState(false);
+  const [observacaoAdmin, setObservacaoAdmin] = useState('');
+
+  // Carregar configuração de email
+  useEffect(() => {
+    const fetchEmailBase = async () => {
+      const { data } = await supabase
+        .from('acoes_sociais_config_regional')
+        .select('email_base')
+        .eq('ativo', true)
+        .single();
+      
+      if (data?.email_base) {
+        setEmailBase(data.email_base);
+      }
+    };
+    fetchEmailBase();
+  }, []);
+
+  useEffect(() => {
+    if (!loadingAccess && !hasAccess) {
+      toast({
+        title: "Acesso negado",
+        description: "Você não tem permissão para acessar esta página.",
+        variant: "destructive",
+      });
+      navigate("/");
+    }
+  }, [loadingAccess, hasAccess, navigate, toast]);
+
+  if (loadingAccess) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Verificando permissões...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!hasAccess) return null;
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+        toast({
+          title: "Arquivo inválido",
+          description: "Por favor, selecione um arquivo Excel (.xlsx ou .xls)",
+          variant: "destructive",
+        });
+        return;
+      }
+      setArquivoSelecionado(file);
+      setResultadoImportacao(null);
+    }
+  };
+
+  const handleImportar = async () => {
+    if (!arquivoSelecionado || !user?.id) return;
+
+    setImportando(true);
+    setResultadoImportacao(null);
+
+    try {
+      const dados = await parseAcoesSociaisExcel(arquivoSelecionado);
+      
+      if (dados.length === 0) {
+        toast({
+          title: "Arquivo vazio",
+          description: "O arquivo não contém dados para importar.",
+          variant: "destructive",
+        });
+        setImportando(false);
+        return;
+      }
+
+      const resultado = await importarMutation.mutateAsync({
+        dados_excel: dados,
+        admin_profile_id: user.id,
+        regional_id: profile?.regional_id || undefined,
+      });
+
+      setResultadoImportacao(resultado);
+      setArquivoSelecionado(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+
+    } catch (error: any) {
+      toast({
+        title: "Erro na importação",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setImportando(false);
+    }
+  };
+
+  const handleSalvarEmailBase = async () => {
+    if (!novoEmailBase.trim()) return;
+
+    const { error } = await supabase
+      .from('acoes_sociais_config_regional')
+      .update({ email_base: novoEmailBase.trim() })
+      .eq('ativo', true);
+
+    if (error) {
+      toast({
+        title: "Erro ao salvar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      setEmailBase(novoEmailBase.trim());
+      setEditandoEmail(false);
+      toast({
+        title: "Configuração salva",
+        description: "E-mail base atualizado com sucesso.",
+      });
+    }
+  };
+
+  const handleVerDetalhes = (solicitacao: any) => {
+    setSolicitacaoSelecionada(solicitacao);
+    setObservacaoAdmin('');
+    setMostrarDialog(true);
+  };
+
+  const handleProcessar = async (novoStatus: 'aprovado' | 'recusado') => {
+    if (!solicitacaoSelecionada) return;
+
+    await processarMutation.mutateAsync({
+      solicitacaoId: solicitacaoSelecionada.id,
+      registroId: solicitacaoSelecionada.registro_id,
+      novoStatus,
+      observacaoAdmin: observacaoAdmin.trim() || undefined,
+    });
+
+    setMostrarDialog(false);
+    setSolicitacaoSelecionada(null);
+    setObservacaoAdmin('');
+    refetch();
+  };
+
+  const getStatusBadge = (status: string) => {
+    const variants = {
+      pendente: { label: 'Pendente', className: 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50', icon: <Clock className="h-3 w-3 mr-1" /> },
+      aprovado: { label: 'Aprovado', className: 'bg-green-500/20 text-green-500 border-green-500/50', icon: <CheckCircle className="h-3 w-3 mr-1" /> },
+      recusado: { label: 'Recusado', className: 'bg-red-500/20 text-red-500 border-red-500/50', icon: <XCircle className="h-3 w-3 mr-1" /> },
+    };
+    const variant = variants[status as keyof typeof variants] || variants.pendente;
+    return (
+      <Badge variant="outline" className={`${variant.className} flex items-center w-fit`}>
+        {variant.icon}
+        {variant.label}
+      </Badge>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto py-8 px-4">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-8">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/admin")} className="flex-shrink-0">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <Heart className="h-6 w-6 text-primary" />
+              Gestão de Ações Sociais
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Importação de dados e gerenciamento de solicitações
+            </p>
+          </div>
+        </div>
+
+        <Tabs defaultValue="importar" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2 lg:w-[400px]">
+            <TabsTrigger value="importar" className="flex items-center gap-2">
+              <Upload className="h-4 w-4" />
+              Importar Ações
+            </TabsTrigger>
+            <TabsTrigger value="exclusoes" className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              Solicitações
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Tab de Importação */}
+          <TabsContent value="importar" className="space-y-6">
+            {/* Configuração de Email Base */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Configuração da Regional
+                </CardTitle>
+                <CardDescription>
+                  E-mail base usado para filtrar ações da sua regional no Excel
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {editandoEmail ? (
+                  <div className="flex gap-2 items-end">
+                    <div className="flex-1">
+                      <Label htmlFor="email-base">E-mail Base (sem @gmail.com)</Label>
+                      <Input
+                        id="email-base"
+                        value={novoEmailBase}
+                        onChange={(e) => setNovoEmailBase(e.target.value)}
+                        placeholder="ex: social.regional.vp1"
+                      />
+                    </div>
+                    <Button onClick={handleSalvarEmailBase}>Salvar</Button>
+                    <Button variant="outline" onClick={() => setEditandoEmail(false)}>Cancelar</Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">E-mail base configurado:</p>
+                      <p className="font-mono text-lg">{emailBase || 'Não configurado'}</p>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        setNovoEmailBase(emailBase);
+                        setEditandoEmail(true);
+                      }}
+                    >
+                      Editar
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Upload de Arquivo */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <FileSpreadsheet className="h-5 w-5" />
+                  Importar Arquivo Excel
+                </CardTitle>
+                <CardDescription>
+                  Selecione o arquivo Excel exportado do Google Forms
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    id="excel-file"
+                  />
+                  <label htmlFor="excel-file" className="cursor-pointer">
+                    <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Clique para selecionar ou arraste o arquivo
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Formatos aceitos: .xlsx, .xls
+                    </p>
+                  </label>
+                </div>
+
+                {arquivoSelecionado && (
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <FileSpreadsheet className="h-5 w-5 text-green-600" />
+                      <span className="text-sm font-medium">{arquivoSelecionado.name}</span>
+                    </div>
+                    <Button onClick={handleImportar} disabled={importando || !emailBase}>
+                      {importando ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div>
+                          Processando...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4 mr-2" />
+                          Processar Importação
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+
+                {!emailBase && (
+                  <p className="text-sm text-destructive">
+                    Configure o e-mail base acima antes de importar.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Resultado da Importação */}
+            {resultadoImportacao && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Resultado da Importação</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center p-4 bg-muted/50 rounded-lg">
+                      <p className="text-2xl font-bold text-primary">{resultadoImportacao.total_processados}</p>
+                      <p className="text-xs text-muted-foreground">Total Processados</p>
+                    </div>
+                    <div className="text-center p-4 bg-green-500/10 rounded-lg">
+                      <p className="text-2xl font-bold text-green-600">{resultadoImportacao.inseridos}</p>
+                      <p className="text-xs text-muted-foreground">Importados</p>
+                    </div>
+                    <div className="text-center p-4 bg-yellow-500/10 rounded-lg">
+                      <p className="text-2xl font-bold text-yellow-600">{resultadoImportacao.duplicados}</p>
+                      <p className="text-xs text-muted-foreground">Duplicados</p>
+                    </div>
+                    <div className="text-center p-4 bg-red-500/10 rounded-lg">
+                      <p className="text-2xl font-bold text-red-600">{resultadoImportacao.erros.length}</p>
+                      <p className="text-xs text-muted-foreground">Com Erros</p>
+                    </div>
+                  </div>
+
+                  {resultadoImportacao.erros.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="font-medium mb-2 text-destructive">Erros encontrados:</h4>
+                      <ScrollArea className="h-[200px] border rounded-lg p-3">
+                        {resultadoImportacao.erros.map((erro, idx) => (
+                          <div key={idx} className="text-sm py-1 border-b last:border-0">
+                            <span className="text-muted-foreground">Linha {erro.linha}:</span>{' '}
+                            {erro.motivo}
+                          </div>
+                        ))}
+                      </ScrollArea>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* Tab de Solicitações de Exclusão */}
+          <TabsContent value="exclusoes" className="space-y-6">
+            <div className="mb-6">
+              <Label htmlFor="status-filter" className="mb-2 block">Filtrar por status:</Label>
+              <Select value={statusFiltro} onValueChange={(v) => setStatusFiltro(v as StatusFiltro)}>
+                <SelectTrigger className="w-[280px]">
+                  <SelectValue placeholder="Selecione o status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pendente">Pendentes</SelectItem>
+                  <SelectItem value="aprovado">Aprovadas</SelectItem>
+                  <SelectItem value="recusado">Recusadas</SelectItem>
+                  <SelectItem value="todos">Todas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {loadingSolicitacoes && (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Carregando solicitações...</p>
+              </div>
+            )}
+
+            {!loadingSolicitacoes && solicitacoes.length === 0 && (
+              <Card className="p-12 text-center">
+                <AlertTriangle className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                <h3 className="text-lg font-semibold mb-2">Nenhuma solicitação encontrada</h3>
+                <p className="text-sm text-muted-foreground">
+                  Não há solicitações de exclusão com o status "{statusFiltro}".
+                </p>
+              </Card>
+            )}
+
+            {!loadingSolicitacoes && solicitacoes.length > 0 && (
+              <div className="grid gap-4">
+                {solicitacoes.map((solicitacao: any) => (
+                  <Card key={solicitacao.id} className="hover:shadow-md transition-shadow">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            {solicitacao.registro?.responsavel_nome_colete || 'Desconhecido'}
+                            {getStatusBadge(solicitacao.status)}
+                          </CardTitle>
+                          <CardDescription className="mt-1">
+                            Solicitado em {format(new Date(solicitacao.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </CardDescription>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={() => handleVerDetalhes(solicitacao)}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          Ver detalhes
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="font-semibold">Data da Ação:</span>
+                          <p className="text-muted-foreground">
+                            {format(new Date(solicitacao.registro?.data_acao || ''), 'dd/MM/yyyy')}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="font-semibold">Tipo de Ação:</span>
+                          <p className="text-muted-foreground">
+                            {solicitacao.registro?.tipo_acao_nome_snapshot || 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+
+        {/* Dialog de Detalhes */}
+        <Dialog open={mostrarDialog} onOpenChange={setMostrarDialog}>
+          <DialogContent className="sm:max-w-[700px]">
+            <DialogHeader>
+              <DialogTitle>Detalhes da Solicitação</DialogTitle>
+              <DialogDescription>Analise as informações antes de processar</DialogDescription>
+            </DialogHeader>
+
+            {solicitacaoSelecionada && (
+              <ScrollArea className="max-h-[60vh]">
+                <div className="space-y-6 pr-4">
+                  <div>
+                    <Label className="mb-2 block">Status:</Label>
+                    {getStatusBadge(solicitacaoSelecionada.status)}
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-2">
+                    <h4 className="font-semibold">Ação Social</h4>
+                    <div className="bg-muted/50 border rounded-lg p-3 space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Data:</span>
+                        <span>{format(new Date(solicitacaoSelecionada.registro?.data_acao || ''), 'dd/MM/yyyy')}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Tipo:</span>
+                        <span>{solicitacaoSelecionada.registro?.tipo_acao_nome_snapshot || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Divisão:</span>
+                        <span>{solicitacaoSelecionada.registro?.divisao_relatorio_texto || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Responsável:</span>
+                        <span>{solicitacaoSelecionada.registro?.responsavel_nome_colete || 'N/A'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Justificativa do Usuário:</Label>
+                    <div className="bg-card border rounded-lg p-4">
+                      <p className="whitespace-pre-wrap">{solicitacaoSelecionada.justificativa || 'Nenhuma justificativa'}</p>
+                    </div>
+                  </div>
+
+                  {solicitacaoSelecionada.status === 'pendente' && (
+                    <>
+                      <Separator />
+                      <div className="space-y-2">
+                        <Label htmlFor="observacao-admin">Observação Administrativa (opcional)</Label>
+                        <Textarea
+                          id="observacao-admin"
+                          placeholder="Adicione uma observação..."
+                          value={observacaoAdmin}
+                          onChange={(e) => setObservacaoAdmin(e.target.value)}
+                          rows={3}
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              </ScrollArea>
+            )}
+
+            <DialogFooter>
+              {solicitacaoSelecionada?.status === 'pendente' ? (
+                <>
+                  <Button variant="outline" onClick={() => setMostrarDialog(false)}>Cancelar</Button>
+                  <Button variant="destructive" onClick={() => handleProcessar('recusado')} disabled={processarMutation.isPending}>
+                    <XCircle className="mr-2 h-4 w-4" />
+                    Recusar
+                  </Button>
+                  <Button onClick={() => handleProcessar('aprovado')} disabled={processarMutation.isPending}>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    {processarMutation.isPending ? 'Processando...' : 'Aprovar'}
+                  </Button>
+                </>
+              ) : (
+                <Button variant="outline" onClick={() => setMostrarDialog(false)}>Fechar</Button>
+              )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </div>
+  );
+};
+
+export default AdminGestaoAcoesSociais;

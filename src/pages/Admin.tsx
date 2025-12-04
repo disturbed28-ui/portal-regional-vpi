@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronDown, ArrowLeft, Building2, Database, Users, ShieldCheck, Bell, Link as LinkIcon, FileCheck, TriangleAlert, Settings, Activity } from "lucide-react";
+import { ChevronDown, ArrowLeft, Building2, Database, Users, ShieldCheck, Bell, Link as LinkIcon, FileCheck, TriangleAlert, Settings, Activity, Heart } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -624,12 +624,12 @@ const Admin = () => {
   </Button>
 
   <Button
-    onClick={() => navigate("/admin/acoes-sociais/solicitacoes-exclusao")}
+    onClick={() => navigate("/admin/acoes-sociais")}
     variant="outline"
     className="w-full justify-start h-9 px-2 py-2 text-sm"
   >
-    <TriangleAlert className="h-4 w-4 mr-2" />
-    Exclusoes de Acoes Sociais
+    <Heart className="h-4 w-4 mr-2" />
+    Gestão de Ações Sociais
   </Button>
 
   <Button

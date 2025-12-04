@@ -15,6 +15,7 @@ import AdminAlertas from "./pages/AdminAlertas";
 import AdminLinksUteis from "./pages/AdminLinksUteis";
 import AdminConfiguracaoDeltas from "./pages/AdminConfiguracaoDeltas";
 import AdminLogs from "./pages/AdminLogs";
+import AdminGestaoAcoesSociais from "./pages/AdminGestaoAcoesSociais";
 import Agenda from "./pages/Agenda";
 import Relatorios from "./pages/Relatorios";
 import Organograma from "./pages/Organograma";
@@ -28,7 +29,6 @@ import Formularios from "./pages/Formularios";
 import FormularioRelatorioSemanal from "./pages/FormularioRelatorioSemanal";
 import FormularioAcoesSociais from "./pages/FormularioAcoesSociais";
 import AcoesSociais from "./pages/AcoesSociais";
-import AdminAcoesSociaisExclusoes from "./pages/AdminAcoesSociaisExclusoes";
 
 const queryClient = new QueryClient();
 
@@ -49,7 +49,7 @@ const App = () => (
           <Route path="/admin/alertas" element={<AdminAlertas />} />
           <Route path="/admin/links-uteis" element={<AdminLinksUteis />} />
           <Route path="/admin/configuracao-deltas" element={<AdminConfiguracaoDeltas />} />
-          <Route path="/admin/acoes-sociais/solicitacoes-exclusao" element={<AdminAcoesSociaisExclusoes />} />
+          <Route path="/admin/acoes-sociais" element={<AdminGestaoAcoesSociais />} />
           <Route path="/admin/logs" element={<AdminLogs />} />
           <Route path="/agenda" element={<Agenda />} />
           <Route path="/relatorios" element={<Relatorios />} />
