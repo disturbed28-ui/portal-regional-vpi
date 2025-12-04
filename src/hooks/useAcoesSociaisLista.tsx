@@ -123,7 +123,7 @@ export const useAcoesSociaisLista = (filtros?: FiltrosAcoesSociais) => {
       'acoes-sociais-lista', 
       user?.id, 
       profile?.id, 
-      roles,
+      roles.sort().join(','),
       filtros?.dataInicio?.toISOString(),
       filtros?.dataFim?.toISOString(),
       filtros?.divisaoId

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Heart, Calendar, Users, MapPin, Eye, Filter, CalendarIcon, ChevronDown, Download } from "lucide-react";
 import { format, subMonths } from "date-fns";
@@ -149,11 +149,11 @@ export default function AcoesSociais() {
   };
 
   // Expandir todas se <= 3 divisões na primeira renderização
-  useMemo(() => {
-    if (registrosAgrupados.length <= 3 && divisoesExpandidas.size === 0) {
+  useEffect(() => {
+    if (registrosAgrupados.length > 0 && registrosAgrupados.length <= 3 && divisoesExpandidas.size === 0) {
       setDivisoesExpandidas(new Set(registrosAgrupados.map(([divisao]) => divisao)));
     }
-  }, [registrosAgrupados.length]);
+  }, [registrosAgrupados]);
 
   const handleExportarExcel = () => {
     if (registrosFiltrados.length === 0) return;
