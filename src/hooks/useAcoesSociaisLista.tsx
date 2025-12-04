@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserRole } from "@/hooks/useUserRole";
 import { format } from "date-fns";
+import { normalizarRegional, normalizarDivisao } from "@/lib/normalizeText";
 
 interface FiltrosAcoesSociais {
   dataInicio?: Date;
@@ -36,6 +37,44 @@ export const useAcoesSociaisLista = (filtros?: FiltrosAcoesSociais) => {
       profileDivisaoId: profile.divisao_id 
     });
 
+    // Buscar dados de regional/divisão do usuário para normalização
+    let regionalNormalizada: string | null = null;
+    let divisaoNormalizada: string | null = null;
+
+    if (isRegional && profile.regional_id) {
+      const { data: regionalData, error: regionalError } = await supabase
+        .from('regionais')
+        .select('nome')
+        .eq('id', profile.regional_id)
+        .single();
+
+      if (regionalError || !regionalData?.nome) {
+        console.error('[useAcoesSociaisLista] Erro ao buscar regional:', regionalError);
+        return [];
+      }
+
+      regionalNormalizada = normalizarRegional(regionalData.nome);
+      console.log('[useAcoesSociaisLista] Regional normalizada:', regionalNormalizada);
+    } else if ((isDiretor || isModerator) && profile.divisao_id) {
+      const { data: divisaoData, error: divisaoError } = await supabase
+        .from('divisoes')
+        .select('nome')
+        .eq('id', profile.divisao_id)
+        .single();
+
+      if (divisaoError || !divisaoData?.nome) {
+        console.error('[useAcoesSociaisLista] Erro ao buscar divisão:', divisaoError);
+        return [];
+      }
+
+      divisaoNormalizada = normalizarDivisao(divisaoData.nome);
+      console.log('[useAcoesSociaisLista] Divisão normalizada:', divisaoNormalizada);
+    } else {
+      console.log('[useAcoesSociaisLista] Usuário sem permissão ou IDs ausentes');
+      return [];
+    }
+
+    // Buscar TODOS os registros (filtros de período são aplicados no banco)
     let query = supabase
       .from('acoes_sociais_registros')
       .select(`
@@ -50,72 +89,70 @@ export const useAcoesSociaisLista = (filtros?: FiltrosAcoesSociais) => {
       .neq('status_registro', 'excluido')
       .order('data_acao', { ascending: false });
 
-    if (isRegional && profile.regional_id) {
-      // Buscar nome da regional usando o ID
-      const { data: regionalData, error: regionalError } = await supabase
-        .from('regionais')
-        .select('nome')
-        .eq('id', profile.regional_id)
-        .single();
-
-      if (regionalError) {
-        console.error('[useAcoesSociaisLista] Erro ao buscar regional:', regionalError);
-        return [];
-      }
-
-      if (regionalData?.nome) {
-        console.log('[useAcoesSociaisLista] Filtrando por regional:', regionalData.nome);
-        query = query.ilike('regional_relatorio_texto', `%${regionalData.nome}%`);
-      } else {
-        console.log('[useAcoesSociaisLista] Nome da regional não encontrado');
-        return [];
-      }
-    } else if ((isDiretor || isModerator) && profile.divisao_id) {
-      // Buscar nome da divisão usando o ID
-      const { data: divisaoData, error: divisaoError } = await supabase
-        .from('divisoes')
-        .select('nome')
-        .eq('id', profile.divisao_id)
-        .single();
-
-      if (divisaoError) {
-        console.error('[useAcoesSociaisLista] Erro ao buscar divisão:', divisaoError);
-        return [];
-      }
-
-      if (divisaoData?.nome) {
-        console.log('[useAcoesSociaisLista] Filtrando por divisão:', divisaoData.nome);
-        query = query.ilike('divisao_relatorio_texto', `%${divisaoData.nome}%`);
-      } else {
-        console.log('[useAcoesSociaisLista] Nome da divisão não encontrado');
-        return [];
-      }
-    } else {
-      // Sem permissão ou sem IDs necessários
-      console.log('[useAcoesSociaisLista] Usuário sem permissão ou IDs ausentes');
-      return [];
-    }
-
-    // Aplicar filtros de período
+    // Aplicar filtros de período (esses ficam no banco para performance)
     if (filtros?.dataInicio) {
       query = query.gte('data_acao', format(filtros.dataInicio, 'yyyy-MM-dd'));
     }
     if (filtros?.dataFim) {
       query = query.lte('data_acao', format(filtros.dataFim, 'yyyy-MM-dd'));
     }
-    if (filtros?.divisaoId) {
-      query = query.eq('divisao_relatorio_id', filtros.divisaoId);
-    }
 
-    const { data, error } = await query;
+    const { data: todosRegistros, error } = await query;
 
     if (error) {
       console.error('[useAcoesSociaisLista] Erro ao buscar ações:', error);
       throw error;
     }
 
-    console.log(`[useAcoesSociaisLista] ${data?.length || 0} ações encontradas`);
-    return data || [];
+    if (!todosRegistros || todosRegistros.length === 0) {
+      console.log('[useAcoesSociaisLista] Nenhum registro encontrado');
+      return [];
+    }
+
+    console.log(`[useAcoesSociaisLista] ${todosRegistros.length} registros antes da filtragem`);
+
+    // Filtrar em JavaScript usando normalização
+    let registrosFiltrados = todosRegistros;
+
+    if (regionalNormalizada) {
+      // Filtrar por regional usando normalização
+      registrosFiltrados = todosRegistros.filter(registro => {
+        const registroRegionalNorm = normalizarRegional(registro.regional_relatorio_texto || '');
+        const match = registroRegionalNorm === regionalNormalizada;
+        if (!match && registro.regional_relatorio_texto) {
+          console.log('[useAcoesSociaisLista] Não match:', {
+            original: registro.regional_relatorio_texto,
+            normalizado: registroRegionalNorm,
+            esperado: regionalNormalizada
+          });
+        }
+        return match;
+      });
+    } else if (divisaoNormalizada) {
+      // Filtrar por divisão usando normalização
+      registrosFiltrados = todosRegistros.filter(registro => {
+        const registroDivisaoNorm = normalizarDivisao(registro.divisao_relatorio_texto || '');
+        const match = registroDivisaoNorm === divisaoNormalizada;
+        if (!match && registro.divisao_relatorio_texto) {
+          console.log('[useAcoesSociaisLista] Não match divisão:', {
+            original: registro.divisao_relatorio_texto,
+            normalizado: registroDivisaoNorm,
+            esperado: divisaoNormalizada
+          });
+        }
+        return match;
+      });
+    }
+
+    // Filtro adicional por divisaoId específica (se fornecido nos filtros)
+    if (filtros?.divisaoId) {
+      registrosFiltrados = registrosFiltrados.filter(
+        r => r.divisao_relatorio_id === filtros.divisaoId
+      );
+    }
+
+    console.log(`[useAcoesSociaisLista] ${registrosFiltrados.length} ações após filtros de normalização`);
+    return registrosFiltrados;
   };
 
   const { data: registros, isLoading, error, refetch } = useQuery({
