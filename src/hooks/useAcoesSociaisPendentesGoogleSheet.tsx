@@ -30,19 +30,46 @@ const normalizeText = (text: string): string => {
     .trim();
 };
 
-// Função para gerar hash de deduplicação (mesmo algoritmo do backend)
+// Função para normalizar texto de regional (mesmo algoritmo do backend)
+const normalizeRegionalText = (text: string): string => {
+  if (!text) return "";
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .replace(/[^a-z0-9 ]/g, "")
+    .replace(/\biii\b/g, "3")
+    .replace(/\bii\b/g, "2")
+    .replace(/\bi\b/g, "1")
+    .trim();
+};
+
+// Função para gerar hash de deduplicação (mesmo algoritmo do backend com btoa)
 const gerarHashDeduplicacao = (
   dataAcao: string,
   divisao: string,
   responsavel: string
 ): string => {
-  const normalizedData = dataAcao || "";
-  const normalizedDivisao = normalizeText(divisao);
-  const normalizedResponsavel = normalizeText(responsavel);
-  return `${normalizedData}|${normalizedDivisao}|${normalizedResponsavel}`;
+  const texto = [
+    dataAcao || "",
+    normalizeText(divisao),
+    normalizeText(responsavel)
+  ].join("|");
+  
+  return btoa(texto);
 };
 
-// Função para parsear data do Excel
+// Função para validar se é um responsável válido (não é data)
+const isValidResponsavel = (value: string): boolean => {
+  if (!value || value.trim().length === 0) return false;
+  const datePattern = /^\d{1,2}\/\d{1,2}(\/\d{2,4})?$/;
+  if (datePattern.test(value.trim())) return false;
+  if (/^\d/.test(value.trim())) return false;
+  return true;
+};
+
+// Função para parsear data do Excel (com detecção automática de formato)
 const parseExcelDate = (value: any): string | null => {
   if (!value) return null;
   
@@ -54,17 +81,39 @@ const parseExcelDate = (value: any): string | null => {
   
   // Se for string
   if (typeof value === "string") {
-    // Formato DD/MM/YYYY
-    const brMatch = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-    if (brMatch) {
-      const [, day, month, year] = brMatch;
-      return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-    }
+    const trimmed = value.trim();
     
     // Formato YYYY-MM-DD
-    const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (isoMatch) {
-      return value.substring(0, 10);
+      return trimmed.substring(0, 10);
+    }
+    
+    // Formato com barras (DD/MM/YYYY ou MM/DD/YYYY)
+    const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+    if (slashMatch) {
+      const [, p1, p2, yearPart] = slashMatch;
+      const part1 = parseInt(p1, 10);
+      const part2 = parseInt(p2, 10);
+      const year = yearPart.length === 2 ? `20${yearPart}` : yearPart;
+      
+      let day: string, month: string;
+      
+      if (part1 > 12) {
+        // Primeiro número > 12, então é DD/MM/YYYY (brasileiro)
+        day = p1.padStart(2, "0");
+        month = p2.padStart(2, "0");
+      } else if (part2 > 12) {
+        // Segundo número > 12, então é MM/DD/YYYY (americano)
+        month = p1.padStart(2, "0");
+        day = p2.padStart(2, "0");
+      } else {
+        // Ambíguo - assumir MM/DD/YYYY (padrão Google Forms)
+        month = p1.padStart(2, "0");
+        day = p2.padStart(2, "0");
+      }
+      
+      return `${year}-${month}-${day}`;
     }
   }
   
@@ -116,11 +165,13 @@ export const useAcoesSociaisPendentesGoogleSheet = (
 
       const rows: SheetRow[] = sheetResponse.data;
 
-      // 2. Filtrar por regional (comparando normalizado)
-      const normalizedRegional = normalizeText(regionalTexto);
+      // 2. Filtrar por regional (usando normalização robusta)
+      const normalizedRegionalFilter = normalizeRegionalText(regionalTexto);
       const acoesDaRegional = rows.filter((row) => {
         const rowRegional = row["Regional"] || row["regional"] || "";
-        return normalizeText(rowRegional) === normalizedRegional;
+        const normalizedRowRegional = normalizeRegionalText(rowRegional);
+        return normalizedRowRegional.includes(normalizedRegionalFilter) || 
+               normalizedRegionalFilter.includes(normalizedRowRegional);
       });
 
       setTotalNaPlanilha(acoesDaRegional.length);
@@ -177,7 +228,8 @@ export const useAcoesSociaisPendentesGoogleSheet = (
           row["descricao"] ||
           "";
 
-        if (!dataAcao || !responsavel) continue;
+        // Validar campos obrigatórios (usando mesma lógica do backend)
+        if (!dataAcao || !isValidResponsavel(responsavel)) continue;
 
         const hash = gerarHashDeduplicacao(dataAcao, divisao, responsavel);
 
