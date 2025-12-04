@@ -63,6 +63,8 @@ const COLUMN_MAPPING: Record<string, keyof RegistroMapeado> = {
   'nome de colete do responsavel pela acao social': 'responsavel',
   'nome de colete do responsavel': 'responsavel',
   'nome do responsavel': 'responsavel',
+  'nome do social responsavel': 'responsavel',  // ← NOVO (header real da planilha)
+  'social responsavel': 'responsavel',
   'responsavel': 'responsavel',
   'nome de colete': 'responsavel',
   'responsavel_nome_colete': 'responsavel',
@@ -71,6 +73,7 @@ const COLUMN_MAPPING: Record<string, keyof RegistroMapeado> = {
   // Tipo de ação (várias variações)
   'tipo de acao social': 'tipo_acao',
   'tipo de acao': 'tipo_acao',
+  'tipo da acao': 'tipo_acao',  // ← NOVO (header real da planilha)
   'tipo': 'tipo_acao',
   'tipo_acao': 'tipo_acao',
   'qual tipo de acao social': 'tipo_acao',
@@ -121,8 +124,8 @@ const normalizeRegionalText = (text: string): string => {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
-    .replace(/\s+/g, " ")
-    .replace(/[^a-z0-9 ]/g, "")
+    .replace(/[^a-z0-9 ]/g, "")  // PRIMEIRO: Remove caracteres especiais (hífen, etc)
+    .replace(/\s+/g, " ")         // DEPOIS: Múltiplos espaços -> um espaço
     .replace(/\biii\b/g, "3")
     .replace(/\bii\b/g, "2")
     .replace(/\bi\b/g, "1")
