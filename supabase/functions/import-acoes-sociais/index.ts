@@ -54,11 +54,34 @@ function parseExcelDate(value: any): string | null {
     return date.toISOString().split('T')[0];
   }
   
-  // Se for string no formato DD/MM/YYYY ou DD/MM/YY
+  // Se for string no formato DD/MM/YY, DD/MM/YYYY, MM/DD/YY ou MM/DD/YYYY
   if (typeof value === 'string') {
     const parts = value.split('/');
     if (parts.length === 3) {
-      let [day, month, year] = parts;
+      let [part1, part2, year] = parts;
+      let day: string, month: string;
+      
+      // Detectar formato automaticamente:
+      // Se part1 > 12, é dia (DD/MM/YY - formato brasileiro)
+      // Se part1 <= 12 e part2 > 12, é mês (MM/DD/YY - formato americano)
+      // Caso ambíguo (ambos <= 12): assumir MM/DD/YY (padrão Excel americano)
+      const p1 = parseInt(part1, 10);
+      const p2 = parseInt(part2, 10);
+      
+      if (p1 > 12) {
+        // Formato DD/MM/YY (brasileiro)
+        day = part1;
+        month = part2;
+      } else if (p2 > 12) {
+        // Formato MM/DD/YY (americano)
+        month = part1;
+        day = part2;
+      } else {
+        // Ambíguo - assumir MM/DD/YY (padrão Excel Google Forms americano)
+        month = part1;
+        day = part2;
+      }
+      
       if (year.length === 2) {
         year = '20' + year;
       }
@@ -104,7 +127,7 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { dados_excel, admin_profile_id, regional_id } = await req.json();
+    const { dados_excel, admin_profile_id, regional_id, regional_texto } = await req.json();
 
     if (!dados_excel || !Array.isArray(dados_excel)) {
       return new Response(
@@ -120,25 +143,33 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[import-acoes-sociais] Iniciando importação de ${dados_excel.length} linhas`);
-
-    // Buscar email_base da regional do admin
-    const { data: configRegional, error: configError } = await supabase
-      .from('acoes_sociais_config_regional')
-      .select('email_base, regional_texto')
-      .eq('ativo', true)
-      .single();
-
-    if (configError || !configRegional?.email_base) {
-      console.error('[import-acoes-sociais] Erro ao buscar config regional:', configError);
+    if (!regional_texto) {
       return new Response(
-        JSON.stringify({ error: 'Configuração de e-mail da regional não encontrada' }),
+        JSON.stringify({ error: 'Regional não selecionada' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const emailBase = configRegional.email_base.toLowerCase();
-    console.log(`[import-acoes-sociais] Email base para filtro: ${emailBase}`);
+    console.log(`[import-acoes-sociais] Iniciando importação de ${dados_excel.length} linhas`);
+    console.log(`[import-acoes-sociais] Regional selecionada: ${regional_texto}`);
+
+    // Normalizar texto da regional para comparação flexível
+    function normalizeRegionalText(text: string): string {
+      return text
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .replace(/[^a-z0-9 ]/g, '')
+        .replace(/vale do paraiba/gi, 'vale do paraiba')
+        .replace(/\bi\b/g, '1')
+        .replace(/\bii\b/g, '2')
+        .replace(/\biii\b/g, '3')
+        .trim();
+    }
+
+    const regionalFiltro = normalizeRegionalText(regional_texto);
+    console.log(`[import-acoes-sociais] Regional normalizada para filtro: ${regionalFiltro}`);
 
     // Buscar integrantes para lookup de divisão por nome
     const { data: integrantes } = await supabase
@@ -182,9 +213,9 @@ Deno.serve(async (req) => {
       const row = dados_excel[i];
       const linhaExcel = i + 2; // +2 porque linha 1 é header
       
-      // Verificar se o e-mail contém o email_base (filtro tolerante a erros)
-      const emailLinha = (row.email || '').toLowerCase();
-      if (!emailLinha.includes(emailBase)) {
+      // Filtrar por nome da regional (mais robusto que email)
+      const regionalLinha = normalizeRegionalText(row.regional || '');
+      if (!regionalLinha.includes(regionalFiltro) && !regionalFiltro.includes(regionalLinha)) {
         continue; // Pular linhas de outras regionais
       }
 
@@ -243,14 +274,14 @@ Deno.serve(async (req) => {
       registrosParaInserir.push({
         profile_id: admin_profile_id,
         data_acao: dataAcao,
-        regional_relatorio_texto: row.regional || configRegional.regional_texto,
+        regional_relatorio_texto: row.regional || regional_texto,
         regional_relatorio_id: regional_id || null,
         divisao_relatorio_texto: divisaoTexto,
         divisao_relatorio_id: divisaoId,
         responsavel_nome_colete: responsavel,
         responsavel_cargo_nome: null,
         responsavel_divisao_texto: divisaoTexto,
-        responsavel_regional_texto: row.regional || configRegional.regional_texto,
+        responsavel_regional_texto: row.regional || regional_texto,
         responsavel_comando_texto: 'INSANOS MC',
         escopo_acao: parseEscopo(row.escopo),
         tipo_acao_nome_snapshot: (row.tipo_acao || '').trim(),

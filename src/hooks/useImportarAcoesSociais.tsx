@@ -15,6 +15,7 @@ interface ImportParams {
   dados_excel: AcaoSocialExcel[];
   admin_profile_id: string;
   regional_id?: string;
+  regional_texto: string;
 }
 
 export const useImportarAcoesSociais = () => {

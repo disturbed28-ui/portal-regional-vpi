@@ -59,9 +59,9 @@ const AdminGestaoAcoesSociais = () => {
   const [arquivoSelecionado, setArquivoSelecionado] = useState<File | null>(null);
   const [importando, setImportando] = useState(false);
   const [resultadoImportacao, setResultadoImportacao] = useState<ImportResult | null>(null);
-  const [emailBase, setEmailBase] = useState<string>('');
-  const [editandoEmail, setEditandoEmail] = useState(false);
-  const [novoEmailBase, setNovoEmailBase] = useState('');
+  const [regionais, setRegionais] = useState<{id: string, nome: string}[]>([]);
+  const [regionalSelecionada, setRegionalSelecionada] = useState<string>('');
+  const [regionalId, setRegionalId] = useState<string | undefined>(undefined);
 
   // Estados de solicitações de exclusão
   const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>('pendente');
@@ -73,21 +73,28 @@ const AdminGestaoAcoesSociais = () => {
   const [mostrarDialog, setMostrarDialog] = useState(false);
   const [observacaoAdmin, setObservacaoAdmin] = useState('');
 
-  // Carregar configuração de email
+  // Carregar lista de regionais
   useEffect(() => {
-    const fetchEmailBase = async () => {
+    const fetchRegionais = async () => {
       const { data } = await supabase
-        .from('acoes_sociais_config_regional')
-        .select('email_base')
-        .eq('ativo', true)
-        .single();
+        .from('regionais')
+        .select('id, nome')
+        .order('nome');
       
-      if (data?.email_base) {
-        setEmailBase(data.email_base);
+      if (data) {
+        setRegionais(data);
+        // Pré-selecionar a regional do usuário logado
+        if (profile?.regional_id) {
+          const userRegional = data.find(r => r.id === profile.regional_id);
+          if (userRegional) {
+            setRegionalSelecionada(userRegional.nome);
+            setRegionalId(userRegional.id);
+          }
+        }
       }
     };
-    fetchEmailBase();
-  }, []);
+    fetchRegionais();
+  }, [profile?.regional_id]);
 
   useEffect(() => {
     if (!loadingAccess && !hasAccess) {
@@ -151,7 +158,8 @@ const AdminGestaoAcoesSociais = () => {
       const resultado = await importarMutation.mutateAsync({
         dados_excel: dados,
         admin_profile_id: user.id,
-        regional_id: profile?.regional_id || undefined,
+        regional_id: regionalId,
+        regional_texto: regionalSelecionada,
       });
 
       setResultadoImportacao(resultado);
@@ -171,28 +179,10 @@ const AdminGestaoAcoesSociais = () => {
     }
   };
 
-  const handleSalvarEmailBase = async () => {
-    if (!novoEmailBase.trim()) return;
-
-    const { error } = await supabase
-      .from('acoes_sociais_config_regional')
-      .update({ email_base: novoEmailBase.trim() })
-      .eq('ativo', true);
-
-    if (error) {
-      toast({
-        title: "Erro ao salvar",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      setEmailBase(novoEmailBase.trim());
-      setEditandoEmail(false);
-      toast({
-        title: "Configuração salva",
-        description: "E-mail base atualizado com sucesso.",
-      });
-    }
+  const handleRegionalChange = (nome: string) => {
+    setRegionalSelecionada(nome);
+    const regional = regionais.find(r => r.nome === nome);
+    setRegionalId(regional?.id);
   };
 
   const handleVerDetalhes = (solicitacao: any) => {
@@ -265,50 +255,34 @@ const AdminGestaoAcoesSociais = () => {
 
           {/* Tab de Importação */}
           <TabsContent value="importar" className="space-y-6">
-            {/* Configuração de Email Base */}
+            {/* Seleção de Regional */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Settings className="h-5 w-5" />
-                  Configuração da Regional
+                  Regional para Importação
                 </CardTitle>
                 <CardDescription>
-                  E-mail base usado para filtrar ações da sua regional no Excel
+                  Selecione a regional cujas ações serão importadas do Excel
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {editandoEmail ? (
-                  <div className="flex gap-2 items-end">
-                    <div className="flex-1">
-                      <Label htmlFor="email-base">E-mail Base (sem @gmail.com)</Label>
-                      <Input
-                        id="email-base"
-                        value={novoEmailBase}
-                        onChange={(e) => setNovoEmailBase(e.target.value)}
-                        placeholder="ex: social.regional.vp1"
-                      />
-                    </div>
-                    <Button onClick={handleSalvarEmailBase}>Salvar</Button>
-                    <Button variant="outline" onClick={() => setEditandoEmail(false)}>Cancelar</Button>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">E-mail base configurado:</p>
-                      <p className="font-mono text-lg">{emailBase || 'Não configurado'}</p>
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => {
-                        setNovoEmailBase(emailBase);
-                        setEditandoEmail(true);
-                      }}
-                    >
-                      Editar
-                    </Button>
-                  </div>
-                )}
+                <div className="space-y-2">
+                  <Label htmlFor="regional-select">Regional</Label>
+                  <Select value={regionalSelecionada} onValueChange={handleRegionalChange}>
+                    <SelectTrigger id="regional-select" className="w-full md:w-[400px]">
+                      <SelectValue placeholder="Selecione a regional" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {regionais.map((r) => (
+                        <SelectItem key={r.id} value={r.nome}>{r.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Somente ações desta regional serão importadas do arquivo
+                  </p>
+                </div>
               </CardContent>
             </Card>
 
@@ -350,7 +324,7 @@ const AdminGestaoAcoesSociais = () => {
                       <FileSpreadsheet className="h-5 w-5 text-green-600" />
                       <span className="text-sm font-medium">{arquivoSelecionado.name}</span>
                     </div>
-                    <Button onClick={handleImportar} disabled={importando || !emailBase}>
+                    <Button onClick={handleImportar} disabled={importando || !regionalSelecionada}>
                       {importando ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div>
@@ -366,9 +340,9 @@ const AdminGestaoAcoesSociais = () => {
                   </div>
                 )}
 
-                {!emailBase && (
+                {!regionalSelecionada && (
                   <p className="text-sm text-destructive">
-                    Configure o e-mail base acima antes de importar.
+                    Selecione uma regional acima antes de importar.
                   </p>
                 )}
               </CardContent>
