@@ -317,72 +317,99 @@ export const RelatorioSemanalDetalheDialog = ({
                   <Card>
                     <CardContent className="p-4">
                       <h4 className="font-semibold mb-3 text-base">Estatísticas da Divisão</h4>
-                      {relatorio.estatisticas_divisao_json ? (
+                        {relatorio.estatisticas_divisao_json ? (
                         <div className="space-y-3">
-                          {/* Estatísticas Gerais */}
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                            <div className="p-3 border rounded-lg">
-                              <p className="text-xs text-muted-foreground">Total de Integrantes</p>
-                              <p className="text-lg font-semibold">{relatorio.estatisticas_divisao_json.total_integrantes || 0}</p>
+                          {/* Estatísticas Gerais - Novos campos ou Fallback para relatórios antigos */}
+                          {relatorio.estatisticas_divisao_json.total_integrantes !== undefined ? (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                              <div className="p-3 border rounded-lg">
+                                <p className="text-xs text-muted-foreground">Total de Integrantes</p>
+                                <p className="text-lg font-semibold">{relatorio.estatisticas_divisao_json.total_integrantes || 0}</p>
+                              </div>
+                              <div className="p-3 border rounded-lg">
+                                <p className="text-xs text-muted-foreground">Total Aptos</p>
+                                <p className="text-lg font-semibold">{relatorio.estatisticas_divisao_json.total_aptos || 0}</p>
+                              </div>
+                              <div className="p-3 border rounded-lg">
+                                <p className="text-xs text-muted-foreground">Total Estagiários</p>
+                                <p className="text-lg font-semibold">{relatorio.estatisticas_divisao_json.total_estagiarios || 0}</p>
+                              </div>
+                              <div className="p-3 border rounded-lg">
+                                <p className="text-xs text-muted-foreground">Total Afastados</p>
+                                <p className="text-lg font-semibold">{relatorio.estatisticas_divisao_json.total_afastados || 0}</p>
+                              </div>
+                              <div className="p-3 border rounded-lg">
+                                <p className="text-xs text-muted-foreground">Devedores</p>
+                                <p className="text-lg font-semibold">{relatorio.estatisticas_divisao_json.total_devedores || 0}</p>
+                              </div>
+                              <div className="p-3 border rounded-lg">
+                                <p className="text-xs text-muted-foreground">Veículos Disponíveis</p>
+                                <p className="text-lg font-semibold">{relatorio.estatisticas_divisao_json.total_veiculos || 0}</p>
+                              </div>
                             </div>
-                            <div className="p-3 border rounded-lg">
-                              <p className="text-xs text-muted-foreground">Total Aptos</p>
-                              <p className="text-lg font-semibold">{relatorio.estatisticas_divisao_json.total_aptos || 0}</p>
+                          ) : (
+                            /* Fallback para relatórios antigos */
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                              <div className="p-3 border rounded-lg">
+                                <p className="text-xs text-muted-foreground">Possuem Moto</p>
+                                <p className="text-lg font-semibold">{relatorio.estatisticas_divisao_json.total_tem_moto || 0}</p>
+                              </div>
+                              <div className="p-3 border rounded-lg">
+                                <p className="text-xs text-muted-foreground">Possuem Carro</p>
+                                <p className="text-lg font-semibold">{relatorio.estatisticas_divisao_json.total_tem_carro || 0}</p>
+                              </div>
+                              <div className="p-3 border rounded-lg">
+                                <p className="text-xs text-muted-foreground">Sem Veículo</p>
+                                <p className="text-lg font-semibold">{relatorio.estatisticas_divisao_json.total_sem_veiculo || 0}</p>
+                              </div>
                             </div>
-                            <div className="p-3 border rounded-lg">
-                              <p className="text-xs text-muted-foreground">Total Estagiários</p>
-                              <p className="text-lg font-semibold">{relatorio.estatisticas_divisao_json.total_estagiarios || 0}</p>
-                            </div>
-                            <div className="p-3 border rounded-lg">
-                              <p className="text-xs text-muted-foreground">Total Afastados</p>
-                              <p className="text-lg font-semibold">{relatorio.estatisticas_divisao_json.total_afastados || 0}</p>
-                            </div>
-                            <div className="p-3 border rounded-lg">
-                              <p className="text-xs text-muted-foreground">Devedores</p>
-                              <p className="text-lg font-semibold">{relatorio.estatisticas_divisao_json.total_devedores || 0}</p>
-                            </div>
-                            <div className="p-3 border rounded-lg">
-                              <p className="text-xs text-muted-foreground">Veículos Disponíveis</p>
-                              <p className="text-lg font-semibold">{relatorio.estatisticas_divisao_json.total_veiculos || 0}</p>
-                            </div>
-                          </div>
+                          )}
 
                           {/* Estatísticas Detalhadas (se existirem) */}
                           {(relatorio.estatisticas_divisao_json.total_caveiras > 0 ||
+                            relatorio.estatisticas_divisao_json.total_suplentes_caveira > 0 ||
                             relatorio.estatisticas_divisao_json.total_batedores > 0 ||
-                            relatorio.estatisticas_divisao_json.total_lobos > 0) && (
+                            relatorio.estatisticas_divisao_json.total_lobos > 0 ||
+                            relatorio.estatisticas_divisao_json.total_ursos > 0 ||
+                            relatorio.estatisticas_divisao_json.total_combate_insano > 0) && (
                             <>
                               <Separator className="my-4" />
                               <p className="text-sm font-medium mb-2">Detalhes Especiais:</p>
-                              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 text-sm">
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
                                 {relatorio.estatisticas_divisao_json.total_caveiras > 0 && (
-                                  <div className="p-2 bg-muted rounded">
-                                    <span className="text-muted-foreground">Caveiras:</span> {relatorio.estatisticas_divisao_json.total_caveiras}
+                                  <div className="p-2 bg-secondary border border-border rounded">
+                                    <span className="text-muted-foreground">Caveiras:</span>{' '}
+                                    <span className="font-semibold text-foreground">{relatorio.estatisticas_divisao_json.total_caveiras}</span>
                                   </div>
                                 )}
                                 {relatorio.estatisticas_divisao_json.total_suplentes_caveira > 0 && (
-                                  <div className="p-2 bg-muted rounded">
-                                    <span className="text-muted-foreground">Suplentes:</span> {relatorio.estatisticas_divisao_json.total_suplentes_caveira}
+                                  <div className="p-2 bg-secondary border border-border rounded">
+                                    <span className="text-muted-foreground">Suplentes:</span>{' '}
+                                    <span className="font-semibold text-foreground">{relatorio.estatisticas_divisao_json.total_suplentes_caveira}</span>
                                   </div>
                                 )}
                                 {relatorio.estatisticas_divisao_json.total_batedores > 0 && (
-                                  <div className="p-2 bg-muted rounded">
-                                    <span className="text-muted-foreground">Batedores:</span> {relatorio.estatisticas_divisao_json.total_batedores}
+                                  <div className="p-2 bg-secondary border border-border rounded">
+                                    <span className="text-muted-foreground">Batedores:</span>{' '}
+                                    <span className="font-semibold text-foreground">{relatorio.estatisticas_divisao_json.total_batedores}</span>
                                   </div>
                                 )}
                                 {relatorio.estatisticas_divisao_json.total_lobos > 0 && (
-                                  <div className="p-2 bg-muted rounded">
-                                    <span className="text-muted-foreground">Lobos:</span> {relatorio.estatisticas_divisao_json.total_lobos}
+                                  <div className="p-2 bg-secondary border border-border rounded">
+                                    <span className="text-muted-foreground">Lobos:</span>{' '}
+                                    <span className="font-semibold text-foreground">{relatorio.estatisticas_divisao_json.total_lobos}</span>
                                   </div>
                                 )}
                                 {relatorio.estatisticas_divisao_json.total_ursos > 0 && (
-                                  <div className="p-2 bg-muted rounded">
-                                    <span className="text-muted-foreground">Ursos:</span> {relatorio.estatisticas_divisao_json.total_ursos}
+                                  <div className="p-2 bg-secondary border border-border rounded">
+                                    <span className="text-muted-foreground">Ursos:</span>{' '}
+                                    <span className="font-semibold text-foreground">{relatorio.estatisticas_divisao_json.total_ursos}</span>
                                   </div>
                                 )}
                                 {relatorio.estatisticas_divisao_json.total_combate_insano > 0 && (
-                                  <div className="p-2 bg-muted rounded">
-                                    <span className="text-muted-foreground">C. Insano:</span> {relatorio.estatisticas_divisao_json.total_combate_insano}
+                                  <div className="p-2 bg-secondary border border-border rounded">
+                                    <span className="text-muted-foreground">C. Insano:</span>{' '}
+                                    <span className="font-semibold text-foreground">{relatorio.estatisticas_divisao_json.total_combate_insano}</span>
                                   </div>
                                 )}
                               </div>
