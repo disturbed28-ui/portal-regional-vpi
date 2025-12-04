@@ -463,15 +463,15 @@ export const useAcoesSociaisPendentesGoogleSheet = (
     setImportando(true);
 
     try {
-      // Converter para o formato esperado pelo endpoint de importação
+      // Converter para o formato esperado pelo endpoint de importação (campos normalizados)
       const dadosParaImportar = acoesPendentes.map((acao) => ({
-        "Carimbo de data/hora": acao.data_acao,
-        "Tipo de Ação Social": acao.tipo_acao,
-        "Escopo da Ação Social": acao.escopo,
-        "Nome de Colete do Responsável pela Ação Social": acao.responsavel,
-        "Divisão": acao.divisao,
-        "Regional": acao.regional,
-        "Descrição da Ação Social": acao.descricao,
+        data_acao: acao.data_acao,
+        tipo_acao: acao.tipo_acao,
+        escopo: acao.escopo,
+        responsavel: acao.responsavel,
+        divisao: acao.divisao,
+        regional: acao.regional,
+        descricao: acao.descricao,
       }));
 
       const { data, error } = await supabase.functions.invoke(
