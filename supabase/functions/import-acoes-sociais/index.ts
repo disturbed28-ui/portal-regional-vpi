@@ -18,6 +18,7 @@ interface ImportResult {
   duplicados: number;
   erros: { linha: number; motivo: string }[];
   total_processados: number;
+  marcados_como_reportados: number;
 }
 
 function normalizeText(text: string): string {
@@ -117,6 +118,15 @@ function isValidResponsavel(value: string): boolean {
   return true;
 }
 
+// Função para verificar se uma data é mais antiga que X dias
+function isDataAntiga(dataAcao: string, diasLimite: number = 7): boolean {
+  const data = new Date(dataAcao);
+  const agora = new Date();
+  const diffMs = agora.getTime() - data.getTime();
+  const diffDias = diffMs / (1000 * 60 * 60 * 24);
+  return diffDias > diasLimite;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -127,7 +137,7 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { dados_excel, admin_profile_id, regional_id, regional_texto } = await req.json();
+    const { dados_excel, admin_profile_id, regional_id, regional_texto, is_carga_passivo } = await req.json();
 
     if (!dados_excel || !Array.isArray(dados_excel)) {
       return new Response(
@@ -152,6 +162,7 @@ Deno.serve(async (req) => {
 
     console.log(`[import-acoes-sociais] Iniciando importação de ${dados_excel.length} linhas`);
     console.log(`[import-acoes-sociais] Regional selecionada: ${regional_texto}`);
+    console.log(`[import-acoes-sociais] Modo carga de passivo: ${is_carga_passivo ? 'SIM' : 'NÃO'}`);
 
     // Normalizar texto da regional para comparação flexível
     function normalizeRegionalText(text: string): string {
@@ -204,10 +215,12 @@ Deno.serve(async (req) => {
       inseridos: 0,
       duplicados: 0,
       erros: [],
-      total_processados: 0
+      total_processados: 0,
+      marcados_como_reportados: 0
     };
 
     const registrosParaInserir: any[] = [];
+    const hashesNoLote = new Set<string>(); // Para evitar duplicatas dentro do mesmo lote
 
     for (let i = 0; i < dados_excel.length; i++) {
       const row = dados_excel[i];
@@ -262,14 +275,28 @@ Deno.serve(async (req) => {
         responsavel: responsavel
       });
 
-      // Verificar duplicata dentro do mesmo lote (evitar inserir 2x o mesmo registro)
+      // Verificar duplicata no banco de dados existente
       if (hashesExistentes.has(hash)) {
         result.duplicados++;
         continue;
       }
 
+      // Verificar duplicata dentro do mesmo lote
+      if (hashesNoLote.has(hash)) {
+        result.duplicados++;
+        continue;
+      }
+
       // Adicionar hash ao set para evitar duplicatas dentro do mesmo lote
-      hashesExistentes.add(hash);
+      hashesNoLote.add(hash);
+
+      // Determinar se deve marcar como já reportada
+      // Se is_carga_passivo = true E a data é mais antiga que 7 dias -> marcar como reportada
+      const foiReportada = is_carga_passivo === true && isDataAntiga(dataAcao, 7);
+      
+      if (foiReportada) {
+        result.marcados_como_reportados++;
+      }
 
       registrosParaInserir.push({
         profile_id: admin_profile_id,
@@ -291,30 +318,15 @@ Deno.serve(async (req) => {
         hash_deduplicacao: hash,
         importado_em: new Date().toISOString(),
         importado_por: admin_profile_id,
-        google_form_status: null
+        google_form_status: null,
+        foi_reportada_em_relatorio: foiReportada
       });
     }
 
-    // UPSERT: Deletar registros antigos com os mesmos hashes antes de inserir os novos
+    // Inserir apenas novos registros (sem DELETE para preservar status existentes)
     if (registrosParaInserir.length > 0) {
-      const hashesParaUpsert = registrosParaInserir.map(r => r.hash_deduplicacao);
+      console.log(`[import-acoes-sociais] Inserindo ${registrosParaInserir.length} novos registros`);
       
-      // Deletar registros existentes com esses hashes (UPSERT)
-      const { data: deletados, error: deleteError } = await supabase
-        .from('acoes_sociais_registros')
-        .delete()
-        .in('hash_deduplicacao', hashesParaUpsert)
-        .select('id');
-      
-      if (deleteError) {
-        console.error('[import-acoes-sociais] Erro ao deletar registros antigos:', deleteError);
-      } else {
-        const qtdDeletados = deletados?.length || 0;
-        if (qtdDeletados > 0) {
-          console.log(`[import-acoes-sociais] ${qtdDeletados} registros antigos removidos para atualização`);
-        }
-      }
-
       // Inserir novos registros em lotes
       const batchSize = 100;
       for (let i = 0; i < registrosParaInserir.length; i += batchSize) {
@@ -335,7 +347,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`[import-acoes-sociais] Resultado: ${result.inseridos} inseridos, ${result.duplicados} duplicados, ${result.erros.length} erros`);
+    console.log(`[import-acoes-sociais] Resultado: ${result.inseridos} inseridos, ${result.duplicados} duplicados, ${result.marcados_como_reportados} marcados como reportados, ${result.erros.length} erros`);
 
     return new Response(
       JSON.stringify(result),
