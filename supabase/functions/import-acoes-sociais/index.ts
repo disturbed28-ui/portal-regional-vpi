@@ -29,19 +29,16 @@ function normalizeText(text: string): string {
     .trim();
 }
 
+// Hash sem tipo_acao e descricao para permitir atualizações desses campos
 function gerarHashDeduplicacao(registro: {
   data_acao: string;
   divisao: string;
   responsavel: string;
-  tipo_acao: string;
-  descricao: string;
 }): string {
   const texto = [
     registro.data_acao,
     normalizeText(registro.divisao),
-    normalizeText(registro.responsavel),
-    normalizeText(registro.tipo_acao),
-    normalizeText((registro.descricao || '').substring(0, 50))
+    normalizeText(registro.responsavel)
   ].join('|');
   
   return btoa(texto);
@@ -227,16 +224,14 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Gerar hash de deduplicação
+      // Gerar hash de deduplicação (sem tipo_acao e descricao para permitir atualizações)
       const hash = gerarHashDeduplicacao({
         data_acao: dataAcao,
         divisao: divisaoTexto,
-        responsavel: responsavel,
-        tipo_acao: row.tipo_acao || '',
-        descricao: row.descricao || ''
+        responsavel: responsavel
       });
 
-      // Verificar duplicata
+      // Verificar duplicata dentro do mesmo lote (evitar inserir 2x o mesmo registro)
       if (hashesExistentes.has(hash)) {
         result.duplicados++;
         continue;
@@ -269,8 +264,27 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Inserir em lotes
+    // UPSERT: Deletar registros antigos com os mesmos hashes antes de inserir os novos
     if (registrosParaInserir.length > 0) {
+      const hashesParaUpsert = registrosParaInserir.map(r => r.hash_deduplicacao);
+      
+      // Deletar registros existentes com esses hashes (UPSERT)
+      const { data: deletados, error: deleteError } = await supabase
+        .from('acoes_sociais_registros')
+        .delete()
+        .in('hash_deduplicacao', hashesParaUpsert)
+        .select('id');
+      
+      if (deleteError) {
+        console.error('[import-acoes-sociais] Erro ao deletar registros antigos:', deleteError);
+      } else {
+        const qtdDeletados = deletados?.length || 0;
+        if (qtdDeletados > 0) {
+          console.log(`[import-acoes-sociais] ${qtdDeletados} registros antigos removidos para atualização`);
+        }
+      }
+
+      // Inserir novos registros em lotes
       const batchSize = 100;
       for (let i = 0; i < registrosParaInserir.length; i += batchSize) {
         const batch = registrosParaInserir.slice(i, i + batchSize);
