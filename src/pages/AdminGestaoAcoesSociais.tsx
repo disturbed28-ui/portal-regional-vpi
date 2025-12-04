@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, ArrowLeft, Upload, FileSpreadsheet, CheckCircle, XCircle, AlertTriangle, Eye, Clock, Settings, Cloud, RefreshCw, Copy, Loader2, Link2, CalendarClock } from "lucide-react";
+import { Heart, ArrowLeft, Upload, FileSpreadsheet, CheckCircle, XCircle, AlertTriangle, Eye, Clock, Settings, Cloud, RefreshCw, Copy, Loader2, Link2, CalendarClock, Wrench } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
@@ -117,6 +117,15 @@ const AdminGestaoAcoesSociais = () => {
   const [solicitacaoSelecionada, setSolicitacaoSelecionada] = useState<any>(null);
   const [mostrarDialog, setMostrarDialog] = useState(false);
   const [observacaoAdmin, setObservacaoAdmin] = useState('');
+  
+  // Estado para manutenção
+  const [executandoManutencao, setExecutandoManutencao] = useState(false);
+  const [resultadoManutencao, setResultadoManutencao] = useState<{
+    total_registros: number;
+    hashes_atualizados: number;
+    marcados_como_reportados: number;
+    total_erros: number;
+  } | null>(null);
 
   // Carregar lista de regionais
   useEffect(() => {
@@ -254,6 +263,52 @@ const AdminGestaoAcoesSociais = () => {
       title: "Email copiado!",
       description: "O email do service account foi copiado para a área de transferência",
     });
+  };
+
+  const handleExecutarManutencao = async () => {
+    setExecutandoManutencao(true);
+    setResultadoManutencao(null);
+    
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/manutencao-acoes-sociais`,
+        {
+          method: 'POST',
+          headers: {
+            'apikey': supabaseKey,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Erro ao executar manutenção');
+      }
+      
+      setResultadoManutencao(data);
+      
+      toast({
+        title: "Manutenção concluída!",
+        description: `${data.hashes_atualizados} hashes atualizados, ${data.marcados_como_reportados} ações marcadas como reportadas`,
+      });
+      
+      // Recarregar dados
+      refetchPendentes();
+      
+    } catch (error: any) {
+      toast({
+        title: "Erro na manutenção",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setExecutandoManutencao(false);
+    }
   };
 
   const handleTestarConexao = async () => {
@@ -704,6 +759,71 @@ const AdminGestaoAcoesSociais = () => {
                 </CardContent>
               </Card>
             )}
+
+            {/* Card de Manutenção */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Wrench className="h-5 w-5" />
+                  Manutenção do Sistema
+                </CardTitle>
+                <CardDescription>
+                  Recalcula hashes de deduplicação e marca ações antigas como reportadas
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Alert>
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    Esta função irá:
+                    <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
+                      <li>Recalcular os hashes de deduplicação de todas as ações</li>
+                      <li>Marcar como "já reportadas" todas as ações com mais de 7 dias</li>
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+
+                <Button
+                  onClick={handleExecutarManutencao}
+                  disabled={executandoManutencao}
+                  variant="outline"
+                  className="w-full"
+                >
+                  {executandoManutencao ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Executando manutenção...
+                    </>
+                  ) : (
+                    <>
+                      <Wrench className="h-4 w-4 mr-2" />
+                      Executar Manutenção
+                    </>
+                  )}
+                </Button>
+
+                {resultadoManutencao && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                    <div className="text-center p-3 bg-muted/50 rounded-lg">
+                      <p className="text-xl font-bold">{resultadoManutencao.total_registros}</p>
+                      <p className="text-xs text-muted-foreground">Total Analisados</p>
+                    </div>
+                    <div className="text-center p-3 bg-blue-500/10 rounded-lg">
+                      <p className="text-xl font-bold text-blue-600">{resultadoManutencao.hashes_atualizados}</p>
+                      <p className="text-xs text-muted-foreground">Hashes Atualizados</p>
+                    </div>
+                    <div className="text-center p-3 bg-green-500/10 rounded-lg">
+                      <p className="text-xl font-bold text-green-600">{resultadoManutencao.marcados_como_reportados}</p>
+                      <p className="text-xs text-muted-foreground">Marcados Reportados</p>
+                    </div>
+                    <div className="text-center p-3 bg-red-500/10 rounded-lg">
+                      <p className="text-xl font-bold text-red-600">{resultadoManutencao.total_erros}</p>
+                      <p className="text-xs text-muted-foreground">Erros</p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Tab de Solicitações de Exclusão */}
