@@ -399,14 +399,35 @@ export const useAcoesSociaisPendentesGoogleSheet = (
         (hashesExistentes || []).map((h) => h.hash_deduplicacao)
       );
 
-      // 5. Processar cada registro mapeado e verificar se já foi importada
+      // 5. Buscar integrantes para lookup de divisão (IGUAL AO BACKEND)
+      const { data: integrantes, error: integrantesError } = await supabase
+        .from("integrantes_portal")
+        .select("nome_colete, nome_colete_ascii, divisao_texto")
+        .eq("ativo", true);
+
+      if (integrantesError) {
+        console.warn("Erro ao buscar integrantes para lookup:", integrantesError.message);
+      }
+
+      // Criar mapa de nome -> divisão (igual ao backend)
+      const integrantesMap = new Map<string, string>();
+      (integrantes || []).forEach((i) => {
+        const nomeNorm = normalizeText(i.nome_colete);
+        const nomeAscii = normalizeText(i.nome_colete_ascii || "");
+        if (nomeNorm) integrantesMap.set(nomeNorm, i.divisao_texto);
+        if (nomeAscii && nomeAscii !== nomeNorm) integrantesMap.set(nomeAscii, i.divisao_texto);
+      });
+
+      console.log(`📊 [Google Sheet] Integrantes carregados para lookup: ${integrantesMap.size}`);
+
+      // 6. Processar cada registro mapeado e verificar se já foi importada
       const pendentes: AcaoSocialPendente[] = [];
       let jaImportadas = 0;
 
       for (const registro of acoesDaRegional) {
         const dataAcao = registro.data_acao_parsed;
         const responsavel = registro.responsavel;
-        const divisao = registro.divisao;
+        const divisaoPlanilha = registro.divisao;
         const tipoAcao = registro.tipo_acao;
         const escopo = registro.escopo;
         const descricao = registro.descricao;
@@ -414,7 +435,24 @@ export const useAcoesSociaisPendentesGoogleSheet = (
         // Validar campos obrigatórios (usando mesma lógica do backend)
         if (!dataAcao || !isValidResponsavel(responsavel)) continue;
 
-        const hash = gerarHashDeduplicacao(dataAcao, divisao, responsavel);
+        // Buscar divisão pelo nome do responsável (IGUAL AO BACKEND)
+        const nomeNormalizado = normalizeText(responsavel);
+        let divisaoParaHash = divisaoPlanilha; // fallback para divisão da planilha
+
+        // Busca exata primeiro
+        if (integrantesMap.has(nomeNormalizado)) {
+          divisaoParaHash = integrantesMap.get(nomeNormalizado)!;
+        } else {
+          // Busca parcial (igual ao backend)
+          for (const [nomeKey, divisaoTexto] of integrantesMap) {
+            if (nomeKey.includes(nomeNormalizado) || nomeNormalizado.includes(nomeKey)) {
+              divisaoParaHash = divisaoTexto;
+              break;
+            }
+          }
+        }
+
+        const hash = gerarHashDeduplicacao(dataAcao, divisaoParaHash, responsavel);
 
         if (hashSet.has(hash)) {
           jaImportadas++;
@@ -424,7 +462,7 @@ export const useAcoesSociaisPendentesGoogleSheet = (
             tipo_acao: tipoAcao,
             escopo,
             responsavel,
-            divisao,
+            divisao: divisaoParaHash, // Usar a divisão correta encontrada
             regional: regionalTexto,
             descricao,
             hash,
