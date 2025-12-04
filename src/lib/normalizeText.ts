@@ -20,6 +20,67 @@ export const normalizeText = (text: string): string => {
 };
 
 /**
+ * Normaliza nome de Regional para comparação
+ * Exemplos:
+ * - "Vale do Paraiba I - SP" → "VALE DO PARAIBA 1"
+ * - "REGIONAL VALE DO PARAIBA I - SP" → "VALE DO PARAIBA 1"
+ * - "Vale do Paraíba 1" → "VALE DO PARAIBA 1"
+ */
+export const normalizarRegional = (texto: string): string => {
+  if (!texto) return "";
+  
+  return texto
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Remove acentos
+    .replace(/^REGIONAL\s*/i, "")     // Remove prefixo "REGIONAL "
+    .replace(/\s*-\s*SP$/i, "")       // Remove sufixo "- SP"
+    .replace(/\bIII\b/g, "3")         // III → 3
+    .replace(/\bII\b/g, "2")          // II → 2
+    .replace(/\bI\b/g, "1")           // I → 1
+    .replace(/\s+/g, " ")             // Normaliza espaços
+    .trim();
+};
+
+/**
+ * Abreviações conhecidas de divisões
+ */
+const ABREVIACOES_DIVISAO: Record<string, string> = {
+  "SJC": "SAO JOSE DOS CAMPOS",
+  "SJ DOS CAMPOS": "SAO JOSE DOS CAMPOS",
+  "S J CAMPOS": "SAO JOSE DOS CAMPOS",
+  "SJCAMPOS": "SAO JOSE DOS CAMPOS",
+};
+
+/**
+ * Normaliza nome de Divisão para comparação
+ * Exemplos:
+ * - "Divisao Sao Jose dos Campos Extremo Sul - SP" → "SAO JOSE DOS CAMPOS EXTREMO SUL"
+ * - "DIVISAO SAO JOSE DOS CAMPOS EXTREMO SUL - SP" → "SAO JOSE DOS CAMPOS EXTREMO SUL"
+ * - "SJC Extremo Sul" → "SAO JOSE DOS CAMPOS EXTREMO SUL"
+ */
+export const normalizarDivisao = (texto: string): string => {
+  if (!texto) return "";
+  
+  let normalizado = texto
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Remove acentos
+    .replace(/^DIVISAO\s*/i, "")      // Remove prefixo "DIVISAO "
+    .replace(/\s*-\s*SP$/i, "")       // Remove sufixo "- SP"
+    .replace(/\s+/g, " ")             // Normaliza espaços
+    .trim();
+
+  // Expandir abreviações conhecidas
+  Object.entries(ABREVIACOES_DIVISAO).forEach(([abrev, completo]) => {
+    const regex = new RegExp(`^${abrev}\\b`, "i");
+    normalizado = normalizado.replace(regex, completo);
+  });
+
+  return normalizado.trim();
+};
+
+/**
  * Dados da semana operacional (Domingo → Sábado)
  */
 export interface SemanaOperacional {
