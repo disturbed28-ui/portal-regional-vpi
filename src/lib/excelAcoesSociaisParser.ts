@@ -36,7 +36,15 @@ const COLUMN_MAPPING: Record<string, keyof AcaoSocialExcel> = {
   'tipo da acao': 'tipo_acao',
   'tipo de ação': 'tipo_acao',
   'tipo de acao': 'tipo_acao',
+  'tipo de acao social': 'tipo_acao',
+  'tipo de ação social': 'tipo_acao',
+  'qual tipo de acao': 'tipo_acao',
+  'qual tipo de ação': 'tipo_acao',
+  'tipo acao': 'tipo_acao',
+  'tipo ação': 'tipo_acao',
   'tipo': 'tipo_acao',
+  'acao': 'tipo_acao',
+  'ação': 'tipo_acao',
   'descrição da ação': 'descricao',
   'descricao da acao': 'descricao',
   'descrição': 'descricao',
@@ -53,7 +61,9 @@ function normalizeColumnName(name: string): string {
   return name
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')  // Remove acentos
+    .replace(/[:\?\!\.\,\;]/g, '')     // Remove pontuação: : ? ! . , ;
+    .replace(/\s+/g, ' ')              // Normaliza múltiplos espaços
     .trim();
 }
 

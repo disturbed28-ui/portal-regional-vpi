@@ -9,6 +9,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useAcoesSociaisLista } from "@/hooks/useAcoesSociaisLista";
 import { useDivisoes } from "@/hooks/useDivisoes";
 import { exportAcoesSociaisToExcel } from "@/lib/exportAcoesSociaisExcel";
+import { normalizarDivisao } from "@/lib/normalizeText";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -64,17 +65,29 @@ export default function AcoesSociais() {
   }), [registros]);
 
   const registrosAgrupados = useMemo(() => {
-    const grupos: Record<string, any[]> = {};
+    const grupos: Record<string, { nomeExibicao: string; registros: any[] }> = {};
     
     registrosFiltrados.forEach(registro => {
-      const divisao = registro.divisao_relatorio_texto || 'Sem Divisão';
-      if (!grupos[divisao]) {
-        grupos[divisao] = [];
+      const divisaoOriginal = registro.divisao_relatorio_texto || 'Sem Divisão';
+      const chaveNormalizada = normalizarDivisao(divisaoOriginal);
+      
+      if (!grupos[chaveNormalizada]) {
+        grupos[chaveNormalizada] = {
+          nomeExibicao: divisaoOriginal,
+          registros: []
+        };
+      } else {
+        // Preferir o nome mais completo para exibição
+        if (divisaoOriginal.length > grupos[chaveNormalizada].nomeExibicao.length) {
+          grupos[chaveNormalizada].nomeExibicao = divisaoOriginal;
+        }
       }
-      grupos[divisao].push(registro);
+      grupos[chaveNormalizada].registros.push(registro);
     });
 
-    return Object.entries(grupos).sort(([a], [b]) => a.localeCompare(b));
+    return Object.values(grupos)
+      .map(g => [g.nomeExibicao, g.registros] as [string, any[]])
+      .sort(([a], [b]) => a.localeCompare(b));
   }, [registrosFiltrados]);
 
   // TODOS os useEffect ANTES dos early returns
