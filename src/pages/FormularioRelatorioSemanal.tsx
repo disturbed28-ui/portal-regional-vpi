@@ -114,7 +114,14 @@ const ItemSaida = ({ saida, idx, acoes, saidas, setSaidas, busca, setBusca }: an
   return (
     <Card className="p-4 space-y-3 bg-muted/50">
       <div className="flex justify-between items-start">
-        <h4 className="text-sm font-medium">Saída #{idx + 1}</h4>
+        <div className="flex items-center gap-2">
+          <h4 className="text-sm font-medium">Saída #{idx + 1}</h4>
+          {saida.origem === "delta" && (
+            <span className="text-xs bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 px-2 py-0.5 rounded">
+              Detectado na carga
+            </span>
+          )}
+        </div>
         <Button
           type="button"
           variant="ghost"
@@ -733,6 +740,115 @@ const FormularioRelatorioSemanal = () => {
     acoesSociais,
   ]);
 
+  // T6: Carregar entradas e saídas automaticamente da tabela deltas_pendentes
+  useEffect(() => {
+    const carregarEntradasSaidasDaSemana = async () => {
+      try {
+        // Não sobrescrever em modo de edição
+        if (modoEdicao === "editar") return;
+        
+        // Se já houver entradas ou saídas carregadas, não sobrescrever
+        if ((entradas && entradas.length > 0) || (saidas && saidas.length > 0)) return;
+        
+        // Precisamos ter divisaoSelecionada carregada
+        if (!divisaoSelecionada) return;
+        
+        const semana = calcularSemanaOperacional();
+        const divisaoNormalizada = normalizeText(divisaoSelecionada.nome);
+        
+        // Buscar NOVO_ATIVOS da semana (entradas reais)
+        // Retornos de afastamento já são resolvidos automaticamente pelo sistema
+        const { data: deltasEntradas, error: errorEntradas } = await supabase
+          .from("deltas_pendentes")
+          .select("*")
+          .eq("tipo_delta", "NOVO_ATIVOS")
+          .eq("status", "PENDENTE")
+          .gte("created_at", semana.periodo_inicio.toISOString())
+          .lte("created_at", semana.periodo_fim.toISOString() + "T23:59:59");
+        
+        // Buscar SUMIU_ATIVOS da semana (possíveis saídas)
+        const { data: deltasSaidas, error: errorSaidas } = await supabase
+          .from("deltas_pendentes")
+          .select("*")
+          .eq("tipo_delta", "SUMIU_ATIVOS")
+          .eq("status", "PENDENTE")
+          .gte("created_at", semana.periodo_inicio.toISOString())
+          .lte("created_at", semana.periodo_fim.toISOString() + "T23:59:59");
+        
+        // Buscar NOVO_AFASTADOS do mesmo período para filtrar quem entrou em afastamento
+        const { data: novosAfastados, error: errorAfastados } = await supabase
+          .from("deltas_pendentes")
+          .select("registro_id")
+          .eq("tipo_delta", "NOVO_AFASTADOS")
+          .gte("created_at", semana.periodo_inicio.toISOString())
+          .lte("created_at", semana.periodo_fim.toISOString() + "T23:59:59");
+        
+        if (errorEntradas || errorSaidas || errorAfastados) {
+          console.error("[FormularioRelatorioSemanal] Erro ao carregar deltas:", errorEntradas || errorSaidas || errorAfastados);
+          return;
+        }
+        
+        // Criar Set de registro_ids que entraram em afastamento (não são saídas reais)
+        const registrosAfastados = new Set((novosAfastados || []).map(d => d.registro_id));
+        
+        // Filtrar entradas pela divisão normalizada
+        const entradasDivisao = (deltasEntradas || []).filter(d => 
+          normalizeText(d.divisao_texto) === divisaoNormalizada
+        );
+        
+        // Filtrar saídas: remover quem entrou em afastamento + filtrar por divisão
+        const saidasReais = (deltasSaidas || []).filter(d => 
+          normalizeText(d.divisao_texto) === divisaoNormalizada &&
+          !registrosAfastados.has(d.registro_id)
+        );
+        
+        // Mapear entradas para o formato do formulário
+        if (entradasDivisao.length > 0) {
+          const entradasMapeadas = entradasDivisao.map(d => ({
+            nome_colete: d.nome_colete,
+            data_entrada: (d.dados_adicionais as any)?.data_entrada || "",
+            motivo_entrada: "Novo",
+            possui_carro: false,
+            possui_moto: false,
+            nenhum: true,
+            origem: "delta",
+            delta_id: d.id
+          }));
+          setTeveEntradas(true);
+          setEntradas(entradasMapeadas);
+        }
+        
+        // Mapear saídas para o formato do formulário
+        if (saidasReais.length > 0) {
+          const saidasMapeadas = saidasReais.map(d => ({
+            integrante_id: "",
+            nome_colete: d.nome_colete,
+            data_saida: d.created_at?.split("T")[0] || "",
+            motivo_codigo: "",
+            justificativa: "",
+            tem_moto: false,
+            tem_carro: false,
+            origem: "delta",
+            delta_id: d.id
+          }));
+          setTeveSaidas(true);
+          setSaidas(saidasMapeadas);
+        }
+        
+        console.log("[FormularioRelatorioSemanal] Deltas carregados:", {
+          entradas: entradasDivisao.length,
+          saidas: saidasReais.length,
+          afastadosFiltrados: registrosAfastados.size
+        });
+        
+      } catch (error) {
+        console.error("[FormularioRelatorioSemanal] Erro ao carregar deltas:", error);
+      }
+    };
+    
+    carregarEntradasSaidasDaSemana();
+  }, [divisaoSelecionada, modoEdicao, entradas, saidas]);
+
   // Recarregar relatório existente quando divisão do relatório mudar
   useEffect(() => {
     if (!divisaoSelecionada?.id || !formularioId) return;
@@ -1083,8 +1199,15 @@ const FormularioRelatorioSemanal = () => {
             <div className="space-y-4">
               {entradas.map((entrada, idx) => (
                 <Card key={idx} className="p-4 space-y-3 bg-muted/50">
-                  <div className="flex justify_between items-start">
-                    <h4 className="text-sm font-medium">Entrada #{idx + 1}</h4>
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-medium">Entrada #{idx + 1}</h4>
+                      {entrada.origem === "delta" && (
+                        <span className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-0.5 rounded">
+                          Detectado na carga
+                        </span>
+                      )}
+                    </div>
                     <Button
                       type="button"
                       variant="ghost"
