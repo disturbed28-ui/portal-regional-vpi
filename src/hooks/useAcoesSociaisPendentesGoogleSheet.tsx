@@ -20,9 +20,91 @@ interface SheetRow {
   [key: string]: string;
 }
 
+interface RegistroMapeado {
+  data_acao: string | null;
+  tipo_acao: string;
+  escopo: string;
+  responsavel: string;
+  divisao: string;
+  regional: string;
+  descricao: string;
+}
+
 export type ConexaoStatus = 'idle' | 'testando' | 'conectado' | 'erro';
 
-// Função para normalizar texto (remover acentos e lowercase)
+// ============================================================================
+// MAPEAMENTO FLEXÍVEL DE COLUNAS (igual ao parser do Excel)
+// ============================================================================
+const COLUMN_MAPPING: Record<string, keyof RegistroMapeado> = {
+  // Data da ação (várias variações possíveis)
+  'carimbo de data/hora': 'data_acao',
+  'carimbo de datahora': 'data_acao',
+  'data da acao': 'data_acao',
+  'data da acao social': 'data_acao',
+  'data': 'data_acao',
+  'data_acao': 'data_acao',
+  'timestamp': 'data_acao',
+  
+  // Regional (várias variações)
+  'qual a sua regional': 'regional',
+  'regional': 'regional',
+  'qual regional': 'regional',
+  'a qual regional voce pertence': 'regional',
+  'sua regional': 'regional',
+  'regional_texto': 'regional',
+  
+  // Divisão (várias variações)
+  'divisao': 'divisao',
+  'qual a sua divisao': 'divisao',
+  'sua divisao': 'divisao',
+  'divisao_texto': 'divisao',
+  
+  // Responsável (várias variações)
+  'nome de colete do responsavel pela acao social': 'responsavel',
+  'nome de colete do responsavel': 'responsavel',
+  'nome do responsavel': 'responsavel',
+  'responsavel': 'responsavel',
+  'nome de colete': 'responsavel',
+  'responsavel_nome_colete': 'responsavel',
+  'colete': 'responsavel',
+  
+  // Tipo de ação (várias variações)
+  'tipo de acao social': 'tipo_acao',
+  'tipo de acao': 'tipo_acao',
+  'tipo': 'tipo_acao',
+  'tipo_acao': 'tipo_acao',
+  'qual tipo de acao social': 'tipo_acao',
+  
+  // Escopo (várias variações)
+  'escopo da acao social': 'escopo',
+  'escopo da acao': 'escopo',
+  'escopo': 'escopo',
+  'acao interna ou externa': 'escopo',
+  'interna ou externa': 'escopo',
+  'tipo de escopo': 'escopo',
+  
+  // Descrição (várias variações)
+  'descricao da acao social': 'descricao',
+  'descricao da acao': 'descricao',
+  'descricao': 'descricao',
+  'detalhes': 'descricao',
+  'observacoes': 'descricao',
+  'obs': 'descricao',
+};
+
+// Função para normalizar header (remover acentos, caracteres especiais, lowercase)
+const normalizeHeader = (header: string): string => {
+  if (!header) return "";
+  return header
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Remove acentos
+    .toLowerCase()
+    .replace(/[:\?\!\.\,\;\(\)\"\']/g, "") // Remove pontuação
+    .replace(/\s+/g, " ") // Múltiplos espaços -> um espaço
+    .trim();
+};
+
+// Função para normalizar texto genérico
 const normalizeText = (text: string): string => {
   if (!text) return "";
   return text
@@ -45,6 +127,52 @@ const normalizeRegionalText = (text: string): string => {
     .replace(/\bii\b/g, "2")
     .replace(/\bi\b/g, "1")
     .trim();
+};
+
+// Função para mapear uma row para registro normalizado usando COLUMN_MAPPING
+const mapRowToRegistro = (row: SheetRow, debugFirstRow = false): RegistroMapeado => {
+  const resultado: RegistroMapeado = {
+    data_acao: null,
+    tipo_acao: "",
+    escopo: "",
+    responsavel: "",
+    divisao: "",
+    regional: "",
+    descricao: "",
+  };
+
+  const headersEncontrados: string[] = [];
+  const headersMapeados: string[] = [];
+  const headersNaoMapeados: string[] = [];
+
+  for (const [rawHeader, value] of Object.entries(row)) {
+    const normalizedHeader = normalizeHeader(rawHeader);
+    headersEncontrados.push(`"${rawHeader}" -> "${normalizedHeader}"`);
+    
+    const mappedField = COLUMN_MAPPING[normalizedHeader];
+    
+    if (mappedField && value) {
+      headersMapeados.push(`${normalizedHeader} => ${mappedField}`);
+      
+      // Para data_acao, já vamos parsear depois
+      if (mappedField === 'data_acao') {
+        resultado.data_acao = value;
+      } else {
+        resultado[mappedField] = String(value);
+      }
+    } else if (!mappedField && value) {
+      headersNaoMapeados.push(normalizedHeader);
+    }
+  }
+
+  // Log apenas para a primeira row (debug)
+  if (debugFirstRow) {
+    console.log("📊 [Google Sheet] Headers encontrados:", headersEncontrados);
+    console.log("✅ [Google Sheet] Headers mapeados:", headersMapeados);
+    console.log("⚠️ [Google Sheet] Headers não mapeados:", headersNaoMapeados);
+  }
+
+  return resultado;
 };
 
 // Função para gerar hash de deduplicação (mesmo algoritmo do backend com btoa)
@@ -110,9 +238,9 @@ const parseExcelDate = (value: any): string | null => {
         month = p1.padStart(2, "0");
         day = p2.padStart(2, "0");
       } else {
-        // Ambíguo - assumir MM/DD/YYYY (padrão Google Forms)
-        month = p1.padStart(2, "0");
-        day = p2.padStart(2, "0");
+        // Ambíguo - assumir DD/MM/YYYY (padrão brasileiro)
+        day = p1.padStart(2, "0");
+        month = p2.padStart(2, "0");
       }
       
       return `${year}-${month}-${day}`;
@@ -217,15 +345,33 @@ export const useAcoesSociaisPendentesGoogleSheet = (
       setConexaoErro(null);
 
       const rows: SheetRow[] = sheetResponse.data;
+      
+      console.log(`📊 [Google Sheet] Total de linhas recebidas: ${rows.length}`);
 
-      // 2. Filtrar por regional (usando normalização robusta)
-      const normalizedRegionalFilter = normalizeRegionalText(regionalTexto);
-      const acoesDaRegional = rows.filter((row) => {
-        const rowRegional = row["Regional"] || row["regional"] || "";
-        const normalizedRowRegional = normalizeRegionalText(rowRegional);
-        return normalizedRowRegional.includes(normalizedRegionalFilter) || 
-               normalizedRegionalFilter.includes(normalizedRowRegional);
+      // 2. Mapear todas as linhas usando o mapeamento flexível
+      const registrosMapeados = rows.map((row, index) => {
+        const mapeado = mapRowToRegistro(row, index === 0); // Debug só na primeira linha
+        return {
+          ...mapeado,
+          data_acao_parsed: parseExcelDate(mapeado.data_acao),
+        };
       });
+
+      // Log de regionais encontradas para debug
+      const regionaisEncontradas = new Set(registrosMapeados.map(r => r.regional).filter(Boolean));
+      console.log(`📊 [Google Sheet] Regionais encontradas na planilha:`, Array.from(regionaisEncontradas));
+      console.log(`📊 [Google Sheet] Buscando por regional: "${regionalTexto}" (normalizado: "${normalizeRegionalText(regionalTexto)}")`);
+
+      // 3. Filtrar por regional (usando normalização robusta)
+      const normalizedRegionalFilter = normalizeRegionalText(regionalTexto);
+      const acoesDaRegional = registrosMapeados.filter((registro) => {
+        const normalizedRowRegional = normalizeRegionalText(registro.regional);
+        const match = normalizedRowRegional.includes(normalizedRegionalFilter) || 
+               normalizedRegionalFilter.includes(normalizedRowRegional);
+        return match;
+      });
+
+      console.log(`📊 [Google Sheet] Ações encontradas para a regional: ${acoesDaRegional.length}`);
 
       setTotalNaPlanilha(acoesDaRegional.length);
 
@@ -236,7 +382,7 @@ export const useAcoesSociaisPendentesGoogleSheet = (
         return;
       }
 
-      // 3. Buscar hashes existentes no banco
+      // 4. Buscar hashes existentes no banco
       const { data: hashesExistentes, error: hashError } = await supabase
         .from("acoes_sociais_registros")
         .select("hash_deduplicacao")
@@ -250,36 +396,17 @@ export const useAcoesSociaisPendentesGoogleSheet = (
         (hashesExistentes || []).map((h) => h.hash_deduplicacao)
       );
 
-      // 4. Processar cada linha e verificar se já foi importada
+      // 5. Processar cada registro mapeado e verificar se já foi importada
       const pendentes: AcaoSocialPendente[] = [];
       let jaImportadas = 0;
 
-      for (const row of acoesDaRegional) {
-        const dataAcao = parseExcelDate(
-          row["Carimbo de data/hora"] || row["Data da Ação"] || row["data_acao"]
-        );
-        const responsavel =
-          row["Nome de Colete do Responsável pela Ação Social"] ||
-          row["Responsável"] ||
-          row["responsavel"] ||
-          "";
-        const divisao =
-          row["Divisão"] || row["divisao"] || "";
-        const tipoAcao =
-          row["Tipo de Ação Social"] ||
-          row["Tipo"] ||
-          row["tipo_acao"] ||
-          "";
-        const escopo =
-          row["Escopo da Ação Social"] ||
-          row["Escopo"] ||
-          row["escopo"] ||
-          "";
-        const descricao =
-          row["Descrição da Ação Social"] ||
-          row["Descrição"] ||
-          row["descricao"] ||
-          "";
+      for (const registro of acoesDaRegional) {
+        const dataAcao = registro.data_acao_parsed;
+        const responsavel = registro.responsavel;
+        const divisao = registro.divisao;
+        const tipoAcao = registro.tipo_acao;
+        const escopo = registro.escopo;
+        const descricao = registro.descricao;
 
         // Validar campos obrigatórios (usando mesma lógica do backend)
         if (!dataAcao || !isValidResponsavel(responsavel)) continue;
@@ -301,6 +428,8 @@ export const useAcoesSociaisPendentesGoogleSheet = (
           });
         }
       }
+
+      console.log(`📊 [Google Sheet] Resultado: ${pendentes.length} pendentes, ${jaImportadas} já importadas`);
 
       setTotalJaImportadas(jaImportadas);
       setAcoesPendentes(pendentes);
