@@ -47,7 +47,44 @@ export default function AcoesSociais() {
   const [mostrarDetalhes, setMostrarDetalhes] = useState(false);
   const [divisoesExpandidas, setDivisoesExpandidas] = useState<Set<string>>(new Set());
 
-  // Proteção de acesso
+  // TODOS os useMemo ANTES dos early returns (regra de hooks)
+  const registrosFiltrados = useMemo(() => {
+    if (!registros) return [];
+    let filtrados = registros;
+    if (filtroStatusAcao) {
+      filtrados = filtrados.filter(r => (r.status_acao || 'concluida') === filtroStatusAcao);
+    }
+    return filtrados;
+  }, [registros, filtroStatusAcao]);
+
+  const contagens = useMemo(() => ({
+    todos: registros?.length || 0,
+    em_andamento: registros?.filter(r => r.status_acao === 'em_andamento').length || 0,
+    concluida: registros?.filter(r => !r.status_acao || r.status_acao === 'concluida').length || 0,
+  }), [registros]);
+
+  const registrosAgrupados = useMemo(() => {
+    const grupos: Record<string, any[]> = {};
+    
+    registrosFiltrados.forEach(registro => {
+      const divisao = registro.divisao_relatorio_texto || 'Sem Divisão';
+      if (!grupos[divisao]) {
+        grupos[divisao] = [];
+      }
+      grupos[divisao].push(registro);
+    });
+
+    return Object.entries(grupos).sort(([a], [b]) => a.localeCompare(b));
+  }, [registrosFiltrados]);
+
+  // TODOS os useEffect ANTES dos early returns
+  useEffect(() => {
+    if (registrosAgrupados.length > 0 && registrosAgrupados.length <= 3 && divisoesExpandidas.size === 0) {
+      setDivisoesExpandidas(new Set(registrosAgrupados.map(([divisao]) => divisao)));
+    }
+  }, [registrosAgrupados]);
+
+  // Proteção de acesso - AGORA os early returns (depois de todos os hooks)
   if (loadingAccess || loadingRoles) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -64,6 +101,7 @@ export default function AcoesSociais() {
     return null;
   }
 
+  // Funções auxiliares (não são hooks, podem ficar depois dos returns)
   const handleVerDetalhes = (registro: any) => {
     setRegistroSelecionado(registro);
     setMostrarDetalhes(true);
@@ -74,6 +112,23 @@ export default function AcoesSociais() {
     setDataFim(new Date());
     setDivisaoFiltro('todas');
     setFiltroStatusAcao(null);
+  };
+
+  const toggleDivisao = (divisao: string) => {
+    setDivisoesExpandidas(prev => {
+      const novo = new Set(prev);
+      if (novo.has(divisao)) {
+        novo.delete(divisao);
+      } else {
+        novo.add(divisao);
+      }
+      return novo;
+    });
+  };
+
+  const handleExportarExcel = () => {
+    if (registrosFiltrados.length === 0) return;
+    exportAcoesSociaisToExcel(registrosFiltrados);
   };
 
   const getStatusAcaoBadge = (status: string | null) => {
@@ -101,63 +156,6 @@ export default function AcoesSociais() {
         Interna
       </Badge>
     );
-  };
-
-  // Aplicar filtro de status da ação
-  const registrosFiltrados = useMemo(() => {
-    let filtrados = registros;
-    if (filtroStatusAcao) {
-      filtrados = filtrados.filter(r => (r.status_acao || 'concluida') === filtroStatusAcao);
-    }
-    return filtrados;
-  }, [registros, filtroStatusAcao]);
-
-  // Contagens para os filtros de status
-  const contagens = useMemo(() => ({
-    todos: registros.length,
-    em_andamento: registros.filter(r => r.status_acao === 'em_andamento').length,
-    concluida: registros.filter(r => !r.status_acao || r.status_acao === 'concluida').length,
-  }), [registros]);
-
-  // Agrupar por divisão
-  const registrosAgrupados = useMemo(() => {
-    const grupos: Record<string, any[]> = {};
-    
-    registrosFiltrados.forEach(registro => {
-      const divisao = registro.divisao_relatorio_texto || 'Sem Divisão';
-      if (!grupos[divisao]) {
-        grupos[divisao] = [];
-      }
-      grupos[divisao].push(registro);
-    });
-
-    // Ordenar divisões alfabeticamente
-    return Object.entries(grupos).sort(([a], [b]) => a.localeCompare(b));
-  }, [registrosFiltrados]);
-
-  // Auto-expandir se poucas divisões
-  const toggleDivisao = (divisao: string) => {
-    setDivisoesExpandidas(prev => {
-      const novo = new Set(prev);
-      if (novo.has(divisao)) {
-        novo.delete(divisao);
-      } else {
-        novo.add(divisao);
-      }
-      return novo;
-    });
-  };
-
-  // Expandir todas se <= 3 divisões na primeira renderização
-  useEffect(() => {
-    if (registrosAgrupados.length > 0 && registrosAgrupados.length <= 3 && divisoesExpandidas.size === 0) {
-      setDivisoesExpandidas(new Set(registrosAgrupados.map(([divisao]) => divisao)));
-    }
-  }, [registrosAgrupados]);
-
-  const handleExportarExcel = () => {
-    if (registrosFiltrados.length === 0) return;
-    exportAcoesSociaisToExcel(registrosFiltrados);
   };
 
   return (
