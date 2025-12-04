@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, ArrowLeft, Upload, FileSpreadsheet, CheckCircle, XCircle, AlertTriangle, Eye, Clock, Settings, Cloud, RefreshCw, Copy, Loader2, Link2 } from "lucide-react";
+import { Heart, ArrowLeft, Upload, FileSpreadsheet, CheckCircle, XCircle, AlertTriangle, Eye, Clock, Settings, Cloud, RefreshCw, Copy, Loader2, Link2, CalendarClock } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
@@ -39,6 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const SERVICE_ACCOUNT_EMAIL = "relatorio-cmd@cmd5-9ae89.iam.gserviceaccount.com";
 
@@ -87,6 +88,7 @@ const AdminGestaoAcoesSociais = () => {
   const [regionais, setRegionais] = useState<{id: string, nome: string}[]>([]);
   const [regionalSelecionada, setRegionalSelecionada] = useState<string>('');
   const [regionalId, setRegionalId] = useState<string | undefined>(undefined);
+  const [isCargaPassivo, setIsCargaPassivo] = useState(false);
 
   // Estados de solicitações de exclusão
   const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>('pendente');
@@ -558,9 +560,25 @@ const AdminGestaoAcoesSociais = () => {
                         </div>
                       </ScrollArea>
 
+                      {/* Checkbox para carga de passivo */}
+                      <div className="flex items-center space-x-2 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                        <Checkbox
+                          id="carga-passivo"
+                          checked={isCargaPassivo}
+                          onCheckedChange={(checked) => setIsCargaPassivo(!!checked)}
+                        />
+                        <label
+                          htmlFor="carga-passivo"
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex items-center gap-2"
+                        >
+                          <CalendarClock className="h-4 w-4 text-amber-600" />
+                          <span>Carga de passivo: marcar ações com mais de 1 semana como já reportadas</span>
+                        </label>
+                      </div>
+
                       {/* Botão de importação */}
                       <Button
-                        onClick={() => user?.id && importarTodas(user.id, regionalId)}
+                        onClick={() => user?.id && importarTodas(user.id, regionalId, isCargaPassivo)}
                         disabled={importandoPendentes}
                         className="w-full"
                       >

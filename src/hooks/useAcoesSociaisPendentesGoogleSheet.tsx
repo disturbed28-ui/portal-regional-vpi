@@ -457,7 +457,7 @@ export const useAcoesSociaisPendentesGoogleSheet = (
   }, [buscarAcoesPendentes]);
 
   // Função para importar todas as ações pendentes
-  const importarTodas = async (adminProfileId: string, regionalId?: string) => {
+  const importarTodas = async (adminProfileId: string, regionalId?: string, isCargaPassivo: boolean = false) => {
     if (acoesPendentes.length === 0) return;
 
     setImportando(true);
@@ -474,6 +474,8 @@ export const useAcoesSociaisPendentesGoogleSheet = (
         descricao: acao.descricao,
       }));
 
+      console.log(`[importarTodas] Enviando ${dadosParaImportar.length} ações. isCargaPassivo: ${isCargaPassivo}`);
+
       const { data, error } = await supabase.functions.invoke(
         "import-acoes-sociais",
         {
@@ -482,6 +484,7 @@ export const useAcoesSociaisPendentesGoogleSheet = (
             admin_profile_id: adminProfileId,
             regional_id: regionalId,
             regional_texto: regionalTexto,
+            is_carga_passivo: isCargaPassivo,
           },
         }
       );
