@@ -757,21 +757,20 @@ const FormularioRelatorioSemanal = () => {
         const divisaoNormalizada = normalizeText(divisaoSelecionada.nome);
         
         // Buscar NOVO_ATIVOS da semana (entradas reais)
-        // Retornos de afastamento já são resolvidos automaticamente pelo sistema
+        // Inclui PENDENTE e RESOLVIDO - retornos de afastamento já são filtrados pelo sistema
         const { data: deltasEntradas, error: errorEntradas } = await supabase
           .from("deltas_pendentes")
           .select("*")
           .eq("tipo_delta", "NOVO_ATIVOS")
-          .eq("status", "PENDENTE")
           .gte("created_at", semana.periodo_inicio.toISOString())
           .lte("created_at", semana.periodo_fim.toISOString() + "T23:59:59");
         
         // Buscar SUMIU_ATIVOS da semana (possíveis saídas)
+        // Inclui PENDENTE e RESOLVIDO para não perder saídas já confirmadas
         const { data: deltasSaidas, error: errorSaidas } = await supabase
           .from("deltas_pendentes")
           .select("*")
           .eq("tipo_delta", "SUMIU_ATIVOS")
-          .eq("status", "PENDENTE")
           .gte("created_at", semana.periodo_inicio.toISOString())
           .lte("created_at", semana.periodo_fim.toISOString() + "T23:59:59");
         
