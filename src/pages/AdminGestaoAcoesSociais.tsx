@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, ArrowLeft, Upload, FileSpreadsheet, CheckCircle, XCircle, AlertTriangle, Eye, Clock, Settings } from "lucide-react";
+import { Heart, ArrowLeft, Upload, FileSpreadsheet, CheckCircle, XCircle, AlertTriangle, Eye, Clock, Settings, Cloud, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useSolicitacoesExclusaoAcoesSociais } from "@/hooks/useSolicitacoesExclusaoAcoesSociais";
 import { useProcessarSolicitacaoExclusaoAcaoSocial } from "@/hooks/useProcessarSolicitacaoExclusaoAcaoSocial";
 import { useImportarAcoesSociais } from "@/hooks/useImportarAcoesSociais";
+import { useAcoesSociaisPendentesGoogleSheet } from "@/hooks/useAcoesSociaisPendentesGoogleSheet";
 import { parseAcoesSociaisExcel } from "@/lib/excelAcoesSociaisParser";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -68,6 +69,17 @@ const AdminGestaoAcoesSociais = () => {
   const { solicitacoes, loading: loadingSolicitacoes, refetch } = useSolicitacoesExclusaoAcoesSociais(statusFiltro);
   const processarMutation = useProcessarSolicitacaoExclusaoAcaoSocial();
   const importarMutation = useImportarAcoesSociais();
+  
+  // Hook para buscar ações pendentes do Google Sheets
+  const {
+    acoesPendentes,
+    totalNaPlanilha,
+    totalJaImportadas,
+    loading: loadingPendentes,
+    importarTodas,
+    importando: importandoPendentes,
+    refetch: refetchPendentes,
+  } = useAcoesSociaisPendentesGoogleSheet(regionalSelecionada, !!regionalSelecionada);
 
   const [solicitacaoSelecionada, setSolicitacaoSelecionada] = useState<any>(null);
   const [mostrarDialog, setMostrarDialog] = useState(false);
@@ -285,6 +297,104 @@ const AdminGestaoAcoesSociais = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Ações Pendentes do Google Sheets */}
+            {regionalSelecionada && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Cloud className="h-5 w-5" />
+                    Ações Pendentes (Google Sheets)
+                  </CardTitle>
+                  <CardDescription>
+                    Ações da regional {regionalSelecionada} que ainda não foram importadas
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loadingPendentes ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3"></div>
+                      <span className="text-muted-foreground">Buscando na planilha...</span>
+                    </div>
+                  ) : acoesPendentes.length === 0 ? (
+                    <div className="text-center py-8">
+                      <CheckCircle className="h-12 w-12 mx-auto text-green-500 mb-2" />
+                      <p className="font-medium">Sem ações pendentes para importar</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {totalJaImportadas > 0 
+                          ? `Todas as ${totalJaImportadas} ações desta regional já estão no sistema`
+                          : "Nenhuma ação encontrada para esta regional na planilha"}
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-4"
+                        onClick={() => refetchPendentes()}
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Verificar novamente
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Resumo */}
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="p-3 bg-muted/50 rounded-lg text-center">
+                          <p className="text-2xl font-bold">{totalNaPlanilha}</p>
+                          <p className="text-xs text-muted-foreground">Total na planilha</p>
+                        </div>
+                        <div className="p-3 bg-green-500/10 rounded-lg text-center">
+                          <p className="text-2xl font-bold text-green-600">{totalJaImportadas}</p>
+                          <p className="text-xs text-muted-foreground">Já importadas</p>
+                        </div>
+                        <div className="p-3 bg-yellow-500/10 rounded-lg text-center">
+                          <p className="text-2xl font-bold text-yellow-600">{acoesPendentes.length}</p>
+                          <p className="text-xs text-muted-foreground">Pendentes</p>
+                        </div>
+                      </div>
+
+                      {/* Lista prévia */}
+                      <ScrollArea className="h-[200px] border rounded-lg">
+                        <div className="p-2 space-y-2">
+                          {acoesPendentes.slice(0, 5).map((acao, idx) => (
+                            <div key={idx} className="p-2 bg-muted/30 rounded border-l-2 border-yellow-500">
+                              <p className="font-medium text-sm">{acao.responsavel}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {acao.data_acao} • {acao.tipo_acao || "Sem tipo"} • {acao.divisao || "Sem divisão"}
+                              </p>
+                            </div>
+                          ))}
+                          {acoesPendentes.length > 5 && (
+                            <p className="text-sm text-muted-foreground p-2 text-center">
+                              ... e mais {acoesPendentes.length - 5} ações pendentes
+                            </p>
+                          )}
+                        </div>
+                      </ScrollArea>
+
+                      {/* Botão de importação */}
+                      <Button
+                        onClick={() => user?.id && importarTodas(user.id, regionalId)}
+                        disabled={importandoPendentes}
+                        className="w-full"
+                      >
+                        {importandoPendentes ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div>
+                            Importando...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-4 w-4 mr-2" />
+                            Importar {acoesPendentes.length} ações
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Upload de Arquivo */}
             <Card>
