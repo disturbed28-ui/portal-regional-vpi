@@ -571,6 +571,7 @@ const FormularioRelatorioSemanal = () => {
     const carregarEstatisticas = async () => {
       const divisaoNormalizada = normalizeText(divisaoSelecionada.nome);
       
+      // Buscar integrantes ativos
       const { data: integrantesDivisao, error } = await supabase
         .from('integrantes_portal')
         .select('*')
@@ -581,12 +582,45 @@ const FormularioRelatorioSemanal = () => {
         return;
       }
 
+      // Buscar afastados ativos
+      const { data: afastados } = await supabase
+        .from('integrantes_afastados')
+        .select('*')
+        .eq('ativo', true);
+
+      // Buscar devedores
+      const { data: devedores } = await supabase
+        .from('vw_devedores_ativos')
+        .select('*');
+
       // Filtrar por divisão usando normalização
       const integrantesFiltrados = integrantesDivisao?.filter(i => 
         normalizeText(i.divisao_texto) === divisaoNormalizada
       ) || [];
 
+      const afastadosFiltrados = afastados?.filter(a => 
+        normalizeText(a.divisao_texto) === divisaoNormalizada
+      ) || [];
+
+      const devedoresFiltrados = devedores?.filter(d => 
+        normalizeText(d.divisao_texto) === divisaoNormalizada
+      ) || [];
+
+      // Separar por grau/status
+      const estagiarios = integrantesFiltrados.filter(i => 
+        i.grau === 'I' || i.cargo_estagio?.toLowerCase().includes('estagiário') || i.cargo_estagio?.toLowerCase().includes('estagiario')
+      );
+
       const stats = {
+        // Campos agregados para o modal de detalhes
+        total_integrantes: integrantesFiltrados.length,
+        total_aptos: integrantesFiltrados.filter(i => i.grau && i.grau !== 'I').length,
+        total_estagiarios: estagiarios.length,
+        total_afastados: afastadosFiltrados.length,
+        total_devedores: devedoresFiltrados.length,
+        total_veiculos: integrantesFiltrados.filter(i => i.tem_moto || i.tem_carro).length,
+        
+        // Campos detalhados existentes
         total_caveiras: integrantesFiltrados.filter(i => i.caveira).length,
         total_suplentes_caveira: integrantesFiltrados.filter(i => i.caveira_suplente).length,
         total_batedores: integrantesFiltrados.filter(i => i.batedor).length,
@@ -596,6 +630,14 @@ const FormularioRelatorioSemanal = () => {
         total_tem_carro: integrantesFiltrados.filter(i => i.tem_carro).length,
         total_sem_veiculo: integrantesFiltrados.filter(i => !i.tem_moto && !i.tem_carro).length,
         total_combate_insano: integrantesFiltrados.filter(i => i.combate_insano).length,
+        
+        // Lista de estagiários com detalhes
+        estagiarios: estagiarios.map(i => ({
+          nome_colete: i.nome_colete,
+          estagio: i.cargo_estagio || 'Estagiário'
+        })),
+        
+        // Manter compatibilidade com campo antigo
         estagio: integrantesFiltrados
           .filter(i => i.cargo_estagio && normalizeText(i.cargo_estagio) !== "SEM CARGO")
           .map(i => ({
