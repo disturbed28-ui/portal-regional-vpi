@@ -54,6 +54,7 @@ export type Database = {
         Row: {
           ativo: boolean | null
           created_at: string | null
+          email_base: string | null
           email_formulario: string
           id: string
           regional_texto: string
@@ -62,6 +63,7 @@ export type Database = {
         Insert: {
           ativo?: boolean | null
           created_at?: string | null
+          email_base?: string | null
           email_formulario: string
           id?: string
           regional_texto: string
@@ -70,6 +72,7 @@ export type Database = {
         Update: {
           ativo?: boolean | null
           created_at?: string | null
+          email_base?: string | null
           email_formulario?: string
           id?: string
           regional_texto?: string
@@ -90,8 +93,12 @@ export type Database = {
           google_form_enviado_em: string | null
           google_form_enviado_por: string | null
           google_form_status: string | null
+          hash_deduplicacao: string | null
           id: string
+          importado_em: string | null
+          importado_por: string | null
           integrante_portal_id: string | null
+          origem_registro: string | null
           profile_id: string
           regional_relatorio_id: string | null
           regional_relatorio_texto: string
@@ -100,6 +107,7 @@ export type Database = {
           responsavel_divisao_texto: string
           responsavel_nome_colete: string
           responsavel_regional_texto: string
+          status_acao: string | null
           status_registro: string | null
           tipo_acao_id: string | null
           tipo_acao_nome_snapshot: string
@@ -117,8 +125,12 @@ export type Database = {
           google_form_enviado_em?: string | null
           google_form_enviado_por?: string | null
           google_form_status?: string | null
+          hash_deduplicacao?: string | null
           id?: string
+          importado_em?: string | null
+          importado_por?: string | null
           integrante_portal_id?: string | null
+          origem_registro?: string | null
           profile_id: string
           regional_relatorio_id?: string | null
           regional_relatorio_texto: string
@@ -127,6 +139,7 @@ export type Database = {
           responsavel_divisao_texto: string
           responsavel_nome_colete: string
           responsavel_regional_texto: string
+          status_acao?: string | null
           status_registro?: string | null
           tipo_acao_id?: string | null
           tipo_acao_nome_snapshot: string
@@ -144,8 +157,12 @@ export type Database = {
           google_form_enviado_em?: string | null
           google_form_enviado_por?: string | null
           google_form_status?: string | null
+          hash_deduplicacao?: string | null
           id?: string
+          importado_em?: string | null
+          importado_por?: string | null
           integrante_portal_id?: string | null
+          origem_registro?: string | null
           profile_id?: string
           regional_relatorio_id?: string | null
           regional_relatorio_texto?: string
@@ -154,6 +171,7 @@ export type Database = {
           responsavel_divisao_texto?: string
           responsavel_nome_colete?: string
           responsavel_regional_texto?: string
+          status_acao?: string | null
           status_registro?: string | null
           tipo_acao_id?: string | null
           tipo_acao_nome_snapshot?: string
