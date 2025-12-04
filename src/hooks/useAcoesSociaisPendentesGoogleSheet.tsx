@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-// ID da planilha de ações sociais
-const SPREADSHEET_ID = "1Fb1Sby_TmqNjqGmI92RLIxqJsXP3LHPp7tLJbo5olwo";
+// ID padrão da planilha de ações sociais (usado como fallback)
+const DEFAULT_SPREADSHEET_ID = "1Fb1Sby_TmqNjqGmI92RLIxqJsXP3LHPp7tLJbo5olwo";
 
 interface AcaoSocialPendente {
   data_acao: string;
@@ -19,6 +19,8 @@ interface AcaoSocialPendente {
 interface SheetRow {
   [key: string]: string;
 }
+
+export type ConexaoStatus = 'idle' | 'testando' | 'conectado' | 'erro';
 
 // Função para normalizar texto (remover acentos e lowercase)
 const normalizeText = (text: string): string => {
@@ -122,7 +124,8 @@ const parseExcelDate = (value: any): string | null => {
 
 export const useAcoesSociaisPendentesGoogleSheet = (
   regionalTexto: string,
-  enabled: boolean
+  enabled: boolean,
+  spreadsheetId?: string
 ) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -131,6 +134,52 @@ export const useAcoesSociaisPendentesGoogleSheet = (
   const [totalNaPlanilha, setTotalNaPlanilha] = useState(0);
   const [totalJaImportadas, setTotalJaImportadas] = useState(0);
   const [importando, setImportando] = useState(false);
+  const [conexaoStatus, setConexaoStatus] = useState<ConexaoStatus>('idle');
+  const [conexaoErro, setConexaoErro] = useState<string | null>(null);
+
+  const activeSpreadsheetId = spreadsheetId || DEFAULT_SPREADSHEET_ID;
+
+  // Função para testar conexão com a planilha
+  const testarConexao = useCallback(async (): Promise<boolean> => {
+    if (!activeSpreadsheetId) {
+      setConexaoStatus('erro');
+      setConexaoErro('ID da planilha não configurado');
+      return false;
+    }
+
+    setConexaoStatus('testando');
+    setConexaoErro(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "read-google-sheet",
+        {
+          body: {
+            spreadsheetId: activeSpreadsheetId,
+            range: "A1:A1", // Leitura mínima para testar
+            includeHeaders: false,
+          },
+        }
+      );
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (!data?.success) {
+        throw new Error(data?.error || 'Erro desconhecido ao conectar');
+      }
+
+      setConexaoStatus('conectado');
+      setConexaoErro(null);
+      return true;
+    } catch (err: any) {
+      console.error("Erro ao testar conexão:", err);
+      setConexaoStatus('erro');
+      setConexaoErro(err.message || 'Falha na conexão');
+      return false;
+    }
+  }, [activeSpreadsheetId]);
 
   const buscarAcoesPendentes = useCallback(async () => {
     if (!enabled || !regionalTexto) {
@@ -149,7 +198,7 @@ export const useAcoesSociaisPendentesGoogleSheet = (
         "read-google-sheet",
         {
           body: {
-            spreadsheetId: SPREADSHEET_ID,
+            spreadsheetId: activeSpreadsheetId,
             includeHeaders: true,
           },
         }
@@ -162,6 +211,10 @@ export const useAcoesSociaisPendentesGoogleSheet = (
       if (!sheetResponse?.success || !sheetResponse?.data) {
         throw new Error("Resposta inválida da planilha");
       }
+
+      // Atualizar status da conexão como sucesso
+      setConexaoStatus('conectado');
+      setConexaoErro(null);
 
       const rows: SheetRow[] = sheetResponse.data;
 
@@ -254,6 +307,8 @@ export const useAcoesSociaisPendentesGoogleSheet = (
     } catch (err: any) {
       console.error("Erro ao buscar ações pendentes:", err);
       setError(err.message);
+      setConexaoStatus('erro');
+      setConexaoErro(err.message);
       toast({
         title: "Erro ao buscar ações",
         description: err.message,
@@ -262,7 +317,7 @@ export const useAcoesSociaisPendentesGoogleSheet = (
     } finally {
       setLoading(false);
     }
-  }, [enabled, regionalTexto, toast]);
+  }, [enabled, regionalTexto, activeSpreadsheetId, toast]);
 
   // Buscar quando regional mudar
   useEffect(() => {
@@ -331,5 +386,8 @@ export const useAcoesSociaisPendentesGoogleSheet = (
     importarTodas,
     importando,
     refetch: buscarAcoesPendentes,
+    conexaoStatus,
+    conexaoErro,
+    testarConexao,
   };
 };

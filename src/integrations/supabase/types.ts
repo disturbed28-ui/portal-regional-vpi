@@ -1779,6 +1779,7 @@ export type Database = {
           id: string
           updated_at: string | null
           valor: boolean
+          valor_texto: string | null
         }
         Insert: {
           chave: string
@@ -1787,6 +1788,7 @@ export type Database = {
           id?: string
           updated_at?: string | null
           valor?: boolean
+          valor_texto?: string | null
         }
         Update: {
           chave?: string
@@ -1795,6 +1797,7 @@ export type Database = {
           id?: string
           updated_at?: string | null
           valor?: boolean
+          valor_texto?: string | null
         }
         Relationships: []
       }

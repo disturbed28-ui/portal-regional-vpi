@@ -6,6 +6,7 @@ interface SystemSetting {
   id: string;
   chave: string;
   valor: boolean;
+  valor_texto: string | null;
   descricao: string | null;
   created_at: string;
   updated_at: string;
@@ -62,11 +63,43 @@ export function useSystemSettings() {
     return getSetting(chave)?.valor ?? true;
   };
 
+  const getSettingTextValue = (chave: string): string | null => {
+    return getSetting(chave)?.valor_texto ?? null;
+  };
+
+  const updateSettingText = useMutation({
+    mutationFn: async ({ chave, valor_texto }: { chave: string; valor_texto: string }) => {
+      const { error } = await supabase
+        .from('system_settings')
+        .update({ valor_texto, updated_at: new Date().toISOString() })
+        .eq('chave', chave);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['system-settings'] });
+      toast({
+        title: "Configuração atualizada",
+        description: "As alterações foram salvas com sucesso",
+      });
+    },
+    onError: (error) => {
+      console.error('Erro ao atualizar configuração:', error);
+      toast({
+        title: "Erro ao atualizar",
+        description: "Não foi possível salvar a configuração",
+        variant: "destructive",
+      });
+    }
+  });
+
   return {
     settings,
     isLoading,
     updateSetting,
+    updateSettingText,
     getSetting,
     getSettingValue,
+    getSettingTextValue,
   };
 }

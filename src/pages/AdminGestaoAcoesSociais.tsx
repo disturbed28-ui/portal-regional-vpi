@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, ArrowLeft, Upload, FileSpreadsheet, CheckCircle, XCircle, AlertTriangle, Eye, Clock, Settings, Cloud, RefreshCw } from "lucide-react";
+import { Heart, ArrowLeft, Upload, FileSpreadsheet, CheckCircle, XCircle, AlertTriangle, Eye, Clock, Settings, Cloud, RefreshCw, Copy, Loader2, Link2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,7 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useSolicitacoesExclusaoAcoesSociais } from "@/hooks/useSolicitacoesExclusaoAcoesSociais";
 import { useProcessarSolicitacaoExclusaoAcaoSocial } from "@/hooks/useProcessarSolicitacaoExclusaoAcaoSocial";
 import { useImportarAcoesSociais } from "@/hooks/useImportarAcoesSociais";
-import { useAcoesSociaisPendentesGoogleSheet } from "@/hooks/useAcoesSociaisPendentesGoogleSheet";
+import { useAcoesSociaisPendentesGoogleSheet, ConexaoStatus } from "@/hooks/useAcoesSociaisPendentesGoogleSheet";
+import { useSystemSettings } from "@/hooks/useSystemSettings";
 import { parseAcoesSociaisExcel } from "@/lib/excelAcoesSociaisParser";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -37,6 +39,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+const SERVICE_ACCOUNT_EMAIL = "relatorio-cmd@cmd5-9ae89.iam.gserviceaccount.com";
 
 type StatusFiltro = 'pendente' | 'aprovado' | 'recusado' | 'todos';
 
@@ -55,6 +59,26 @@ const AdminGestaoAcoesSociais = () => {
   const { profile } = useProfile(user?.id);
   const { hasAccess, loading: loadingAccess } = useAdminAccess();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Hook de configurações do sistema
+  const { getSettingTextValue, updateSettingText, isLoading: loadingSettings } = useSystemSettings();
+  const spreadsheetIdFromSettings = getSettingTextValue('google_sheets_acoes_sociais_id');
+  
+  // Estados de configuração da planilha
+  const [spreadsheetIdLocal, setSpreadsheetIdLocal] = useState<string>('');
+  const [spreadsheetIdAlterado, setSpreadsheetIdAlterado] = useState(false);
+
+  // Atualizar estado local quando carregar do banco
+  useEffect(() => {
+    if (spreadsheetIdFromSettings && !spreadsheetIdLocal) {
+      setSpreadsheetIdLocal(spreadsheetIdFromSettings);
+    }
+  }, [spreadsheetIdFromSettings, spreadsheetIdLocal]);
+
+  // Verificar se foi alterado
+  useEffect(() => {
+    setSpreadsheetIdAlterado(spreadsheetIdLocal !== spreadsheetIdFromSettings && spreadsheetIdLocal.length > 0);
+  }, [spreadsheetIdLocal, spreadsheetIdFromSettings]);
 
   // Estados de importação
   const [arquivoSelecionado, setArquivoSelecionado] = useState<File | null>(null);
@@ -79,7 +103,14 @@ const AdminGestaoAcoesSociais = () => {
     importarTodas,
     importando: importandoPendentes,
     refetch: refetchPendentes,
-  } = useAcoesSociaisPendentesGoogleSheet(regionalSelecionada, !!regionalSelecionada);
+    conexaoStatus,
+    conexaoErro,
+    testarConexao,
+  } = useAcoesSociaisPendentesGoogleSheet(
+    regionalSelecionada, 
+    !!regionalSelecionada,
+    spreadsheetIdFromSettings || undefined
+  );
 
   const [solicitacaoSelecionada, setSolicitacaoSelecionada] = useState<any>(null);
   const [mostrarDialog, setMostrarDialog] = useState(false);
@@ -197,6 +228,81 @@ const AdminGestaoAcoesSociais = () => {
     setRegionalId(regional?.id);
   };
 
+  const handleSalvarSpreadsheetId = async () => {
+    if (!spreadsheetIdLocal.trim()) {
+      toast({
+        title: "ID inválido",
+        description: "Por favor, insira um ID de planilha válido",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    await updateSettingText.mutateAsync({
+      chave: 'google_sheets_acoes_sociais_id',
+      valor_texto: spreadsheetIdLocal.trim(),
+    });
+    
+    setSpreadsheetIdAlterado(false);
+  };
+
+  const handleCopiarEmail = () => {
+    navigator.clipboard.writeText(SERVICE_ACCOUNT_EMAIL);
+    toast({
+      title: "Email copiado!",
+      description: "O email do service account foi copiado para a área de transferência",
+    });
+  };
+
+  const handleTestarConexao = async () => {
+    const result = await testarConexao();
+    if (result) {
+      toast({
+        title: "Conexão estabelecida",
+        description: "A planilha está acessível e configurada corretamente",
+      });
+    } else {
+      toast({
+        title: "Falha na conexão",
+        description: conexaoErro || "Verifique se a planilha está compartilhada com o service account",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getConexaoStatusBadge = (status: ConexaoStatus) => {
+    switch (status) {
+      case 'testando':
+        return (
+          <Badge variant="outline" className="animate-pulse">
+            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+            Testando...
+          </Badge>
+        );
+      case 'conectado':
+        return (
+          <Badge className="bg-green-500/20 text-green-500 border-green-500/50">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Conexão estabelecida
+          </Badge>
+        );
+      case 'erro':
+        return (
+          <Badge variant="destructive">
+            <XCircle className="h-3 w-3 mr-1" />
+            Sem conexão
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="outline" className="text-muted-foreground">
+            <Link2 className="h-3 w-3 mr-1" />
+            Não testado
+          </Badge>
+        );
+    }
+  };
+
   const handleVerDetalhes = (solicitacao: any) => {
     setSolicitacaoSelecionada(solicitacao);
     setObservacaoAdmin('');
@@ -302,15 +408,95 @@ const AdminGestaoAcoesSociais = () => {
             {regionalSelecionada && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Cloud className="h-5 w-5" />
-                    Ações Pendentes (Google Sheets)
-                  </CardTitle>
-                  <CardDescription>
-                    Ações da regional {regionalSelecionada} que ainda não foram importadas
-                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Cloud className="h-5 w-5" />
+                        Ações Pendentes (Google Sheets)
+                      </CardTitle>
+                      <CardDescription>
+                        Ações da regional {regionalSelecionada} que ainda não foram importadas
+                      </CardDescription>
+                    </div>
+                    {getConexaoStatusBadge(conexaoStatus)}
+                  </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-6">
+                  {/* Configuração da Planilha */}
+                  <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-medium">Configuração da Planilha</Label>
+                    </div>
+
+                    {/* Campo para ID da planilha */}
+                    <div className="space-y-2">
+                      <Label htmlFor="spreadsheet-id" className="text-xs text-muted-foreground">
+                        ID da Planilha do Google Sheets
+                      </Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="spreadsheet-id"
+                          value={spreadsheetIdLocal}
+                          onChange={(e) => setSpreadsheetIdLocal(e.target.value)}
+                          placeholder="Ex: 1Fb1Sby_TmqNjqGmI92RLIxqJsXP3LHPp7tLJbo5olwo"
+                          className="font-mono text-xs"
+                        />
+                        <Button 
+                          variant="outline" 
+                          onClick={handleSalvarSpreadsheetId}
+                          disabled={!spreadsheetIdAlterado || updateSettingText.isPending}
+                        >
+                          {updateSettingText.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            "Salvar"
+                          )}
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={handleTestarConexao}
+                          disabled={conexaoStatus === 'testando'}
+                          title="Testar conexão"
+                        >
+                          {conexaoStatus === 'testando' ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Alerta sobre compartilhamento (aparece ao trocar) */}
+                    {spreadsheetIdAlterado && (
+                      <Alert variant="default" className="bg-yellow-500/10 border-yellow-500/50">
+                        <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                        <AlertDescription className="text-yellow-600">
+                          Ao trocar a planilha, você precisa compartilhá-la com o email do service account abaixo (permissão de leitor).
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    {/* Email do service account com botão copiar */}
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">
+                        Email do Service Account (compartilhe a planilha com este email)
+                      </Label>
+                      <div className="flex items-center gap-2 p-2 bg-background rounded-lg border">
+                        <code className="text-xs flex-1 font-mono truncate">
+                          {SERVICE_ACCOUNT_EMAIL}
+                        </code>
+                        <Button variant="ghost" size="sm" onClick={handleCopiarEmail} title="Copiar email">
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Conteúdo principal */}
                   {loadingPendentes ? (
                     <div className="flex items-center justify-center py-8">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3"></div>
