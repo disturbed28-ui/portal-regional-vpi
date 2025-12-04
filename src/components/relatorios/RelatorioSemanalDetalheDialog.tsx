@@ -319,6 +319,7 @@ export const RelatorioSemanalDetalheDialog = ({
                       <h4 className="font-semibold mb-3 text-base">Estatísticas da Divisão</h4>
                       {relatorio.estatisticas_divisao_json ? (
                         <div className="space-y-3">
+                          {/* Estatísticas Gerais */}
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                             <div className="p-3 border rounded-lg">
                               <p className="text-xs text-muted-foreground">Total de Integrantes</p>
@@ -346,16 +347,62 @@ export const RelatorioSemanalDetalheDialog = ({
                             </div>
                           </div>
 
-                          {relatorio.estatisticas_divisao_json.estagiarios && 
-                           Array.isArray(relatorio.estatisticas_divisao_json.estagiarios) && 
-                           relatorio.estatisticas_divisao_json.estagiarios.length > 0 && (
+                          {/* Estatísticas Detalhadas (se existirem) */}
+                          {(relatorio.estatisticas_divisao_json.total_caveiras > 0 ||
+                            relatorio.estatisticas_divisao_json.total_batedores > 0 ||
+                            relatorio.estatisticas_divisao_json.total_lobos > 0) && (
+                            <>
+                              <Separator className="my-4" />
+                              <p className="text-sm font-medium mb-2">Detalhes Especiais:</p>
+                              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 text-sm">
+                                {relatorio.estatisticas_divisao_json.total_caveiras > 0 && (
+                                  <div className="p-2 bg-muted rounded">
+                                    <span className="text-muted-foreground">Caveiras:</span> {relatorio.estatisticas_divisao_json.total_caveiras}
+                                  </div>
+                                )}
+                                {relatorio.estatisticas_divisao_json.total_suplentes_caveira > 0 && (
+                                  <div className="p-2 bg-muted rounded">
+                                    <span className="text-muted-foreground">Suplentes:</span> {relatorio.estatisticas_divisao_json.total_suplentes_caveira}
+                                  </div>
+                                )}
+                                {relatorio.estatisticas_divisao_json.total_batedores > 0 && (
+                                  <div className="p-2 bg-muted rounded">
+                                    <span className="text-muted-foreground">Batedores:</span> {relatorio.estatisticas_divisao_json.total_batedores}
+                                  </div>
+                                )}
+                                {relatorio.estatisticas_divisao_json.total_lobos > 0 && (
+                                  <div className="p-2 bg-muted rounded">
+                                    <span className="text-muted-foreground">Lobos:</span> {relatorio.estatisticas_divisao_json.total_lobos}
+                                  </div>
+                                )}
+                                {relatorio.estatisticas_divisao_json.total_ursos > 0 && (
+                                  <div className="p-2 bg-muted rounded">
+                                    <span className="text-muted-foreground">Ursos:</span> {relatorio.estatisticas_divisao_json.total_ursos}
+                                  </div>
+                                )}
+                                {relatorio.estatisticas_divisao_json.total_combate_insano > 0 && (
+                                  <div className="p-2 bg-muted rounded">
+                                    <span className="text-muted-foreground">C. Insano:</span> {relatorio.estatisticas_divisao_json.total_combate_insano}
+                                  </div>
+                                )}
+                              </div>
+                            </>
+                          )}
+
+                          {/* Lista de Estagiários */}
+                          {((relatorio.estatisticas_divisao_json.estagiarios && 
+                            Array.isArray(relatorio.estatisticas_divisao_json.estagiarios) && 
+                            relatorio.estatisticas_divisao_json.estagiarios.length > 0) ||
+                           (relatorio.estatisticas_divisao_json.estagio && 
+                            Array.isArray(relatorio.estatisticas_divisao_json.estagio) && 
+                            relatorio.estatisticas_divisao_json.estagio.length > 0)) && (
                             <>
                               <Separator className="my-4" />
                               <div>
                                 <p className="text-sm font-medium mb-2">Lista de Estagiários:</p>
                                 <ul className="text-sm space-y-1 list-disc list-inside">
-                                  {relatorio.estatisticas_divisao_json.estagiarios.map((est: any, idx: number) => (
-                                    <li key={idx}>{est.nome_colete} - {est.estagio}</li>
+                                  {(relatorio.estatisticas_divisao_json.estagiarios || relatorio.estatisticas_divisao_json.estagio || []).map((est: any, idx: number) => (
+                                    <li key={idx}>{est.nome_colete} - {est.estagio || est.cargo_estagio || 'Estagiário'}</li>
                                   ))}
                                 </ul>
                               </div>
