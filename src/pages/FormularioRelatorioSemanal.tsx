@@ -1060,16 +1060,16 @@ const FormularioRelatorioSemanal = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-3 sm:p-4">
-      <div className="max-w-full sm:max-w-2xl mx-auto space-y-4 sm:space-y-6">
+    <div className="min-h-screen bg-background p-2 sm:p-4 overflow-x-hidden">
+      <div className="w-full max-w-2xl mx-auto space-y-4 sm:space-y-6 px-1">
         {/* T6: Cabeçalho */}
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/formularios")}>
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <Button variant="ghost" size="icon" className="shrink-0" onClick={() => navigate("/formularios")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
-            <p className="text-xs sm:text-sm text-muted-foreground">Regional {dadosResponsavel?.regional_texto}</p>
-            <h1 className="text-xl sm:text-2xl font-bold">Relatório Semanal da Divisão</h1>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs sm:text-sm text-muted-foreground truncate">Regional {dadosResponsavel?.regional_texto}</p>
+            <h1 className="text-lg sm:text-2xl font-bold">Relatório Semanal da Divisão</h1>
           </div>
         </div>
 
@@ -1129,44 +1129,44 @@ const FormularioRelatorioSemanal = () => {
 
         {/* Banner: Limite 'multipla' - opção de editar ou sobrescrever */}
         {formConfig?.limite_respostas === 'multipla' && existingReport && !modoEdicao && (
-          <Card className="p-4 bg-purple-50 dark:bg-purple-950 border-purple-300 dark:border-purple-700">
-            <div className="flex items-start gap-3">
-              <div className="text-2xl">🔄</div>
-              <div className="flex-1">
-                <h4 className="font-semibold text-purple-900 dark:text-purple-100 mb-1">
-                  Relatório já enviado para esta divisão
+          <Card className="p-3 sm:p-4 bg-purple-50 dark:bg-purple-950 border-purple-300 dark:border-purple-700">
+            <div className="flex items-start gap-2 sm:gap-3">
+              <div className="text-xl sm:text-2xl shrink-0">🔄</div>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-semibold text-purple-900 dark:text-purple-100 mb-1 text-sm sm:text-base">
+                  Relatório já enviado
                 </h4>
-                <p className="text-sm text-purple-800 dark:text-purple-200 mb-3">
+                <p className="text-xs sm:text-sm text-purple-800 dark:text-purple-200 mb-3 break-words">
                   A divisão <strong>{divisaoSelecionada?.nome}</strong> já possui um relatório 
-                  enviado nesta semana em{' '}
+                  enviado em{' '}
                   <strong>
                     {new Date(existingReport.created_at).toLocaleString('pt-BR')}
                   </strong>
                   {existingReport.profile_id !== user?.id && (
                     <span> por <strong>{existingReport.responsavel_nome_colete}</strong></span>
                   )}.
-                  <br />
-                  Deseja carregar as respostas anteriores para edição ou sobrescrever com um novo relatório?
                 </p>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Button
                     size="sm"
+                    className="w-full sm:w-auto text-xs sm:text-sm"
                     onClick={() => {
                       setModoEdicao('editar');
                       carregarRespostasExistentes(existingReport);
                     }}
                   >
-                    Editar respostas anteriores
+                    Editar anterior
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
+                    className="w-full sm:w-auto text-xs sm:text-sm"
                     onClick={() => {
                       setModoEdicao('nova');
                       limparFormulario();
                     }}
                   >
-                    Nova resposta (sobrescrever)
+                    Sobrescrever
                   </Button>
                 </div>
               </div>
@@ -1209,7 +1209,7 @@ const FormularioRelatorioSemanal = () => {
         </Card>
 
         {/* Seção: Entradas de Integrantes */}
-        <Card className="p-6 space-y-4">
+        <Card className="p-4 sm:p-6 space-y-4">
           <h3 className="font-semibold">Entradas de Integrantes</h3>
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">Houve entrada de integrantes nesta semana?</p>
@@ -1401,7 +1401,7 @@ const FormularioRelatorioSemanal = () => {
         />
 
         {/* Seção: Conflitos */}
-        <Card className="p-6 space-y-4">
+        <Card className="p-4 sm:p-6 space-y-4">
           <h3 className="font-semibold">Conflitos Internos e Externos</h3>
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">Houve conflitos esta semana?</p>
@@ -1494,7 +1494,7 @@ const FormularioRelatorioSemanal = () => {
         </Card>
 
         {/* Seção: Ações Sociais */}
-        <Card className="p-6 space-y-4">
+        <Card className="p-4 sm:p-6 space-y-4">
           <h3 className="font-semibold">Ações Sociais</h3>
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">Houve ações sociais esta semana?</p>
@@ -1626,9 +1626,9 @@ const FormularioRelatorioSemanal = () => {
 
         {/* Estatísticas da Divisão */}
         {estatisticas && (
-          <Card className="p-6">
-            <h3 className="font-semibold mb-4">Estatísticas da Divisão</h3>
-            <div className="grid grid-cols-2 gap-3 text-sm">
+          <Card className="p-4 sm:p-6">
+            <h3 className="font-semibold mb-4 text-sm sm:text-base">Estatísticas da Divisão</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-xs sm:text-sm">
               <div>Caveiras: {estatisticas.total_caveiras}</div>
               <div>Suplentes: {estatisticas.total_suplentes_caveira}</div>
               <div>Batedores: {estatisticas.total_batedores}</div>
@@ -1655,22 +1655,22 @@ const FormularioRelatorioSemanal = () => {
         )}
 
         {/* Botões de ação */}
-        <div className="flex gap-3">
-          <Button onClick={() => navigate("/formularios")} variant="outline" className="flex-1">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <Button onClick={() => navigate("/formularios")} variant="outline" className="flex-1 text-sm">
             Cancelar
           </Button>
           <Button 
             onClick={handleEnviar} 
-            className="flex-1"
+            className="flex-1 text-sm"
             disabled={
               !hojePermitido || 
               (formConfig?.limite_respostas === 'unica' && existingReport)
             }
           >
             {existingReport && modoEdicao === 'editar' 
-              ? 'Atualizar Relatório'
+              ? 'Atualizar'
               : existingReport && modoEdicao === 'nova'
-              ? 'Sobrescrever Relatório'
+              ? 'Sobrescrever'
               : 'Enviar Relatório'
             }
           </Button>
