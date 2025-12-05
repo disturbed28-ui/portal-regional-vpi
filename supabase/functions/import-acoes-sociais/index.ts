@@ -259,16 +259,17 @@ Deno.serve(async (req) => {
       let divisaoTexto = (row.divisao || '').trim();
       let divisaoId: string | null = null;
 
-      // CORREÇÃO: Busca exata primeiro, depois parcial como fallback
+      // CORREÇÃO: Busca exata primeiro, depois parcial (startsWith) como fallback
       if (integrantesMap.has(nomeNormalizado)) {
         // Busca exata - prioridade máxima
         const divInfo = integrantesMap.get(nomeNormalizado)!;
         divisaoTexto = divInfo.divisao_texto;
         divisaoId = divInfo.divisao_id;
       } else {
-        // Busca parcial como fallback
+        // Busca parcial como fallback - preferir startsWith para evitar falsos positivos
+        // Ex: "tom" deve preferir "tom a-" sobre "tombado"
         for (const [nomeKey, divInfo] of integrantesMap) {
-          if (nomeKey.includes(nomeNormalizado) || nomeNormalizado.includes(nomeKey)) {
+          if (nomeKey.startsWith(nomeNormalizado) || nomeNormalizado.startsWith(nomeKey)) {
             divisaoTexto = divInfo.divisao_texto;
             divisaoId = divInfo.divisao_id;
             break;
