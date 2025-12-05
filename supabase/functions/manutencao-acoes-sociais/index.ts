@@ -27,6 +27,37 @@ function gerarHashDeduplicacao(dataAcao: string, divisao: string, responsavel: s
   return btoa(stringParaHash);
 }
 
+// Buscar divisão pelo nome - PREFERIR NOME MAIS CURTO (mais específico)
+function buscarDivisaoPorNome(
+  nomeNormalizado: string,
+  integrantesMap: Map<string, string>,
+  divisaoDefault: string
+): string {
+  // Busca exata primeiro - prioridade máxima
+  if (integrantesMap.has(nomeNormalizado)) {
+    return integrantesMap.get(nomeNormalizado)!;
+  }
+
+  // Busca parcial - coletar TODOS os matches e escolher o MENOR (mais específico)
+  const matches: { nomeKey: string; divisaoTexto: string }[] = [];
+  
+  for (const [nomeKey, divisaoTexto] of integrantesMap) {
+    if (nomeKey.startsWith(nomeNormalizado) || nomeNormalizado.startsWith(nomeKey)) {
+      matches.push({ nomeKey, divisaoTexto });
+    }
+  }
+
+  if (matches.length > 0) {
+    // Ordenar por tamanho do nome (menor primeiro = mais específico)
+    // Ex: "tom a-" (6) vence "tombado" (7)
+    matches.sort((a, b) => a.nomeKey.length - b.nomeKey.length);
+    console.log(`🔍 [Match] "${nomeNormalizado}" -> escolhido "${matches[0].nomeKey}" (${matches[0].divisaoTexto}) entre ${matches.length} matches`);
+    return matches[0].divisaoTexto;
+  }
+
+  return divisaoDefault;
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -63,6 +94,13 @@ Deno.serve(async (req) => {
     });
 
     console.log(`📊 [Manutenção] ${integrantesMap.size} integrantes carregados para lookup`);
+    
+    // Debug: mostrar alguns integrantes com "tom" no nome
+    for (const [nome, divisao] of integrantesMap) {
+      if (nome.includes('tom')) {
+        console.log(`   - "${nome}" -> "${divisao}"`);
+      }
+    }
 
     // 2. Buscar todos os registros de ações sociais
     const { data: registros, error: registrosError } = await supabase
@@ -84,45 +122,59 @@ Deno.serve(async (req) => {
 
     console.log(`📅 [Manutenção] Data limite para marcar como reportado: ${dataLimiteStr}`);
 
-    // 4. Primeiro passo: Identificar e deletar duplicados
-    // Agrupar registros por hash normalizado e manter apenas o mais antigo
-    const hashToRecords = new Map<string, { id: string; created_at: string }[]>();
-    const idsParaDeletar: string[] = [];
+    // 4. Primeiro passo: Calcular divisão correta e hash normalizado para TODOS os registros
+    // Isso é necessário para identificar duplicados corretamente
+    const registrosProcessados: {
+      id: string;
+      created_at: string;
+      data_acao: string;
+      responsavel_nome_colete: string;
+      divisao_atual: string;
+      divisao_correta: string;
+      hash_atual: string | null;
+      hash_normalizado: string;
+      foi_reportada_em_relatorio: boolean;
+    }[] = [];
 
     for (const registro of registros || []) {
       const nomeNormalizado = normalizeText(registro.responsavel_nome_colete);
       
-      // Buscar divisão correta pelo nome do responsável
-      let divisaoCorreta = registro.divisao_relatorio_texto;
-      
-      // Busca exata primeiro
-      if (integrantesMap.has(nomeNormalizado)) {
-        divisaoCorreta = integrantesMap.get(nomeNormalizado)!;
-      } else {
-        // Busca parcial com startsWith (mais restritiva que includes)
-        for (const [nomeKey, divisaoTexto] of integrantesMap) {
-          if (nomeKey.startsWith(nomeNormalizado) || nomeNormalizado.startsWith(nomeKey)) {
-            divisaoCorreta = divisaoTexto;
-            break;
-          }
-        }
-      }
+      // Buscar divisão correta - PREFERIR NOME MAIS CURTO
+      const divisaoCorreta = buscarDivisaoPorNome(
+        nomeNormalizado,
+        integrantesMap,
+        registro.divisao_relatorio_texto
+      );
 
-      // Calcular hash normalizado (sempre lowercase)
+      // Calcular hash normalizado (sempre lowercase, com divisão correta)
       const hashNormalizado = gerarHashDeduplicacao(
         registro.data_acao,
         divisaoCorreta,
         registro.responsavel_nome_colete
       );
 
-      // Agrupar por hash normalizado
-      if (!hashToRecords.has(hashNormalizado)) {
-        hashToRecords.set(hashNormalizado, []);
-      }
-      hashToRecords.get(hashNormalizado)!.push({
+      registrosProcessados.push({
         id: registro.id,
-        created_at: registro.created_at
+        created_at: registro.created_at,
+        data_acao: registro.data_acao,
+        responsavel_nome_colete: registro.responsavel_nome_colete,
+        divisao_atual: registro.divisao_relatorio_texto,
+        divisao_correta: divisaoCorreta,
+        hash_atual: registro.hash_deduplicacao,
+        hash_normalizado: hashNormalizado,
+        foi_reportada_em_relatorio: registro.foi_reportada_em_relatorio
       });
+    }
+
+    // 5. Identificar e deletar duplicados baseado no hash NORMALIZADO
+    const hashToRecords = new Map<string, typeof registrosProcessados>();
+    const idsParaDeletar: string[] = [];
+
+    for (const registro of registrosProcessados) {
+      if (!hashToRecords.has(registro.hash_normalizado)) {
+        hashToRecords.set(registro.hash_normalizado, []);
+      }
+      hashToRecords.get(registro.hash_normalizado)!.push(registro);
     }
 
     // Identificar duplicados (manter o mais antigo de cada grupo)
@@ -159,68 +211,38 @@ Deno.serve(async (req) => {
       console.log(`✅ [Manutenção] ${totalDeletados} registros duplicados deletados`);
     }
 
-    // 5. Buscar registros restantes para atualização
-    const { data: registrosRestantes, error: restantesError } = await supabase
-      .from("acoes_sociais_registros")
-      .select("id, data_acao, responsavel_nome_colete, divisao_relatorio_texto, hash_deduplicacao, foi_reportada_em_relatorio");
+    // 6. Filtrar registros que NÃO foram deletados e atualizar
+    const idsParaDeletarSet = new Set(idsParaDeletar);
+    const registrosParaAtualizar = registrosProcessados.filter(r => !idsParaDeletarSet.has(r.id));
 
-    if (restantesError) {
-      throw new Error(`Erro ao buscar registros restantes: ${restantesError.message}`);
-    }
+    console.log(`📊 [Manutenção] ${registrosParaAtualizar.length} registros restantes para atualização`);
 
-    console.log(`📊 [Manutenção] ${registrosRestantes?.length || 0} registros restantes para atualização`);
-
-    // 6. Processar cada registro restante
+    // 7. Processar cada registro restante
     let hashesAtualizados = 0;
     let divisoesCorrigidas = 0;
     let marcadosComoReportados = 0;
     let erros: string[] = [];
 
-    for (const registro of registrosRestantes || []) {
+    for (const registro of registrosParaAtualizar) {
       try {
-        const nomeNormalizado = normalizeText(registro.responsavel_nome_colete);
-        
-        // Buscar divisão correta pelo nome do responsável
-        let divisaoCorreta = registro.divisao_relatorio_texto;
-        
-        // Busca exata primeiro
-        if (integrantesMap.has(nomeNormalizado)) {
-          divisaoCorreta = integrantesMap.get(nomeNormalizado)!;
-        } else {
-          // Busca parcial com startsWith
-          for (const [nomeKey, divisaoTexto] of integrantesMap) {
-            if (nomeKey.startsWith(nomeNormalizado) || nomeNormalizado.startsWith(nomeKey)) {
-              divisaoCorreta = divisaoTexto;
-              break;
-            }
-          }
-        }
-
-        // Calcular novo hash (sempre normalizado para lowercase)
-        const novoHash = gerarHashDeduplicacao(
-          registro.data_acao,
-          divisaoCorreta,
-          registro.responsavel_nome_colete
-        );
-
         // Verificar se é registro antigo (deve ser marcado como reportado)
-        const dataAcao = registro.data_acao;
-        const deveMarcarComoReportado = dataAcao < dataLimiteStr && !registro.foi_reportada_em_relatorio;
+        const deveMarcarComoReportado = registro.data_acao < dataLimiteStr && !registro.foi_reportada_em_relatorio;
 
         // Verificar se precisa atualizar
-        const hashMudou = novoHash !== registro.hash_deduplicacao;
-        const divisaoMudou = divisaoCorreta !== registro.divisao_relatorio_texto;
+        const hashMudou = registro.hash_normalizado !== registro.hash_atual;
+        const divisaoMudou = registro.divisao_correta !== registro.divisao_atual;
 
         if (hashMudou || deveMarcarComoReportado || divisaoMudou) {
           const updateData: any = {};
           
           if (hashMudou) {
-            updateData.hash_deduplicacao = novoHash;
+            updateData.hash_deduplicacao = registro.hash_normalizado;
           }
           
           if (divisaoMudou) {
-            updateData.divisao_relatorio_texto = divisaoCorreta;
-            updateData.responsavel_divisao_texto = divisaoCorreta;
+            updateData.divisao_relatorio_texto = registro.divisao_correta;
+            updateData.responsavel_divisao_texto = registro.divisao_correta;
+            console.log(`🔄 [Manutenção] Corrigindo divisão de "${registro.responsavel_nome_colete}": "${registro.divisao_atual}" -> "${registro.divisao_correta}"`);
           }
           
           if (deveMarcarComoReportado) {
@@ -256,7 +278,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         total_registros_inicial: registros?.length || 0,
-        total_registros_final: registrosRestantes?.length || 0,
+        total_registros_final: registrosParaAtualizar.length,
         duplicados_deletados: totalDeletados,
         hashes_atualizados: hashesAtualizados,
         divisoes_corrigidas: divisoesCorrigidas,

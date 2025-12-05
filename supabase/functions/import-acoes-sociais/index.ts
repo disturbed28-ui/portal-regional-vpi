@@ -30,7 +30,7 @@ function normalizeText(text: string): string {
     .trim();
 }
 
-// Hash sem tipo_acao e descricao para permitir atualizações desses campos
+// Hash sempre normalizado para lowercase
 function gerarHashDeduplicacao(registro: {
   data_acao: string;
   divisao: string;
@@ -43,6 +43,20 @@ function gerarHashDeduplicacao(registro: {
   ].join('|');
   
   return btoa(texto);
+}
+
+// Normalizar hash existente para comparação case-insensitive
+function normalizeHashParaComparacao(hash: string | null): string {
+  if (!hash) return '';
+  try {
+    // Decodificar, normalizar para lowercase, re-encodar
+    const decoded = atob(hash);
+    const normalized = decoded.toLowerCase();
+    return btoa(normalized);
+  } catch {
+    // Se falhar decodificação, retornar hash em lowercase
+    return hash.toLowerCase();
+  }
 }
 
 function parseExcelDate(value: any): string | null {
@@ -127,6 +141,37 @@ function isDataAntiga(dataAcao: string, diasLimite: number = 7): boolean {
   return diffDias > diasLimite;
 }
 
+// Buscar divisão pelo nome do responsável - PREFERIR NOME MAIS CURTO (mais específico)
+function buscarDivisaoPorNome(
+  nomeNormalizado: string,
+  integrantesMap: Map<string, { divisao_texto: string; divisao_id: string | null }>,
+  divisaoDefault: string,
+  divisaoIdDefault: string | null
+): { divisao_texto: string; divisao_id: string | null } {
+  // Busca exata primeiro - prioridade máxima
+  if (integrantesMap.has(nomeNormalizado)) {
+    return integrantesMap.get(nomeNormalizado)!;
+  }
+
+  // Busca parcial - coletar TODOS os matches e escolher o MENOR (mais específico)
+  const matches: { nomeKey: string; divisao_texto: string; divisao_id: string | null }[] = [];
+  
+  for (const [nomeKey, divInfo] of integrantesMap) {
+    if (nomeKey.startsWith(nomeNormalizado) || nomeNormalizado.startsWith(nomeKey)) {
+      matches.push({ nomeKey, ...divInfo });
+    }
+  }
+
+  if (matches.length > 0) {
+    // Ordenar por tamanho do nome (menor primeiro = mais específico)
+    // Ex: "tom a-" (6) vence "tombado" (7)
+    matches.sort((a, b) => a.nomeKey.length - b.nomeKey.length);
+    return { divisao_texto: matches[0].divisao_texto, divisao_id: matches[0].divisao_id };
+  }
+
+  return { divisao_texto: divisaoDefault, divisao_id: divisaoIdDefault };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -200,15 +245,20 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Buscar hashes existentes para evitar duplicatas
+    console.log(`[import-acoes-sociais] ${integrantesMap.size} integrantes carregados para lookup`);
+
+    // Buscar hashes existentes para evitar duplicatas - NORMALIZAR PARA COMPARAÇÃO
     const { data: existingHashes } = await supabase
       .from('acoes_sociais_registros')
       .select('hash_deduplicacao')
       .not('hash_deduplicacao', 'is', null);
 
+    // Normalizar todos os hashes existentes para comparação case-insensitive
     const hashesExistentes = new Set<string>(
-      existingHashes?.map(h => h.hash_deduplicacao) || []
+      existingHashes?.map(h => normalizeHashParaComparacao(h.hash_deduplicacao)).filter(Boolean) || []
     );
+
+    console.log(`[import-acoes-sociais] ${hashesExistentes.size} hashes existentes carregados (normalizados)`);
 
     const result: ImportResult = {
       success: true,
@@ -254,37 +304,25 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Buscar divisão pelo nome do responsável
+      // Buscar divisão pelo nome do responsável - PREFERIR NOME MAIS CURTO
       const nomeNormalizado = normalizeText(responsavel);
-      let divisaoTexto = (row.divisao || '').trim();
-      let divisaoId: string | null = null;
+      const divisaoDefault = (row.divisao || '').trim();
+      
+      const { divisao_texto: divisaoTexto, divisao_id: divisaoId } = buscarDivisaoPorNome(
+        nomeNormalizado,
+        integrantesMap,
+        divisaoDefault,
+        null
+      );
 
-      // CORREÇÃO: Busca exata primeiro, depois parcial (startsWith) como fallback
-      if (integrantesMap.has(nomeNormalizado)) {
-        // Busca exata - prioridade máxima
-        const divInfo = integrantesMap.get(nomeNormalizado)!;
-        divisaoTexto = divInfo.divisao_texto;
-        divisaoId = divInfo.divisao_id;
-      } else {
-        // Busca parcial como fallback - preferir startsWith para evitar falsos positivos
-        // Ex: "tom" deve preferir "tom a-" sobre "tombado"
-        for (const [nomeKey, divInfo] of integrantesMap) {
-          if (nomeKey.startsWith(nomeNormalizado) || nomeNormalizado.startsWith(nomeKey)) {
-            divisaoTexto = divInfo.divisao_texto;
-            divisaoId = divInfo.divisao_id;
-            break;
-          }
-        }
-      }
-
-      // Gerar hash de deduplicação (sem tipo_acao e descricao para permitir atualizações)
+      // Gerar hash de deduplicação (sempre lowercase)
       const hash = gerarHashDeduplicacao({
         data_acao: dataAcao,
         divisao: divisaoTexto,
         responsavel: responsavel
       });
 
-      // Verificar duplicata no banco de dados existente
+      // Verificar duplicata no banco de dados existente (comparação normalizada)
       if (hashesExistentes.has(hash)) {
         result.duplicados++;
         continue;
