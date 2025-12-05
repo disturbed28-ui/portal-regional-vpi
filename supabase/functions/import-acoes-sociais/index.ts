@@ -259,12 +259,20 @@ Deno.serve(async (req) => {
       let divisaoTexto = (row.divisao || '').trim();
       let divisaoId: string | null = null;
 
-      // Tentar encontrar integrante por nome parcial
-      for (const [nomeKey, divInfo] of integrantesMap) {
-        if (nomeKey.includes(nomeNormalizado) || nomeNormalizado.includes(nomeKey)) {
-          divisaoTexto = divInfo.divisao_texto;
-          divisaoId = divInfo.divisao_id;
-          break;
+      // CORREÇÃO: Busca exata primeiro, depois parcial como fallback
+      if (integrantesMap.has(nomeNormalizado)) {
+        // Busca exata - prioridade máxima
+        const divInfo = integrantesMap.get(nomeNormalizado)!;
+        divisaoTexto = divInfo.divisao_texto;
+        divisaoId = divInfo.divisao_id;
+      } else {
+        // Busca parcial como fallback
+        for (const [nomeKey, divInfo] of integrantesMap) {
+          if (nomeKey.includes(nomeNormalizado) || nomeNormalizado.includes(nomeKey)) {
+            divisaoTexto = divInfo.divisao_texto;
+            divisaoId = divInfo.divisao_id;
+            break;
+          }
         }
       }
 
