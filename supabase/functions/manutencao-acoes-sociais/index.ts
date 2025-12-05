@@ -121,12 +121,18 @@ Deno.serve(async (req) => {
 
         // Verificar se precisa atualizar
         const hashMudou = novoHash !== registro.hash_deduplicacao;
+        const divisaoMudou = divisaoCorreta !== registro.divisao_relatorio_texto;
 
-        if (hashMudou || deveMarcarComoReportado) {
+        if (hashMudou || deveMarcarComoReportado || divisaoMudou) {
           const updateData: any = {};
           
           if (hashMudou) {
             updateData.hash_deduplicacao = novoHash;
+          }
+          
+          if (divisaoMudou) {
+            updateData.divisao_relatorio_texto = divisaoCorreta;
+            updateData.responsavel_divisao_texto = divisaoCorreta;
           }
           
           if (deveMarcarComoReportado) {
