@@ -65,10 +65,22 @@ export const useSubmitRelatorioSemanal = () => {
         .from('relatorios_semanais_divisao')
         .update(dados)
         .eq('id', existingReportId)
-        .select()
-        .single();
+        .select();
       
       if (error) throw error;
+      
+      // Se não encontrou o registro para atualizar, tentar inserir
+      if (!data || data.length === 0) {
+        console.warn('[RelatorioSemanal] Registro não encontrado para update, fazendo insert...');
+        const { data: insertData, error: insertError } = await supabase
+          .from('relatorios_semanais_divisao')
+          .insert([dados])
+          .select()
+          .single();
+        
+        if (insertError) throw insertError;
+        return insertData;
+      }
 
       // Após sucesso, marcar ações sociais como reportadas
       if (acoesSociaisParaMarcar && acoesSociaisParaMarcar.length > 0) {
@@ -84,7 +96,7 @@ export const useSubmitRelatorioSemanal = () => {
         }
       }
 
-      return data;
+      return data[0];
     },
     onSuccess: (_, variables) => {
       const isUpdate = !!variables.existingReportId;
