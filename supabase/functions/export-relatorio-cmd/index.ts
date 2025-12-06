@@ -245,7 +245,7 @@ async function fetchDadosRelatorio(
 
 // Bloco 1: Cabeçalho Regional
 function adicionarCabecalhoRegional(wsData: any[][], dados: DadosRelatorio, row: number): number {
-  wsData[row++] = [`CMD REGIONAL ${dados.regional_numero_romano}`];
+  wsData[row++] = ['COMANDO REGIONAL V'];
   wsData[row++] = [`REGIONAL ${dados.regional_nome.toUpperCase()}`];
   wsData[row++] = ['RELATÓRIO SEMANAL DE ATIVIDADES'];
   wsData[row++] = [];
