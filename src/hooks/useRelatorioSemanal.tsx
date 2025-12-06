@@ -61,27 +61,21 @@ export const useSubmitRelatorioSemanal = () => {
       }
 
       // CASO 3: Existe relatório com limite 'multipla' → UPDATE direto pelo ID
+      console.log('[RelatorioSemanal] Tentando UPDATE com id:', existingReportId);
+      
       const { data, error } = await supabase
         .from('relatorios_semanais_divisao')
         .update(dados)
         .eq('id', existingReportId)
         .select()
-        .maybeSingle();
+        .single();
       
-      if (error) throw error;
-      
-      // Se não encontrou o registro para atualizar, fazer INSERT
-      if (!data) {
-        console.warn('[RelatorioSemanal] Registro não encontrado para update, fazendo insert...');
-        const { data: insertData, error: insertError } = await supabase
-          .from('relatorios_semanais_divisao')
-          .insert([dados])
-          .select()
-          .maybeSingle();
-        
-        if (insertError) throw insertError;
-        return insertData;
+      if (error) {
+        console.error('[RelatorioSemanal] Erro no UPDATE:', error);
+        throw error;
       }
+
+      console.log('[RelatorioSemanal] ✅ UPDATE bem-sucedido:', data.id);
 
       // Após sucesso, marcar ações sociais como reportadas
       if (acoesSociaisParaMarcar && acoesSociaisParaMarcar.length > 0) {
