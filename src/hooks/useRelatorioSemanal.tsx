@@ -60,26 +60,23 @@ export const useSubmitRelatorioSemanal = () => {
         throw new Error('Você já respondeu este formulário nesta semana. Apenas uma resposta é permitida.');
       }
 
-      // CASO 3: Existe relatório com limite 'multipla' → UPDATE
+      // CASO 3: Existe relatório com limite 'multipla' → UPSERT usando onConflict
+      // Usamos upsert para evitar erro de constraint única quando o ID passado não existe
       const { data, error } = await supabase
         .from('relatorios_semanais_divisao')
-        .update(dados)
-        .eq('id', existingReportId)
+        .upsert(
+          { ...dados, id: existingReportId },
+          { 
+            onConflict: 'divisao_relatorio_id,semana_inicio,semana_fim',
+            ignoreDuplicates: false 
+          }
+        )
         .select();
       
       if (error) throw error;
       
-      // Se não encontrou o registro para atualizar, tentar inserir
       if (!data || data.length === 0) {
-        console.warn('[RelatorioSemanal] Registro não encontrado para update, fazendo insert...');
-        const { data: insertData, error: insertError } = await supabase
-          .from('relatorios_semanais_divisao')
-          .insert([dados])
-          .select()
-          .single();
-        
-        if (insertError) throw insertError;
-        return insertData;
+        throw new Error('Não foi possível atualizar o relatório.');
       }
 
       // Após sucesso, marcar ações sociais como reportadas
