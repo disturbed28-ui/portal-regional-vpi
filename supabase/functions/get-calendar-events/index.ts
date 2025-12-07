@@ -18,6 +18,7 @@ async function fetchAllEvents(
       singleEvents: 'true',
       orderBy: 'startTime',
       maxResults: '250',
+      showDeleted: 'true', // Incluir eventos cancelados
       ...(pageToken && { pageToken })
     });
     

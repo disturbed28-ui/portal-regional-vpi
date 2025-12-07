@@ -36,6 +36,7 @@ export interface CalendarEvent {
   htmlLink: string;
   isComandoEvent: boolean;
   isRegionalEvent: boolean;
+  googleStatus?: string; // Status do evento no Google (cancelled, confirmed, etc.)
 }
 
 // Cache de divisões do banco
@@ -373,6 +374,7 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
     
     for (const item of data.items) {
       const originalTitle = item.summary || "Sem titulo";
+      const googleStatus = item.status || 'confirmed'; // Status do Google (confirmed, cancelled, tentative)
       
       // Parsear componentes do título
       const components = parseEventComponents(originalTitle);
@@ -399,6 +401,7 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
         htmlLink: item.htmlLink || '',
         isComandoEvent: components.isCMD,
         isRegionalEvent: components.isRegional,
+        googleStatus, // Incluir status do Google
       });
       
       if (!divisaoId && components.divisao !== 'Sem Divisao') {
@@ -425,10 +428,10 @@ async function syncEventsWithDatabase(events: CalendarEvent[]) {
   try {
     console.log('[syncEventsWithDatabase] Iniciando sincronização de eventos...');
     
-    // Buscar todos os eventos que existem no banco
+    // Buscar todos os eventos que existem no banco (incluindo status)
     const { data: existingEvents, error: fetchError } = await supabase
       .from('eventos_agenda')
-      .select('evento_id, titulo, data_evento, tipo_evento, divisao_id');
+      .select('id, evento_id, titulo, data_evento, tipo_evento, divisao_id, status');
     
     if (fetchError) {
       console.error('[syncEventsWithDatabase] Erro ao buscar eventos existentes:', fetchError);
@@ -440,16 +443,59 @@ async function syncEventsWithDatabase(events: CalendarEvent[]) {
       return;
     }
 
-    // Para cada evento existente, verificar se há mudanças
+    // Criar set de IDs do Google Calendar para comparação rápida
+    const googleEventIds = new Set(events.map(e => e.id));
+
+    // Para cada evento existente, verificar mudanças e status
     for (const dbEvent of existingEvents) {
       const calendarEvent = events.find(e => e.id === dbEvent.evento_id);
       
-      if (!calendarEvent) {
-        console.log(`[syncEventsWithDatabase] Evento ${dbEvent.evento_id} não encontrado no Google Calendar`);
+      // CENÁRIO 1: Evento NÃO existe mais no Google (foi deletado)
+      if (!calendarEvent && !googleEventIds.has(dbEvent.evento_id)) {
+        // Só marca como removido se ainda estiver como 'active'
+        if (dbEvent.status === 'active' || !dbEvent.status) {
+          console.log(`[syncEventsWithDatabase] ⚠️ Evento removido do Google: ${dbEvent.titulo}`);
+          const { error: updateError } = await supabase
+            .from('eventos_agenda')
+            .update({ 
+              status: 'removed', 
+              updated_at: new Date().toISOString() 
+            })
+            .eq('id', dbEvent.id);
+          
+          if (updateError) {
+            console.error(`[syncEventsWithDatabase] Erro ao marcar evento como removido:`, updateError);
+          } else {
+            console.log(`[syncEventsWithDatabase] ✅ Evento marcado como REMOVIDO`);
+          }
+        }
         continue;
       }
 
-      // Verificar se houve mudanças
+      if (!calendarEvent) continue;
+
+      // CENÁRIO 2: Evento existe no Google com status "cancelled"
+      if (calendarEvent.googleStatus === 'cancelled') {
+        if (dbEvent.status === 'active' || !dbEvent.status) {
+          console.log(`[syncEventsWithDatabase] ⚠️ Evento cancelado no Google: ${dbEvent.titulo}`);
+          const { error: updateError } = await supabase
+            .from('eventos_agenda')
+            .update({ 
+              status: 'cancelled', 
+              updated_at: new Date().toISOString() 
+            })
+            .eq('id', dbEvent.id);
+          
+          if (updateError) {
+            console.error(`[syncEventsWithDatabase] Erro ao marcar evento como cancelado:`, updateError);
+          } else {
+            console.log(`[syncEventsWithDatabase] ✅ Evento marcado como CANCELADO`);
+          }
+        }
+        continue;
+      }
+
+      // CENÁRIO 3: Evento ativo - verificar se há mudanças de dados
       const dbDate = new Date(dbEvent.data_evento).toISOString();
       const calendarDate = new Date(calendarEvent.start).toISOString();
       
@@ -471,7 +517,7 @@ async function syncEventsWithDatabase(events: CalendarEvent[]) {
           divisao_id_nova: calendarEvent.divisao_id
         });
 
-        // Atualizar evento no banco
+        // Atualizar evento no banco (garantir status active)
         const { error: updateError } = await supabase
           .from('eventos_agenda')
           .update({
@@ -479,6 +525,7 @@ async function syncEventsWithDatabase(events: CalendarEvent[]) {
             data_evento: calendarEvent.start,
             tipo_evento: calendarEvent.type,
             divisao_id: calendarEvent.divisao_id,
+            status: 'active',
             updated_at: new Date().toISOString()
           })
           .eq('evento_id', calendarEvent.id);
