@@ -370,7 +370,8 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
 
     console.log('[fetchCalendarEvents] Processando', data.items.length, 'eventos...');
 
-    const events: CalendarEvent[] = [];
+    const allEvents: CalendarEvent[] = []; // Todos os eventos (para sincronização)
+    const activeEvents: CalendarEvent[] = []; // Apenas eventos ativos (para exibição)
     
     for (const item of data.items) {
       const originalTitle = item.summary || "Sem titulo";
@@ -386,7 +387,7 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
       // Construir título normalizado
       const normalizedTitle = buildNormalizedTitle(components);
       
-      events.push({
+      const event: CalendarEvent = {
         id: item.id,
         title: normalizedTitle,
         originalTitle,
@@ -402,9 +403,20 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
         isComandoEvent: components.isCMD,
         isRegionalEvent: components.isRegional,
         googleStatus, // Incluir status do Google
-      });
+      };
       
-      if (!divisaoId && components.divisao !== 'Sem Divisao') {
+      // Adicionar a todos os eventos (para sincronização)
+      allEvents.push(event);
+      
+      // Só adicionar aos eventos ativos se NÃO estiver cancelado/deletado
+      // e se tiver um título válido (não vazio)
+      if (googleStatus !== 'cancelled' && originalTitle !== 'Sem titulo') {
+        activeEvents.push(event);
+      } else {
+        console.log(`[fetchCalendarEvents] ⚠️ Evento filtrado da exibição (status: ${googleStatus}, titulo: "${originalTitle}")`);
+      }
+      
+      if (!divisaoId && components.divisao !== 'Sem Divisao' && googleStatus !== 'cancelled') {
         console.warn('[fetchCalendarEvents] ⚠️ Divisão não encontrada no banco:', {
           titulo_original: originalTitle,
           divisao_detectada: components.divisao
@@ -412,12 +424,13 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
       }
     }
 
-    console.log('[fetchCalendarEvents] Processados', events.length, 'eventos');
+    console.log('[fetchCalendarEvents] Total de eventos:', allEvents.length, '| Eventos ativos para exibição:', activeEvents.length);
 
-    // Sincronizar eventos que já existem no banco de dados
-    await syncEventsWithDatabase(events);
+    // Sincronizar TODOS os eventos (incluindo cancelados) para detectar mudanças de status
+    await syncEventsWithDatabase(allEvents);
 
-    return events;
+    // Retornar apenas eventos ativos para exibição na UI
+    return activeEvents;
   } catch (error) {
     console.error('[fetchCalendarEvents] Erro:', error);
     throw new Error("Erro ao buscar eventos do calendário");
