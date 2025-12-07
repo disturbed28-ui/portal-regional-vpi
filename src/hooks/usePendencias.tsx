@@ -67,6 +67,24 @@ export const usePendencias = (
 ) => {
   const [pendencias, setPendencias] = useState<Pendencia[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Função para forçar refetch
+  const refetch = () => {
+    // Limpar todos os caches de pendências
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('pendencias_')) {
+        localStorage.removeItem(key);
+      }
+    });
+    setRefreshTrigger(prev => prev + 1);
+  };
+
+  // Cache de 5 minutos (ao invés de diário)
+  const getCacheKey = () => {
+    const cacheTime = Math.floor(Date.now() / (5 * 60 * 1000)); // 5 minutos
+    return `pendencias_v5_${userId}_${userRole}_${divisaoId || 'no_div'}_${registroId || 'all'}_${cacheTime}`;
+  };
 
   useEffect(() => {
     if (!userId || !userRole) {
@@ -85,17 +103,29 @@ export const usePendencias = (
 
     console.log('[usePendencias] ✅ Iniciando com:', { userId, userRole, regionalId, divisaoId, registroId });
 
-    // Limpar caches antigos (versões v1, v2 e v3)
+    // Detectar page refresh e invalidar cache
+    const navEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+    const isPageRefresh = navEntry?.type === 'reload';
+    
+    if (isPageRefresh) {
+      console.log('[usePendencias] 🔄 Page refresh detectado, invalidando cache...');
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('pendencias_')) {
+          localStorage.removeItem(key);
+        }
+      });
+    }
+
+    // Limpar caches antigos (versões v1, v2, v3 e v4)
     Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('pendencias_') && !key.includes('_v4_')) {
+      if (key.startsWith('pendencias_') && !key.includes('_v5_')) {
         console.log('[usePendencias] Removendo cache antigo:', key);
         localStorage.removeItem(key);
       }
     });
 
-    // Verificar cache do dia (nova versão v4 com validação de consistência)
-    const data = new Date().toISOString().split('T')[0];
-    const cacheKey = `pendencias_v4_${userId}_${userRole}_${divisaoId || 'no_div'}_${registroId || 'all'}_${data}`;
+    // Cache de 5 minutos (nova versão v5)
+    const cacheKey = getCacheKey();
     const cached = localStorage.getItem(cacheKey);
     
     console.log('[usePendencias] Cache key:', cacheKey);
@@ -535,7 +565,7 @@ export const usePendencias = (
     };
 
     fetchPendencias();
-  }, [userId, userRole, regionalId, divisaoId, registroId]);
+  }, [userId, userRole, regionalId, divisaoId, registroId, refreshTrigger]);
 
-  return { pendencias, loading, totalPendencias: pendencias.length };
+  return { pendencias, loading, totalPendencias: pendencias.length, refetch };
 };
