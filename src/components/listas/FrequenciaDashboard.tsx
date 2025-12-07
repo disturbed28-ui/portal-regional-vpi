@@ -150,6 +150,29 @@ export const FrequenciaDashboard = ({ grau, regionalId, divisaoId, isAdmin = fal
     enabled: isAdmin || nivelAcesso === 'comando' || divisaoIdsDaRegional.length > 0 || !!divisaoId
   });
 
+  // Função para mapear justificativa_ausencia para formato padronizado
+  const mapearJustificativa = (ausencia: string | null, tipo: string | null): string | null => {
+    // Priorizar justificativa_tipo se existir e não for nulo/vazio
+    if (tipo && tipo.trim() !== '') return tipo;
+    
+    // Mapear justificativa_ausencia para formato com acentos/capitalizado
+    if (!ausencia || ausencia.trim() === '') return null;
+    
+    const mapeamento: Record<string, string> = {
+      'trabalho': 'Trabalho',
+      'familia': 'Família',
+      'saude': 'Saúde',
+      'saúde': 'Saúde',
+      'família': 'Família',
+      'nao_justificado': 'Não justificou',
+      'nao justificado': 'Não justificou',
+      'não justificou': 'Não justificou'
+    };
+    
+    const chave = ausencia.toLowerCase().trim();
+    return mapeamento[chave] || ausencia; // Retorna o valor original se não encontrar mapeamento
+  };
+
   // Processar dados para gráficos com cálculo ponderado
   const estatisticas = useMemo(() => {
     if (!dadosFrequencia) return null;
@@ -197,8 +220,11 @@ export const FrequenciaDashboard = ({ grau, regionalId, divisaoId, isAdmin = fal
           eventosPorMes[mesAno].presentes++;
           pontosObtidos += pesoEvento;
         } else if (presenca.status === 'ausente') {
-          // Verificar se tem justificativa válida
-          const tipoJustificativa = presenca.justificativa_tipo;
+          // Verificar se tem justificativa válida - checar AMBOS os campos
+          const tipoJustificativa = mapearJustificativa(
+            presenca.justificativa_ausencia,
+            presenca.justificativa_tipo
+          );
           
           if (tipoJustificativa && tipoJustificativa !== 'Não justificou') {
             // Ausência justificada - aplicar peso da justificativa
