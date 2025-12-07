@@ -702,6 +702,7 @@ export type Database = {
           evento_id: string
           id: string
           regional_id: string | null
+          status: string | null
           tipo_evento: string | null
           tipo_evento_peso: string | null
           titulo: string
@@ -714,6 +715,7 @@ export type Database = {
           evento_id: string
           id?: string
           regional_id?: string | null
+          status?: string | null
           tipo_evento?: string | null
           tipo_evento_peso?: string | null
           titulo: string
@@ -726,6 +728,7 @@ export type Database = {
           evento_id?: string
           id?: string
           regional_id?: string | null
+          status?: string | null
           tipo_evento?: string | null
           tipo_evento_peso?: string | null
           titulo?: string
@@ -761,6 +764,57 @@ export type Database = {
             referencedColumns: ["regional_id"]
           },
         ]
+      }
+      eventos_agenda_historico: {
+        Row: {
+          data_evento: string
+          divisao_id: string | null
+          evento_created_at: string | null
+          evento_google_id: string
+          evento_original_id: string
+          excluido_em: string | null
+          excluido_por: string
+          id: string
+          motivo_exclusao: string
+          regional_id: string | null
+          status_original: string
+          tipo_evento: string | null
+          tipo_evento_peso: string | null
+          titulo: string
+        }
+        Insert: {
+          data_evento: string
+          divisao_id?: string | null
+          evento_created_at?: string | null
+          evento_google_id: string
+          evento_original_id: string
+          excluido_em?: string | null
+          excluido_por: string
+          id?: string
+          motivo_exclusao: string
+          regional_id?: string | null
+          status_original: string
+          tipo_evento?: string | null
+          tipo_evento_peso?: string | null
+          titulo: string
+        }
+        Update: {
+          data_evento?: string
+          divisao_id?: string | null
+          evento_created_at?: string | null
+          evento_google_id?: string
+          evento_original_id?: string
+          excluido_em?: string | null
+          excluido_por?: string
+          id?: string
+          motivo_exclusao?: string
+          regional_id?: string | null
+          status_original?: string
+          tipo_evento?: string | null
+          tipo_evento_peso?: string | null
+          titulo?: string
+        }
+        Relationships: []
       }
       formularios_catalogo: {
         Row: {
@@ -1328,6 +1382,59 @@ export type Database = {
             columns: ["integrante_id"]
             isOneToOne: false
             referencedRelation: "integrantes_portal"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      presencas_historico: {
+        Row: {
+          confirmado_em: string | null
+          confirmado_por: string | null
+          evento_historico_id: string
+          id: string
+          integrante_id: string | null
+          justificativa_ausencia: string | null
+          justificativa_tipo: string | null
+          presenca_original_id: string
+          profile_id: string | null
+          status: string
+          visitante_nome: string | null
+          visitante_tipo: string | null
+        }
+        Insert: {
+          confirmado_em?: string | null
+          confirmado_por?: string | null
+          evento_historico_id: string
+          id?: string
+          integrante_id?: string | null
+          justificativa_ausencia?: string | null
+          justificativa_tipo?: string | null
+          presenca_original_id: string
+          profile_id?: string | null
+          status: string
+          visitante_nome?: string | null
+          visitante_tipo?: string | null
+        }
+        Update: {
+          confirmado_em?: string | null
+          confirmado_por?: string | null
+          evento_historico_id?: string
+          id?: string
+          integrante_id?: string | null
+          justificativa_ausencia?: string | null
+          justificativa_tipo?: string | null
+          presenca_original_id?: string
+          profile_id?: string | null
+          status?: string
+          visitante_nome?: string | null
+          visitante_tipo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "presencas_historico_evento_historico_id_fkey"
+            columns: ["evento_historico_id"]
+            isOneToOne: false
+            referencedRelation: "eventos_agenda_historico"
             referencedColumns: ["id"]
           },
         ]

@@ -36,17 +36,27 @@ interface DeltaDetalhes {
   dados_adicionais?: any;
 }
 
+interface EventoCanceladoDetalhes {
+  id: string;
+  evento_google_id: string;
+  titulo: string;
+  data_evento: string;
+  divisao_nome: string | null;
+  status: 'cancelled' | 'removed';
+  total_presencas: number;
+}
+
 interface Pendencia {
   nome_colete: string;
   divisao_texto: string;
-  tipo: 'mensalidade' | 'afastamento' | 'delta';
+  tipo: 'mensalidade' | 'afastamento' | 'delta' | 'evento_cancelado';
   detalhe: string;
   data_ref: string;
   registro_id: number;
-  detalhes_completos: MensalidadeDetalhes | AfastamentoDetalhes | DeltaDetalhes;
+  detalhes_completos: MensalidadeDetalhes | AfastamentoDetalhes | DeltaDetalhes | EventoCanceladoDetalhes;
 }
 
-export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes };
+export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes };
 
 export const usePendencias = (
   userId: string | undefined,
@@ -443,8 +453,62 @@ export const usePendencias = (
         });
       });
 
-      // Ordenar: deltas críticos primeiro, depois por data
+      // 4. Eventos cancelados/removidos pendentes de tratamento (apenas para admins)
+      if (userRole === 'admin') {
+        console.log('[usePendencias] Buscando eventos cancelados/removidos...');
+        
+        const { data: eventosProblematicos, error: errorEventos } = await supabase
+          .from('eventos_agenda')
+          .select(`
+            id, evento_id, titulo, data_evento, status,
+            divisoes:divisao_id (nome)
+          `)
+          .in('status', ['cancelled', 'removed']);
+
+        if (!errorEventos && eventosProblematicos) {
+          // Filtrar apenas os que têm presenças
+          for (const evento of eventosProblematicos) {
+            const { count } = await supabase
+              .from('presencas')
+              .select('*', { count: 'exact', head: true })
+              .eq('evento_agenda_id', evento.id);
+
+            if (count && count > 0) {
+              const statusLabel = evento.status === 'cancelled' 
+                ? '📅 Cancelado no Google' 
+                : '❌ Removido do Google';
+
+              todasPendencias.push({
+                registro_id: 0,
+                nome_colete: evento.titulo,
+                divisao_texto: (evento.divisoes as any)?.nome || 'Sem divisão',
+                tipo: 'evento_cancelado',
+                detalhe: `${statusLabel} - ${count} presenças`,
+                data_ref: evento.data_evento,
+                detalhes_completos: {
+                  id: evento.id,
+                  evento_google_id: evento.evento_id,
+                  titulo: evento.titulo,
+                  data_evento: evento.data_evento,
+                  divisao_nome: (evento.divisoes as any)?.nome || null,
+                  status: evento.status as 'cancelled' | 'removed',
+                  total_presencas: count
+                }
+              });
+            }
+          }
+        }
+
+        console.log('[usePendencias] Eventos cancelados/removidos encontrados:', 
+          todasPendencias.filter(p => p.tipo === 'evento_cancelado').length);
+      }
+
+      // Ordenar: deltas críticos primeiro, depois eventos cancelados, depois por data
       todasPendencias.sort((a, b) => {
+        // Eventos cancelados têm prioridade alta (mas menor que deltas críticos)
+        if (a.tipo === 'evento_cancelado' && b.tipo !== 'evento_cancelado') return -1;
+        if (b.tipo === 'evento_cancelado' && a.tipo !== 'evento_cancelado') return 1;
+        
         if (a.tipo === 'delta' && b.tipo === 'delta') {
           // PROTEÇÃO CRÍTICA: Verificar se detalhes_completos existe
           const detalhesA = a.detalhes_completos as DeltaDetalhes | null;

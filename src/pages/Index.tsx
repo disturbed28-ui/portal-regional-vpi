@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { QRCodeSVG } from "qrcode.react";
 import { QrCode, X } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useAdminCalendarSync } from "@/hooks/useAdminCalendarSync";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -31,6 +32,9 @@ const Index = () => {
   const { hasAccess: canSeeOrganograma, loading: loadingOrganogramaAccess } = useScreenAccess('/organograma', user?.id);
   const { hasAccess: canSeeAdmin, loading: loadingAdminAccess } = useAdminAccess();
   const [showQRCode, setShowQRCode] = useState(false);
+
+  // Sincronização automática da Agenda para admins (detecta eventos cancelados/removidos)
+  useAdminCalendarSync();
 
   // Determinar role para pendências
   const isAdmin = hasRole("admin");

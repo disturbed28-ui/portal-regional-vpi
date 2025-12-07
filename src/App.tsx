@@ -29,6 +29,7 @@ import Formularios from "./pages/Formularios";
 import FormularioRelatorioSemanal from "./pages/FormularioRelatorioSemanal";
 import FormularioAcoesSociais from "./pages/FormularioAcoesSociais";
 import AcoesSociais from "./pages/AcoesSociais";
+import AdminEventosAgendaPendentes from "./pages/AdminEventosAgendaPendentes";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +52,7 @@ const App = () => (
           <Route path="/admin/configuracao-deltas" element={<AdminConfiguracaoDeltas />} />
           <Route path="/admin/acoes-sociais" element={<AdminGestaoAcoesSociais />} />
           <Route path="/admin/logs" element={<AdminLogs />} />
+          <Route path="/admin/eventos-agenda-pendentes" element={<AdminEventosAgendaPendentes />} />
           <Route path="/agenda" element={<Agenda />} />
           <Route path="/relatorios" element={<Relatorios />} />
           <Route path="/organograma" element={<Organograma />} />

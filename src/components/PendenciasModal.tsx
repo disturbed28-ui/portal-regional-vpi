@@ -20,7 +20,7 @@ import {
   AlertTriangle,
   ArrowRight
 } from "lucide-react";
-import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes } from "@/hooks/usePendencias";
+import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes } from "@/hooks/usePendencias";
 
 interface PendenciasModalProps {
   pendencias: Pendencia[];
@@ -372,6 +372,63 @@ const DeltaDetalhesCard = ({ detalhes }: { detalhes: DeltaDetalhes }) => {
   );
 };
 
+// Card para Eventos Cancelados/Removidos
+const EventoCanceladoDetalhesCard = ({ detalhes }: { detalhes: EventoCanceladoDetalhes }) => {
+  const navigate = useNavigate();
+  const formatarData = (data: string) => 
+    format(new Date(data), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+
+  const statusInfo = detalhes.status === 'cancelled' 
+    ? { icon: '📅', text: 'Cancelado no Google Calendar', color: 'amber' }
+    : { icon: '❌', text: 'Removido do Google Calendar', color: 'red' };
+
+  return (
+    <Card className="bg-background/50 border-amber-500">
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 rounded border border-amber-200 dark:border-amber-800">
+          <span className="text-2xl">{statusInfo.icon}</span>
+          <div className="flex-1">
+            <p className="font-semibold text-amber-700 dark:text-amber-400">{statusInfo.text}</p>
+            <p className="text-xs text-muted-foreground">
+              Este evento tem {detalhes.total_presencas} presença(s) registrada(s) que impactam o aproveitamento
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-2 text-sm">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <span className="text-muted-foreground">Data:</span>{' '}
+              <span className="font-medium">{formatarData(detalhes.data_evento)}</span>
+            </div>
+          </div>
+          
+          {detalhes.divisao_nome && (
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <span className="text-muted-foreground">Divisão:</span>{' '}
+                <span className="font-medium">{detalhes.divisao_nome}</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <Button 
+          size="sm" 
+          variant="outline"
+          className="w-full"
+          onClick={() => navigate('/admin/eventos-agenda-pendentes')}
+        >
+          <ArrowRight className="h-4 w-4 mr-2" />
+          Gerenciar eventos pendentes
+        </Button>
+      </CardContent>
+    </Card>
+  );
+};
+
 interface PendenciaItemProps {
   pendencia: Pendencia;
   itemId: string;
@@ -384,6 +441,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
   const isMensalidade = pendencia.tipo === 'mensalidade';
   const isAfastamento = pendencia.tipo === 'afastamento';
   const isDelta = pendencia.tipo === 'delta';
+  const isEventoCancelado = pendencia.tipo === 'evento_cancelado';
   const detalhes = pendencia.detalhes_completos;
   
   // LOG DE DEBUG TEMPORÁRIO
@@ -406,13 +464,10 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
     if (isMensalidade && isCritico) return 'border-red-700';
     if (isMensalidade) return 'border-red-500';
     if (isAfastamento) return 'border-orange-500';
+    if (isEventoCancelado) return 'border-amber-500';
     if (isDelta) {
-      // PROTEÇÃO ADICIONADA
       const deltaDetalhes = detalhes as DeltaDetalhes | null;
-      if (!deltaDetalhes) {
-        console.warn('[PendenciaItem] Delta sem detalhes em getBorderColor');
-        return 'border-gray-500';
-      }
+      if (!deltaDetalhes) return 'border-gray-500';
       if (deltaDetalhes.prioridade === 1) return 'border-red-600';
       return 'border-blue-500';
     }
@@ -422,14 +477,13 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
   const getIcon = () => {
     if (isMensalidade) return '💰';
     if (isAfastamento) return '🏥';
+    if (isEventoCancelado) {
+      const eventDetalhes = detalhes as EventoCanceladoDetalhes;
+      return eventDetalhes?.status === 'cancelled' ? '📅' : '❌';
+    }
     if (isDelta) {
-      // PROTEÇÃO ADICIONADA
       const deltaDetalhes = detalhes as DeltaDetalhes | null;
-      if (!deltaDetalhes || !deltaDetalhes.tipo_delta) {
-        console.warn('[PendenciaItem] Delta sem tipo_delta em getIcon');
-        return '❓';
-      }
-      
+      if (!deltaDetalhes || !deltaDetalhes.tipo_delta) return '❓';
       const tipo = deltaDetalhes.tipo_delta;
       const icons: Record<string, string> = {
         'SUMIU_ATIVOS': '🚨',
@@ -445,6 +499,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
   const getLabel = () => {
     if (isMensalidade) return 'Mensalidade';
     if (isAfastamento) return 'Afastamento';
+    if (isEventoCancelado) return 'Evento Cancelado';
     if (isDelta) return 'Anomalia';
     return 'Pendência';
   };
@@ -535,6 +590,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
           <div className="px-3 pb-3 pt-0 space-y-3">
             {isMensalidade && <MensalidadeDetalhesCard detalhes={detalhes as MensalidadeDetalhes} />}
             {isAfastamento && <AfastamentoDetalhesCard detalhes={detalhes as AfastamentoDetalhes} />}
+            {isEventoCancelado && detalhes && <EventoCanceladoDetalhesCard detalhes={detalhes as EventoCanceladoDetalhes} />}
             
             {/* PROTEÇÃO ADICIONADA */}
             {isDelta && detalhes && <DeltaDetalhesCard detalhes={detalhes as DeltaDetalhes} />}
