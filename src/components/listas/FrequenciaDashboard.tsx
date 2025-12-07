@@ -6,8 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, TrendingUp, Users, CheckCircle2, XCircle } from "lucide-react";
-import { format, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear } from "date-fns";
+import { CalendarIcon, TrendingUp, Users, CheckCircle2, XCircle, AlertTriangle, Target } from "lucide-react";
+import { format, startOfMonth, endOfMonth, subMonths, startOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { getNivelAcesso } from "@/lib/grauUtils";
@@ -24,7 +24,7 @@ type PeriodoPreset = 'mes_atual' | 'mes_anterior' | 'trimestre' | 'ano' | 'perso
 
 const COLORS = {
   presente: '#10b981',
-  ausente: '#ef4444',
+  injustificado: '#ef4444',
   justificado: '#f59e0b'
 };
 
@@ -59,6 +59,34 @@ export const FrequenciaDashboard = ({ grau, regionalId, divisaoId, isAdmin = fal
     enabled: isAdmin || nivelAcesso === 'comando'
   });
 
+  // Buscar pesos dos tipos de evento
+  const { data: tiposEventoPeso } = useQuery({
+    queryKey: ['tipos-evento-peso'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tipos_evento_peso')
+        .select('tipo, peso, ativo')
+        .eq('ativo', true);
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Buscar pesos das justificativas
+  const { data: justificativasPeso } = useQuery({
+    queryKey: ['justificativas-peso'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('justificativas_peso')
+        .select('tipo, peso, ativo')
+        .eq('ativo', true);
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
   // Determinar quais divisões mostrar no seletor
   const divisoesParaSelecao = useMemo(() => {
     if (isAdmin || nivelAcesso === 'comando') {
@@ -82,11 +110,13 @@ export const FrequenciaDashboard = ({ grau, regionalId, divisaoId, isAdmin = fal
           titulo,
           data_evento,
           divisao_id,
+          tipo_evento_peso,
           divisoes(nome),
           presencas(
             id,
             status,
             justificativa_ausencia,
+            justificativa_tipo,
             integrante_id
           )
         `)
@@ -120,35 +150,70 @@ export const FrequenciaDashboard = ({ grau, regionalId, divisaoId, isAdmin = fal
     enabled: isAdmin || nivelAcesso === 'comando' || divisaoIdsDaRegional.length > 0 || !!divisaoId
   });
 
-  // Processar dados para gráficos
+  // Processar dados para gráficos com cálculo ponderado
   const estatisticas = useMemo(() => {
     if (!dadosFrequencia) return null;
 
+    // Mapear pesos por tipo
+    const pesosEvento: Record<string, number> = {};
+    tiposEventoPeso?.forEach(t => {
+      pesosEvento[t.tipo] = Number(t.peso);
+    });
+    
+    const pesosJustificativa: Record<string, number> = {};
+    justificativasPeso?.forEach(j => {
+      pesosJustificativa[j.tipo] = Number(j.peso);
+    });
+
     const totalEventos = dadosFrequencia.length;
     let totalPresencas = 0;
-    let totalAusencias = 0;
+    let totalInjustificados = 0;
     let totalJustificados = 0;
 
-    const eventosPorMes: Record<string, { presentes: number; ausentes: number; justificados: number }> = {};
+    // Para cálculo ponderado
+    let pontosObtidos = 0;
+    let pontosMaximos = 0;
+
+    const eventosPorMes: Record<string, { presentes: number; injustificados: number; justificados: number }> = {};
 
     dadosFrequencia.forEach(evento => {
       const presencas = evento.presencas || [];
       const mesAno = format(new Date(evento.data_evento), 'MMM/yyyy', { locale: ptBR });
+      
+      // Peso do tipo de evento (default 1 se não configurado)
+      const pesoEvento = pesosEvento[evento.tipo_evento_peso || ''] || 1;
 
       if (!eventosPorMes[mesAno]) {
-        eventosPorMes[mesAno] = { presentes: 0, ausentes: 0, justificados: 0 };
+        eventosPorMes[mesAno] = { presentes: 0, injustificados: 0, justificados: 0 };
       }
 
       presencas.forEach(presenca => {
+        // Peso máximo possível para este registro
+        pontosMaximos += pesoEvento;
+
         if (presenca.status === 'presente') {
+          // Presença = 100% do peso do evento
           totalPresencas++;
           eventosPorMes[mesAno].presentes++;
-        } else if (presenca.status === 'justificado') {
-          totalJustificados++;
-          eventosPorMes[mesAno].justificados++;
-        } else {
-          totalAusencias++;
-          eventosPorMes[mesAno].ausentes++;
+          pontosObtidos += pesoEvento;
+        } else if (presenca.status === 'ausente') {
+          // Verificar se tem justificativa válida
+          const tipoJustificativa = presenca.justificativa_tipo;
+          
+          if (tipoJustificativa && tipoJustificativa !== 'Não justificou') {
+            // Ausência justificada - aplicar peso da justificativa
+            totalJustificados++;
+            eventosPorMes[mesAno].justificados++;
+            
+            // Peso da justificativa (ex: Saúde = 0.75, Trabalho = 0.5, etc)
+            const pesoJustificativa = pesosJustificativa[tipoJustificativa] ?? 0;
+            pontosObtidos += pesoEvento * pesoJustificativa;
+          } else {
+            // Ausência injustificada - 0 pontos
+            totalInjustificados++;
+            eventosPorMes[mesAno].injustificados++;
+            // pontosObtidos += 0
+          }
         }
       });
     });
@@ -156,27 +221,32 @@ export const FrequenciaDashboard = ({ grau, regionalId, divisaoId, isAdmin = fal
     const dadosGraficoBarras = Object.entries(eventosPorMes).map(([mes, dados]) => ({
       mes,
       Presentes: dados.presentes,
-      Ausentes: dados.ausentes,
+      Injustificados: dados.injustificados,
       Justificados: dados.justificados
     }));
 
-    const totalRegistros = totalPresencas + totalAusencias + totalJustificados;
+    const totalRegistros = totalPresencas + totalInjustificados + totalJustificados;
+    const aproveitamentoPonderado = pontosMaximos > 0 ? (pontosObtidos / pontosMaximos) * 100 : 0;
+
     const dadosGraficoPizza = [
-      { name: 'Presentes', value: totalPresencas, porcentagem: totalRegistros > 0 ? ((totalPresencas / totalRegistros) * 100).toFixed(1) : 0 },
-      { name: 'Ausentes', value: totalAusencias, porcentagem: totalRegistros > 0 ? ((totalAusencias / totalRegistros) * 100).toFixed(1) : 0 },
-      { name: 'Justificados', value: totalJustificados, porcentagem: totalRegistros > 0 ? ((totalJustificados / totalRegistros) * 100).toFixed(1) : 0 }
+      { name: 'Presentes', value: totalPresencas, porcentagem: totalRegistros > 0 ? ((totalPresencas / totalRegistros) * 100).toFixed(1) : '0' },
+      { name: 'Justificados', value: totalJustificados, porcentagem: totalRegistros > 0 ? ((totalJustificados / totalRegistros) * 100).toFixed(1) : '0' },
+      { name: 'Injustificados', value: totalInjustificados, porcentagem: totalRegistros > 0 ? ((totalInjustificados / totalRegistros) * 100).toFixed(1) : '0' }
     ];
 
     return {
       totalEventos,
       totalPresencas,
-      totalAusencias,
+      totalInjustificados,
       totalJustificados,
       totalRegistros,
+      aproveitamentoPonderado,
+      pontosObtidos,
+      pontosMaximos,
       dadosGraficoBarras,
       dadosGraficoPizza
     };
-  }, [dadosFrequencia]);
+  }, [dadosFrequencia, tiposEventoPeso, justificativasPeso]);
 
   const handlePeriodoChange = (valor: PeriodoPreset) => {
     setPeriodoPreset(valor);
@@ -320,7 +390,7 @@ export const FrequenciaDashboard = ({ grau, regionalId, divisaoId, isAdmin = fal
 
       {/* Cards de Resumo */}
       {estatisticas && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total de Eventos</CardTitle>
@@ -346,11 +416,11 @@ export const FrequenciaDashboard = ({ grau, regionalId, divisaoId, isAdmin = fal
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Ausências</CardTitle>
-              <XCircle className="h-4 w-4 text-red-600" />
+              <CardTitle className="text-sm font-medium">Justificados</CardTitle>
+              <Users className="h-4 w-4 text-amber-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">{estatisticas.totalAusencias}</div>
+              <div className="text-2xl font-bold text-amber-600">{estatisticas.totalJustificados}</div>
               <p className="text-xs text-muted-foreground">
                 {estatisticas.dadosGraficoPizza[1].porcentagem}% do total
               </p>
@@ -359,13 +429,32 @@ export const FrequenciaDashboard = ({ grau, regionalId, divisaoId, isAdmin = fal
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Justificados</CardTitle>
-              <Users className="h-4 w-4 text-amber-600" />
+              <CardTitle className="text-sm font-medium">Injustificados</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-red-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-amber-600">{estatisticas.totalJustificados}</div>
+              <div className="text-2xl font-bold text-red-600">{estatisticas.totalInjustificados}</div>
               <p className="text-xs text-muted-foreground">
                 {estatisticas.dadosGraficoPizza[2].porcentagem}% do total
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="col-span-2 md:col-span-1">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Aproveitamento</CardTitle>
+              <Target className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${
+                estatisticas.aproveitamentoPonderado >= 80 ? 'text-green-600' :
+                estatisticas.aproveitamentoPonderado >= 60 ? 'text-amber-600' :
+                'text-red-600'
+              }`}>
+                {estatisticas.aproveitamentoPonderado.toFixed(1)}%
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {estatisticas.pontosObtidos.toFixed(1)} / {estatisticas.pontosMaximos.toFixed(1)} pts
               </p>
             </CardContent>
           </Card>
@@ -391,7 +480,7 @@ export const FrequenciaDashboard = ({ grau, regionalId, divisaoId, isAdmin = fal
                   <Legend wrapperStyle={{ fontSize: '12px' }} />
                   <Bar dataKey="Presentes" fill={COLORS.presente} />
                   <Bar dataKey="Justificados" fill={COLORS.justificado} />
-                  <Bar dataKey="Ausentes" fill={COLORS.ausente} />
+                  <Bar dataKey="Injustificados" fill={COLORS.injustificado} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
