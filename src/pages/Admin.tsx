@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronDown, ArrowLeft, Building2, Database, Users, ShieldCheck, Bell, Link as LinkIcon, FileCheck, TriangleAlert, Settings, Activity, Heart } from "lucide-react";
+import { ChevronDown, ArrowLeft, Building2, Database, Users, ShieldCheck, Bell, Link as LinkIcon, FileCheck, TriangleAlert, Settings, Activity, Heart, Calendar } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -542,7 +542,7 @@ const Admin = () => {
     <div className="admin-page min-h-screen bg-background p-4">
       <div className="max-w-4xl mx-auto">
         {/* Header mobile-first com botao de voltar */}
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-3 mb-2">
           <Button
             variant="ghost"
             size="icon"
@@ -552,9 +552,12 @@ const Admin = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-xl font-bold sm:text-2xl">
-            Administracao de Perfis
+            Administração do Sistema
           </h1>
         </div>
+        <p className="text-sm text-muted-foreground mb-4 ml-11">
+          Gestão de perfis, estrutura organizacional, permissões, dados e configurações do sistema
+        </p>
 
         {/* Grid de botoes - pensado para 9x18 */}
         
@@ -648,6 +651,15 @@ const Admin = () => {
             >
               <Activity className="h-4 w-4 mr-2" />
               Auditoria
+            </Button>
+
+            <Button
+              onClick={() => navigate("/admin/eventos-agenda-pendentes")}
+              variant="outline"
+              className="w-full justify-start h-9 px-2 py-2 text-sm"
+            >
+              <Calendar className="h-4 w-4 mr-2" />
+              Eventos Agenda Pendentes
             </Button>
 </div>
 
