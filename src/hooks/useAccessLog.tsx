@@ -10,13 +10,7 @@ export const useAccessLog = () => {
     if (!userId) return;
 
     try {
-      // Update last_access_at in profiles
-      await supabase
-        .from("profiles")
-        .update({ last_access_at: new Date().toISOString() })
-        .eq("id", userId);
-
-      // Insert login log
+      // Insert login log - trigger will update profiles.last_access_at automatically
       await supabase.from("user_access_logs").insert({
         user_id: userId,
         tipo_evento: "login",

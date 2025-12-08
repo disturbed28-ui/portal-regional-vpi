@@ -52,6 +52,7 @@ export const useProfilesWithAccess = () => {
           last_access_at,
           photo_url
         `)
+        .not("last_access_at", "is", null)
         .order("last_access_at", { ascending: false, nullsFirst: false });
 
       if (filters.search) {
