@@ -178,6 +178,13 @@ const mapRowToRegistro = (row: SheetRow, debugFirstRow = false): RegistroMapeado
   return resultado;
 };
 
+// Função para normalizar escopo (IGUAL AO BACKEND import-acoes-sociais)
+const parseEscopo = (value: string): 'interna' | 'externa' => {
+  const lower = (value || '').toLowerCase();
+  if (lower.includes('extern')) return 'externa';
+  return 'interna';
+};
+
 // Função para gerar hash de deduplicação (mesmo algoritmo do backend com btoa)
 // Inclui tipo_acao e escopo para diferenciar múltiplas ações do mesmo responsável no mesmo dia
 const gerarHashDeduplicacao = (
@@ -457,7 +464,10 @@ export const useAcoesSociaisPendentesGoogleSheet = (
           }
         }
 
-        const hash = gerarHashDeduplicacao(dataAcao, divisaoParaHash, responsavel, tipoAcao, escopo);
+        // Normalizar escopo IGUAL ao backend (interna/externa)
+        const escopoNormalizado = parseEscopo(escopo);
+        
+        const hash = gerarHashDeduplicacao(dataAcao, divisaoParaHash, responsavel, tipoAcao, escopoNormalizado);
 
         if (hashSet.has(hash)) {
           jaImportadas++;
