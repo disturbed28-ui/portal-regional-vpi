@@ -5,15 +5,15 @@ export interface ProfileWithAccess {
   id: string;
   name: string;
   nome_colete: string | null;
-  cargo: string | null;
   grau: string | null;
-  regional: string | null;
   regional_id: string | null;
-  divisao: string | null;
   divisao_id: string | null;
   profile_status: string;
   last_access_at: string | null;
   photo_url: string | null;
+  cargos: { nome: string } | null;
+  divisoes: { nome: string } | null;
+  regionais: { nome: string } | null;
 }
 
 interface Filters {
@@ -42,15 +42,15 @@ export const useProfilesWithAccess = () => {
           id,
           name,
           nome_colete,
-          cargo,
           grau,
-          regional,
           regional_id,
-          divisao,
           divisao_id,
           profile_status,
           last_access_at,
-          photo_url
+          photo_url,
+          cargos:cargo_id(nome),
+          divisoes:divisao_id(nome),
+          regionais:regional_id(nome)
         `)
         .not("last_access_at", "is", null)
         .order("last_access_at", { ascending: false, nullsFirst: false });

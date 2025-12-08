@@ -63,7 +63,7 @@ export const UserAccessDetail = ({ user, open, onClose }: UserAccessDetailProps)
                 {user.nome_colete || user.name}
               </DialogTitle>
               <p className="text-xs text-muted-foreground truncate">
-                {[user.divisao, user.cargo, user.grau].filter(Boolean).join(' • ')}
+                {[user.divisoes?.nome, user.cargos?.nome, user.grau].filter(Boolean).join(' • ')}
               </p>
             </div>
             <Button variant="ghost" size="icon" onClick={refresh} className="h-8 w-8">
