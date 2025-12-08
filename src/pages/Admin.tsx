@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronDown, ArrowLeft, Building2, Database, Users, ShieldCheck, Bell, Link as LinkIcon, FileCheck, TriangleAlert, Settings, Activity, Heart, Calendar } from "lucide-react";
+import { ChevronDown, ArrowLeft, Building2, Database, Users, ShieldCheck, Bell, Link as LinkIcon, FileCheck, TriangleAlert, Settings, Activity, Heart, Calendar, History } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -660,6 +660,15 @@ const Admin = () => {
             >
               <Calendar className="h-4 w-4 mr-2" />
               Eventos Agenda Pendentes
+            </Button>
+
+            <Button
+              onClick={() => navigate("/admin/historico-conexoes")}
+              variant="outline"
+              className="w-full justify-start h-9 px-2 py-2 text-sm"
+            >
+              <History className="h-4 w-4 mr-2" />
+              Histórico de Conexões
             </Button>
 </div>
 
