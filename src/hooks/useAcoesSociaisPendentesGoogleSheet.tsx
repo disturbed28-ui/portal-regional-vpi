@@ -455,12 +455,20 @@ export const useAcoesSociaisPendentesGoogleSheet = (
         if (integrantesMap.has(nomeNormalizado)) {
           divisaoParaHash = integrantesMap.get(nomeNormalizado)!;
         } else {
-          // Busca parcial (igual ao backend)
+          // Busca parcial - coletar TODOS os matches e escolher o MENOR (IGUAL AO BACKEND)
+          const matches: { nomeKey: string; divisaoTexto: string }[] = [];
+
           for (const [nomeKey, divisaoTexto] of integrantesMap) {
-            if (nomeKey.includes(nomeNormalizado) || nomeNormalizado.includes(nomeKey)) {
-              divisaoParaHash = divisaoTexto;
-              break;
+            if (nomeKey.startsWith(nomeNormalizado) || nomeNormalizado.startsWith(nomeKey)) {
+              matches.push({ nomeKey, divisaoTexto });
             }
+          }
+
+          if (matches.length > 0) {
+            // Ordenar por tamanho do nome (menor primeiro = mais específico)
+            // Ex: "tom a-" (6) vence "tombado" (7)
+            matches.sort((a, b) => a.nomeKey.length - b.nomeKey.length);
+            divisaoParaHash = matches[0].divisaoTexto;
           }
         }
 
