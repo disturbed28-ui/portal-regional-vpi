@@ -1,8 +1,32 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { logSystemEventFromClient } from "@/lib/logSystemEvent";
+
+// Helper to log login access
+const logLoginAccess = async (userId: string, rota: string) => {
+  try {
+    // Update last_access_at in profiles
+    await supabase
+      .from("profiles")
+      .update({ last_access_at: new Date().toISOString() })
+      .eq("id", userId);
+
+    // Insert login log
+    await supabase.from("user_access_logs").insert({
+      user_id: userId,
+      tipo_evento: "login",
+      rota: rota || "/",
+      origem: "frontend",
+      user_agent: navigator.userAgent,
+    });
+
+    console.log("[useAuth] Login access logged for user:", userId);
+  } catch (error) {
+    console.error("[useAuth] Error logging login access:", error);
+  }
+};
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -55,6 +79,9 @@ export const useAuth = () => {
                 // Não mostrar toast - edge function já trata casos conhecidos
               } else {
                 console.log('[useAuth] Profile creation result:', data);
+                
+                // Log login access
+                logLoginAccess(session.user.id, window.location.pathname);
                 
                 // Mostrar toast de boas-vindas
                 const hasShownWelcomeToast = sessionStorage.getItem('welcome_toast_shown');
