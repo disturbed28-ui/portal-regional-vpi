@@ -30,16 +30,20 @@ function normalizeText(text: string): string {
     .trim();
 }
 
-// Hash sempre normalizado para lowercase
+// Hash sempre normalizado para lowercase - inclui tipo_acao e escopo para diferenciar múltiplas ações do mesmo responsável no mesmo dia
 function gerarHashDeduplicacao(registro: {
   data_acao: string;
   divisao: string;
   responsavel: string;
+  tipo_acao: string;
+  escopo: string;
 }): string {
   const texto = [
     registro.data_acao,
     normalizeText(registro.divisao),
-    normalizeText(registro.responsavel)
+    normalizeText(registro.responsavel),
+    normalizeText(registro.tipo_acao),
+    normalizeText(registro.escopo)
   ].join('|');
   
   return btoa(texto);
@@ -315,11 +319,16 @@ Deno.serve(async (req) => {
         null
       );
 
-      // Gerar hash de deduplicação (sempre lowercase)
+      // Gerar hash de deduplicação (sempre lowercase, com tipo_acao e escopo)
+      const tipoAcao = (row.tipo_acao || '').trim();
+      const escopoAcao = parseEscopo(row.escopo);
+      
       const hash = gerarHashDeduplicacao({
         data_acao: dataAcao,
         divisao: divisaoTexto,
-        responsavel: responsavel
+        responsavel: responsavel,
+        tipo_acao: tipoAcao,
+        escopo: escopoAcao
       });
 
       // Verificar duplicata no banco de dados existente (comparação normalizada)

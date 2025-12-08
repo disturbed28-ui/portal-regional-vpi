@@ -179,15 +179,20 @@ const mapRowToRegistro = (row: SheetRow, debugFirstRow = false): RegistroMapeado
 };
 
 // Função para gerar hash de deduplicação (mesmo algoritmo do backend com btoa)
+// Inclui tipo_acao e escopo para diferenciar múltiplas ações do mesmo responsável no mesmo dia
 const gerarHashDeduplicacao = (
   dataAcao: string,
   divisao: string,
-  responsavel: string
+  responsavel: string,
+  tipoAcao: string,
+  escopo: string
 ): string => {
   const texto = [
     dataAcao || "",
     normalizeText(divisao),
-    normalizeText(responsavel)
+    normalizeText(responsavel),
+    normalizeText(tipoAcao),
+    normalizeText(escopo)
   ].join("|");
   
   return btoa(texto);
@@ -452,7 +457,7 @@ export const useAcoesSociaisPendentesGoogleSheet = (
           }
         }
 
-        const hash = gerarHashDeduplicacao(dataAcao, divisaoParaHash, responsavel);
+        const hash = gerarHashDeduplicacao(dataAcao, divisaoParaHash, responsavel, tipoAcao, escopo);
 
         if (hashSet.has(hash)) {
           jaImportadas++;
