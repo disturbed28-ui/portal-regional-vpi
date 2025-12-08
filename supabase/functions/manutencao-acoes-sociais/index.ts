@@ -17,11 +17,20 @@ function normalizeText(text: string): string {
 }
 
 // Gerar hash em Base64 - SEMPRE normalizado para lowercase
-function gerarHashDeduplicacao(dataAcao: string, divisao: string, responsavel: string): string {
+// Inclui tipo_acao e escopo para diferenciar múltiplas ações do mesmo responsável no mesmo dia
+function gerarHashDeduplicacao(
+  dataAcao: string, 
+  divisao: string, 
+  responsavel: string,
+  tipoAcao: string,
+  escopo: string
+): string {
   const partes = [
     dataAcao,
     normalizeText(divisao),
     normalizeText(responsavel),
+    normalizeText(tipoAcao),
+    normalizeText(escopo),
   ];
   const stringParaHash = partes.join("|");
   return btoa(stringParaHash);
@@ -102,10 +111,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 2. Buscar todos os registros de ações sociais
+    // 2. Buscar todos os registros de ações sociais (incluindo tipo_acao e escopo para o novo hash)
     const { data: registros, error: registrosError } = await supabase
       .from("acoes_sociais_registros")
-      .select("id, data_acao, responsavel_nome_colete, divisao_relatorio_texto, hash_deduplicacao, foi_reportada_em_relatorio, created_at")
+      .select("id, data_acao, responsavel_nome_colete, divisao_relatorio_texto, tipo_acao_nome_snapshot, escopo_acao, hash_deduplicacao, foi_reportada_em_relatorio, created_at")
       .order("created_at", { ascending: true }); // Mais antigos primeiro para manter o original
 
     if (registrosError) {
@@ -146,11 +155,13 @@ Deno.serve(async (req) => {
         registro.divisao_relatorio_texto
       );
 
-      // Calcular hash normalizado (sempre lowercase, com divisão correta)
+      // Calcular hash normalizado (sempre lowercase, com divisão correta, tipo_acao e escopo)
       const hashNormalizado = gerarHashDeduplicacao(
         registro.data_acao,
         divisaoCorreta,
-        registro.responsavel_nome_colete
+        registro.responsavel_nome_colete,
+        registro.tipo_acao_nome_snapshot || '',
+        registro.escopo_acao || ''
       );
 
       registrosProcessados.push({
