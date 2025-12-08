@@ -213,14 +213,14 @@ const AdminHistoricoConexoes = () => {
                         {profile.profile_status}
                       </Badge>
                     </div>
-                    {(profile.regional || profile.divisao) && (
+                    {(profile.regionais?.nome || profile.divisoes?.nome) && (
                       <p className="text-xs text-muted-foreground truncate">
-                        {[profile.regional, profile.divisao].filter(Boolean).join(' • ')}
+                        {[profile.regionais?.nome, profile.divisoes?.nome].filter(Boolean).join(' • ')}
                       </p>
                     )}
-                    {(profile.cargo || profile.grau) && (
+                    {(profile.cargos?.nome || profile.grau) && (
                       <p className="text-xs text-muted-foreground">
-                        {[profile.cargo, profile.grau].filter(Boolean).join(' ')}
+                        {[profile.cargos?.nome, profile.grau].filter(Boolean).join(' ')}
                       </p>
                     )}
                   </div>
