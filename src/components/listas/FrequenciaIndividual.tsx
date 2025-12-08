@@ -275,215 +275,245 @@ export const FrequenciaIndividual = ({ grau, regionalId, divisaoId, isAdmin = fa
     });
   };
 
-  const handleExportExcel = () => {
-    if (!dadosFrequencia) return;
+  // Constantes para ordenação hierárquica do organograma
+  const CARGO_ORDER: Record<string, number> = {
+    'Diretor Regional': 1,
+    'Operacional Regional': 2,
+    'Social Regional': 3,
+    'Adm. Regional': 4,
+    'Comunicação': 5,
+    'Diretor Divisão': 10,
+    'Sub Diretor Divisão': 11,
+    'Social Divisão': 12,
+    'Adm. Divisão': 13,
+    'Sgt.Armas Divisão': 14,
+    'Sgt Armas Full': 15,
+    'Sgt Armas PP': 16,
+  };
 
-    const getStatusOrder = (status: string): number => {
-      switch (status) {
-        case 'presente': return 1;
-        case 'visitante': return 2;
-        case 'ausente': return 3;
-        case 'justificado': return 4;
-        default: return 999;
-      }
+  const getCargoOrder = (cargo: string | null): number => CARGO_ORDER[cargo || ''] || 99;
+
+  const getDivOrder = (divisao: string, regional: string): number =>
+    divisao === regional ? 0 : 1; // Regional = 0, Divisões = 1
+
+  const getTipoGrauOrder = (cargo: string | null): number => {
+    if (!cargo) return 3;
+    const upper = cargo.toUpperCase();
+    if (upper.includes('PP')) return 1;
+    if (upper.includes('FULL')) return 2;
+    return 3;
+  };
+
+  const handleExportExcel = () => {
+    if (!dadosFrequencia || dadosFrequencia.length === 0) return;
+
+    // Interfaces locais para tipagem
+    interface DadosResumo {
+      regional: string;
+      divisao: string;
+      divOrder: number;
+      nome: string;
+      cargo: string;
+      cargoOrder: number;
+      grau: string;
+      grauNum: number;
+      tipoGrau: number;
+      eventos: number;
+      presencas: number;
+      ausencias: number;
+      justificados: number;
+      pontosObtidos: number;
+      pontosMaximos: number;
+      aproveitamento: number;
+    }
+
+    interface DadosDetalhado {
+      regional: string;
+      divisao: string;
+      divOrder: number;
+      nome: string;
+      cargo: string;
+      cargoOrder: number;
+      grau: string;
+      grauNum: number;
+      tipoGrau: number;
+      status: string;
+      justificativa: string;
+      dataHora: Date;
+      dataOriginal: string;
+      evento: string;
+      pesoEvento: number;
+      pesoPresenca: number;
+      pontos: number;
+    }
+
+    // Função de ordenação hierárquica
+    const sortHierarquico = <T extends { 
+      regional: string; 
+      divOrder: number; 
+      divisao: string; 
+      cargoOrder: number; 
+      grauNum: number; 
+      tipoGrau: number; 
+      nome: string 
+    }>(a: T, b: T): number => {
+      if (a.regional !== b.regional) return a.regional.localeCompare(b.regional, 'pt-BR');
+      if (a.divOrder !== b.divOrder) return a.divOrder - b.divOrder;
+      if (a.divisao !== b.divisao) return a.divisao.localeCompare(b.divisao, 'pt-BR');
+      if (a.cargoOrder !== b.cargoOrder) return a.cargoOrder - b.cargoOrder;
+      if (a.grauNum !== b.grauNum) return a.grauNum - b.grauNum;
+      if (a.tipoGrau !== b.tipoGrau) return a.tipoGrau - b.tipoGrau;
+      return a.nome.localeCompare(b.nome, 'pt-BR');
     };
 
-    // Agrupar eventos por data/título
-    const eventosPorData = new Map<string, {
-      data: string;
-      titulo: string;
-      integrantes: Array<{
-        nome: string;
-        divisao: string;
-        regional: string;
-        cargo: string;
-        grau: string;
-        status: string;
-        justificativa: string;
-        peso_evento: number;
-        peso_presenca: number;
-        pontos: number;
-        tipo_grupo: 'regional' | 'divisao';
-        grupo_nome: string;
-      }>;
-    }>();
+    // 1. Processar dados para aba "Resumo_Integrantes"
+    const dadosResumo: DadosResumo[] = dadosFrequencia.map(integrante => {
+      const eventos = integrante.eventos;
+      const cargoNome = eventos[0]?.cargo_nome || '-';
+      const grauTexto = eventos[0]?.grau || '-';
+      const regionalTexto = integrante.regional_texto || '';
 
-    // Usar dadosAgrupados para manter a estrutura de grupos
-    dadosAgrupados.forEach(grupo => {
-      grupo.integrantes.forEach(integrante => {
-        integrante.eventos.forEach(evento => {
-          const eventoKey = `${evento.data}|${evento.titulo}`;
-          
-          if (!eventosPorData.has(eventoKey)) {
-            eventosPorData.set(eventoKey, {
-              data: evento.data,
-              titulo: evento.titulo,
-              integrantes: []
-            });
-          }
-          
-          const eventoData = eventosPorData.get(eventoKey)!;
-          eventoData.integrantes.push({
-            nome: integrante.nome_colete,
-            divisao: integrante.divisao,
-            regional: integrante.regional_texto || '',
-            cargo: evento.cargo_nome || '-',
-            grau: evento.grau || '-',
-            status: evento.status,
-            justificativa: evento.justificativa || '-',
-            peso_evento: evento.pesoEvento,
-            peso_presenca: evento.pesoPresenca,
-            pontos: evento.pontos,
-            tipo_grupo: grupo.tipo,
-            grupo_nome: grupo.nome
-          });
-        });
-      });
+      return {
+        regional: regionalTexto,
+        divisao: integrante.divisao,
+        divOrder: getDivOrder(integrante.divisao, regionalTexto),
+        nome: integrante.nome_colete,
+        cargo: cargoNome,
+        cargoOrder: getCargoOrder(cargoNome),
+        grau: grauTexto,
+        grauNum: romanToNumber(grauTexto),
+        tipoGrau: getTipoGrauOrder(cargoNome),
+        eventos: integrante.totalEventos,
+        presencas: eventos.filter(e => e.status === 'presente').length,
+        ausencias: eventos.filter(e => e.status === 'ausente').length,
+        justificados: eventos.filter(e => e.justificativa && e.justificativa !== '-' && e.justificativa !== 'Não justificou').length,
+        pontosObtidos: integrante.pontosObtidos,
+        pontosMaximos: integrante.pontosMaximos,
+        aproveitamento: integrante.percentual,
+      };
     });
 
-    const eventosOrdenados = Array.from(eventosPorData.values())
-      .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+    // Ordenar resumo pela hierarquia
+    dadosResumo.sort(sortHierarquico);
 
-    const dadosParaExcel: any[] = [];
+    // 2. Processar dados para aba "Base_Detalhada"
+    const dadosDetalhado: DadosDetalhado[] = [];
     
-    eventosOrdenados.forEach(evento => {
-      // Cabeçalho do evento
-      dadosParaExcel.push({
-        'Data': format(new Date(evento.data), 'dd/MM/yyyy HH:mm', { locale: ptBR }),
-        'Evento': evento.titulo,
-        'Grupo': '',
-        'Nome': '',
-        'Divisão': '',
-        'Cargo': '',
-        'Grau': '',
-        'Status': '',
-        'Justificativa': '',
-        'Peso Evento': '',
-        'Peso Presença': '',
-        'Pontos': ''
-      });
+    dadosFrequencia.forEach(integrante => {
+      const regionalTexto = integrante.regional_texto || '';
+      
+      integrante.eventos.forEach(evento => {
+        const cargoNome = evento.cargo_nome || '-';
+        const grauTexto = evento.grau || '-';
+        const dataEvento = new Date(evento.data);
 
-      // Agrupar integrantes do evento por grupo (regional/divisão)
-      const integrantesPorGrupo = new Map<string, typeof evento.integrantes>();
-      evento.integrantes.forEach(int => {
-        const grupoKey = `${int.tipo_grupo}|${int.grupo_nome}`;
-        if (!integrantesPorGrupo.has(grupoKey)) {
-          integrantesPorGrupo.set(grupoKey, []);
-        }
-        integrantesPorGrupo.get(grupoKey)!.push(int);
-      });
-
-      // Ordenar grupos: regionais primeiro, depois divisões alfabeticamente
-      const gruposOrdenados = Array.from(integrantesPorGrupo.entries()).sort((a, b) => {
-        const [tipoA] = a[0].split('|');
-        const [tipoB] = b[0].split('|');
-        if (tipoA === 'regional' && tipoB !== 'regional') return -1;
-        if (tipoA !== 'regional' && tipoB === 'regional') return 1;
-        return a[0].localeCompare(b[0], 'pt-BR');
-      });
-
-      gruposOrdenados.forEach(([grupoKey, integrantes]) => {
-        const [tipoGrupo, grupoNome] = grupoKey.split('|');
-        const separador = tipoGrupo === 'regional' ? '═══' : '──';
-        
-        // Separador de grupo
-        dadosParaExcel.push({
-          'Data': '',
-          'Evento': '',
-          'Grupo': `${separador} ${grupoNome} ${separador}`,
-          'Nome': '',
-          'Divisão': '',
-          'Cargo': '',
-          'Grau': '',
-          'Status': '',
-          'Justificativa': '',
-          'Peso Evento': '',
-          'Peso Presença': '',
-          'Pontos': ''
+        dadosDetalhado.push({
+          regional: regionalTexto,
+          divisao: integrante.divisao,
+          divOrder: getDivOrder(integrante.divisao, regionalTexto),
+          nome: integrante.nome_colete,
+          cargo: cargoNome,
+          cargoOrder: getCargoOrder(cargoNome),
+          grau: grauTexto,
+          grauNum: romanToNumber(grauTexto),
+          tipoGrau: getTipoGrauOrder(cargoNome),
+          status: evento.status,
+          justificativa: evento.justificativa || '-',
+          dataHora: dataEvento,
+          dataOriginal: format(dataEvento, 'dd/MM/yyyy HH:mm', { locale: ptBR }),
+          evento: evento.titulo,
+          pesoEvento: evento.pesoEvento,
+          pesoPresenca: evento.pesoPresenca,
+          pontos: evento.pontos,
         });
-
-        // Ordenar integrantes
-        const integrantesOrdenados = [...integrantes].sort((a, b) => {
-          const statusA = getStatusOrder(a.status);
-          const statusB = getStatusOrder(b.status);
-          if (statusA !== statusB) return statusA - statusB;
-          
-          const grauA = romanToNumber(a.grau);
-          const grauB = romanToNumber(b.grau);
-          if (grauA !== grauB) return grauA - grauB;
-          
-          return a.nome.localeCompare(b.nome, 'pt-BR');
-        });
-
-        integrantesOrdenados.forEach(int => {
-          dadosParaExcel.push({
-            'Data': '',
-            'Evento': '',
-            'Grupo': '',
-            'Nome': int.nome,
-            'Divisão': int.divisao,
-            'Cargo': int.cargo,
-            'Grau': int.grau,
-            'Status': int.status,
-            'Justificativa': int.justificativa,
-            'Peso Evento': int.peso_evento.toFixed(2),
-            'Peso Presença': int.peso_presenca.toFixed(2),
-            'Pontos': int.pontos.toFixed(2)
-          });
-        });
-
-        // Total do grupo
-        dadosParaExcel.push({
-          'Data': '',
-          'Evento': '',
-          'Grupo': `Total ${grupoNome}: ${integrantes.length}`,
-          'Nome': '',
-          'Divisão': '',
-          'Cargo': '',
-          'Grau': '',
-          'Status': '',
-          'Justificativa': '',
-          'Peso Evento': '',
-          'Peso Presença': '',
-          'Pontos': ''
-        });
-      });
-
-      // Linha em branco entre eventos
-      dadosParaExcel.push({
-        'Data': '', 'Evento': '', 'Grupo': '', 'Nome': '', 'Divisão': '', 'Cargo': '', 
-        'Grau': '', 'Status': '', 'Justificativa': '', 'Peso Evento': '', 
-        'Peso Presença': '', 'Pontos': ''
       });
     });
 
-    // Total Geral
-    dadosParaExcel.push({
-      'Data': 'TOTAL GERAL',
-      'Evento': `${dadosFrequencia.length} integrantes`,
-      'Grupo': '',
-      'Nome': '',
-      'Divisão': '',
-      'Cargo': '',
-      'Grau': '',
-      'Status': '',
-      'Justificativa': '',
-      'Peso Evento': '',
-      'Peso Presença': '',
-      'Pontos': ''
+    // Ordenar detalhado pela hierarquia + dataHora
+    dadosDetalhado.sort((a, b) => {
+      const hierarquico = sortHierarquico(a, b);
+      if (hierarquico !== 0) return hierarquico;
+      return a.dataHora.getTime() - b.dataHora.getTime();
     });
 
-    const ws = XLSX.utils.json_to_sheet(dadosParaExcel);
-    
-    ws['!cols'] = [
-      { wch: 18 }, { wch: 40 }, { wch: 25 }, { wch: 25 }, { wch: 30 }, { wch: 30 },
-      { wch: 8 }, { wch: 12 }, { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 10 }
-    ];
+    // 3. Preparar dados para Excel - Aba Resumo
+    const sheetResumoData = dadosResumo.map(d => ({
+      'Regional': d.regional,
+      'Divisão': d.divisao,
+      'Nome': d.nome,
+      'Cargo': d.cargo,
+      'Grau': d.grau,
+      'Eventos': d.eventos,
+      'Presencas': d.presencas,
+      'Ausencias': d.ausencias,
+      'Justificados': d.justificados,
+      'PontosObtidos': Number(d.pontosObtidos.toFixed(2)),
+      'PontosMaximos': Number(d.pontosMaximos.toFixed(2)),
+      'Aproveitamento (%)': Number(d.aproveitamento.toFixed(2)),
+    }));
 
+    // 4. Preparar dados para Excel - Aba Detalhada
+    const sheetDetalhadoData = dadosDetalhado.map(d => ({
+      'Regional': d.regional,
+      'Divisão': d.divisao,
+      'Nome': d.nome,
+      'Cargo': d.cargo,
+      'Grau': d.grau,
+      'Status': d.status,
+      'Justificativa': d.justificativa,
+      'DataHora': d.dataHora,
+      'Data': d.dataOriginal,
+      'Evento': d.evento,
+      'Peso Evento': d.pesoEvento,
+      'Peso Presença': d.pesoPresenca,
+      'Pontos': d.pontos,
+    }));
+
+    // 5. Criar workbook com duas abas
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Frequência por Evento');
-    
-    XLSX.writeFile(wb, `frequencia_por_evento_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+
+    // Aba 1: Resumo_Integrantes
+    const wsResumo = XLSX.utils.json_to_sheet(sheetResumoData);
+    wsResumo['!cols'] = [
+      { wch: 35 }, // Regional
+      { wch: 40 }, // Divisão
+      { wch: 25 }, // Nome
+      { wch: 22 }, // Cargo
+      { wch: 8 },  // Grau
+      { wch: 10 }, // Eventos
+      { wch: 10 }, // Presencas
+      { wch: 10 }, // Ausencias
+      { wch: 12 }, // Justificados
+      { wch: 14 }, // PontosObtidos
+      { wch: 14 }, // PontosMaximos
+      { wch: 18 }, // Aproveitamento
+    ];
+    XLSX.utils.book_append_sheet(wb, wsResumo, 'Resumo_Integrantes');
+
+    // Aba 2: Base_Detalhada
+    const wsDetalhado = XLSX.utils.json_to_sheet(sheetDetalhadoData, { 
+      cellDates: true,
+      dateNF: 'dd/mm/yyyy hh:mm' 
+    });
+    wsDetalhado['!cols'] = [
+      { wch: 35 }, // Regional
+      { wch: 40 }, // Divisão
+      { wch: 25 }, // Nome
+      { wch: 22 }, // Cargo
+      { wch: 8 },  // Grau
+      { wch: 12 }, // Status
+      { wch: 20 }, // Justificativa
+      { wch: 18 }, // DataHora
+      { wch: 18 }, // Data
+      { wch: 45 }, // Evento
+      { wch: 12 }, // Peso Evento
+      { wch: 13 }, // Peso Presença
+      { wch: 10 }, // Pontos
+    ];
+    XLSX.utils.book_append_sheet(wb, wsDetalhado, 'Base_Detalhada');
+
+    // 6. Baixar arquivo
+    XLSX.writeFile(wb, `frequencia_individual_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
   };
 
   if (isLoading) {
