@@ -1482,6 +1482,7 @@ export type Database = {
           funcao_id: string | null
           grau: string | null
           id: string
+          last_access_at: string | null
           name: string
           nome_colete: string | null
           observacao: string | null
@@ -1505,6 +1506,7 @@ export type Database = {
           funcao_id?: string | null
           grau?: string | null
           id: string
+          last_access_at?: string | null
           name?: string
           nome_colete?: string | null
           observacao?: string | null
@@ -1528,6 +1530,7 @@ export type Database = {
           funcao_id?: string | null
           grau?: string | null
           id?: string
+          last_access_at?: string | null
           name?: string
           nome_colete?: string | null
           observacao?: string | null
@@ -1986,6 +1989,39 @@ export type Database = {
           peso?: number
           tipo?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      user_access_logs: {
+        Row: {
+          created_at: string
+          extras: Json | null
+          id: string
+          origem: string
+          rota: string | null
+          tipo_evento: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          extras?: Json | null
+          id?: string
+          origem?: string
+          rota?: string | null
+          tipo_evento: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          extras?: Json | null
+          id?: string
+          origem?: string
+          rota?: string | null
+          tipo_evento?: string
+          user_agent?: string | null
+          user_id?: string
         }
         Relationships: []
       }
