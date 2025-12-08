@@ -63,7 +63,7 @@ export const UserAccessDetail = ({ user, open, onClose }: UserAccessDetailProps)
                 {user.nome_colete || user.name}
               </DialogTitle>
               <p className="text-xs text-muted-foreground truncate">
-                {user.divisao} • {user.cargo} {user.grau}
+                {[user.divisao, user.cargo, user.grau].filter(Boolean).join(' • ')}
               </p>
             </div>
             <Button variant="ghost" size="icon" onClick={refresh} className="h-8 w-8">
@@ -96,7 +96,7 @@ export const UserAccessDetail = ({ user, open, onClose }: UserAccessDetailProps)
                     <div className="flex items-center gap-2 flex-wrap">
                       {getEventBadge(log.tipo_evento)}
                       {log.rota && (
-                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded truncate max-w-[150px]">
+                        <code className="text-xs bg-muted text-foreground px-1.5 py-0.5 rounded truncate max-w-[150px]">
                           {log.rota}
                         </code>
                       )}

@@ -213,12 +213,16 @@ const AdminHistoricoConexoes = () => {
                         {profile.profile_status}
                       </Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {profile.regional} • {profile.divisao}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {profile.cargo} {profile.grau}
-                    </p>
+                    {(profile.regional || profile.divisao) && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {[profile.regional, profile.divisao].filter(Boolean).join(' • ')}
+                      </p>
+                    )}
+                    {(profile.cargo || profile.grau) && (
+                      <p className="text-xs text-muted-foreground">
+                        {[profile.cargo, profile.grau].filter(Boolean).join(' ')}
+                      </p>
+                    )}
                   </div>
                   <div className="text-right shrink-0">
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
