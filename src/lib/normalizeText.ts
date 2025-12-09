@@ -29,17 +29,24 @@ export const normalizeText = (text: string): string => {
 export const normalizarRegional = (texto: string): string => {
   if (!texto) return "";
   
-  return texto
+  let normalizado = texto
     .toUpperCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "") // Remove acentos
     .replace(/^REGIONAL\s*/i, "")     // Remove prefixo "REGIONAL "
     .replace(/\s*-\s*SP$/i, "")       // Remove sufixo "- SP"
-    .replace(/\bIII\b/g, "3")         // III → 3
-    .replace(/\bII\b/g, "2")          // II → 2
-    .replace(/\bI\b/g, "1")           // I → 1
-    .replace(/\s+/g, " ")             // Normaliza espaços
     .trim();
+  
+  // Conversão de números romanos para arábicos (mais robusta)
+  // Adicionar espaço virtual no início e fim para a regex funcionar corretamente
+  normalizado = ` ${normalizado} `
+    .replace(/\sIII\s/g, " 3 ")
+    .replace(/\sII\s/g, " 2 ")
+    .replace(/\sI\s/g, " 1 ")
+    .replace(/\s+/g, " ")
+    .trim();
+  
+  return normalizado;
 };
 
 /**
