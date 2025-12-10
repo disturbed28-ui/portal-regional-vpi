@@ -190,7 +190,14 @@ const Index = () => {
                 {isLoggedIn && totalOnline > 0 && <OnlineUsersModal users={onlineUsers} totalOnline={totalOnline} />}
               </div>
             </div>
-            <h2 className="text-lg text-muted-foreground tracking-wide">VALE DO PARAIBA I - SP</h2>
+          <h2 className="text-lg text-muted-foreground tracking-wide">
+            {profile?.regional 
+              ? removeAccents(profile.regional)
+                  .toUpperCase()
+                  .replace(/^REGIONAL\s+/i, '')
+              : "COMANDO"
+            }
+          </h2>
           </div>
 
           {/* Avatar */}
