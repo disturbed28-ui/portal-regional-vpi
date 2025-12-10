@@ -1608,6 +1608,7 @@ export type Database = {
           id: string
           nome: string
           nome_ascii: string | null
+          sigla: string | null
           slug: string | null
         }
         Insert: {
@@ -1616,6 +1617,7 @@ export type Database = {
           id?: string
           nome: string
           nome_ascii?: string | null
+          sigla?: string | null
           slug?: string | null
         }
         Update: {
@@ -1624,6 +1626,7 @@ export type Database = {
           id?: string
           nome?: string
           nome_ascii?: string | null
+          sigla?: string | null
           slug?: string | null
         }
         Relationships: [

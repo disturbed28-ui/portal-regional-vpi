@@ -65,7 +65,7 @@ const AdminEstrutura = () => {
 
   // Estado dos formulários
   const [comandoForm, setComandoForm] = useState({ id: '', nome: '' });
-  const [regionalForm, setRegionalForm] = useState({ id: '', nome: '', comando_id: '' });
+  const [regionalForm, setRegionalForm] = useState({ id: '', nome: '', comando_id: '', sigla: '' });
   const [divisaoForm, setDivisaoForm] = useState({ id: '', nome: '', regional_id: '' });
 
   // Estado de exclusão
@@ -143,9 +143,9 @@ const AdminEstrutura = () => {
   // === REGIONAL CRUD ===
   const openRegionalDialog = (regional?: Regional) => {
     if (regional) {
-      setRegionalForm({ id: regional.id, nome: regional.nome, comando_id: regional.comando_id });
+      setRegionalForm({ id: regional.id, nome: regional.nome, comando_id: regional.comando_id, sigla: regional.sigla || '' });
     } else {
-      setRegionalForm({ id: '', nome: '', comando_id: selectedComandoFilter || '' });
+      setRegionalForm({ id: '', nome: '', comando_id: selectedComandoFilter || '', sigla: '' });
     }
     setRegionalDialogOpen(true);
   };
@@ -162,10 +162,10 @@ const AdminEstrutura = () => {
 
     try {
       if (regionalForm.id) {
-        await updateRegional(regionalForm.id, regionalForm.nome, regionalForm.comando_id);
+        await updateRegional(regionalForm.id, regionalForm.nome, regionalForm.comando_id, regionalForm.sigla || null);
         toast({ title: "Regional atualizada com sucesso" });
       } else {
-        await createRegional(regionalForm.nome, regionalForm.comando_id);
+        await createRegional(regionalForm.nome, regionalForm.comando_id, regionalForm.sigla || null);
         toast({ title: "Regional criada com sucesso" });
       }
       setRegionalDialogOpen(false);
@@ -333,7 +333,10 @@ const AdminEstrutura = () => {
               {filteredRegionais.map((regional) => (
                 <Card key={regional.id}>
                   <CardHeader>
-                    <CardTitle>{regional.nome}</CardTitle>
+                    <CardTitle>
+                      {regional.sigla && <span className="text-primary font-mono mr-2">[{regional.sigla}]</span>}
+                      {regional.nome}
+                    </CardTitle>
                     <CardDescription>
                       {comandos.find(c => c.id === regional.comando_id)?.nome}
                     </CardDescription>
@@ -463,6 +466,22 @@ const AdminEstrutura = () => {
                   onChange={(e) => setRegionalForm({ ...regionalForm, nome: e.target.value })}
                   placeholder="Ex: Regional Leste"
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="regional-sigla">Sigla (ex: VP1, VP2, LN, CMD)</Label>
+                <Input
+                  id="regional-sigla"
+                  value={regionalForm.sigla}
+                  onChange={(e) => setRegionalForm({ 
+                    ...regionalForm, 
+                    sigla: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') 
+                  })}
+                  placeholder="Ex: VP1"
+                  maxLength={10}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Será exibida como prefixo nos eventos da agenda: [VP1] Reunião...
+                </p>
               </div>
             </div>
             <DialogFooter>
