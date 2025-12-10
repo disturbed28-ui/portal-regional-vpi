@@ -32,20 +32,20 @@ export async function deleteComando(id: string) {
 }
 
 // Regionais
-export async function createRegional(nome: string, comandoId: string) {
+export async function createRegional(nome: string, comandoId: string, sigla: string | null = null) {
   const { data, error } = await supabase
     .from('regionais')
-    .insert({ nome, comando_id: comandoId })
+    .insert({ nome, comando_id: comandoId, sigla })
     .select()
     .single();
   
   return { data, error };
 }
 
-export async function updateRegional(id: string, nome: string, comandoId: string) {
+export async function updateRegional(id: string, nome: string, comandoId: string, sigla: string | null = null) {
   const { data, error } = await supabase
     .from('regionais')
-    .update({ nome, comando_id: comandoId })
+    .update({ nome, comando_id: comandoId, sigla })
     .eq('id', id)
     .select()
     .single();

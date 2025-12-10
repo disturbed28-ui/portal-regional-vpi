@@ -16,6 +16,7 @@ interface ParsedEvent {
   subtipo?: string;          // "Arrecadacao", "Entrega de Coletes"
   divisao: string;           // "Div Cacapava - SP", "CMD V e XX"
   divisaoId: string | null;  // UUID da divisão no banco
+  regionalSigla: string | null; // Sigla da regional (VP1, VP2, LN, CMD)
   informacoesExtras?: string;// "Casa do irmao Vinicius"
   isCMD: boolean;            // true se for evento do CMD
   isRegional: boolean;       // true se for evento Regional
@@ -39,17 +40,28 @@ export interface CalendarEvent {
   googleStatus?: string; // Status do evento no Google (cancelled, confirmed, etc.)
 }
 
-// Cache de divisões do banco
-let divisoesCache: Array<{ id: string; nome: string; normalizado: string }> | null = null;
+// Cache de divisões do banco (enriquecido com sigla da regional)
+let divisoesCache: Array<{ 
+  id: string; 
+  nome: string; 
+  normalizado: string;
+  regional_id: string | null;
+  regionalSigla: string | null;
+}> | null = null;
 
-// Carregar divisões do banco e cachear
+// Carregar divisões do banco e cachear (com sigla da regional)
 async function loadDivisoesCache() {
   if (divisoesCache) return divisoesCache;
   
-  console.log('[loadDivisoesCache] Carregando divisões do banco...');
+  console.log('[loadDivisoesCache] Carregando divisões do banco com sigla da regional...');
   const { data, error } = await supabase
     .from('divisoes')
-    .select('id, nome');
+    .select(`
+      id, 
+      nome, 
+      regional_id,
+      regionais:regional_id(id, sigla)
+    `);
   
   if (error) {
     console.error('[loadDivisoesCache] Erro ao carregar divisões:', error);
@@ -59,15 +71,17 @@ async function loadDivisoesCache() {
   divisoesCache = (data || []).map(d => ({
     id: d.id,
     nome: d.nome,
-    normalizado: removeSpecialCharacters(d.nome).toUpperCase()
+    normalizado: removeSpecialCharacters(d.nome).toUpperCase(),
+    regional_id: d.regional_id,
+    regionalSigla: (d.regionais as any)?.sigla || null
   }));
   
-  console.log('[loadDivisoesCache] Carregadas', divisoesCache.length, 'divisões');
+  console.log('[loadDivisoesCache] Carregadas', divisoesCache.length, 'divisões com siglas');
   return divisoesCache;
 }
 
-// Fazer matching fuzzy de divisão com banco
-async function matchDivisaoToId(divisaoText: string): Promise<string | null> {
+// Fazer matching fuzzy de divisão com banco - retorna id E sigla da regional
+async function matchDivisaoToId(divisaoText: string): Promise<{ id: string | null; regionalSigla: string | null }> {
   const divisoes = await loadDivisoesCache();
   const normalizado = removeSpecialCharacters(divisaoText).toUpperCase();
   
@@ -76,16 +90,16 @@ async function matchDivisaoToId(divisaoText: string): Promise<string | null> {
   // 1. Match exato
   for (const div of divisoes) {
     if (div.normalizado === normalizado) {
-      console.log('[matchDivisaoToId] ✅ Match exato:', div.nome);
-      return div.id;
+      console.log('[matchDivisaoToId] ✅ Match exato:', div.nome, '| Sigla:', div.regionalSigla);
+      return { id: div.id, regionalSigla: div.regionalSigla };
     }
   }
   
   // 2. Match por contains (divisão contém o texto ou vice-versa)
   for (const div of divisoes) {
     if (div.normalizado.includes(normalizado) || normalizado.includes(div.normalizado)) {
-      console.log('[matchDivisaoToId] ✅ Match parcial:', div.nome);
-      return div.id;
+      console.log('[matchDivisaoToId] ✅ Match parcial:', div.nome, '| Sigla:', div.regionalSigla);
+      return { id: div.id, regionalSigla: div.regionalSigla };
     }
   }
   
@@ -114,8 +128,8 @@ async function matchDivisaoToId(divisaoText: string): Promise<string | null> {
       if (divNormalizada.includes(key)) {
         for (const pattern of patterns) {
           if (normalizado.includes(pattern)) {
-            console.log('[matchDivisaoToId] ✅ Match por keyword:', div.nome, '(pattern:', pattern, ')');
-            return div.id;
+            console.log('[matchDivisaoToId] ✅ Match por keyword:', div.nome, '(pattern:', pattern, ') | Sigla:', div.regionalSigla);
+            return { id: div.id, regionalSigla: div.regionalSigla };
           }
         }
       }
@@ -123,7 +137,7 @@ async function matchDivisaoToId(divisaoText: string): Promise<string | null> {
   }
   
   console.log('[matchDivisaoToId] ❌ Nenhum match encontrado para:', divisaoText);
-  return null;
+  return { id: null, regionalSigla: null };
 }
 
 // Parsear componentes do título do evento
@@ -267,6 +281,7 @@ function parseEventComponents(originalTitle: string): ParsedEvent {
     subtipo,
     divisao,
     divisaoId: null, // Será preenchido depois
+    regionalSigla: null, // Será preenchido depois com base na divisão
     informacoesExtras,
     isCMD,
     isRegional
@@ -325,7 +340,7 @@ function detectDivisionFromTitle(title: string): string {
   return 'Sem Divisao';
 }
 
-// Construir título normalizado
+// Construir título normalizado (com prefixo de sigla da regional)
 function buildNormalizedTitle(components: ParsedEvent): string {
   const parts: string[] = [];
   
@@ -347,9 +362,18 @@ function buildNormalizedTitle(components: ParsedEvent): string {
     parts.push(components.informacoesExtras);
   }
   
-  const normalized = parts.join(' - ');
-  console.log('[buildNormalizedTitle] Título normalizado:', normalized);
-  return normalized;
+  let innerTitle = parts.join(' - ');
+  
+  // Proteção contra duplicidade: remover prefixo existente se houver
+  innerTitle = innerTitle.replace(/^\[[A-Z0-9]+\]\s*/, '');
+  
+  // Adicionar prefixo da sigla da regional se existir
+  if (components.regionalSigla) {
+    innerTitle = `[${components.regionalSigla}] ${innerTitle}`;
+  }
+  
+  console.log('[buildNormalizedTitle] Título normalizado:', innerTitle, '| Sigla:', components.regionalSigla);
+  return innerTitle;
 }
 
 export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
@@ -380,11 +404,20 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
       // Parsear componentes do título
       const components = parseEventComponents(originalTitle);
       
-      // Fazer matching de divisão com banco
-      const divisaoId = await matchDivisaoToId(components.divisao);
-      components.divisaoId = divisaoId;
+      // Fazer matching de divisão com banco (agora retorna id E sigla)
+      const matchResult = await matchDivisaoToId(components.divisao);
+      components.divisaoId = matchResult.id;
       
-      // Construir título normalizado
+      // Determinar sigla da regional
+      if (components.isCMD) {
+        // Para eventos CMD, usar sigla "CMD"
+        components.regionalSigla = 'CMD';
+      } else if (matchResult.regionalSigla) {
+        // Para eventos de divisão normal ou regional, usar a sigla encontrada
+        components.regionalSigla = matchResult.regionalSigla;
+      }
+      
+      // Construir título normalizado (agora com sigla)
       const normalizedTitle = buildNormalizedTitle(components);
       
       const event: CalendarEvent = {
@@ -398,7 +431,7 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
         location: item.location,
         type: components.tipoEvento,
         division: components.divisao,
-        divisao_id: divisaoId,
+        divisao_id: matchResult.id,
         htmlLink: item.htmlLink || '',
         isComandoEvent: components.isCMD,
         isRegionalEvent: components.isRegional,
@@ -416,7 +449,7 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
         console.log(`[fetchCalendarEvents] ⚠️ Evento filtrado da exibição (status: ${googleStatus}, titulo: "${originalTitle}")`);
       }
       
-      if (!divisaoId && components.divisao !== 'Sem Divisao' && googleStatus !== 'cancelled') {
+      if (!matchResult.id && components.divisao !== 'Sem Divisao' && googleStatus !== 'cancelled') {
         console.warn('[fetchCalendarEvents] ⚠️ Divisão não encontrada no banco:', {
           titulo_original: originalTitle,
           divisao_detectada: components.divisao

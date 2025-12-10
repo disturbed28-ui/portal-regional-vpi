@@ -5,6 +5,7 @@ export interface Regional {
   id: string;
   comando_id: string;
   nome: string;
+  sigla: string | null;
   created_at: string;
 }
 
