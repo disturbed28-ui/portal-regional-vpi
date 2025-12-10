@@ -16,6 +16,8 @@ import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
 import { useScreenAccess } from "@/hooks/useScreenAccess";
 import { dataAtualBrasil } from "@/lib/timezone";
+import { useRegionais } from "@/hooks/useRegionais";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const Agenda = () => {
   const navigate = useNavigate();
@@ -24,9 +26,14 @@ const Agenda = () => {
   const { profile, loading: profileLoading } = useProfile(user?.id);
   const { hasAccess, loading: loadingAccess } = useScreenAccess('/agenda', user?.id);
   const { data: events, isLoading, error } = useCalendarEvents();
+  const { regionais } = useRegionais();
   const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [selectedRegional, setSelectedRegional] = useState<string>("todas");
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  // Regionais que têm sigla cadastrada
+  const regionaisComSigla = regionais?.filter(r => r.sigla) || [];
 
   // Redirecionar para home se não tiver acesso
   useEffect(() => {
@@ -52,7 +59,15 @@ const Agenda = () => {
     const eventDate = new Date(event.start);
     const monthStart = startOfMonth(selectedMonth);
     const monthEnd = endOfMonth(selectedMonth);
-    return isWithinInterval(eventDate, { start: monthStart, end: monthEnd });
+    
+    // Filtro por mês
+    const isInMonth = isWithinInterval(eventDate, { start: monthStart, end: monthEnd });
+    
+    // Filtro por regional
+    const matchesRegional = selectedRegional === "todas" 
+      || event.normalizedComponents?.regionalSigla === selectedRegional;
+    
+    return isInMonth && matchesRegional;
   }) || [];
 
   // Auto-scroll para a data de hoje (apenas no mês atual)
@@ -135,7 +150,24 @@ const Agenda = () => {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-bold">Agenda Regional Vale do Paraiba I</h1>
+          <h1 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-bold">Agenda com eventos das regionais</h1>
+        </div>
+        
+        {/* Seletor de Regional */}
+        <div className="mt-3">
+          <Select value={selectedRegional} onValueChange={setSelectedRegional}>
+            <SelectTrigger className="w-full bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground">
+              <SelectValue placeholder="Selecione a regional" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todas">Todas as regionais</SelectItem>
+              {regionaisComSigla.map((regional) => (
+                <SelectItem key={regional.id} value={regional.sigla!}>
+                  [{regional.sigla}] {regional.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         
         <div className="flex items-center justify-between mt-4">
