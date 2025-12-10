@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,17 +24,47 @@ import { Calendar, Users, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { CardDescription } from '@/components/ui/card';
 import { toast as sonnerToast } from 'sonner';
+import { getNivelAcesso } from '@/lib/grauUtils';
 
 const Relatorios = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { profile, loading: profileLoading } = useProfile(user?.id);
-  const { hasRole, loading: rolesLoading } = useUserRole(user?.id); // mantido para UI interna
+  const { hasRole, loading: rolesLoading } = useUserRole(user?.id);
   const { hasAccess, loading: loadingAccess } = useScreenAccess("/relatorios", user?.id);
   const { hasAccess: hasAccessSemanalAba, loading: loadingAccessSemanalAba } = useScreenAccess('/relatorios/semanal-divisao', user?.id);
   const { hasAccess: hasAccessIntegrantes } = useScreenAccess('/relatorios/integrantes', user?.id);
 
-  const { data: relatorioData, isLoading } = useRelatorioData();
+  // Determinar o filtro de regional baseado em role admin ou grau
+  const isAdmin = hasRole('admin');
+  const grau = profile?.integrante?.grau || profile?.grau;
+  const nivel = getNivelAcesso(grau);
+
+  // REGRA: Admin tem acesso total, independente do grau
+  const regionalTextoFiltro: string | undefined = useMemo(() => {
+    if (rolesLoading || profileLoading) return undefined; // Aguardar carregamento
+    
+    if (isAdmin) {
+      return undefined; // Admin vê tudo
+    }
+    
+    if (nivel === 'comando') {
+      return undefined; // Graus I-IV veem tudo
+    }
+    
+    // Grau V (regional) e VI+ (divisão) veem apenas sua regional
+    return profile?.integrante?.regional_texto || undefined;
+  }, [isAdmin, nivel, profile?.integrante?.regional_texto, rolesLoading, profileLoading]);
+
+  // Texto de escopo para exibição
+  const escopoTexto = useMemo(() => {
+    if (isAdmin || nivel === 'comando') {
+      return 'Escopo do dashboard: Comando (todas as regionais)';
+    }
+    return `Escopo do dashboard: Regional ${profile?.regional || ''}`;
+  }, [isAdmin, nivel, profile?.regional]);
+
+  const { data: relatorioData, isLoading } = useRelatorioData(regionalTextoFiltro);
   const { data: historicoData, isLoading: isLoadingHistorico } = useHistoricoCargas({
     enabled: !!user?.id && hasAccess && !loadingAccess
   });
@@ -147,6 +177,9 @@ const Relatorios = () => {
                   Última atualização: {formatarDataBrasil(relatorioData.dataCarga)}
                 </p>
               )}
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                {escopoTexto}
+              </p>
             </div>
           </div>
         </div>

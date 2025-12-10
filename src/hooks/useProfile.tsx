@@ -27,6 +27,7 @@ interface Profile {
     cargo_nome: string;
     grau: string;
     divisao_texto: string;
+    regional_texto: string;
     tem_moto: boolean;
     tem_carro: boolean;
     sgt_armas: boolean;
@@ -71,6 +72,7 @@ export const useProfile = (userId: string | undefined) => {
             cargo_nome,
             grau,
             divisao_texto,
+            regional_texto,
             tem_moto,
             tem_carro,
             sgt_armas,
@@ -178,6 +180,7 @@ export const useProfile = (userId: string | undefined) => {
                   cargo_nome,
                   grau,
                   divisao_texto,
+                  regional_texto,
                   tem_moto,
                   tem_carro,
                   sgt_armas,
@@ -264,6 +267,7 @@ export const useProfile = (userId: string | undefined) => {
                 cargo_nome,
                 grau,
                 divisao_texto,
+                regional_texto,
                 tem_moto,
                 tem_carro,
                 sgt_armas,
