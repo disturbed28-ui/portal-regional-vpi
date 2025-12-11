@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { DivisaoRelatorio, TotaisRelatorio } from './useRelatorioData';
+import { normalizeText } from '@/lib/normalizeText';
 
 interface RelatorioSemanalResumoData {
   divisoes: DivisaoRelatorio[];
@@ -41,11 +42,20 @@ export const useRelatorioSemanalResumo = (regionalId: string, ano?: number, mes?
         .select('nome, nome_ascii')
         .eq('regional_id', regionalId);
 
-      // Criar mapa de nome_ascii -> nome (para lookup normalizado)
-      const mapNomeAsciiParaNome = new Map<string, string>();
+      // Criar mapa de todas as formas do nome -> nome canônico (para lookup normalizado)
+      const mapNomesParaRegional = new Map<string, string>();
       divisoesRegional?.forEach(d => {
+        // Adicionar nome original (uppercase)
+        if (d.nome) {
+          mapNomesParaRegional.set(d.nome.toUpperCase(), d.nome);
+        }
+        // Adicionar nome_ascii (uppercase)
         if (d.nome_ascii) {
-          mapNomeAsciiParaNome.set(d.nome_ascii, d.nome);
+          mapNomesParaRegional.set(d.nome_ascii.toUpperCase(), d.nome);
+        }
+        // Adicionar nome normalizado sem acentos (uppercase)
+        if (d.nome) {
+          mapNomesParaRegional.set(normalizeText(d.nome).toUpperCase(), d.nome);
         }
       });
 
@@ -83,11 +93,12 @@ export const useRelatorioSemanalResumo = (regionalId: string, ano?: number, mes?
       // Mapear total anterior por divisão (usando chave MAIÚSCULA para match com divisao_texto)
       const totaisPorDivisao = new Map<string, number>();
       divisoesSnapshot.forEach((d: any) => {
-        const nomeSnapshotNormalizado = d.divisao?.toUpperCase();
+        const nomeSnapshotUpper = d.divisao?.toUpperCase();
+        const nomeSnapshotNormalizado = normalizeText(d.divisao)?.toUpperCase();
         
-        // Verifica se pertence à regional usando o mapa
-        if (mapNomeAsciiParaNome.has(nomeSnapshotNormalizado)) {
-          totaisPorDivisao.set(nomeSnapshotNormalizado, d.total || 0);
+        // Verifica se pertence à regional usando TODAS as formas do nome
+        if (mapNomesParaRegional.has(nomeSnapshotUpper) || mapNomesParaRegional.has(nomeSnapshotNormalizado)) {
+          totaisPorDivisao.set(nomeSnapshotUpper, d.total || 0);
         }
       });
 
