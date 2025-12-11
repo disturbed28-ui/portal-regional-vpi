@@ -145,6 +145,34 @@ function isDataAntiga(dataAcao: string, diasLimite: number = 7): boolean {
   return diffDias > diasLimite;
 }
 
+// Mapeamento especial: Divisões de Jacareí pertencem à VP3 (mesmo que planilha diga VP1)
+const VP3_REGIONAL = {
+  id: '66fb9687-10ac-4f35-830d-8ba5fef92146',
+  texto: 'Vale do Paraiba III - SP'
+};
+
+function getRegionalCorreta(divisaoTexto: string, regionalOriginal: string, regionalIdOriginal: string | null): { 
+  regional_texto: string; 
+  regional_id: string | null 
+} {
+  const divisaoNorm = normalizeText(divisaoTexto);
+  
+  // Se a divisão for de Jacareí, forçar VP3
+  if (divisaoNorm.includes('jacarei')) {
+    console.log(`[import-acoes-sociais] Mapeando divisão Jacareí para VP3: ${divisaoTexto}`);
+    return {
+      regional_texto: VP3_REGIONAL.texto,
+      regional_id: VP3_REGIONAL.id
+    };
+  }
+  
+  // Caso contrário, manter a regional original
+  return {
+    regional_texto: regionalOriginal,
+    regional_id: regionalIdOriginal
+  };
+}
+
 // Buscar divisão pelo nome do responsável - PREFERIR NOME MAIS CURTO (mais específico)
 function buscarDivisaoPorNome(
   nomeNormalizado: string,
@@ -354,17 +382,24 @@ Deno.serve(async (req) => {
         result.marcados_como_reportados++;
       }
 
+      // Determinar regional correta (mapeamento Jacareí → VP3)
+      const { regional_texto: regionalCorreta, regional_id: regionalIdCorreta } = getRegionalCorreta(
+        divisaoTexto,
+        row.regional || regional_texto,
+        regional_id || null
+      );
+
       registrosParaInserir.push({
         profile_id: admin_profile_id,
         data_acao: dataAcao,
-        regional_relatorio_texto: row.regional || regional_texto,
-        regional_relatorio_id: regional_id || null,
+        regional_relatorio_texto: regionalCorreta,
+        regional_relatorio_id: regionalIdCorreta,
         divisao_relatorio_texto: divisaoTexto,
         divisao_relatorio_id: divisaoId,
         responsavel_nome_colete: responsavel,
         responsavel_cargo_nome: null,
         responsavel_divisao_texto: divisaoTexto,
-        responsavel_regional_texto: row.regional || regional_texto,
+        responsavel_regional_texto: regionalCorreta,
         responsavel_comando_texto: 'INSANOS MC',
         escopo_acao: parseEscopo(row.escopo),
         tipo_acao_nome_snapshot: (row.tipo_acao || '').trim(),
