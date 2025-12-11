@@ -9,6 +9,80 @@ interface CampoAlterado {
   novo: string;
 }
 
+interface HierarquiaIds {
+  divisao_id: string | null;
+  regional_id: string | null;
+}
+
+// Cache para evitar queries repetidas
+const cacheHierarquia = new Map<string, HierarquiaIds>();
+
+// Função para normalizar texto de divisão para busca
+function normalizarDivisaoTexto(texto: string): string {
+  return texto
+    .replace(/^DIVISAO\s*/i, '')
+    .replace(/\s*-\s*SP$/i, '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+// Buscar IDs de divisão e regional baseado no texto da divisão
+async function buscarIdsHierarquia(
+  supabase: any,
+  divisaoTexto: string
+): Promise<HierarquiaIds> {
+  // Verificar cache primeiro
+  const cacheKey = divisaoTexto.toLowerCase();
+  if (cacheHierarquia.has(cacheKey)) {
+    return cacheHierarquia.get(cacheKey)!;
+  }
+  
+  const divisaoNorm = normalizarDivisaoTexto(divisaoTexto);
+  
+  // Buscar divisão pelo nome (fonte de verdade para regional_id)
+  const { data: divisoes } = await supabase
+    .from('divisoes')
+    .select('id, nome, regional_id, nome_ascii')
+    .order('nome');
+  
+  if (divisoes && divisoes.length > 0) {
+    // Tentar match exato primeiro
+    let divisaoEncontrada = divisoes.find((d: any) => {
+      const nomeNorm = normalizarDivisaoTexto(d.nome);
+      return nomeNorm === divisaoNorm;
+    });
+    
+    // Se não encontrou, tentar match parcial
+    if (!divisaoEncontrada) {
+      divisaoEncontrada = divisoes.find((d: any) => {
+        const nomeNorm = normalizarDivisaoTexto(d.nome);
+        const asciiNorm = d.nome_ascii ? d.nome_ascii.toLowerCase() : '';
+        return nomeNorm.includes(divisaoNorm) || 
+               divisaoNorm.includes(nomeNorm) ||
+               asciiNorm.includes(divisaoNorm) ||
+               divisaoNorm.includes(asciiNorm);
+      });
+    }
+    
+    if (divisaoEncontrada) {
+      const resultado = {
+        divisao_id: divisaoEncontrada.id,
+        regional_id: divisaoEncontrada.regional_id  // Fonte de verdade!
+      };
+      cacheHierarquia.set(cacheKey, resultado);
+      console.log(`[HIERARQUIA] ${divisaoTexto} -> divisao_id=${resultado.divisao_id}, regional_id=${resultado.regional_id}`);
+      return resultado;
+    }
+  }
+  
+  console.warn(`[HIERARQUIA] Divisão não encontrada: "${divisaoTexto}"`);
+  const resultadoVazio = { divisao_id: null, regional_id: null };
+  cacheHierarquia.set(cacheKey, resultadoVazio);
+  return resultadoVazio;
+}
+
 function compararCampos(antigo: any, novo: any): CampoAlterado[] {
   const mudancas: CampoAlterado[] = [];
   
@@ -182,8 +256,12 @@ Deno.serve(async (req) => {
       
       console.log('[admin-import-integrantes] Unique novos after dedup:', uniqueNovos.length);
       
-      // Validar cargo_grau_texto antes de inserir
+      // Enriquecer com IDs de divisão e regional (buscar da tabela divisoes)
+      console.log('[admin-import-integrantes] Enriquecendo registros com IDs de hierarquia...');
+      const novosEnriquecidos = [];
+      
       for (const item of uniqueNovos) {
+        // Validar cargo_grau_texto
         if (!item.cargo_grau_texto || item.cargo_grau_texto.trim() === '') {
           console.error('[admin-import-integrantes] ❌ Registro sem cargo_grau_texto:', {
             registro_id: item.registro_id,
@@ -192,24 +270,35 @@ Deno.serve(async (req) => {
             all_fields: Object.keys(item)
           });
         }
+        
+        // Buscar IDs de hierarquia baseado no texto da divisão
+        const hierarquia = await buscarIdsHierarquia(supabase, item.divisao_texto);
+        
+        novosEnriquecidos.push({
+          ...item,
+          divisao_id: hierarquia.divisao_id,
+          regional_id: hierarquia.regional_id
+        });
       }
+      
+      console.log('[admin-import-integrantes] Registros enriquecidos:', novosEnriquecidos.length);
       
       const { error: upsertError } = await supabase
         .from('integrantes_portal')
-        .upsert(uniqueNovos, { 
+        .upsert(novosEnriquecidos, { 
           onConflict: 'registro_id',
           ignoreDuplicates: false 
         });
 
       if (upsertError) {
-        logError('admin-import-integrantes', upsertError, { count: uniqueNovos.length });
+        logError('admin-import-integrantes', upsertError, { count: novosEnriquecidos.length });
         return new Response(
           JSON.stringify({ error: handleDatabaseError(upsertError) }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      insertedCount = uniqueNovos.length;
+      insertedCount = novosEnriquecidos.length;
     }
 
     // Update existing integrantes and save old data for comparison
@@ -232,9 +321,25 @@ Deno.serve(async (req) => {
           dadosAntigos.set(id, oldData);
         }
         
+        // Enriquecer com IDs de hierarquia se houver divisao_texto
+        let updateDataEnriquecido = { ...updateData };
+        if (updateData.divisao_texto) {
+          const hierarquia = await buscarIdsHierarquia(supabase, updateData.divisao_texto);
+          updateDataEnriquecido = {
+            ...updateData,
+            divisao_id: hierarquia.divisao_id,
+            regional_id: hierarquia.regional_id
+          };
+          
+          // Log se houver mudança de regional
+          if (oldData && oldData.regional_id !== hierarquia.regional_id) {
+            console.log(`[MUDANÇA_REGIONAL] ${updateData.nome_colete || oldData.nome_colete}: ${oldData.regional_id} -> ${hierarquia.regional_id}`);
+          }
+        }
+        
         const { error: updateError } = await supabase
           .from('integrantes_portal')
-          .update(updateData)
+          .update(updateDataEnriquecido)
           .eq('id', id);
 
         if (updateError) {
@@ -243,6 +348,23 @@ Deno.serve(async (req) => {
             JSON.stringify({ error: handleDatabaseError(updateError) }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
+        }
+
+        // Se mudou de regional, atualizar também o profile vinculado
+        if (updateDataEnriquecido.regional_id && oldData?.profile_id && oldData.regional_id !== updateDataEnriquecido.regional_id) {
+          const { error: profileUpdateError } = await supabase
+            .from('profiles')
+            .update({ 
+              regional_id: updateDataEnriquecido.regional_id,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', oldData.profile_id);
+          
+          if (profileUpdateError) {
+            console.error('[admin-import-integrantes] Erro ao atualizar profile regional:', profileUpdateError);
+          } else {
+            console.log(`[PROFILE_ATUALIZADO] ${oldData.profile_id} -> regional_id = ${updateDataEnriquecido.regional_id}`);
+          }
         }
 
         updatedCount++;
