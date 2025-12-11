@@ -4,12 +4,14 @@ import { ArrowLeft, Heart, Calendar, Users, MapPin, Eye, Filter, CalendarIcon, C
 import { format, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
 import { useScreenAccess } from "@/hooks/useScreenAccess";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useAcoesSociaisLista } from "@/hooks/useAcoesSociaisLista";
 import { useDivisoes } from "@/hooks/useDivisoes";
 import { exportAcoesSociaisToExcel } from "@/lib/exportAcoesSociaisExcel";
 import { normalizarDivisao } from "@/lib/normalizeText";
+import { getNivelAcesso } from "@/lib/grauUtils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,8 +26,24 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 export default function AcoesSociais() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { profile } = useProfile(user?.id);
   const { hasAccess, loading: loadingAccess } = useScreenAccess('/acoes-sociais', user?.id);
-  const { roles, loading: loadingRoles } = useUserRole(user?.id);
+  const { hasRole, roles, loading: loadingRoles } = useUserRole(user?.id);
+
+  // Determinar escopo de visualização
+  const isAdmin = hasRole('admin');
+  const grau = profile?.integrante?.grau || profile?.grau;
+  const nivel = getNivelAcesso(grau);
+
+  const escopoTexto = useMemo(() => {
+    if (isAdmin || nivel === 'comando') {
+      return 'Escopo: Comando (todas as ações)';
+    }
+    if (nivel === 'regional') {
+      return `Escopo: Regional ${profile?.integrante?.regional_texto || ''}`;
+    }
+    return `Escopo: Divisão ${profile?.integrante?.divisao_texto || ''}`;
+  }, [isAdmin, nivel, profile?.integrante?.regional_texto, profile?.integrante?.divisao_texto]);
 
   // Estados de filtro de período e divisão
   const hoje = new Date();
@@ -183,6 +201,7 @@ export default function AcoesSociais() {
             <div className="flex-1">
               <h1 className="text-lg sm:text-2xl font-bold">Ações Sociais</h1>
               <p className="text-xs sm:text-sm text-muted-foreground">Consulta e visualização</p>
+              <p className="text-xs text-blue-600 dark:text-blue-400">{escopoTexto}</p>
             </div>
           </div>
           

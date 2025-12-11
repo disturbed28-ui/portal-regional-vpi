@@ -5,6 +5,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useUserRole } from "@/hooks/useUserRole";
 import { format } from "date-fns";
 import { normalizarRegional, normalizarDivisao } from "@/lib/normalizeText";
+import { getNivelAcesso } from "@/lib/grauUtils";
 
 interface FiltrosAcoesSociais {
   dataInicio?: Date;
@@ -23,54 +24,84 @@ export const useAcoesSociaisLista = (filtros?: FiltrosAcoesSociais) => {
       return [];
     }
 
-    // Determinar filtro baseado em roles
-    const isRegional = roles.includes('regional') || roles.includes('diretor_regional');
-    const isDiretor = roles.includes('diretor_divisao');
-    const isModerator = roles.includes('moderator');
+    // Determinar nível de acesso baseado em role admin ou grau
+    const isAdmin = roles.includes('admin');
+    const grau = profile?.integrante?.grau || profile?.grau;
+    const nivel = getNivelAcesso(grau);
 
     console.log('[useAcoesSociaisLista] Debug:', { 
       roles, 
-      isRegional, 
-      isDiretor, 
-      isModerator,
-      profileRegionalId: profile.regional_id,
-      profileDivisaoId: profile.divisao_id 
+      isAdmin,
+      grau,
+      nivel,
+      integranteRegionalTexto: profile?.integrante?.regional_texto,
+      integranteDivisaoTexto: profile?.integrante?.divisao_texto
     });
+
+    // REGRA 1: Admin ou Graus I-IV (comando) → Acesso total
+    if (isAdmin || nivel === 'comando') {
+      console.log('[useAcoesSociaisLista] Acesso total (admin ou comando)');
+      
+      let query = supabase
+        .from('acoes_sociais_registros')
+        .select(`
+          *,
+          solicitacao_exclusao:acoes_sociais_solicitacoes_exclusao(
+            id,
+            status,
+            observacao_admin,
+            created_at
+          )
+        `)
+        .neq('status_registro', 'excluido')
+        .order('data_acao', { ascending: false });
+
+      if (filtros?.dataInicio) {
+        query = query.gte('data_acao', format(filtros.dataInicio, 'yyyy-MM-dd'));
+      }
+      if (filtros?.dataFim) {
+        query = query.lte('data_acao', format(filtros.dataFim, 'yyyy-MM-dd'));
+      }
+      if (filtros?.divisaoId) {
+        query = query.eq('divisao_relatorio_id', filtros.divisaoId);
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        console.error('[useAcoesSociaisLista] Erro ao buscar ações (acesso total):', error);
+        throw error;
+      }
+      console.log(`[useAcoesSociaisLista] ${data?.length || 0} ações retornadas (acesso total)`);
+      return data || [];
+    }
 
     // Buscar dados de regional/divisão do usuário para normalização
     let regionalNormalizada: string | null = null;
     let divisaoNormalizada: string | null = null;
 
-    if (isRegional && profile.regional_id) {
-      const { data: regionalData, error: regionalError } = await supabase
-        .from('regionais')
-        .select('nome')
-        .eq('id', profile.regional_id)
-        .single();
-
-      if (regionalError || !regionalData?.nome) {
-        console.error('[useAcoesSociaisLista] Erro ao buscar regional:', regionalError);
+    // REGRA 2: Grau V (regional) → Filtrar pela regional
+    if (nivel === 'regional') {
+      const regionalTexto = profile?.integrante?.regional_texto;
+      if (!regionalTexto) {
+        console.error('[useAcoesSociaisLista] Grau V sem regional_texto');
         return [];
       }
-
-      regionalNormalizada = normalizarRegional(regionalData.nome);
-      console.log('[useAcoesSociaisLista] Regional normalizada:', regionalNormalizada);
-    } else if ((isDiretor || isModerator) && profile.divisao_id) {
-      const { data: divisaoData, error: divisaoError } = await supabase
-        .from('divisoes')
-        .select('nome')
-        .eq('id', profile.divisao_id)
-        .single();
-
-      if (divisaoError || !divisaoData?.nome) {
-        console.error('[useAcoesSociaisLista] Erro ao buscar divisão:', divisaoError);
+      regionalNormalizada = normalizarRegional(regionalTexto);
+      console.log('[useAcoesSociaisLista] Filtrando por regional:', regionalNormalizada);
+    }
+    // REGRA 3: Grau VI+ (divisão) → Filtrar pela divisão
+    else if (nivel === 'divisao') {
+      const divisaoTexto = profile?.integrante?.divisao_texto;
+      if (!divisaoTexto) {
+        console.error('[useAcoesSociaisLista] Grau VI+ sem divisao_texto');
         return [];
       }
-
-      divisaoNormalizada = normalizarDivisao(divisaoData.nome);
-      console.log('[useAcoesSociaisLista] Divisão normalizada:', divisaoNormalizada);
-    } else {
-      console.log('[useAcoesSociaisLista] Usuário sem permissão ou IDs ausentes');
+      divisaoNormalizada = normalizarDivisao(divisaoTexto);
+      console.log('[useAcoesSociaisLista] Filtrando por divisão:', divisaoNormalizada);
+    }
+    // Sem nível identificado
+    else {
+      console.log('[useAcoesSociaisLista] Nível de acesso não identificado, grau:', grau);
       return [];
     }
 
