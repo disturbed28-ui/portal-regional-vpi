@@ -56,6 +56,13 @@ const Relatorios = () => {
     return profile?.integrante?.regional_texto || undefined;
   }, [isAdmin, nivel, profile?.integrante?.regional_texto, rolesLoading, profileLoading]);
 
+  // Determinar regionalId para filtro de histórico (Evolução)
+  const regionalIdHistorico = useMemo(() => {
+    if (rolesLoading || profileLoading) return undefined;
+    if (isAdmin || nivel === 'comando') return undefined; // Admin/comando veem tudo
+    return profile?.regional_id || undefined; // Regional/divisão veem apenas sua regional
+  }, [isAdmin, nivel, profile?.regional_id, rolesLoading, profileLoading]);
+
   // Texto de escopo para exibição
   const escopoTexto = useMemo(() => {
     if (isAdmin || nivel === 'comando') {
@@ -66,7 +73,8 @@ const Relatorios = () => {
 
   const { data: relatorioData, isLoading } = useRelatorioData(regionalTextoFiltro);
   const { data: historicoData, isLoading: isLoadingHistorico } = useHistoricoCargas({
-    enabled: !!user?.id && hasAccess && !loadingAccess
+    enabled: !!user?.id && hasAccess && !loadingAccess,
+    regionalId: regionalIdHistorico
   });
 
   // Hooks para afastamentos

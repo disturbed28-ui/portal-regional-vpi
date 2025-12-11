@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { useIntegrantesRelatorio } from '@/hooks/useIntegrantesRelatorio';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -12,6 +13,9 @@ import { toast } from 'sonner';
 
 export const IntegrantesTab = () => {
   const { user } = useAuth();
+  const { hasRole } = useUserRole(user?.id);
+  const isAdmin = hasRole('admin');
+  
   const {
     integrantes,
     integrantesAgrupados,
@@ -20,7 +24,7 @@ export const IntegrantesTab = () => {
     setFiltro,
     loading,
     comboDesabilitado
-  } = useIntegrantesRelatorio(user?.id);
+  } = useIntegrantesRelatorio(user?.id, isAdmin);
 
   const [integranteSelecionado, setIntegranteSelecionado] = useState<any>(null);
   const [modalAberto, setModalAberto] = useState(false);

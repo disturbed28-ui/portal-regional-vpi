@@ -31,13 +31,14 @@ export interface UseIntegrantesRelatorioResult {
   comboDesabilitado: boolean;
 }
 
-export const useIntegrantesRelatorio = (userId: string | undefined): UseIntegrantesRelatorioResult => {
+export const useIntegrantesRelatorio = (userId: string | undefined, isAdmin?: boolean): UseIntegrantesRelatorioResult => {
   const { profile } = useProfile(userId);
   const { integrantes: todosIntegrantes, loading: loadingIntegrantes } = useIntegrantes({ ativo: true });
   const { divisoes, loading: loadingDivisoes } = useDivisoes();
   const { regionais, loading: loadingRegionais } = useRegionais();
   
   const [filtroAtivo, setFiltroAtivo] = useState<string>('');
+  const [filtroInicializado, setFiltroInicializado] = useState(false);
 
   // Determinar nível de acesso baseado no grau
   const nivelAcesso = useMemo(() => {
@@ -136,7 +137,30 @@ export const useIntegrantesRelatorio = (userId: string | undefined): UseIntegran
     return opcoes;
   }, [profile, divisoes, regionais, nivelAcesso]);
 
-  // Não setar filtro inicial automaticamente - deixar vazio para placeholder
+  // Setar filtro inicial baseado no nível de acesso (apenas uma vez)
+  useEffect(() => {
+    if (filtroInicializado || opcoesFiltragem.length === 0 || !profile) return;
+
+    // Admin ou comando: inicia em "todos" (mostra tudo)
+    if (isAdmin || nivelAcesso === 'comando') {
+      setFiltroAtivo('todos');
+      setFiltroInicializado(true);
+      return;
+    }
+
+    // Regional: inicia filtrado por sua regional
+    if (nivelAcesso === 'regional' && profile.regional_id) {
+      setFiltroAtivo(`regional_${profile.regional_id}`);
+      setFiltroInicializado(true);
+      return;
+    }
+
+    // Divisão: inicia filtrado por sua divisão
+    if (nivelAcesso === 'divisao' && profile.divisao_id) {
+      setFiltroAtivo(`divisao_${profile.divisao_id}`);
+      setFiltroInicializado(true);
+    }
+  }, [opcoesFiltragem, isAdmin, nivelAcesso, profile, filtroInicializado]);
 
   // Aplicar filtro selecionado
   const integrantesFiltradosPorSelecao = useMemo(() => {

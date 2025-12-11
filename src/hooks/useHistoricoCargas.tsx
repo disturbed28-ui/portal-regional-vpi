@@ -20,11 +20,28 @@ interface HistoricoCompleto {
   divisoesUnicas: string[];
 }
 
-export const useHistoricoCargas = (options?: { enabled?: boolean }) => {
+export const useHistoricoCargas = (options?: { enabled?: boolean; regionalId?: string }) => {
   return useQuery({
-    queryKey: ['historico-cargas'],
+    queryKey: ['historico-cargas', options?.regionalId],
     enabled: options?.enabled ?? true,
     queryFn: async (): Promise<HistoricoCompleto | null> => {
+      // Se regionalId fornecido, buscar divisões dessa regional para filtrar
+      let divisoesRegionalSet: Set<string> | null = null;
+      if (options?.regionalId) {
+        const { data: divisoesData } = await supabase
+          .from('divisoes')
+          .select('nome, nome_ascii')
+          .eq('regional_id', options.regionalId);
+        
+        divisoesRegionalSet = new Set(
+          divisoesData?.flatMap(d => [
+            d.nome?.toUpperCase(),
+            d.nome_ascii?.toUpperCase(),
+            normalizarNomeDivisao(d.nome)?.toUpperCase()
+          ].filter(Boolean)) || []
+        );
+      }
+
       const { data: cargas, error } = await supabase
         .from('cargas_historico')
         .select('data_carga, total_integrantes, dados_snapshot, tipo_carga')
@@ -59,24 +76,34 @@ export const useHistoricoCargas = (options?: { enabled?: boolean }) => {
       // Processar dados filtrados
       const cargasProcessadas: CargaHistorica[] = cargasFiltradas.map((carga) => {
         const snapshot = carga.dados_snapshot as { divisoes?: DivisaoSnapshot[] };
-        const divisoes = snapshot?.divisoes || [];
+        let divisoes = snapshot?.divisoes || [];
+        
+        // Se temos filtro de regional, filtrar apenas divisões dessa regional
+        if (divisoesRegionalSet && divisoesRegionalSet.size > 0) {
+          divisoes = divisoes.filter(d => {
+            const nomeUpper = d.divisao?.toUpperCase();
+            const nomeNormalizado = normalizarNomeDivisao(d.divisao)?.toUpperCase();
+            return divisoesRegionalSet!.has(nomeUpper) || divisoesRegionalSet!.has(nomeNormalizado);
+          });
+        }
+
+        // Recalcular total apenas com divisões filtradas
+        const totalFiltrado = divisoes.reduce((sum, d) => sum + (d.total || 0), 0);
         
         return {
           data_carga: carga.data_carga,
-          total_integrantes: carga.total_integrantes,
+          total_integrantes: divisoesRegionalSet ? totalFiltrado : carga.total_integrantes,
           divisoes
         };
       });
 
-      // Extrair todas as divisões únicas
+      // Extrair todas as divisões únicas (já filtradas se regionalId foi fornecido)
       const divisoesSet = new Set<string>();
       cargasProcessadas.forEach(carga => {
         if (carga.divisoes && Array.isArray(carga.divisoes)) {
           carga.divisoes.forEach(divisao => {
             if (divisao && divisao.divisao) {
-              const nomeOriginal = divisao.divisao;
               const nomeNormalizado = normalizarNomeDivisao(divisao.divisao);
-              console.log(`[useHistoricoCargas] Original: "${nomeOriginal}" -> Normalizado: "${nomeNormalizado}"`);
               divisoesSet.add(nomeNormalizado);
             }
           });
