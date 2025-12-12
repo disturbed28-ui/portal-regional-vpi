@@ -40,7 +40,8 @@ const Organograma = () => {
   const [tipoLista, setTipoLista] = useState<TipoLista>(null);
   const [divisaoSelecionada, setDivisaoSelecionada] = useState<string | null>(null);
 
-  const [regionalUsuario, setRegionalUsuario] = useState<string | null>(null);
+  const [regionalId, setRegionalId] = useState<string | null>(null);
+  const [regionalNome, setRegionalNome] = useState<string | null>(null);
 
   // Redirecionamento em caso de acesso negado
   useEffect(() => {
@@ -93,14 +94,15 @@ const Organograma = () => {
           return;
         }
         
-        setRegionalUsuario(regionalData.nome);
+        setRegionalId(profile.regional_id);
+        setRegionalNome(regionalData.nome);
         return;
       }
 
-      // Se não for admin, validar integrantes_portal (lógica atual)
+      // Se não for admin, validar integrantes_portal
       const { data, error } = await supabase
         .from('integrantes_portal')
-        .select('ativo, vinculado, regional_texto')
+        .select('ativo, vinculado, regional_id, regional_texto')
         .eq('profile_id', user.id)
         .maybeSingle();
       
@@ -110,7 +112,9 @@ const Organograma = () => {
         return;
       }
       
-      setRegionalUsuario(data.regional_texto);
+      // Usar regional_id para query e regional_texto para exibição
+      setRegionalId(data.regional_id);
+      setRegionalNome(data.regional_texto);
     };
 
     validateAccess();
@@ -124,7 +128,7 @@ const Organograma = () => {
     admsDivisao,
     integrantesPorDivisao,
     loading: dataLoading
-  } = useOrganogramaData(regionalUsuario);
+  } = useOrganogramaData(regionalId);
 
   const navegarParaLista = (tipo: TipoLista) => {
     if (tipo === 'adms' && admsDivisao.length === 0) {
@@ -166,7 +170,7 @@ const Organograma = () => {
 
   if (!hasAccess) return null;
 
-  if (!regionalUsuario) {
+  if (!regionalId) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="text-center">
@@ -213,7 +217,7 @@ const Organograma = () => {
 
         <BreadcrumbOrganograma
           nivel={nivel}
-          regionalNome={regionalUsuario}
+          regionalNome={regionalNome || 'Regional'}
           cargoAtual={nivel !== 'regional' ? getTituloLista() : undefined}
           divisaoAtual={divisaoSelecionada || undefined}
           onVoltar={nivel === 'divisao' ? voltarParaLista : voltarParaRegional}

@@ -28,7 +28,7 @@ interface HierarquiaRegional {
   comunicacao_regional: IntegranteComFoto | null;
 }
 
-export const useOrganogramaData = (regionalUsuario: string | null) => {
+export const useOrganogramaData = (regionalId: string | null) => {
   const [hierarquiaRegional, setHierarquiaRegional] = useState<HierarquiaRegional>({
     diretor_regional: null,
     operacional_regional: null,
@@ -44,7 +44,7 @@ export const useOrganogramaData = (regionalUsuario: string | null) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!regionalUsuario) {
+    if (!regionalId) {
       setLoading(false);
       return;
     }
@@ -53,11 +53,11 @@ export const useOrganogramaData = (regionalUsuario: string | null) => {
       try {
         setLoading(true);
 
-        // 1. Buscar integrantes ativos da regional
+        // 1. Buscar integrantes ativos da regional usando regional_id (UUID)
         const { data: integrantes, error: integrantesError } = await supabase
           .from('integrantes_portal')
           .select('*')
-          .or(`regional_texto.ilike.%${regionalUsuario}%,regional_texto.ilike.%regional ${regionalUsuario}%`)
+          .eq('regional_id', regionalId)
           .eq('ativo', true);
 
         if (integrantesError) throw integrantesError;
@@ -150,7 +150,7 @@ export const useOrganogramaData = (regionalUsuario: string | null) => {
     };
 
     fetchOrganograma();
-  }, [regionalUsuario]);
+  }, [regionalId]);
 
   return {
     hierarquiaRegional,
