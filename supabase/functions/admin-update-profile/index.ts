@@ -265,18 +265,86 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Atualizar combate_insano no integrante vinculado (se fornecido e não estamos desvinculando)
-    if (combate_insano !== undefined && !desvincular) {
-      const { error: updateIntegranteError } = await supabase
+    // ======================================================================
+    // SINCRONIZAÇÃO: Atualizar integrantes_portal vinculado (se existir)
+    // ======================================================================
+    if (!desvincular) {
+      // Buscar integrante vinculado
+      const { data: integranteVinculado } = await supabase
         .from('integrantes_portal')
-        .update({ combate_insano })
+        .select('id')
         .eq('profile_id', profile_id)
-        .eq('vinculado', true);
+        .eq('vinculado', true)
+        .maybeSingle();
 
-      if (updateIntegranteError) {
-        console.error('Error updating integrante combate_insano:', updateIntegranteError);
+      if (integranteVinculado) {
+        console.log('[admin-update-profile] 🔄 Sincronizando com integrantes_portal:', integranteVinculado.id);
+
+        // Preparar payload de sincronização
+        const syncPayload: any = {
+          updated_at: new Date().toISOString(),
+        };
+
+        // Sincronizar campos que existem em ambas as tabelas
+        if (nome_colete !== undefined) syncPayload.nome_colete = nome_colete;
+        if (grau !== undefined) syncPayload.grau = grau;
+        if (data_entrada !== undefined) syncPayload.data_entrada = data_entrada;
+        if (divisao_id !== undefined) syncPayload.divisao_id = divisao_id;
+        if (regional_id !== undefined) syncPayload.regional_id = regional_id;
+        if (combate_insano !== undefined) syncPayload.combate_insano = combate_insano;
+
+        // Buscar nomes das entidades para popular campos _texto
+        if (regional_id) {
+          const { data: regionalData } = await supabase
+            .from('regionais')
+            .select('nome')
+            .eq('id', regional_id)
+            .single();
+          if (regionalData) {
+            syncPayload.regional_texto = regionalData.nome;
+          }
+        }
+
+        if (divisao_id) {
+          const { data: divisaoData } = await supabase
+            .from('divisoes')
+            .select('nome')
+            .eq('id', divisao_id)
+            .single();
+          if (divisaoData) {
+            syncPayload.divisao_texto = divisaoData.nome;
+          }
+        }
+
+        if (cargo_id && grau !== undefined) {
+          const { data: cargoData } = await supabase
+            .from('cargos')
+            .select('nome')
+            .eq('id', cargo_id)
+            .single();
+          if (cargoData) {
+            syncPayload.cargo_grau_texto = grau ? `${cargoData.nome} ${grau}` : cargoData.nome;
+            syncPayload.cargo_nome = cargoData.nome;
+          }
+        }
+
+        // Só atualizar se houver campos além de updated_at
+        if (Object.keys(syncPayload).length > 1) {
+          const { error: syncError } = await supabase
+            .from('integrantes_portal')
+            .update(syncPayload)
+            .eq('id', integranteVinculado.id);
+
+          if (syncError) {
+            console.error('[admin-update-profile] ❌ Erro ao sincronizar integrantes_portal:', syncError);
+          } else {
+            console.log('[admin-update-profile] ✅ integrantes_portal sincronizado:', Object.keys(syncPayload));
+          }
+        } else {
+          console.log('[admin-update-profile] ℹ️ Nenhum campo para sincronizar com integrantes_portal');
+        }
       } else {
-        console.log('Combate Insano atualizado:', combate_insano);
+        console.log('[admin-update-profile] ℹ️ Nenhum integrante_portal vinculado a este profile');
       }
     }
 
