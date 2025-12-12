@@ -28,10 +28,22 @@ function normalizarDivisaoTexto(texto: string): string {
     .replace(/[\u0300-\u036f]/g, '');
 }
 
+// Normalizar texto de regional para busca
+function normalizarRegionalTexto(texto: string): string {
+  return texto
+    .replace(/^REGIONAL\s*/i, '')
+    .replace(/\s*-\s*SP$/i, '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
 // Buscar IDs de divisão e regional baseado no texto da divisão
 async function buscarIdsHierarquia(
   supabase: any,
-  divisaoTexto: string
+  divisaoTexto: string,
+  regionalTexto?: string
 ): Promise<HierarquiaIds> {
   // Verificar cache primeiro
   const cacheKey = divisaoTexto.toLowerCase();
@@ -39,6 +51,50 @@ async function buscarIdsHierarquia(
     return cacheHierarquia.get(cacheKey)!;
   }
   
+  // 🆕 VERIFICAR SE É CARGO REGIONAL (divisao_texto contém "REGIONAL" no início)
+  const divisaoUpper = divisaoTexto.toUpperCase();
+  if (divisaoUpper.startsWith('REGIONAL ') || divisaoUpper === 'REGIONAL') {
+    console.log(`[HIERARQUIA] Detectado cargo regional: "${divisaoTexto}"`);
+    
+    // Para cargos regionais, buscar diretamente na tabela regionais
+    const regionalParaBuscar = regionalTexto || divisaoTexto;
+    const regionalNorm = normalizarRegionalTexto(regionalParaBuscar);
+    
+    const { data: regionais } = await supabase
+      .from('regionais')
+      .select('id, nome, nome_ascii')
+      .order('nome');
+    
+    if (regionais && regionais.length > 0) {
+      // Tentar match
+      const regionalEncontrada = regionais.find((r: any) => {
+        const nomeNorm = normalizarRegionalTexto(r.nome);
+        const asciiNorm = r.nome_ascii ? r.nome_ascii.toLowerCase() : '';
+        return nomeNorm === regionalNorm || 
+               nomeNorm.includes(regionalNorm) || 
+               regionalNorm.includes(nomeNorm) ||
+               asciiNorm.includes(regionalNorm) ||
+               regionalNorm.includes(asciiNorm);
+      });
+      
+      if (regionalEncontrada) {
+        const resultado = {
+          divisao_id: null,  // Cargos regionais não têm divisão
+          regional_id: regionalEncontrada.id
+        };
+        cacheHierarquia.set(cacheKey, resultado);
+        console.log(`[HIERARQUIA] Cargo regional: ${divisaoTexto} -> regional_id=${resultado.regional_id} (${regionalEncontrada.nome})`);
+        return resultado;
+      }
+    }
+    
+    console.warn(`[HIERARQUIA] Regional não encontrada para cargo regional: "${divisaoTexto}" / "${regionalParaBuscar}"`);
+    const resultadoVazio = { divisao_id: null, regional_id: null };
+    cacheHierarquia.set(cacheKey, resultadoVazio);
+    return resultadoVazio;
+  }
+  
+  // Para divisões normais, buscar na tabela divisoes
   const divisaoNorm = normalizarDivisaoTexto(divisaoTexto);
   
   // Buscar divisão pelo nome (fonte de verdade para regional_id)
@@ -271,8 +327,8 @@ Deno.serve(async (req) => {
           });
         }
         
-        // Buscar IDs de hierarquia baseado no texto da divisão
-        const hierarquia = await buscarIdsHierarquia(supabase, item.divisao_texto);
+        // Buscar IDs de hierarquia baseado no texto da divisão e regional
+        const hierarquia = await buscarIdsHierarquia(supabase, item.divisao_texto, item.regional_texto);
         
         novosEnriquecidos.push({
           ...item,
@@ -324,7 +380,7 @@ Deno.serve(async (req) => {
         // Enriquecer com IDs de hierarquia se houver divisao_texto
         let updateDataEnriquecido = { ...updateData };
         if (updateData.divisao_texto) {
-          const hierarquia = await buscarIdsHierarquia(supabase, updateData.divisao_texto);
+          const hierarquia = await buscarIdsHierarquia(supabase, updateData.divisao_texto, updateData.regional_texto);
           updateDataEnriquecido = {
             ...updateData,
             divisao_id: hierarquia.divisao_id,
