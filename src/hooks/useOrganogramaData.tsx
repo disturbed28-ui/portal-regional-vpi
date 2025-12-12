@@ -97,29 +97,40 @@ export const useOrganogramaData = (regionalId: string | null) => {
           combate_insano: i.combate_insano || false,
         }));
 
-        // 4. Separar por hierarquia
+        // 4. Funções auxiliares para comparação flexível de cargos
+        const normalizar = (texto: string) => 
+          texto?.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() || '';
+
+        const cargoMatch = (cargoNome: string | null, padrao: string) => {
+          if (!cargoNome) return false;
+          const cargoNorm = normalizar(cargoNome);
+          const padraoNorm = normalizar(padrao);
+          return cargoNorm.startsWith(padraoNorm);
+        };
+
+        // 5. Separar por hierarquia usando comparação flexível
         const hierarquia: HierarquiaRegional = {
-          diretor_regional: integrantesComFoto.find(i => i.cargo_nome === 'Diretor Regional') || null,
-          operacional_regional: integrantesComFoto.find(i => i.cargo_nome === 'Operacional Regional') || null,
-          social_regional: integrantesComFoto.find(i => i.cargo_nome === 'Social Regional') || null,
-          adm_regional: integrantesComFoto.find(i => i.cargo_nome === 'Adm. Regional') || null,
-          comunicacao_regional: integrantesComFoto.find(i => i.cargo_nome === 'Comunicação') || null,
+          diretor_regional: integrantesComFoto.find(i => cargoMatch(i.cargo_nome, 'Diretor Regional')) || null,
+          operacional_regional: integrantesComFoto.find(i => cargoMatch(i.cargo_nome, 'Operacional Regional')) || null,
+          social_regional: integrantesComFoto.find(i => cargoMatch(i.cargo_nome, 'Social Regional')) || null,
+          adm_regional: integrantesComFoto.find(i => cargoMatch(i.cargo_nome, 'Adm. Regional')) || null,
+          comunicacao_regional: integrantesComFoto.find(i => cargoMatch(i.cargo_nome, 'Comunicacao')) || null,
         };
 
         const diretores = integrantesComFoto
-          .filter(i => i.cargo_nome === 'Diretor Divisão')
+          .filter(i => cargoMatch(i.cargo_nome, 'Diretor Divisao'))
           .sort(ordenarIntegrantes);
 
         const subs = integrantesComFoto
-          .filter(i => i.cargo_nome === 'Sub Diretor Divisão')
+          .filter(i => cargoMatch(i.cargo_nome, 'Sub Diretor Divisao'))
           .sort(ordenarIntegrantes);
 
         const sociais = integrantesComFoto
-          .filter(i => i.cargo_nome === 'Social Divisão')
+          .filter(i => cargoMatch(i.cargo_nome, 'Social Divisao'))
           .sort(ordenarIntegrantes);
 
         const adms = integrantesComFoto
-          .filter(i => i.cargo_nome === 'Adm. Divisão')
+          .filter(i => cargoMatch(i.cargo_nome, 'Adm. Divisao'))
           .sort(ordenarIntegrantes);
 
         // 6. Agrupar integrantes por divisão
