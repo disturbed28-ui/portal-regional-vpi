@@ -5,6 +5,7 @@ interface FrequenciaParams {
   dataInicio: Date;
   dataFim: Date;
   divisaoIds?: string[];
+  regionalId?: string | null;
   tiposEvento?: string[];
 }
 
@@ -38,15 +39,17 @@ export const useFrequenciaPonderada = ({
   dataInicio,
   dataFim,
   divisaoIds,
+  regionalId,
   tiposEvento,
 }: FrequenciaParams) => {
   return useQuery({
-    queryKey: ['frequencia-ponderada', dataInicio, dataFim, divisaoIds, tiposEvento],
+    queryKey: ['frequencia-ponderada', dataInicio, dataFim, divisaoIds, regionalId, tiposEvento],
     queryFn: async () => {
       console.log('[useFrequenciaPonderada] Iniciando cálculo', {
         dataInicio,
         dataFim,
         divisaoIds,
+        regionalId,
         tiposEvento,
       });
 
@@ -62,13 +65,20 @@ export const useFrequenciaPonderada = ({
           titulo,
           data_evento,
           divisao_id,
+          regional_id,
           tipo_evento_peso
         `)
         .gte('data_evento', dataInicio.toISOString())
         .lte('data_evento', dataFimReal.toISOString());
 
-      if (divisaoIds && divisaoIds.length > 0) {
+      // Filtrar por divisões E/OU regional
+      if (divisaoIds && divisaoIds.length > 0 && regionalId) {
+        // Buscar eventos das divisões especificadas OU eventos da regional (sem divisão específica)
+        queryEventos = queryEventos.or(`divisao_id.in.(${divisaoIds.join(',')}),regional_id.eq.${regionalId}`);
+      } else if (divisaoIds && divisaoIds.length > 0) {
         queryEventos = queryEventos.in('divisao_id', divisaoIds);
+      } else if (regionalId) {
+        queryEventos = queryEventos.eq('regional_id', regionalId);
       }
 
       const { data: eventos, error: eventosError } = await queryEventos;
@@ -131,9 +141,14 @@ export const useFrequenciaPonderada = ({
       const justificativasMap = new Map(pesosJustificativas?.map(j => [j.tipo, j.peso]) || []);
 
       // 5. Agrupar por integrante e calcular pontuação
+      // Filtrar presenças por regional se especificado (para garantir escopo correto)
+      const presencasFiltradas = regionalId 
+        ? presencas?.filter(p => p.integrantes_portal.regional_id === regionalId)
+        : presencas;
+      
       const integrantesMap = new Map<string, IntegranteFrequencia>();
 
-      presencas?.forEach(p => {
+      presencasFiltradas?.forEach(p => {
         const key = p.integrante_id;
         
         if (!integrantesMap.has(key)) {
