@@ -104,10 +104,19 @@ export const FrequenciaIndividual = ({ grau, regionalId, divisaoId, isAdmin = fa
     return [];
   }, [nivelAcesso, isAdmin, todasDivisoes, divisoesDaRegional]);
 
+  // Determinar se deve filtrar por regional (para usuários não admin/comando)
+  const regionalIdParaFiltro = useMemo(() => {
+    if (isAdmin || nivelAcesso === 'comando') {
+      return null; // Admin/CMD vê tudo
+    }
+    return regionalId || null;
+  }, [isAdmin, nivelAcesso, regionalId]);
+
   const { data: dadosFrequencia, isLoading } = useFrequenciaPonderada({
     dataInicio,
     dataFim,
     divisaoIds: divisaoIdsParaFiltro,
+    regionalId: regionalIdParaFiltro,
   });
 
   // Agrupar dados conforme nível de acesso (mesmo padrão do IntegrantesTab/useIntegrantesRelatorio)
