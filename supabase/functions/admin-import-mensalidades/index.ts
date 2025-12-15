@@ -85,12 +85,96 @@ Deno.serve(async (req) => {
 
     console.log('[admin-import-mensalidades] Admin validated successfully');
 
-    // 2. Buscar carga anterior ATIVA (antes de desativar)
-    console.log('[admin-import-mensalidades] Fetching previous active load...');
+    // ==========================================
+    // MULTI-REGIONAL: Inferir regional de cada registro
+    // ==========================================
+    
+    // 2. Buscar registro_ids únicos para inferir regional
+    const registrosIds = [...new Set(mensalidades.map(m => m.registro_id))];
+    console.log(`[admin-import-mensalidades] Unique registro_ids: ${registrosIds.length}`);
+
+    // 3. Buscar regional_id de cada integrante (fonte primária)
+    const { data: integrantesData } = await supabase
+      .from('integrantes_portal')
+      .select('registro_id, regional_id, regional_texto, grau')
+      .in('registro_id', registrosIds);
+
+    // Criar mapas para lookup rápido
+    const integranteRegionalMap = new Map<number, string>();
+    const grauVMap = new Map<number, string>();
+    
+    (integrantesData || []).forEach(i => {
+      if (i.regional_id) {
+        integranteRegionalMap.set(i.registro_id, i.regional_id);
+      }
+      if (i.grau === 'V' && i.regional_texto) {
+        grauVMap.set(i.registro_id, i.regional_texto);
+      }
+    });
+
+    console.log(`[admin-import-mensalidades] Integrantes found: ${integrantesData?.length || 0}`);
+
+    // 4. Buscar divisões para fallback de regional (quando integrante não está cadastrado)
+    const divisoesTexto = [...new Set(mensalidades.map(m => normalizarTexto(m.divisao_texto)))];
+    const { data: divisoesData } = await supabase
+      .from('divisoes')
+      .select('id, nome, nome_ascii, regional_id');
+
+    // Criar mapa divisao_texto_normalizado -> regional_id
+    const divisaoRegionalMap = new Map<string, string>();
+    (divisoesData || []).forEach(d => {
+      const nomeNormalizado = normalizarTexto(d.nome);
+      if (d.regional_id) {
+        divisaoRegionalMap.set(nomeNormalizado, d.regional_id);
+        if (d.nome_ascii) {
+          divisaoRegionalMap.set(d.nome_ascii.toLowerCase(), d.regional_id);
+        }
+      }
+    });
+
+    console.log(`[admin-import-mensalidades] Divisões for fallback: ${divisoesData?.length || 0}`);
+
+    // 5. Identificar regionais únicas na carga
+    const regionaisNaCarga = new Set<string>();
+    
+    mensalidades.forEach(m => {
+      // Prioridade 1: regional do integrante cadastrado
+      let regionalId = integranteRegionalMap.get(m.registro_id);
+      
+      // Prioridade 2: fallback pela divisão
+      if (!regionalId) {
+        const divisaoNormalizada = normalizarTexto(m.divisao_texto);
+        regionalId = divisaoRegionalMap.get(divisaoNormalizada);
+      }
+      
+      if (regionalId) {
+        regionaisNaCarga.add(regionalId);
+      }
+    });
+
+    const regionaisArray = Array.from(regionaisNaCarga);
+    console.log(`[admin-import-mensalidades] Regionais detected in load: ${regionaisArray.length}`);
+    console.log(`[admin-import-mensalidades] Regional IDs: ${regionaisArray.join(', ')}`);
+
+    if (regionaisArray.length === 0) {
+      console.error('[admin-import-mensalidades] No regional could be inferred from data');
+      return new Response(
+        JSON.stringify({ error: 'Não foi possível identificar a regional dos dados. Verifique se os integrantes estão cadastrados.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ==========================================
+    // MULTI-REGIONAL: Buscar carga anterior APENAS das regionais na carga
+    // ==========================================
+    
+    // 6. Buscar carga anterior ATIVA apenas das regionais sendo atualizadas
+    console.log('[admin-import-mensalidades] Fetching previous active load for affected regionals...');
     const { data: cargaAnterior, error: fetchError } = await supabase
       .from('mensalidades_atraso')
-      .select('id, registro_id, ref, data_carga')
+      .select('id, registro_id, ref, data_carga, regional_id')
       .eq('ativo', true)
+      .in('regional_id', regionaisArray)
       .order('data_carga', { ascending: false });
 
     if (fetchError) {
@@ -101,9 +185,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[admin-import-mensalidades] Previous active load: ${cargaAnterior?.length || 0} records`);
+    console.log(`[admin-import-mensalidades] Previous active load (same regionals): ${cargaAnterior?.length || 0} records`);
 
-    // 3. Detectar liquidações comparando carga anterior com nova
+    // 7. Detectar liquidações comparando carga anterior com nova (APENAS da mesma regional)
     const cargaAnteriorChaves = new Set(
       (cargaAnterior || []).map(m => `${m.registro_id}_${m.ref}`)
     );
@@ -121,58 +205,56 @@ Deno.serve(async (req) => {
 
     console.log(`[admin-import-mensalidades] Liquidations detected: ${liquidacoesIds.length}`);
 
-    // 4. Validar e corrigir divisao_texto para integrantes Grau V
-    console.log('[admin-import-mensalidades] Validating Grau V members...');
+    // 8. Corrigir divisao_texto para integrantes Grau V e normalizar
+    console.log('[admin-import-mensalidades] Validating Grau V members and normalizing...');
 
-    const registrosIds = mensalidades.map(m => m.registro_id);
-    const { data: integrantesGrauV } = await supabase
-      .from('integrantes_portal')
-      .select('registro_id, grau, regional_texto')
-      .in('registro_id', registrosIds)
-      .eq('grau', 'V');
-
-    // Criar mapa de registro_id -> regional_texto para Grau V
-    const grauVMap = new Map(
-      (integrantesGrauV || []).map(i => [i.registro_id, i.regional_texto])
-    );
-
-    // Corrigir divisao_texto para Grau V e normalizar acentos
     const mensalidadesCorrigidas = mensalidades.map(m => {
       const regionalGrauV = grauVMap.get(m.registro_id);
       
-      // Se for Grau V, usar regional_texto
+      // Se for Grau V, usar regional_texto como divisao
       let divisaoFinal = regionalGrauV || m.divisao_texto;
       
       // SEMPRE normalizar removendo acentos
       divisaoFinal = normalizarTexto(divisaoFinal);
       
+      // Inferir regional_id para cada registro
+      let regionalId = integranteRegionalMap.get(m.registro_id);
+      if (!regionalId) {
+        const divisaoNormalizada = normalizarTexto(m.divisao_texto);
+        regionalId = divisaoRegionalMap.get(divisaoNormalizada);
+      }
+      
       if (regionalGrauV) {
         console.log(`[GRAU V] Corrigindo ${m.nome_colete}: "${m.divisao_texto}" → "${divisaoFinal}"`);
-      } else if (divisaoFinal !== m.divisao_texto) {
-        console.log(`[NORMALIZAÇÃO] ${m.nome_colete}: "${m.divisao_texto}" → "${divisaoFinal}"`);
       }
       
       return {
         ...m,
-        divisao_texto: divisaoFinal
+        divisao_texto: divisaoFinal,
+        regional_id: regionalId || null
       };
     });
 
     console.log(`[admin-import-mensalidades] ${grauVMap.size} Grau V members corrected`);
 
-    // 5. Desativar carga anterior
-    console.log('[admin-import-mensalidades] Deactivating previous load...');
+    // ==========================================
+    // MULTI-REGIONAL: Desativar APENAS registros das regionais na carga
+    // ==========================================
+    
+    // 9. Desativar carga anterior APENAS das regionais afetadas
+    console.log(`[admin-import-mensalidades] Deactivating previous load for regionals: ${regionaisArray.join(', ')}`);
     const { error: deactivateError } = await supabase
       .from('mensalidades_atraso')
       .update({ ativo: false })
-      .eq('ativo', true);
+      .eq('ativo', true)
+      .in('regional_id', regionaisArray);
 
     if (deactivateError) {
       console.error('[admin-import-mensalidades] Error deactivating previous load:', deactivateError);
       throw deactivateError;
     }
 
-    // 6. Marcar liquidações
+    // 10. Marcar liquidações
     if (liquidacoesIds.length > 0) {
       console.log(`[admin-import-mensalidades] Marking ${liquidacoesIds.length} liquidations...`);
       const { error: liquidacaoError } = await supabase
@@ -189,12 +271,13 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 7. Inserir novos registros (usando mensalidadesCorrigidas com Grau V corrigido)
+    // 11. Inserir novos registros COM regional_id
     console.log(`[admin-import-mensalidades] Inserting ${mensalidadesCorrigidas.length} new records...`);
     const dataToInsert = mensalidadesCorrigidas.map(m => ({
       registro_id: m.registro_id,
       nome_colete: m.nome_colete,
       divisao_texto: m.divisao_texto,
+      regional_id: m.regional_id, // 🆕 Agora inclui regional_id
       ref: m.ref,
       valor: m.valor,
       data_vencimento: m.data_vencimento,
@@ -217,7 +300,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('[admin-import-mensalidades] ✅ Success');
+    console.log('[admin-import-mensalidades] ✅ Success (MULTI-REGIONAL)');
+    console.log(`[admin-import-mensalidades] Regionais affected: ${regionaisArray.length}`);
     console.log(`[admin-import-mensalidades] Inserted: ${mensalidadesCorrigidas.length}, Liquidated: ${liquidacoesIds.length}`);
 
     return new Response(
@@ -225,7 +309,8 @@ Deno.serve(async (req) => {
         success: true,
         insertedCount: mensalidades.length,
         liquidatedCount: liquidacoesIds.length,
-        message: 'Mensalidades importadas com sucesso'
+        regionaisCount: regionaisArray.length,
+        message: `Mensalidades importadas com sucesso para ${regionaisArray.length} regional(is)`
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

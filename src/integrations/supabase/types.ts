@@ -1274,6 +1274,7 @@ export type Database = {
           nome_colete: string
           realizado_por: string | null
           ref: string | null
+          regional_id: string | null
           registro_id: number
           situacao: string | null
           valor: number | null
@@ -1291,6 +1292,7 @@ export type Database = {
           nome_colete: string
           realizado_por?: string | null
           ref?: string | null
+          regional_id?: string | null
           registro_id: number
           situacao?: string | null
           valor?: number | null
@@ -1308,6 +1310,7 @@ export type Database = {
           nome_colete?: string
           realizado_por?: string | null
           ref?: string | null
+          regional_id?: string | null
           registro_id?: number
           situacao?: string | null
           valor?: number | null
@@ -1326,6 +1329,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_estrutura_completa"
             referencedColumns: ["divisao_id"]
+          },
+          {
+            foreignKeyName: "mensalidades_atraso_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "regionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mensalidades_atraso_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["regional_id"]
           },
         ]
       }
