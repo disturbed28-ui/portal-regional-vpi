@@ -210,8 +210,21 @@ export const usePendencias = (
           return;
         }
         
-        console.log('[usePendencias] 🎯 Filtro diretor_divisao por divisao_id:', divisaoId);
-        queryMensalidades = queryMensalidades.eq('divisao_id', divisaoId);
+        // Buscar nome da divisão para filtrar por divisao_texto (mais confiável que divisao_id)
+        const { data: divisaoData } = await supabase
+          .from('divisoes')
+          .select('nome')
+          .eq('id', divisaoId)
+          .single();
+        
+        if (divisaoData?.nome) {
+          console.log('[usePendencias] 🎯 Filtro diretor_divisao por divisao_texto:', divisaoData.nome);
+          queryMensalidades = queryMensalidades.eq('divisao_texto', divisaoData.nome);
+        } else {
+          console.error('[usePendencias] ❌ Divisão não encontrada:', divisaoId);
+          setLoading(false);
+          return;
+        }
       } else if (userRole === 'user' && registroId) {
         // Usuário comum: só vê suas próprias pendências
         queryMensalidades = queryMensalidades.eq('registro_id', registroId);
@@ -339,7 +352,17 @@ export const usePendencias = (
         if (!divisaoId) {
           console.error('[usePendencias] ❌ diretor_divisao sem divisaoId - pulando afastados');
         } else {
-          queryAfastados = queryAfastados.eq('divisao_id', divisaoId);
+          // Buscar nome da divisão para filtrar por divisao_texto
+          const { data: divisaoDataAfastados } = await supabase
+            .from('divisoes')
+            .select('nome')
+            .eq('id', divisaoId)
+            .single();
+          
+          if (divisaoDataAfastados?.nome) {
+            console.log('[usePendencias] 🎯 Filtro afastados por divisao_texto:', divisaoDataAfastados.nome);
+            queryAfastados = queryAfastados.eq('divisao_texto', divisaoDataAfastados.nome);
+          }
         }
       } else if (userRole === 'user' && registroId) {
         // Usuário comum: só vê seus próprios afastamentos
@@ -416,7 +439,17 @@ export const usePendencias = (
         if (!divisaoId) {
           console.error('[usePendencias] ❌ diretor_divisao sem divisaoId - pulando deltas');
         } else {
-          queryDeltas = queryDeltas.eq('divisao_id', divisaoId);
+          // Buscar nome da divisão para filtrar por divisao_texto
+          const { data: divisaoDataDeltas } = await supabase
+            .from('divisoes')
+            .select('nome')
+            .eq('id', divisaoId)
+            .single();
+          
+          if (divisaoDataDeltas?.nome) {
+            console.log('[usePendencias] 🎯 Filtro deltas por divisao_texto:', divisaoDataDeltas.nome);
+            queryDeltas = queryDeltas.eq('divisao_texto', divisaoDataDeltas.nome);
+          }
         }
       } else if (userRole === 'user' && registroId) {
         queryDeltas = queryDeltas.eq('registro_id', registroId);
