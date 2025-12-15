@@ -36,14 +36,11 @@ export type ConexaoStatus = 'idle' | 'testando' | 'conectado' | 'erro';
 // MAPEAMENTO FLEXÍVEL DE COLUNAS (igual ao parser do Excel)
 // ============================================================================
 const COLUMN_MAPPING: Record<string, keyof RegistroMapeado> = {
-  // Data da ação (várias variações possíveis)
-  'carimbo de data/hora': 'data_acao',
-  'carimbo de datahora': 'data_acao',
+  // Data da ação - APENAS Coluna C (Data da Ação), NÃO usar Carimbo de data/hora
   'data da acao': 'data_acao',
   'data da acao social': 'data_acao',
-  'data': 'data_acao',
   'data_acao': 'data_acao',
-  'timestamp': 'data_acao',
+  // NÃO incluir 'carimbo de data/hora', 'timestamp' - esses são da coluna A (submissão do form)
   
   // Regional (várias variações)
   'qual a sua regional': 'regional',
