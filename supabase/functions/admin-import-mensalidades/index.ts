@@ -120,14 +120,24 @@ Deno.serve(async (req) => {
       .from('divisoes')
       .select('id, nome, nome_ascii, regional_id');
 
-    // Criar mapa divisao_texto_normalizado -> regional_id
+    // Criar mapas: divisao_texto_normalizado -> regional_id e divisao_texto_normalizado -> divisao_id
     const divisaoRegionalMap = new Map<string, string>();
+    const divisaoIdMap = new Map<string, string>();
     (divisoesData || []).forEach(d => {
       const nomeNormalizado = normalizarTexto(d.nome);
       if (d.regional_id) {
         divisaoRegionalMap.set(nomeNormalizado, d.regional_id);
-        if (d.nome_ascii) {
-          divisaoRegionalMap.set(d.nome_ascii.toLowerCase(), d.regional_id);
+      }
+      if (d.id) {
+        divisaoIdMap.set(nomeNormalizado, d.id);
+      }
+      if (d.nome_ascii) {
+        const nomeAsciiLower = d.nome_ascii.toLowerCase();
+        if (d.regional_id) {
+          divisaoRegionalMap.set(nomeAsciiLower, d.regional_id);
+        }
+        if (d.id) {
+          divisaoIdMap.set(nomeAsciiLower, d.id);
         }
       }
     });
@@ -224,6 +234,10 @@ Deno.serve(async (req) => {
         regionalId = divisaoRegionalMap.get(divisaoNormalizada);
       }
       
+      // Inferir divisao_id para cada registro
+      const divisaoNormalizada = normalizarTexto(divisaoFinal);
+      const divisaoId = divisaoIdMap.get(divisaoNormalizada) || null;
+      
       if (regionalGrauV) {
         console.log(`[GRAU V] Corrigindo ${m.nome_colete}: "${m.divisao_texto}" → "${divisaoFinal}"`);
       }
@@ -231,7 +245,8 @@ Deno.serve(async (req) => {
       return {
         ...m,
         divisao_texto: divisaoFinal,
-        regional_id: regionalId || null
+        regional_id: regionalId || null,
+        divisao_id: divisaoId // 🆕 Agora inclui divisao_id
       };
     });
 
@@ -277,7 +292,8 @@ Deno.serve(async (req) => {
       registro_id: m.registro_id,
       nome_colete: m.nome_colete,
       divisao_texto: m.divisao_texto,
-      regional_id: m.regional_id, // 🆕 Agora inclui regional_id
+      divisao_id: m.divisao_id,    // 🆕 Agora inclui divisao_id
+      regional_id: m.regional_id,
       ref: m.ref,
       valor: m.valor,
       data_vencimento: m.data_vencimento,
