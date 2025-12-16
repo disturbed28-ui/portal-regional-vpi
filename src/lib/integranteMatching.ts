@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { normalizeText } from "@/lib/normalizeText";
+import { normalizeText, normalizarRegional } from "@/lib/normalizeText";
 
 interface MatchResult {
   comando_id: string | null;
@@ -65,10 +65,13 @@ export const matchIntegranteToStructure = async (
         .order('nome');
 
       if (regionais && regionais.length > 0) {
+        // Usar normalizarRegional para converter romanos (III→3, II→2, I→1)
+        const regionalNormalizadaInput = normalizarRegional(regionalTexto);
+        
         const regionalMatch = regionais.find(r => {
-          const regionalDbNormalizado = normalizeText(r.nome);
-          return regionalDbNormalizado.includes(regionalNormalizado) || 
-                 regionalNormalizado.includes(regionalDbNormalizado);
+          const regionalDbNormalizada = normalizarRegional(r.nome);
+          // Matching exato após normalização para evitar falso positivo (VP I vs VP III)
+          return regionalDbNormalizada === regionalNormalizadaInput;
         });
 
         if (regionalMatch) {
