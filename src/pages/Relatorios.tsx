@@ -15,12 +15,13 @@ import { GraficoEvolucao } from '@/components/relatorios/GraficoEvolucao';
 import { TabelaComparativa } from '@/components/relatorios/TabelaComparativa';
 import { RelatorioSemanalDivisaoAba } from '@/components/relatorios/RelatorioSemanalDivisaoAba';
 import { IntegrantesTab } from '@/components/relatorios/IntegrantesTab';
+import { HistoricoMovimentacoes } from '@/components/relatorios/HistoricoMovimentacoes';
 import { formatarDataBrasil } from '@/lib/timezone';
 import { toast } from '@/hooks/use-toast';
 import { useAfastadosAtivos, useAfastadosHistorico, useRetornosProximos, useRegistrarRetorno } from '@/hooks/useAfastados';
 import { format, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, Users, AlertCircle } from 'lucide-react';
+import { Calendar, Users, AlertCircle, ArrowRightLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { CardDescription } from '@/components/ui/card';
 import { toast as sonnerToast } from 'sonner';
@@ -210,6 +211,10 @@ const Relatorios = () => {
               </TabsTrigger>
               <TabsTrigger value="afastamentos" className="text-xs sm:text-sm px-2 sm:px-3">
                 Afastamentos
+              </TabsTrigger>
+              <TabsTrigger value="movimentacoes" className="text-xs sm:text-sm px-2 sm:px-3">
+                <ArrowRightLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                Movimentações
               </TabsTrigger>
               {hasAccessSemanalAba && (
                 <TabsTrigger value="semanal" className="text-xs sm:text-sm px-2 sm:px-3">
@@ -553,6 +558,15 @@ const Relatorios = () => {
                     </div>
                   </TabsContent>
                 </Tabs>
+              </TabsContent>
+
+              {/* Aba Movimentações */}
+              <TabsContent value="movimentacoes">
+                <HistoricoMovimentacoes
+                  nivelAcesso={nivel}
+                  regionalUsuario={profile?.integrante?.regional_texto}
+                  divisaoUsuario={profile?.integrante?.divisao_texto}
+                />
               </TabsContent>
 
             {hasAccessSemanalAba && (
