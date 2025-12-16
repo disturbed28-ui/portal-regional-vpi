@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { normalizarNomeDivisao } from '@/lib/utils';
-
+import { normalizarDivisao } from '@/lib/normalizeText';
 interface DivisaoSnapshot {
   divisao: string;
   total: number;
@@ -33,11 +33,13 @@ export const useHistoricoCargas = (options?: { enabled?: boolean; regionalId?: s
           .select('nome, nome_ascii')
           .eq('regional_id', options.regionalId);
         
+        // Usar normalização mais robusta que lida com acentos e prefixos
         divisoesRegionalSet = new Set(
           divisoesData?.flatMap(d => [
             d.nome?.toUpperCase(),
             d.nome_ascii?.toUpperCase(),
-            normalizarNomeDivisao(d.nome)?.toUpperCase()
+            normalizarNomeDivisao(d.nome)?.toUpperCase(),
+            normalizarDivisao(d.nome) // Adiciona versão totalmente normalizada
           ].filter(Boolean)) || []
         );
       }
@@ -83,7 +85,10 @@ export const useHistoricoCargas = (options?: { enabled?: boolean; regionalId?: s
           divisoes = divisoes.filter(d => {
             const nomeUpper = d.divisao?.toUpperCase();
             const nomeNormalizado = normalizarNomeDivisao(d.divisao)?.toUpperCase();
-            return divisoesRegionalSet!.has(nomeUpper) || divisoesRegionalSet!.has(nomeNormalizado);
+            const nomeNormalizadoCompleto = normalizarDivisao(d.divisao);
+            return divisoesRegionalSet!.has(nomeUpper) || 
+                   divisoesRegionalSet!.has(nomeNormalizado) ||
+                   divisoesRegionalSet!.has(nomeNormalizadoCompleto);
           });
         }
 

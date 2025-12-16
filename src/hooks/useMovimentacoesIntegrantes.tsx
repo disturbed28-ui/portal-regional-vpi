@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { normalizarRegional, normalizarDivisao } from "@/lib/normalizeText";
 
 export interface MovimentacaoIntegrante {
   id: string;
@@ -122,10 +123,10 @@ export const useMovimentacoesComFiltro = (options?: UseMovimentacoesComFiltroOpt
       
       if (options?.integrantesDaDivisao) {
         // Buscar integrantes que estão HOJE nessa divisão
+        // Usar busca normalizada para evitar problemas de case/acentos
         const { data: integrantes, error: intError } = await supabase
           .from('integrantes_portal')
           .select('id, divisao_texto, regional_texto')
-          .eq('divisao_texto', options.integrantesDaDivisao)
           .eq('ativo', true);
         
         if (intError) {
@@ -133,16 +134,22 @@ export const useMovimentacoesComFiltro = (options?: UseMovimentacoesComFiltroOpt
           throw intError;
         }
         
-        integranteIds = (integrantes || []).map(i => i.id);
-        (integrantes || []).forEach(i => {
+        // Filtrar localmente com normalização
+        const divisaoNormalizada = normalizarDivisao(options.integrantesDaDivisao);
+        const integrantesFiltrados = (integrantes || []).filter(i => 
+          normalizarDivisao(i.divisao_texto) === divisaoNormalizada
+        );
+        
+        integranteIds = integrantesFiltrados.map(i => i.id);
+        integrantesFiltrados.forEach(i => {
           integrantesMap.set(i.id, { divisao: i.divisao_texto, regional: i.regional_texto });
         });
       } else if (options?.integrantesDaRegional) {
         // Buscar integrantes que estão HOJE nessa regional
+        // Usar busca normalizada para evitar problemas de case/acentos/romanos
         const { data: integrantes, error: intError } = await supabase
           .from('integrantes_portal')
           .select('id, divisao_texto, regional_texto')
-          .eq('regional_texto', options.integrantesDaRegional)
           .eq('ativo', true);
         
         if (intError) {
@@ -150,8 +157,14 @@ export const useMovimentacoesComFiltro = (options?: UseMovimentacoesComFiltroOpt
           throw intError;
         }
         
-        integranteIds = (integrantes || []).map(i => i.id);
-        (integrantes || []).forEach(i => {
+        // Filtrar localmente com normalização (converte VP III → VP 3)
+        const regionalNormalizada = normalizarRegional(options.integrantesDaRegional);
+        const integrantesFiltrados = (integrantes || []).filter(i => 
+          normalizarRegional(i.regional_texto) === regionalNormalizada
+        );
+        
+        integranteIds = integrantesFiltrados.map(i => i.id);
+        integrantesFiltrados.forEach(i => {
           integrantesMap.set(i.id, { divisao: i.divisao_texto, regional: i.regional_texto });
         });
       } else {
