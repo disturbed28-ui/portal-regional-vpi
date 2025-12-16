@@ -20,6 +20,12 @@ export interface ExcelIntegrante {
   data_entrada?: string;
 }
 
+export interface TransferenciaDetectada {
+  integrante: IntegrantePortal;
+  nova_regional: string;
+  nova_divisao: string;
+}
+
 export interface ProcessDeltaResult {
   novos: ExcelIntegrante[];
   atualizados: Array<{
@@ -28,6 +34,8 @@ export interface ProcessDeltaResult {
   }>;
   semMudanca: number;
   removidos: IntegrantePortal[];
+  transferidos: TransferenciaDetectada[];
+  regional_detectada: string;
 }
 
 // Converter data do formato DD/MM/YYYY para YYYY-MM-DD (formato ISO)
@@ -283,15 +291,49 @@ export const parseExcelFile = async (file: File): Promise<ExcelIntegrante[]> => 
   });
 };
 
+// Detectar a regional predominante na carga do Excel
+const detectarRegionalDaCarga = (excelData: ExcelIntegrante[]): string => {
+  const contagem = new Map<string, number>();
+  excelData.forEach(item => {
+    const regional = item.regional?.trim();
+    if (regional) {
+      contagem.set(regional, (contagem.get(regional) || 0) + 1);
+    }
+  });
+  
+  let maiorRegional = '';
+  let maiorContagem = 0;
+  contagem.forEach((count, regional) => {
+    if (count > maiorContagem) {
+      maiorContagem = count;
+      maiorRegional = regional;
+    }
+  });
+  
+  console.log('[processDelta] 📊 Regional detectada na carga:', maiorRegional, `(${maiorContagem}/${excelData.length} registros)`);
+  return maiorRegional;
+};
+
 export const processDelta = (
   excelData: ExcelIntegrante[],
-  dbData: IntegrantePortal[]
+  dbData: IntegrantePortal[],
+  todosIntegrantesAtivos?: IntegrantePortal[]
 ): ProcessDeltaResult => {
   const novos: ExcelIntegrante[] = [];
   const atualizados: Array<{ antigo: IntegrantePortal; novo: ExcelIntegrante }> = [];
   let semMudanca = 0;
 
-  const dbMap = new Map(dbData.map((i) => [i.registro_id, i]));
+  // Detectar a regional da carga
+  const regionalDaCarga = detectarRegionalDaCarga(excelData);
+  
+  // Filtrar dbData apenas para integrantes da regional da carga
+  const dbDataFiltrado = regionalDaCarga 
+    ? dbData.filter(i => i.regional_texto === regionalDaCarga)
+    : dbData;
+  
+  console.log('[processDelta] 📋 Integrantes no DB da regional:', dbDataFiltrado.length, 'de', dbData.length, 'total');
+
+  const dbMap = new Map(dbDataFiltrado.map((i) => [i.registro_id, i]));
   const excelIds = new Set(excelData.map((i) => i.id_integrante));
 
   // Verificar novos e atualizados
@@ -328,14 +370,55 @@ export const processDelta = (
     }
   });
 
-  // Verificar removidos (existem no DB mas nao no Excel)
-  const removidos = dbData.filter((dbItem) => !excelIds.has(dbItem.registro_id));
+  // Verificar removidos da regional (existem no DB da regional mas nao no Excel)
+  const candidatosRemocao = dbDataFiltrado.filter((dbItem) => !excelIds.has(dbItem.registro_id));
+  
+  // Separar removidos de transferidos
+  const removidos: IntegrantePortal[] = [];
+  const transferidos: TransferenciaDetectada[] = [];
+  
+  // Usar todosIntegrantesAtivos se disponível, senão usar dbData
+  const todosAtivos = todosIntegrantesAtivos || dbData;
+  
+  for (const candidato of candidatosRemocao) {
+    // Verificar se este integrante existe ATIVO em OUTRA regional
+    const emOutraRegional = todosAtivos.find(
+      i => i.registro_id === candidato.registro_id && 
+           i.regional_texto !== regionalDaCarga &&
+           i.ativo === true
+    );
+    
+    if (emOutraRegional) {
+      // É uma transferência, não uma remoção!
+      transferidos.push({
+        integrante: candidato,
+        nova_regional: emOutraRegional.regional_texto,
+        nova_divisao: emOutraRegional.divisao_texto
+      });
+      console.log('[processDelta] 🔄 Transferência detectada:', candidato.nome_colete, 
+        `${regionalDaCarga} → ${emOutraRegional.regional_texto}`);
+    } else {
+      // Realmente sumiu, candidato a inativação
+      removidos.push(candidato);
+    }
+  }
+  
+  console.log('[processDelta] 📊 Resultado:', {
+    novos: novos.length,
+    atualizados: atualizados.length,
+    semMudanca,
+    removidos: removidos.length,
+    transferidos: transferidos.length,
+    regional_detectada: regionalDaCarga
+  });
 
   return {
     novos,
     atualizados,
     semMudanca,
     removidos,
+    transferidos,
+    regional_detectada: regionalDaCarga
   };
 };
 
