@@ -13,9 +13,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { supabase } from "@/integrations/supabase/client";
-import { parseExcelFile, processDelta, parseCargoGrau } from "@/lib/excelParser";
+import { parseExcelFile, processDelta, parseCargoGrau, TransferenciaDetectada } from "@/lib/excelParser";
 import { parseMensalidadesExcel, formatRef, ParseResult } from "@/lib/mensalidadesParser";
-import { Upload, ArrowLeft, Users, UserCheck, UserX, AlertCircle, FileSpreadsheet, History, Info, RefreshCw, XCircle, Eye } from "lucide-react";
+import { Upload, ArrowLeft, Users, UserCheck, UserX, AlertCircle, FileSpreadsheet, History, Info, RefreshCw, XCircle, Eye, ArrowRightLeft } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { HistoricoDevedores } from "@/components/admin/HistoricoDevedores";
@@ -64,6 +64,8 @@ const AdminIntegrantes = () => {
     motivo_inativacao: string;
     observacao_inativacao: string;
   }>>([]);
+  const [transferidosDetectados, setTransferidosDetectados] = useState<TransferenciaDetectada[]>([]);
+  const [regionalDaCarga, setRegionalDaCarga] = useState<string>('');
   
   const { ultimaCargaInfo, devedoresAtivos } = useMensalidades();
   const { hasRole } = useUserRole(user?.id);
@@ -163,25 +165,33 @@ const AdminIntegrantes = () => {
         throw new Error('Nenhum ID válido encontrado. Verifique se a coluna de ID existe e está preenchida corretamente.');
       }
       
-      const delta = processDelta(excelData, integrantes);
+      // Passar todos os integrantes ativos para verificar transferências entre regionais
+      const delta = processDelta(excelData, integrantes, integrantes);
       
-      // VERIFICAÇÃO DE SANIDADE: Se 100% dos integrantes serão removidos, algo está errado
-      const porcentagemRemocao = integrantes.length > 0 
-        ? (delta.removidos.length / integrantes.length) * 100 
+      // Guardar regional detectada e transferidos
+      setRegionalDaCarga(delta.regional_detectada);
+      setTransferidosDetectados(delta.transferidos);
+      
+      // Filtrar integrantes apenas da regional da carga para verificação de sanidade
+      const integrantesDaRegional = integrantes.filter(i => i.regional_texto === delta.regional_detectada);
+      
+      // VERIFICAÇÃO DE SANIDADE: Se 100% dos integrantes DA REGIONAL serão removidos, algo está errado
+      const porcentagemRemocao = integrantesDaRegional.length > 0 
+        ? (delta.removidos.length / integrantesDaRegional.length) * 100 
         : 0;
       
-      if (porcentagemRemocao > 95 && integrantes.length > 10) {
+      if (porcentagemRemocao > 95 && integrantesDaRegional.length > 10) {
         console.error('[AdminIntegrantes] ⚠️ ALERTA: Remoção em massa detectada!', {
-          total_db: integrantes.length,
+          regional_da_carga: delta.regional_detectada,
+          total_regional: integrantesDaRegional.length,
           total_excel: excelData.length,
           removidos: delta.removidos.length,
-          porcentagem: porcentagemRemocao.toFixed(1) + '%',
-          exemplo_ids_db: integrantes.slice(0, 5).map(i => i.registro_id),
-          exemplo_ids_excel: excelData.slice(0, 5).map(i => i.id_integrante)
+          transferidos: delta.transferidos.length,
+          porcentagem: porcentagemRemocao.toFixed(1) + '%'
         });
         
         throw new Error(
-          `⚠️ ATENÇÃO: ${delta.removidos.length} de ${integrantes.length} integrantes (${porcentagemRemocao.toFixed(0)}%) seriam inativados!\n\n` +
+          `⚠️ ATENÇÃO: ${delta.removidos.length} de ${integrantesDaRegional.length} integrantes da ${delta.regional_detectada} (${porcentagemRemocao.toFixed(0)}%) seriam inativados!\n\n` +
           `Isso sugere um problema na leitura dos IDs do arquivo Excel.\n\n` +
           `Verifique:\n` +
           `• Se a coluna de ID está presente no arquivo\n` +
@@ -196,7 +206,7 @@ const AdminIntegrantes = () => {
         excelData,
       });
       
-      // Se há removidos, abrir dialog de confirmação primeiro
+      // Se há removidos (que não são transferências), abrir dialog de confirmação primeiro
       if (delta.removidos.length > 0) {
         setRemovidosConfirmados(delta.removidos.map((r: any) => ({
           integrante_id: r.id,
@@ -395,6 +405,8 @@ const AdminIntegrantes = () => {
       setShowUploadDialog(false);
       setUploadPreview(null);
       setRemovidosConfirmados([]);
+      setTransferidosDetectados([]);
+      setRegionalDaCarga('');
       refetch();
     } catch (error) {
       console.error('Error applying changes:', error);
@@ -1059,6 +1071,8 @@ const AdminIntegrantes = () => {
                   setShowRemovidosDialog(false);
                   setRemovidosConfirmados([]);
                   setUploadPreview(null);
+                  setTransferidosDetectados([]);
+                  setRegionalDaCarga('');
                 }}
               >
                 Cancelar
@@ -1105,6 +1119,11 @@ const AdminIntegrantes = () => {
                     <p className="text-sm text-muted-foreground">
                       {uploadPreview.excelData.length} registros no arquivo
                     </p>
+                    {regionalDaCarga && (
+                      <Badge variant="outline" className="mt-1">
+                        Regional: {regionalDaCarga}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </Card>
@@ -1123,7 +1142,7 @@ const AdminIntegrantes = () => {
                   </p>
                 </Card>
                 <Card className="p-4">
-                  <p className="text-sm text-muted-foreground">Sem Mudanca</p>
+                  <p className="text-sm text-muted-foreground">Sem Mudança</p>
                   <p className="text-3xl font-bold text-gray-600">
                     {uploadPreview.delta.semMudanca}
                   </p>
@@ -1135,6 +1154,27 @@ const AdminIntegrantes = () => {
                   </p>
                 </Card>
               </div>
+
+              {/* Transferências detectadas - NÃO serão inativados */}
+              {transferidosDetectados.length > 0 && (
+                <Alert className="border-blue-200 bg-blue-50">
+                  <ArrowRightLeft className="h-4 w-4 text-blue-600" />
+                  <AlertTitle className="text-blue-800">Transferências Detectadas</AlertTitle>
+                  <AlertDescription>
+                    <p className="text-sm text-blue-700 mb-2">
+                      {transferidosDetectados.length} integrante(s) não estão mais na {regionalDaCarga},
+                      mas foram encontrados ativos em outra regional. Estes <strong>NÃO serão inativados</strong>.
+                    </p>
+                    <div className="mt-2 space-y-1 text-xs max-h-32 overflow-y-auto">
+                      {transferidosDetectados.map((t, idx) => (
+                        <p key={idx} className="text-blue-700">
+                          • {t.integrante.nome_colete} → <span className="font-semibold">{t.nova_regional}</span> / {t.nova_divisao}
+                        </p>
+                      ))}
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
 
               {uploadPreview.delta.atualizados.length > 0 && (
                 <Alert>
@@ -1182,7 +1222,13 @@ const AdminIntegrantes = () => {
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowUploadDialog(false)}>
+            <Button variant="outline" onClick={() => {
+              setShowUploadDialog(false);
+              setUploadPreview(null);
+              setRemovidosConfirmados([]);
+              setTransferidosDetectados([]);
+              setRegionalDaCarga('');
+            }}>
               Cancelar
             </Button>
             <Button onClick={handleApplyChanges} disabled={processing}>
