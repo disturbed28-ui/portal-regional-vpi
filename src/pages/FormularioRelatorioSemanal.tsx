@@ -1,19 +1,21 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Info, ArrowRightLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
-import { useIntegrantes, useBuscaIntegrante } from "@/hooks/useIntegrantes";
+import { useIntegrantes, useBuscaIntegrante, useBuscaIntegranteTodos } from "@/hooks/useIntegrantes";
+import { useSugestoesEntradasSaidas } from "@/hooks/useMovimentacoesIntegrantes";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { normalizeText, calcularSemanaOperacional, formatDateToSQL } from "@/lib/normalizeText";
 import { cn } from "@/lib/utils";
 import { useSubmitRelatorioSemanal, SubmitRelatorioParams } from "@/hooks/useRelatorioSemanal";
 import { useAcoesResolucaoDelta } from "@/hooks/useAcoesResolucaoDelta";
-
 // Constante com nomes de dias da semana
 const DIAS_SEMANA_NOMES = [
   'Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 
@@ -21,9 +23,10 @@ const DIAS_SEMANA_NOMES = [
 ];
 
 // Componente auxiliar: Seção de Saídas
-const SecaoSaidas = ({ teveSaidas, setTeveSaidas, saidas, setSaidas }: any) => {
+const SecaoSaidas = ({ teveSaidas, setTeveSaidas, saidas, setSaidas, divisaoAtual, sugestoesSaidas }: any) => {
   const { acoes } = useAcoesResolucaoDelta();
   const [buscas, setBuscas] = useState<{ [key: number]: string }>({});
+  const [sugestoesAplicadas, setSugestoesAplicadas] = useState(false);
 
   const adicionarSaida = () => {
     setSaidas([...saidas, {
@@ -37,9 +40,56 @@ const SecaoSaidas = ({ teveSaidas, setTeveSaidas, saidas, setSaidas }: any) => {
     }]);
   };
 
+  // Aplicar sugestões automáticas
+  const aplicarSugestoes = () => {
+    if (!sugestoesSaidas || sugestoesSaidas.length === 0) return;
+    
+    const novasSaidas = sugestoesSaidas.map((s: any) => ({
+      integrante_id: s.integrante_id || "",
+      nome_colete: s.nome_colete,
+      data_saida: s.data_movimentacao?.split("T")[0] || "",
+      motivo_codigo: "TRANSFERENCIA",
+      justificativa: `Transferido para: ${s.valor_novo || "outra divisão"}`,
+      tem_moto: false,
+      tem_carro: false,
+      origem: "sugestao"
+    }));
+    
+    setSaidas([...saidas, ...novasSaidas]);
+    setSugestoesAplicadas(true);
+    setTeveSaidas(true);
+  };
+
   return (
     <Card className="p-4 sm:p-6 space-y-4">
       <h3 className="font-semibold">Saída de Integrantes</h3>
+      
+      {/* Banner de sugestões automáticas */}
+      {sugestoesSaidas && sugestoesSaidas.length > 0 && !sugestoesAplicadas && (
+        <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800">
+          <ArrowRightLeft className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <AlertTitle className="text-blue-800 dark:text-blue-200">Transferências Detectadas</AlertTitle>
+          <AlertDescription className="text-blue-700 dark:text-blue-300">
+            {sugestoesSaidas.length} integrante(s) saíram desta divisão na semana:
+            <ul className="mt-1 text-sm list-disc list-inside">
+              {sugestoesSaidas.slice(0, 3).map((s: any) => (
+                <li key={s.id}>{s.nome_colete} → {s.valor_novo}</li>
+              ))}
+              {sugestoesSaidas.length > 3 && <li>...e mais {sugestoesSaidas.length - 3}</li>}
+            </ul>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              onClick={aplicarSugestoes}
+            >
+              Adicionar como saídas
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <div className="space-y-2">
         <p className="text-sm text-muted-foreground">Houve saída de integrantes nesta semana?</p>
         <div className="flex gap-2">
@@ -75,8 +125,9 @@ const SecaoSaidas = ({ teveSaidas, setTeveSaidas, saidas, setSaidas }: any) => {
               acoes={acoes}
               saidas={saidas}
               setSaidas={setSaidas}
-              busca={buscas[idx] || ""}
+              busca={buscas[idx] || saida.nome_colete || ""}
               setBusca={(valor: string) => setBuscas({ ...buscas, [idx]: valor })}
+              divisaoAtual={divisaoAtual}
             />
           ))}
 
@@ -95,9 +146,9 @@ const SecaoSaidas = ({ teveSaidas, setTeveSaidas, saidas, setSaidas }: any) => {
   );
 };
 
-// Componente auxiliar: Item de Saída
-const ItemSaida = ({ saida, idx, acoes, saidas, setSaidas, busca, setBusca }: any) => {
-  const { resultados } = useBuscaIntegrante(busca);
+// Componente auxiliar: Item de Saída (usa busca sem filtro de status)
+const ItemSaida = ({ saida, idx, acoes, saidas, setSaidas, busca, setBusca, divisaoAtual }: any) => {
+  const { resultados } = useBuscaIntegranteTodos(busca, undefined); // Sem filtro de divisão para encontrar quem saiu
   const [mostrarResultados, setMostrarResultados] = useState(false);
 
   const selecionarIntegrante = (integrante: any) => {
@@ -111,6 +162,17 @@ const ItemSaida = ({ saida, idx, acoes, saidas, setSaidas, busca, setBusca }: an
     setMostrarResultados(false);
   };
 
+  // Função para determinar badge de status
+  const getStatusBadge = (integrante: any) => {
+    if (!integrante.ativo) {
+      return <Badge variant="destructive" className="ml-2 text-xs">Inativo</Badge>;
+    }
+    if (divisaoAtual && integrante.divisao_texto !== divisaoAtual) {
+      return <Badge variant="secondary" className="ml-2 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">Transferido</Badge>;
+    }
+    return <Badge variant="outline" className="ml-2 text-xs">Ativo</Badge>;
+  };
+
   return (
     <Card className="p-4 space-y-3 bg-muted/50">
       <div className="flex justify-between items-start">
@@ -119,6 +181,11 @@ const ItemSaida = ({ saida, idx, acoes, saidas, setSaidas, busca, setBusca }: an
           {saida.origem === "delta" && (
             <span className="text-xs bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 px-2 py-0.5 rounded">
               Detectado na carga
+            </span>
+          )}
+          {saida.origem === "sugestao" && (
+            <span className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-0.5 rounded">
+              Sugestão automática
             </span>
           )}
         </div>
@@ -144,7 +211,7 @@ const ItemSaida = ({ saida, idx, acoes, saidas, setSaidas, busca, setBusca }: an
               setMostrarResultados(true);
             }}
             onFocus={() => setMostrarResultados(true)}
-            placeholder="Buscar integrante..."
+            placeholder="Buscar integrante (ativos e inativos)..."
           />
           {mostrarResultados && resultados.length > 0 && (
             <div className="absolute z-10 w-full mt-1 bg-background border rounded shadow-lg max-h-48 overflow-auto">
@@ -152,10 +219,11 @@ const ItemSaida = ({ saida, idx, acoes, saidas, setSaidas, busca, setBusca }: an
                 <button
                   key={r.id}
                   type="button"
-                  className="w-full text-left px-3 py-2 hover:bg-muted text-sm"
+                  className="w-full text-left px-3 py-2 hover:bg-muted text-sm flex items-center justify-between"
                   onClick={() => selecionarIntegrante(r)}
                 >
-                  {r.nome_colete}
+                  <span>{r.nome_colete}</span>
+                  {getStatusBadge(r)}
                 </button>
               ))}
             </div>
@@ -439,6 +507,16 @@ const FormularioRelatorioSemanal = () => {
   const [acoesSociais, setAcoesSociais] = useState<any[]>([]);
   const [estatisticas, setEstatisticas] = useState<any>(null);
   const [carregandoAcoesSociaisAuto, setCarregandoAcoesSociaisAuto] = useState(false);
+
+  // Calcular semana operacional para buscar sugestões
+  const semanaOp = calcularSemanaOperacional();
+  
+  // Hook para buscar sugestões de entradas/saídas baseado em movimentações
+  const { data: sugestoes } = useSugestoesEntradasSaidas(
+    divisaoSelecionada?.nome || null,
+    semanaOp?.periodo_inicio || null,
+    semanaOp?.periodo_fim || null
+  );
 
   // Calcular dia permitido
   const hoje = new Date();
@@ -1211,6 +1289,45 @@ const FormularioRelatorioSemanal = () => {
         {/* Seção: Entradas de Integrantes */}
         <Card className="p-4 sm:p-6 space-y-4">
           <h3 className="font-semibold">Entradas de Integrantes</h3>
+          
+          {/* Banner de sugestões de entradas */}
+          {sugestoes?.entradas && sugestoes.entradas.length > 0 && entradas.length === 0 && !teveEntradas && (
+            <Alert className="bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800">
+              <ArrowRightLeft className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <AlertTitle className="text-green-800 dark:text-green-200">Transferências Detectadas</AlertTitle>
+              <AlertDescription className="text-green-700 dark:text-green-300">
+                {sugestoes.entradas.length} integrante(s) entraram nesta divisão na semana:
+                <ul className="mt-1 text-sm list-disc list-inside">
+                  {sugestoes.entradas.slice(0, 3).map((s: any) => (
+                    <li key={s.id}>{s.nome_colete} (vindo de: {s.valor_anterior || "outra divisão"})</li>
+                  ))}
+                  {sugestoes.entradas.length > 3 && <li>...e mais {sugestoes.entradas.length - 3}</li>}
+                </ul>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => {
+                    const novasEntradas = sugestoes.entradas.map((s: any) => ({
+                      nome_colete: s.nome_colete,
+                      data_entrada: s.data_movimentacao?.split("T")[0] || "",
+                      motivo_entrada: "Transferido",
+                      possui_carro: false,
+                      possui_moto: false,
+                      nenhum: true,
+                      origem: "sugestao"
+                    }));
+                    setEntradas([...entradas, ...novasEntradas]);
+                    setTeveEntradas(true);
+                  }}
+                >
+                  Adicionar como entradas
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">Houve entrada de integrantes nesta semana?</p>
             <div className="flex gap-2">
@@ -1246,6 +1363,11 @@ const FormularioRelatorioSemanal = () => {
                       {entrada.origem === "delta" && (
                         <span className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-0.5 rounded">
                           Detectado na carga
+                        </span>
+                      )}
+                      {entrada.origem === "sugestao" && (
+                        <span className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-2 py-0.5 rounded">
+                          Sugestão automática
                         </span>
                       )}
                     </div>
@@ -1391,6 +1513,8 @@ const FormularioRelatorioSemanal = () => {
           setTeveSaidas={setTeveSaidas}
           saidas={saidas}
           setSaidas={setSaidas}
+          divisaoAtual={divisaoSelecionada?.nome}
+          sugestoesSaidas={sugestoes?.saidas || []}
         />
 
         {/* Seção: Inadimplência */}

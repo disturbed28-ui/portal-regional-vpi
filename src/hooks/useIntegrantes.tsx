@@ -161,3 +161,48 @@ export const useBuscaIntegrante = (nomeColete: string) => {
 
   return { resultados, loading };
 };
+
+// Busca de integrantes SEM filtro de status (para entradas/saídas no relatório)
+export const useBuscaIntegranteTodos = (nomeColete: string, filtrarPorDivisao?: string) => {
+  const [resultados, setResultados] = useState<IntegrantePortal[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!nomeColete || nomeColete.length < 2) {
+      setResultados([]);
+      return;
+    }
+
+    const buscar = async () => {
+      setLoading(true);
+      
+      const termoBusca = normalizeSearchTerm(nomeColete);
+      let query = supabase
+        .from('integrantes_portal')
+        .select('*')
+        .ilike('nome_colete_ascii', `%${termoBusca}%`)
+        .order('nome_colete')
+        .limit(15);
+
+      // Filtrar por divisão se especificado
+      if (filtrarPorDivisao) {
+        query = query.eq('divisao_texto', filtrarPorDivisao);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error searching integrantes (todos):', error);
+      } else {
+        setResultados(data || []);
+      }
+      
+      setLoading(false);
+    };
+
+    const timeoutId = setTimeout(buscar, 300);
+    return () => clearTimeout(timeoutId);
+  }, [nomeColete, filtrarPorDivisao]);
+
+  return { resultados, loading };
+};

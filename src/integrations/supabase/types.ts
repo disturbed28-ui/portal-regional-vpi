@@ -415,6 +415,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "atualizacoes_carga_carga_historico_id_fkey"
+            columns: ["carga_historico_id"]
+            isOneToOne: false
+            referencedRelation: "vw_movimentacoes_integrantes"
+            referencedColumns: ["carga_id"]
+          },
+          {
             foreignKeyName: "atualizacoes_carga_integrante_id_fkey"
             columns: ["integrante_id"]
             isOneToOne: false
@@ -587,6 +594,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "cargas_historico"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deltas_pendentes_carga_id_fkey"
+            columns: ["carga_id"]
+            isOneToOne: false
+            referencedRelation: "vw_movimentacoes_integrantes"
+            referencedColumns: ["carga_id"]
           },
           {
             foreignKeyName: "deltas_pendentes_divisao_id_fkey"
@@ -962,6 +976,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "cargas_historico"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integrantes_afastados_carga_historico_id_fkey"
+            columns: ["carga_historico_id"]
+            isOneToOne: false
+            referencedRelation: "vw_movimentacoes_integrantes"
+            referencedColumns: ["carga_id"]
           },
           {
             foreignKeyName: "integrantes_afastados_divisao_id_fkey"
@@ -2103,6 +2124,13 @@ export type Database = {
             referencedRelation: "cargas_historico"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "deltas_pendentes_carga_id_fkey"
+            columns: ["carga_id"]
+            isOneToOne: false
+            referencedRelation: "vw_movimentacoes_integrantes"
+            referencedColumns: ["carga_id"]
+          },
         ]
       }
       vw_devedores_ativos: {
@@ -2140,6 +2168,30 @@ export type Database = {
           regional_id: string | null
         }
         Relationships: []
+      }
+      vw_movimentacoes_integrantes: {
+        Row: {
+          campo_alterado: string | null
+          carga_id: string | null
+          data_carga: string | null
+          data_movimentacao: string | null
+          id: string | null
+          integrante_id: string | null
+          nome_colete: string | null
+          registro_id: number | null
+          tipo_movimentacao: string | null
+          valor_anterior: string | null
+          valor_novo: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atualizacoes_carga_integrante_id_fkey"
+            columns: ["integrante_id"]
+            isOneToOne: false
+            referencedRelation: "integrantes_portal"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
