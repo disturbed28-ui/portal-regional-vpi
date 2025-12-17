@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useTiposEvento } from "@/hooks/useTiposEvento";
-import { Crown } from "lucide-react";
+import { Crown, Skull } from "lucide-react";
 
 interface EventCardProps {
   event: CalendarEvent;
@@ -18,13 +18,21 @@ export function EventCard({ event, onClick }: EventCardProps) {
   
   // Cor especial para eventos CMD e Regional (laranja vibrante)
   const isSpecialEvent = event.isComandoEvent || event.isRegionalEvent;
-  const borderColor = isSpecialEvent 
-    ? '#fb923c' 
-    : getColorForType(event.type);
+  
+  // Cor especial para eventos Caveira (roxo)
+  const isCaveiraEvent = event.isCaveiraEvent;
+  
+  const borderColor = isCaveiraEvent
+    ? '#9333ea' // Roxo para Caveira
+    : isSpecialEvent 
+      ? '#fb923c' 
+      : getColorForType(event.type);
     
-  const bgColor = isSpecialEvent
-    ? 'rgba(251, 146, 60, 0.08)'
-    : undefined;
+  const bgColor = isCaveiraEvent
+    ? 'rgba(147, 51, 234, 0.08)' // Fundo roxo suave
+    : isSpecialEvent
+      ? 'rgba(251, 146, 60, 0.08)'
+      : undefined;
   
   return (
     <div className="flex gap-4 cursor-pointer" onClick={onClick}>
@@ -40,11 +48,19 @@ export function EventCard({ event, onClick }: EventCardProps) {
       <Card 
         className="flex-1 p-4 hover:shadow-lg transition-all hover:scale-[1.02] relative overflow-hidden"
         style={{
-          borderLeft: `${isSpecialEvent ? '5px' : '4px'} solid ${borderColor}`,
+          borderLeft: `${isCaveiraEvent || isSpecialEvent ? '5px' : '4px'} solid ${borderColor}`,
           backgroundColor: bgColor,
         }}
       >
-        {isSpecialEvent && (
+        {/* Ícone de Caveira para eventos restritos */}
+        {isCaveiraEvent && (
+          <div className="absolute top-2 right-2">
+            <Skull className="h-6 w-6 text-purple-600 fill-purple-600/20" />
+          </div>
+        )}
+        
+        {/* Ícone de Coroa para eventos CMD/Regional */}
+        {isSpecialEvent && !isCaveiraEvent && (
           <div className="absolute top-2 right-2">
             <Crown className="h-6 w-6 text-orange-500 fill-orange-500/20" />
           </div>
@@ -61,6 +77,17 @@ export function EventCard({ event, onClick }: EventCardProps) {
           >
             {event.type}
           </Badge>
+          
+          {/* Badge adicional para Caveira */}
+          {isCaveiraEvent && (
+            <Badge 
+              variant="outline"
+              className="bg-purple-500/10 border-purple-500 text-purple-600"
+            >
+              <Skull className="h-3 w-3 mr-1" />
+              CAVEIRA
+            </Badge>
+          )}
         </div>
         
         <h3 className="font-bold text-foreground text-base mb-2">
