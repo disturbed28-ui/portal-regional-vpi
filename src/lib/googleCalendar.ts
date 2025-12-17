@@ -12,7 +12,7 @@ function removeSpecialCharacters(text: string): string {
 
 // Interface para componentes parseados do evento
 interface ParsedEvent {
-  tipoEvento: string;        // "Acao Social", "PUB", "Reuniao"
+  tipoEvento: string;        // "Acao Social", "PUB", "Reuniao", "Caveira"
   subtipo?: string;          // "Arrecadacao", "Entrega de Coletes"
   divisao: string;           // "Div Cacapava - SP", "CMD V e XX"
   divisaoId: string | null;  // UUID da divisão no banco
@@ -20,6 +20,7 @@ interface ParsedEvent {
   informacoesExtras?: string;// "Casa do irmao Vinicius"
   isCMD: boolean;            // true se for evento do CMD
   isRegional: boolean;       // true se for evento Regional
+  isCaveira: boolean;        // true se for evento restrito Caveira
 }
 
 export interface CalendarEvent {
@@ -37,6 +38,7 @@ export interface CalendarEvent {
   htmlLink: string;
   isComandoEvent: boolean;
   isRegionalEvent: boolean;
+  isCaveiraEvent: boolean; // Evento restrito para membros Caveira
   googleStatus?: string; // Status do evento no Google (cancelled, confirmed, etc.)
 }
 
@@ -153,15 +155,24 @@ function parseEventComponents(originalTitle: string): ParsedEvent {
   // Detectar se é CMD ou Regional
   const isCMD = upper.includes('CMD');
   const isRegional = upper.includes('REGIONAL');
+  
+  // Detectar se é evento Caveira (restrito) - match: "Caveira", "Caveiras", case-insensitive
+  const isCaveira = /^\s*caveiras?\b/i.test(originalTitle);
+  
   console.log('[parseEventComponents] É CMD?', isCMD);
   console.log('[parseEventComponents] É Regional?', isRegional);
+  console.log('[parseEventComponents] É Caveira?', isCaveira);
   
   // Detectar tipo de evento (prioridade)
   let tipoEvento = 'Outros';
   let subtipo: string | undefined;
   
+  // Caveira tem prioridade máxima
+  if (isCaveira) {
+    tipoEvento = 'Caveira';
+  }
   // PUB tem prioridade
-  if (lower.includes('pub')) {
+  else if (lower.includes('pub')) {
     tipoEvento = 'PUB';
   }
   // Ação Social / Arrecadação
@@ -199,8 +210,19 @@ function parseEventComponents(originalTitle: string): ParsedEvent {
   let divisao = 'Sem Divisao';
   let informacoesExtras: string | undefined;
   
-  // Se for CMD ou Regional, usar título original como informações extras
-  if (isCMD) {
+  // Se for Caveira, extrair o resto do título como informações extras
+  if (isCaveira) {
+    divisao = 'Caveira';
+    
+    // Extrair o resto do título como informações extras
+    // "Caveiras VP um Reunião" → "VP um Reunião"
+    const tituloSemPrefixo = originalTitle.replace(/^\s*caveiras?\s*[-:–]?\s*/i, '').trim();
+    if (tituloSemPrefixo) {
+      informacoesExtras = tituloSemPrefixo;
+    }
+  }
+  // Se for CMD, usar título original como informações extras
+  else if (isCMD) {
     divisao = 'CMD';
     
     // Usar o título completo como informações extras, removendo apenas tipo de evento
@@ -284,7 +306,8 @@ function parseEventComponents(originalTitle: string): ParsedEvent {
     regionalSigla: null, // Será preenchido depois com base na divisão
     informacoesExtras,
     isCMD,
-    isRegional
+    isRegional,
+    isCaveira
   };
   
   console.log('[parseEventComponents] ===== RESULTADO FINAL =====');
@@ -435,6 +458,7 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
         htmlLink: item.htmlLink || '',
         isComandoEvent: components.isCMD,
         isRegionalEvent: components.isRegional,
+        isCaveiraEvent: components.isCaveira,
         googleStatus, // Incluir status do Google
       };
       

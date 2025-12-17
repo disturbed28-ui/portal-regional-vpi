@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, MapPin, Tag, ExternalLink, Users, Crown } from "lucide-react";
+import { Calendar, Clock, MapPin, Tag, ExternalLink, Users, Crown, Skull } from "lucide-react";
 import { ListaPresenca } from "./ListaPresenca";
 import { useTiposEvento } from "@/hooks/useTiposEvento";
 import { useAuth } from "@/hooks/useAuth";
@@ -37,7 +37,11 @@ export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDial
   const startDate = new Date(event.start);
   const endDate = new Date(event.end);
   
-  const eventColor = event.isComandoEvent ? '#fb923c' : getColorForType(event.type);
+  const eventColor = event.isCaveiraEvent 
+    ? '#9333ea' // Roxo para Caveira
+    : event.isComandoEvent 
+      ? '#fb923c' 
+      : getColorForType(event.type);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -54,7 +58,16 @@ export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDial
             >
               {event.type}
             </Badge>
-            {event.isComandoEvent && (
+            {event.isCaveiraEvent && (
+              <Badge 
+                variant="outline"
+                className="bg-purple-500/10 border-purple-500 text-purple-600"
+              >
+                <Skull className="h-3 w-3 mr-1" />
+                CAVEIRA
+              </Badge>
+            )}
+            {event.isComandoEvent && !event.isCaveiraEvent && (
               <Badge 
                 variant="outline"
                 style={{
