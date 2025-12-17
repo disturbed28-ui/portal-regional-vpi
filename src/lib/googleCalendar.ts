@@ -156,8 +156,8 @@ function parseEventComponents(originalTitle: string): ParsedEvent {
   const isCMD = upper.includes('CMD');
   const isRegional = upper.includes('REGIONAL');
   
-  // Detectar se é evento Caveira (restrito) - match: "Caveira", "Caveiras", case-insensitive
-  const isCaveira = /^\s*caveiras?\b/i.test(originalTitle);
+  // Detectar se é evento Caveira (restrito) - match em qualquer posição do título
+  const isCaveira = /\bcaveiras?\b/i.test(originalTitle);
   
   console.log('[parseEventComponents] É CMD?', isCMD);
   console.log('[parseEventComponents] É Regional?', isRegional);
@@ -214,11 +214,18 @@ function parseEventComponents(originalTitle: string): ParsedEvent {
   if (isCaveira) {
     divisao = 'Caveira';
     
-    // Extrair o resto do título como informações extras
+    // Extrair o título removendo "Caveira/Caveiras" de qualquer posição
+    // "Reunião Caveira VP1" → "Reunião VP1"
     // "Caveiras VP um Reunião" → "VP um Reunião"
-    const tituloSemPrefixo = originalTitle.replace(/^\s*caveiras?\s*[-:–]?\s*/i, '').trim();
-    if (tituloSemPrefixo) {
-      informacoesExtras = tituloSemPrefixo;
+    const tituloSemCaveira = originalTitle
+      .replace(/\bcaveiras?\b/gi, '')
+      .replace(/\s+/g, ' ')
+      .replace(/^\s*[-:–]\s*/, '')
+      .replace(/\s*[-:–]\s*$/, '')
+      .trim();
+    
+    if (tituloSemCaveira) {
+      informacoesExtras = tituloSemCaveira;
     }
   }
   // Se for CMD, usar título original como informações extras
