@@ -1,5 +1,13 @@
 import { corsHeaders } from '../_shared/cors.ts';
 import { logError } from '../_shared/error-handler.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+// Verifica se o título do evento é restrito (começa com "Caveira")
+function isRestrictedEvent(summary: string | undefined): boolean {
+  if (!summary) return false;
+  // Match: "Caveira", "CAVEIRA", "caveira", "Caveira -", "Caveira:"
+  return /^\s*caveira\b/i.test(summary);
+}
 
 async function fetchAllEvents(
   calendarId: string,
@@ -60,7 +68,41 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Calcular período de 6 meses (3 passados + 3 futuros)
+    // ========================================
+    // 1. Verificar se usuário é Caveira
+    // ========================================
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const authHeader = req.headers.get('Authorization');
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader || '' } }
+    });
+
+    // Obter usuário logado
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    let isCaveiraUser = false;
+
+    if (user?.id) {
+      const { data: integrante, error: integranteError } = await supabase
+        .from('integrantes_portal')
+        .select('caveira, caveira_suplente')
+        .eq('profile_id', user.id)
+        .maybeSingle();
+      
+      if (integranteError) {
+        console.error('[get-calendar-events] Erro ao buscar integrante:', integranteError);
+      } else if (integrante) {
+        isCaveiraUser = integrante.caveira === true || integrante.caveira_suplente === true;
+      }
+    }
+
+    console.log(`[get-calendar-events] User: ${user?.id || 'anônimo'} | isCaveiraUser: ${isCaveiraUser}`);
+
+    // ========================================
+    // 2. Buscar eventos do Google Calendar
+    // ========================================
     const now = new Date();
     const threeMonthsBefore = new Date();
     threeMonthsBefore.setMonth(threeMonthsBefore.getMonth() - 3);
@@ -69,7 +111,6 @@ Deno.serve(async (req) => {
 
     console.log('[get-calendar-events] Fetching calendar events with pagination');
     
-    // Buscar TODOS os eventos do período usando paginação
     const allEvents = await fetchAllEvents(
       CALENDAR_ID,
       API_KEY,
@@ -79,8 +120,30 @@ Deno.serve(async (req) => {
 
     console.log('[get-calendar-events] Total events fetched:', allEvents.length);
 
+    // ========================================
+    // 3. Filtrar eventos restritos "Caveira"
+    // ========================================
+    const filteredEvents = allEvents.filter(event => {
+      const summary = event.summary || '';
+      
+      // Se é evento restrito e usuário NÃO é caveira, remover
+      if (isRestrictedEvent(summary) && !isCaveiraUser) {
+        console.log(`[get-calendar-events] 🔒 Evento restrito removido: "${summary}"`);
+        return false;
+      }
+      
+      return true;
+    });
+
+    const removedCount = allEvents.length - filteredEvents.length;
+    if (removedCount > 0) {
+      console.log(`[get-calendar-events] Eventos Caveira removidos: ${removedCount}`);
+    }
+
+    console.log(`[get-calendar-events] Retornando ${filteredEvents.length} eventos`);
+
     return new Response(
-      JSON.stringify({ items: allEvents }),
+      JSON.stringify({ items: filteredEvents }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
