@@ -210,15 +210,27 @@ function parseEventComponents(originalTitle: string): ParsedEvent {
   let divisao = 'Sem Divisao';
   let informacoesExtras: string | undefined;
   
-  // Se for Caveira, extrair o resto do título como informações extras
+  // Variável para armazenar sigla regional detectada diretamente do título
+  let regionalSiglaDetectada: string | null = null;
+  
+  // Se for Caveira, detectar sigla regional e extrair informações extras
   if (isCaveira) {
-    divisao = 'Caveira';
+    // Detectar sigla de regional no título (VP1, VP2, VP3, LN, CMD)
+    const siglaMatch = originalTitle.match(/\b(VP1|VP2|VP3|LN|CMD)\b/i);
+    regionalSiglaDetectada = siglaMatch ? siglaMatch[1].toUpperCase() : null;
     
-    // Extrair o título removendo "Caveira/Caveiras" de qualquer posição
-    // "Reunião Caveira VP1" → "Reunião VP1"
-    // "Caveiras VP um Reunião" → "VP um Reunião"
+    // Usar a regional detectada como divisão (não "Caveira" para evitar duplicação)
+    // O badge de tipo já mostra "Caveira"
+    divisao = regionalSiglaDetectada || 'Sem Divisao';
+    
+    console.log('[parseEventComponents] Caveira - Sigla regional detectada:', regionalSiglaDetectada);
+    
+    // Extrair o título removendo "Caveira/Caveiras" E a sigla da regional
+    // "Reunião Caveira VP1" → "Reunião"
+    // "Caveiras VP1 Reunião" → "Reunião"
     const tituloSemCaveira = originalTitle
       .replace(/\bcaveiras?\b/gi, '')
+      .replace(/\b(VP1|VP2|VP3|LN|CMD)\b/gi, '')
       .replace(/\s+/g, ' ')
       .replace(/^\s*[-:–]\s*/, '')
       .replace(/\s*[-:–]\s*$/, '')
@@ -310,7 +322,7 @@ function parseEventComponents(originalTitle: string): ParsedEvent {
     subtipo,
     divisao,
     divisaoId: null, // Será preenchido depois
-    regionalSigla: null, // Será preenchido depois com base na divisão
+    regionalSigla: regionalSiglaDetectada, // Para Caveira, já vem preenchida; outros serão preenchidos depois
     informacoesExtras,
     isCMD,
     isRegional,
@@ -439,7 +451,10 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
       components.divisaoId = matchResult.id;
       
       // Determinar sigla da regional
-      if (components.isCMD) {
+      if (components.isCaveira && components.regionalSigla) {
+        // Para eventos Caveira, manter a sigla detectada no parseEventComponents
+        console.log('[fetchCalendarEvents] Caveira - Mantendo sigla detectada:', components.regionalSigla);
+      } else if (components.isCMD) {
         // Para eventos CMD, usar sigla "CMD"
         components.regionalSigla = 'CMD';
       } else if (matchResult.regionalSigla) {
