@@ -2,11 +2,11 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { logError } from '../_shared/error-handler.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-// Verifica se o título do evento é restrito (começa com "Caveira")
+// Verifica se o título do evento é restrito (contém "Caveira" em qualquer posição)
 function isRestrictedEvent(summary: string | undefined): boolean {
   if (!summary) return false;
-  // Match: "Caveira", "CAVEIRA", "caveira", "Caveira -", "Caveira:"
-  return /^\s*caveira\b/i.test(summary);
+  // Match: "Caveira" ou "Caveiras" em qualquer posição como palavra inteira
+  return /\bcaveiras?\b/i.test(summary);
 }
 
 async function fetchAllEvents(
