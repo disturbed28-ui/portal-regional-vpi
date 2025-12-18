@@ -186,7 +186,14 @@ export const useRelatorioSemanalResumo = (regionalId: string, ano?: number, mes?
       // Se temos totais do snapshot, usar diretamente
       if (totaisPorDivisao.size > 0) {
         divisoesMap.forEach((divisaoData, nomeDivisao) => {
-          divisaoData.total_anterior = totaisPorDivisao.get(nomeDivisao) || 0;
+          // Normalizar para MAIÚSCULO para match com chave do snapshot
+          const nomeDivisaoUpper = nomeDivisao?.toUpperCase();
+          const nomeDivisaoNormalizado = normalizeText(nomeDivisao)?.toUpperCase();
+          
+          // Tentar múltiplas formas de match
+          divisaoData.total_anterior = totaisPorDivisao.get(nomeDivisaoUpper) 
+                                    || totaisPorDivisao.get(nomeDivisaoNormalizado) 
+                                    || 0;
         });
       }
 
