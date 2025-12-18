@@ -474,61 +474,61 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[98vw] max-w-4xl sm:w-auto max-h-[95vh] sm:max-h-[90vh] overflow-y-auto px-3 sm:px-6">
           <DialogHeader>
-            <DialogTitle className="text-2xl">{event.title}</DialogTitle>
+            <DialogTitle className="text-lg sm:text-2xl">{event.title}</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {/* Informações do Evento */}
-            <div className="space-y-2 border-b pb-4">
+            <div className="space-y-1 sm:space-y-2 border-b pb-3 sm:pb-4">
               {event.division && (
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                <div className="flex items-center gap-2 text-sm sm:text-base">
+                  <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                   <span className="font-medium">Divisão:</span>
-                  <span>{event.division}</span>
+                  <span className="truncate">{event.division}</span>
                 </div>
               )}
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
+              <div className="flex items-center gap-2 text-sm sm:text-base">
+                <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <span className="font-medium">Data:</span>
-                <span>{format(startDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</span>
+                <span>{format(startDate, "dd/MM/yyyy", { locale: ptBR })}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
+              <div className="flex items-center gap-2 text-sm sm:text-base">
+                <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <span className="font-medium">Horário:</span>
                 <span>{format(startDate, "HH:mm", { locale: ptBR })}</span>
               </div>
             </div>
 
-            {/* Contador */}
-            <div className="flex items-center justify-center gap-6 p-4 bg-muted/50 rounded-lg">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-green-600 dark:text-green-500">{todosPresentes.length}</div>
-                <div className="text-sm font-medium text-foreground/70">Presentes</div>
+            {/* Contador - Responsivo */}
+            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 p-3 sm:p-4 bg-muted/50 rounded-lg">
+              <div className="text-center min-w-[70px]">
+                <div className="text-2xl sm:text-3xl font-bold text-green-600 dark:text-green-500">{todosPresentes.length}</div>
+                <div className="text-xs sm:text-sm font-medium text-foreground/70">Presentes</div>
               </div>
-              <div className="h-8 w-px bg-border" />
-              <div className="text-center">
-                <div className="text-3xl font-bold text-orange-600 dark:text-orange-500">{ausentes.length}</div>
-                <div className="text-sm font-medium text-foreground/70">Ausentes</div>
+              <div className="h-8 w-px bg-border hidden sm:block" />
+              <div className="text-center min-w-[70px]">
+                <div className="text-2xl sm:text-3xl font-bold text-orange-600 dark:text-orange-500">{ausentes.length}</div>
+                <div className="text-xs sm:text-sm font-medium text-foreground/70">Ausentes</div>
               </div>
-              <div className="h-8 w-px bg-border" />
-              <div className="text-center">
-                <div className="text-3xl font-bold text-foreground">{totalDivisao}</div>
-                <div className="text-sm font-medium text-foreground/70">Total da Divisão</div>
+              <div className="h-8 w-px bg-border hidden sm:block" />
+              <div className="text-center min-w-[70px] w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-border/50">
+                <div className="text-2xl sm:text-3xl font-bold text-foreground">{totalDivisao}</div>
+                <div className="text-xs sm:text-sm font-medium text-foreground/70">Total</div>
               </div>
             </div>
 
             {/* Campo de Busca por Nome de Colete */}
             {canManage && (
-              <div className="space-y-3 border rounded-lg p-4 bg-muted/50">
-                <Label htmlFor="nome-colete" className="text-base font-semibold text-foreground">
+              <div className="space-y-2 sm:space-y-3 border rounded-lg p-3 sm:p-4 bg-muted/50">
+                <Label htmlFor="nome-colete" className="text-sm sm:text-base font-semibold text-foreground">
                   🔍 Buscar por Nome de Colete
                 </Label>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Input
                     id="nome-colete"
-                    placeholder="Digite o nome do colete..."
+                    placeholder="Digite o nome..."
                     value={nomeColeteSearch}
                     onChange={(e) => setNomeColeteSearch(e.target.value)}
                     onKeyDown={(e) => {
@@ -536,12 +536,15 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                         handleSearchNomeColete();
                       }
                     }}
+                    className="flex-1"
                   />
                   <Button 
                     onClick={handleSearchNomeColete}
                     disabled={isSearching}
+                    className="w-full sm:w-auto"
                   >
-                    <Search className="h-4 w-4" />
+                    <Search className="h-4 w-4 mr-2 sm:mr-0" />
+                    <span className="sm:hidden">Buscar</span>
                   </Button>
                 </div>
                 
@@ -554,13 +557,13 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                         className="flex items-center justify-between p-2 hover:bg-muted/50 rounded cursor-pointer transition-colors"
                         onClick={() => handleSelectSearchResult(integrante)}
                       >
-                        <div>
-                          <div className="font-medium text-foreground">{integrante.nome_colete}</div>
-                          <div className="text-sm text-foreground/70">
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-foreground truncate">{integrante.nome_colete}</div>
+                          <div className="text-xs sm:text-sm text-foreground/70 truncate">
                             {integrante.divisao_texto} • {integrante.cargo_nome || 'Sem cargo'}
                           </div>
                         </div>
-                        <UserCheck className="h-5 w-5 text-green-600 dark:text-green-500" />
+                        <UserCheck className="h-5 w-5 text-green-600 dark:text-green-500 flex-shrink-0 ml-2" />
                       </div>
                     ))}
                   </div>
@@ -589,165 +592,310 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
             {/* Lista de Presentes */}
             {todosPresentes.length > 0 && (
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <h3 className="font-semibold text-lg text-green-600 dark:text-green-500">Presentes</h3>
+                <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                  <h3 className="font-semibold text-base sm:text-lg text-green-600 dark:text-green-500">Presentes</h3>
                   <Badge className="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600">{todosPresentes.length}</Badge>
                 </div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="font-semibold text-foreground">Nome</TableHead>
-                      <TableHead className="font-semibold text-foreground">Divisão</TableHead>
-                      <TableHead className="font-semibold text-foreground">Cargo</TableHead>
-                      <TableHead className="font-semibold text-foreground">Grau</TableHead>
-                      {canManage && <TableHead className="w-[120px] font-semibold text-foreground">Ações</TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {todosPresentes.map((integrante) => {
-                      return (
-                        <TableRow 
-                          key={integrante.id} 
-                          className={integrante.isVisitante 
-                            ? "bg-blue-100/80 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-colors" 
-                            : "bg-green-100/80 dark:bg-green-950/40 hover:bg-green-100 dark:hover:bg-green-950/50 transition-colors"
-                          }
-                        >
-                          <TableCell className="font-medium text-foreground">
-                            <div className="flex items-center gap-2">
-                              {integrante.nome_colete}
-                              {integrante.isVisitante && (
-                                <Badge variant={(integrante as any).isExterno ? "secondary" : "outline"} className={(integrante as any).isExterno ? "" : "text-blue-700 border-blue-700 dark:text-blue-400 dark:border-blue-400 bg-white/50 dark:bg-transparent"}>
-                                  {(integrante as any).isExterno ? 'Visitante (Externo)' : 'Visitante'}
-                                </Badge>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-sm font-medium text-foreground">
-                            {integrante.divisao_texto}
-                          </TableCell>
-                          <TableCell className="text-foreground">{integrante.cargo_nome || '-'}</TableCell>
-                          <TableCell className="text-foreground">{integrante.grau || '-'}</TableCell>
-                          {canManage && (
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleMarcarAusente(integrante.id)}
-                                title="Marcar como ausente"
-                              >
-                                <X className="h-4 w-4 text-red-600" />
-                              </Button>
+                
+                {/* Desktop: Tabela */}
+                <div className="hidden sm:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="font-semibold text-foreground">Nome</TableHead>
+                        <TableHead className="font-semibold text-foreground">Divisão</TableHead>
+                        <TableHead className="font-semibold text-foreground">Cargo</TableHead>
+                        <TableHead className="font-semibold text-foreground">Grau</TableHead>
+                        {canManage && <TableHead className="w-[120px] font-semibold text-foreground">Ações</TableHead>}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {todosPresentes.map((integrante) => {
+                        return (
+                          <TableRow 
+                            key={integrante.id} 
+                            className={integrante.isVisitante 
+                              ? "bg-blue-100/80 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-colors" 
+                              : "bg-green-100/80 dark:bg-green-950/40 hover:bg-green-100 dark:hover:bg-green-950/50 transition-colors"
+                            }
+                          >
+                            <TableCell className="font-medium text-foreground">
+                              <div className="flex items-center gap-2">
+                                {integrante.nome_colete}
+                                {integrante.isVisitante && (
+                                  <Badge variant={(integrante as any).isExterno ? "secondary" : "outline"} className={(integrante as any).isExterno ? "" : "text-blue-700 border-blue-700 dark:text-blue-400 dark:border-blue-400 bg-white/50 dark:bg-transparent"}>
+                                    {(integrante as any).isExterno ? 'Visitante (Externo)' : 'Visitante'}
+                                  </Badge>
+                                )}
+                              </div>
                             </TableCell>
-                          )}
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                            <TableCell className="text-sm font-medium text-foreground">
+                              {integrante.divisao_texto}
+                            </TableCell>
+                            <TableCell className="text-foreground">{integrante.cargo_nome || '-'}</TableCell>
+                            <TableCell className="text-foreground">{integrante.grau || '-'}</TableCell>
+                            {canManage && (
+                              <TableCell>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleMarcarAusente(integrante.id)}
+                                  title="Marcar como ausente"
+                                >
+                                  <X className="h-4 w-4 text-red-600" />
+                                </Button>
+                              </TableCell>
+                            )}
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile: Cards */}
+                <div className="block sm:hidden space-y-2">
+                  {todosPresentes.map((integrante) => (
+                    <div 
+                      key={integrante.id} 
+                      className={`p-3 rounded-lg border ${
+                        integrante.isVisitante 
+                          ? "bg-blue-50/80 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800" 
+                          : "bg-green-50/80 dark:bg-green-950/40 border-green-200 dark:border-green-800"
+                      }`}
+                    >
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-foreground truncate">{integrante.nome_colete}</span>
+                            {integrante.isVisitante && (
+                              <Badge 
+                                variant={(integrante as any).isExterno ? "secondary" : "outline"} 
+                                className={`text-xs ${(integrante as any).isExterno ? "" : "text-blue-700 border-blue-700 dark:text-blue-400 dark:border-blue-400"}`}
+                              >
+                                {(integrante as any).isExterno ? 'Externo' : 'Visitante'}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1 truncate">
+                            {integrante.divisao_texto}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {integrante.cargo_nome || '-'} • Grau {integrante.grau || '-'}
+                          </div>
+                        </div>
+                        {canManage && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 flex-shrink-0"
+                            onClick={() => handleMarcarAusente(integrante.id)}
+                            title="Marcar como ausente"
+                          >
+                            <X className="h-4 w-4 text-red-600" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
             {/* Lista de Ausentes */}
             {ausentes.length > 0 && (
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <h3 className="font-semibold text-lg text-orange-600 dark:text-orange-500">Ausentes</h3>
+                <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                  <h3 className="font-semibold text-base sm:text-lg text-orange-600 dark:text-orange-500">Ausentes</h3>
                   <Badge className="bg-orange-600 text-white hover:bg-orange-700 dark:bg-orange-600 dark:hover:bg-orange-700">{ausentes.length}</Badge>
                 </div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="font-semibold text-foreground">Nome</TableHead>
-                      <TableHead className="font-semibold text-foreground">Cargo</TableHead>
-                      <TableHead className="font-semibold text-foreground">Grau</TableHead>
-                      <TableHead className="font-semibold text-foreground">Justificativa</TableHead>
-                      {canManage && <TableHead className="w-[120px] font-semibold text-foreground">Ações</TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {ausentes.map((integrante) => {
-                      const getJustificativaIcon = (justificativa: string | null | undefined) => {
-                        if (!justificativa) return null;
-                        switch (justificativa) {
-                          case 'saude':
-                            return <Heart className="h-4 w-4 text-red-500" />;
-                          case 'trabalho':
-                            return <Briefcase className="h-4 w-4 text-blue-500" />;
-                          case 'familia':
-                            return <Users className="h-4 w-4 text-green-500" />;
-                          case 'nao_justificado':
-                            return <X className="h-4 w-4 text-gray-500" />;
-                          default:
-                            return null;
-                        }
-                      };
 
-                      const getJustificativaLabel = (justificativa: string | null | undefined) => {
-                        if (!justificativa) return '-';
-                        switch (justificativa) {
-                          case 'saude':
-                            return 'Saúde';
-                          case 'trabalho':
-                            return 'Trabalho';
-                          case 'familia':
-                            return 'Família';
-                          case 'nao_justificado':
-                            return 'Não Justificado';
-                          default:
-                            return '-';
-                        }
-                      };
+                {/* Desktop: Tabela */}
+                <div className="hidden sm:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="font-semibold text-foreground">Nome</TableHead>
+                        <TableHead className="font-semibold text-foreground">Cargo</TableHead>
+                        <TableHead className="font-semibold text-foreground">Grau</TableHead>
+                        <TableHead className="font-semibold text-foreground">Justificativa</TableHead>
+                        {canManage && <TableHead className="w-[120px] font-semibold text-foreground">Ações</TableHead>}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {ausentes.map((integrante) => {
+                        const getJustificativaIcon = (justificativa: string | null | undefined) => {
+                          if (!justificativa) return null;
+                          switch (justificativa) {
+                            case 'saude':
+                              return <Heart className="h-4 w-4 text-red-500" />;
+                            case 'trabalho':
+                              return <Briefcase className="h-4 w-4 text-blue-500" />;
+                            case 'familia':
+                              return <Users className="h-4 w-4 text-green-500" />;
+                            case 'nao_justificado':
+                              return <X className="h-4 w-4 text-gray-500" />;
+                            default:
+                              return null;
+                          }
+                        };
 
-                      return (
-                        <TableRow key={integrante.id} className="hover:bg-muted/30 transition-colors">
-                          <TableCell className="font-medium text-foreground">{integrante.nome_colete}</TableCell>
-                          <TableCell className="text-foreground/80">{integrante.cargo_nome || '-'}</TableCell>
-                          <TableCell className="text-foreground/80">{integrante.grau || '-'}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              {getJustificativaIcon(integrante.justificativa_ausencia)}
-                              <span className="text-sm text-foreground/70">{getJustificativaLabel(integrante.justificativa_ausencia)}</span>
-                            </div>
-                          </TableCell>
-                          {canManage && (
+                        const getJustificativaLabel = (justificativa: string | null | undefined) => {
+                          if (!justificativa) return '-';
+                          switch (justificativa) {
+                            case 'saude':
+                              return 'Saúde';
+                            case 'trabalho':
+                              return 'Trabalho';
+                            case 'familia':
+                              return 'Família';
+                            case 'nao_justificado':
+                              return 'Não Justificado';
+                            default:
+                              return '-';
+                          }
+                        };
+
+                        return (
+                          <TableRow key={integrante.id} className="hover:bg-muted/30 transition-colors">
+                            <TableCell className="font-medium text-foreground">{integrante.nome_colete}</TableCell>
+                            <TableCell className="text-foreground/80">{integrante.cargo_nome || '-'}</TableCell>
+                            <TableCell className="text-foreground/80">{integrante.grau || '-'}</TableCell>
                             <TableCell>
-                              <div className="flex gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleMarcarPresente(integrante)}
-                                  title="Marcar como presente"
-                                >
-                                  <UserCheck className="h-4 w-4 text-green-600" />
-                                </Button>
-                                {(!integrante.justificativa_ausencia || integrante.justificativa_ausencia === 'nao_justificado') && (
+                              <div className="flex items-center gap-2">
+                                {getJustificativaIcon(integrante.justificativa_ausencia)}
+                                <span className="text-sm text-foreground/70">{getJustificativaLabel(integrante.justificativa_ausencia)}</span>
+                              </div>
+                            </TableCell>
+                            {canManage && (
+                              <TableCell>
+                                <div className="flex gap-1">
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => setJustificativaDialog({ open: true, integranteId: integrante.id })}
-                                    title="Adicionar justificativa"
+                                    onClick={() => handleMarcarPresente(integrante)}
+                                    title="Marcar como presente"
                                   >
-                                    <Heart className="h-4 w-4 text-orange-500" />
+                                    <UserCheck className="h-4 w-4 text-green-600" />
                                   </Button>
-                                )}
+                                  {(!integrante.justificativa_ausencia || integrante.justificativa_ausencia === 'nao_justificado') && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => setJustificativaDialog({ open: true, integranteId: integrante.id })}
+                                      title="Adicionar justificativa"
+                                    >
+                                      <Heart className="h-4 w-4 text-orange-500" />
+                                    </Button>
+                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleExcluirDaLista(integrante.id, integrante.presencaId)}
+                                    title="Excluir da lista"
+                                    className="hover:bg-red-100 dark:hover:bg-red-950"
+                                  >
+                                    <X className="h-4 w-4 text-red-600" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            )}
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile: Cards */}
+                <div className="block sm:hidden space-y-2">
+                  {ausentes.map((integrante) => {
+                    const getJustificativaIcon = (justificativa: string | null | undefined) => {
+                      if (!justificativa) return null;
+                      switch (justificativa) {
+                        case 'saude':
+                          return <Heart className="h-3 w-3 text-red-500" />;
+                        case 'trabalho':
+                          return <Briefcase className="h-3 w-3 text-blue-500" />;
+                        case 'familia':
+                          return <Users className="h-3 w-3 text-green-500" />;
+                        case 'nao_justificado':
+                          return <X className="h-3 w-3 text-gray-500" />;
+                        default:
+                          return null;
+                      }
+                    };
+
+                    const getJustificativaLabel = (justificativa: string | null | undefined) => {
+                      if (!justificativa) return 'Sem justificativa';
+                      switch (justificativa) {
+                        case 'saude':
+                          return 'Saúde';
+                        case 'trabalho':
+                          return 'Trabalho';
+                        case 'familia':
+                          return 'Família';
+                        case 'nao_justificado':
+                          return 'Não Justificado';
+                        default:
+                          return '-';
+                      }
+                    };
+
+                    return (
+                      <div 
+                        key={integrante.id} 
+                        className="p-3 rounded-lg border bg-orange-50/50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800"
+                      >
+                        <div className="flex justify-between items-start gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-foreground truncate">{integrante.nome_colete}</div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {integrante.cargo_nome || '-'} • Grau {integrante.grau || '-'}
+                            </div>
+                            <div className="flex items-center gap-1 mt-1">
+                              {getJustificativaIcon(integrante.justificativa_ausencia)}
+                              <span className="text-xs text-foreground/70">{getJustificativaLabel(integrante.justificativa_ausencia)}</span>
+                            </div>
+                          </div>
+                          {canManage && (
+                            <div className="flex gap-1 flex-shrink-0">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => handleMarcarPresente(integrante)}
+                                title="Marcar como presente"
+                              >
+                                <UserCheck className="h-4 w-4 text-green-600" />
+                              </Button>
+                              {(!integrante.justificativa_ausencia || integrante.justificativa_ausencia === 'nao_justificado') && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => handleExcluirDaLista(integrante.id, integrante.presencaId)}
-                                  title="Excluir da lista"
-                                  className="hover:bg-red-100 dark:hover:bg-red-950"
+                                  className="h-8 w-8 p-0"
+                                  onClick={() => setJustificativaDialog({ open: true, integranteId: integrante.id })}
+                                  title="Adicionar justificativa"
                                 >
-                                  <X className="h-4 w-4 text-red-600" />
+                                  <Heart className="h-4 w-4 text-orange-500" />
                                 </Button>
-                              </div>
-                            </TableCell>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 hover:bg-red-100 dark:hover:bg-red-950"
+                                onClick={() => handleExcluirDaLista(integrante.id, integrante.presencaId)}
+                                title="Excluir da lista"
+                              >
+                                <X className="h-4 w-4 text-red-600" />
+                              </Button>
+                            </div>
                           )}
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
@@ -771,56 +919,56 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
         open={justificativaDialog.open} 
         onOpenChange={(open) => setJustificativaDialog({ open, integranteId: null })}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="w-[95vw] max-w-md sm:w-auto">
           <AlertDialogHeader>
-            <AlertDialogTitle>Selecione a Justificativa</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-lg sm:text-xl">Selecione a Justificativa</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm">
               Escolha o motivo da ausência
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="grid gap-3 mt-4">
+          <div className="grid gap-2 sm:gap-3 mt-3 sm:mt-4">
             <Button
               variant="outline"
-              className="h-auto py-4 justify-start gap-3"
+              className="h-auto py-3 sm:py-4 justify-start gap-2 sm:gap-3"
               onClick={() => handleConfirmarAusencia('saude')}
             >
-              <Heart className="h-5 w-5 text-red-500" />
+              <Heart className="h-5 w-5 text-red-500 flex-shrink-0" />
               <div className="text-left">
-                <div className="font-semibold">Saúde</div>
-                <div className="text-xs text-muted-foreground">Motivos médicos ou de saúde</div>
+                <div className="font-semibold text-sm sm:text-base">Saúde</div>
+                <div className="text-xs text-muted-foreground hidden sm:block">Motivos médicos ou de saúde</div>
               </div>
             </Button>
             <Button
               variant="outline"
-              className="h-auto py-4 justify-start gap-3"
+              className="h-auto py-3 sm:py-4 justify-start gap-2 sm:gap-3"
               onClick={() => handleConfirmarAusencia('trabalho')}
             >
-              <Briefcase className="h-5 w-5 text-blue-500" />
+              <Briefcase className="h-5 w-5 text-blue-500 flex-shrink-0" />
               <div className="text-left">
-                <div className="font-semibold">Trabalho</div>
-                <div className="text-xs text-muted-foreground">Compromissos profissionais</div>
+                <div className="font-semibold text-sm sm:text-base">Trabalho</div>
+                <div className="text-xs text-muted-foreground hidden sm:block">Compromissos profissionais</div>
               </div>
             </Button>
             <Button
               variant="outline"
-              className="h-auto py-4 justify-start gap-3"
+              className="h-auto py-3 sm:py-4 justify-start gap-2 sm:gap-3"
               onClick={() => handleConfirmarAusencia('familia')}
             >
-              <Users className="h-5 w-5 text-green-500" />
+              <Users className="h-5 w-5 text-green-500 flex-shrink-0" />
               <div className="text-left">
-                <div className="font-semibold">Família</div>
-                <div className="text-xs text-muted-foreground">Questões familiares</div>
+                <div className="font-semibold text-sm sm:text-base">Família</div>
+                <div className="text-xs text-muted-foreground hidden sm:block">Questões familiares</div>
               </div>
             </Button>
             <Button
               variant="outline"
-              className="h-auto py-4 justify-start gap-3"
+              className="h-auto py-3 sm:py-4 justify-start gap-2 sm:gap-3"
               onClick={() => handleConfirmarAusencia('nao_justificado')}
             >
-              <X className="h-5 w-5 text-gray-500" />
+              <X className="h-5 w-5 text-gray-500 flex-shrink-0" />
               <div className="text-left">
-                <div className="font-semibold">Não Justificado</div>
-                <div className="text-xs text-muted-foreground">Sem justificativa</div>
+                <div className="font-semibold text-sm sm:text-base">Não Justificado</div>
+                <div className="text-xs text-muted-foreground hidden sm:block">Sem justificativa</div>
               </div>
             </Button>
           </div>
@@ -829,20 +977,20 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
 
       {/* Diálogo para Visitante Externo */}
       <AlertDialog open={visitanteExternoDialog.open} onOpenChange={(open) => !open && handleCancelarVisitanteExterno()}>
-        <AlertDialogContent>
+        <AlertDialogContent className="w-[95vw] max-w-md sm:w-auto">
           <AlertDialogHeader>
-            <AlertDialogTitle>Visitante Externo</AlertDialogTitle>
-            <AlertDialogDescription>
-              O nome "<strong>{visitanteExternoDialog.nome}</strong>" não foi localizado no banco de dados.
+            <AlertDialogTitle className="text-lg sm:text-xl">Visitante Externo</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm">
+              O nome "<strong>{visitanteExternoDialog.nome}</strong>" não foi localizado.
               <br /><br />
               Deseja incluí-lo como <strong>Visitante (Externo)</strong>?
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={handleCancelarVisitanteExterno}>
+          <div className="flex flex-col sm:flex-row justify-end gap-2 mt-3 sm:mt-4">
+            <Button variant="outline" onClick={handleCancelarVisitanteExterno} className="w-full sm:w-auto">
               Cancelar
             </Button>
-            <Button onClick={handleConfirmarVisitanteExterno}>
+            <Button onClick={handleConfirmarVisitanteExterno} className="w-full sm:w-auto">
               Confirmar
             </Button>
           </div>
