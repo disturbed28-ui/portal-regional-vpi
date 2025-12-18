@@ -293,7 +293,7 @@ Deno.serve(async (req) => {
         if (regional_id !== undefined) syncPayload.regional_id = regional_id;
         if (combate_insano !== undefined) syncPayload.combate_insano = combate_insano;
 
-        // Buscar nomes das entidades para popular campos _texto
+        // Buscar nomes das entidades para popular campos _texto (NORMALIZADO PARA MAIÚSCULO)
         if (regional_id) {
           const { data: regionalData } = await supabase
             .from('regionais')
@@ -301,7 +301,8 @@ Deno.serve(async (req) => {
             .eq('id', regional_id)
             .single();
           if (regionalData) {
-            syncPayload.regional_texto = regionalData.nome;
+            // Normalizar para MAIÚSCULO (consistência com carga Excel)
+            syncPayload.regional_texto = `REGIONAL ${regionalData.nome.toUpperCase()}`;
           }
         }
 
@@ -312,7 +313,12 @@ Deno.serve(async (req) => {
             .eq('id', divisao_id)
             .single();
           if (divisaoData) {
-            syncPayload.divisao_texto = divisaoData.nome;
+            // Normalizar para MAIÚSCULO (consistência com carga Excel)
+            let nomeNormalizado = divisaoData.nome.toUpperCase();
+            if (!nomeNormalizado.startsWith('DIVISAO')) {
+              nomeNormalizado = `DIVISAO ${nomeNormalizado}`;
+            }
+            syncPayload.divisao_texto = nomeNormalizado;
           }
         }
 
