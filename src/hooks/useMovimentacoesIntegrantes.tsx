@@ -70,19 +70,22 @@ export const useMovimentacoesIntegrantes = (options?: UseMovimentacoesOptions) =
       }
 
       // Mapear para o formato esperado
-      const movimentacoes: MovimentacaoIntegrante[] = (data || []).map(item => ({
-        id: item.id,
-        integrante_id: item.integrante_id,
-        registro_id: item.registro_id,
-        nome_colete: item.nome_colete,
-        campo_alterado: item.campo_alterado,
-        valor_anterior: item.valor_anterior,
-        valor_novo: item.valor_novo,
-        data_movimentacao: item.created_at,
-        data_carga: null,
-        carga_id: item.carga_historico_id,
-        tipo_movimentacao: getTipoMovimentacao(item.campo_alterado, item.valor_novo)
-      }));
+      let movimentacoes: MovimentacaoIntegrante[] = (data || [])
+        // Filtrar primeiro: remover mudanças que não são reais (apenas normalização de texto)
+        .filter(item => isMudancaReal(item.campo_alterado, item.valor_anterior, item.valor_novo))
+        .map(item => ({
+          id: item.id,
+          integrante_id: item.integrante_id,
+          registro_id: item.registro_id,
+          nome_colete: item.nome_colete,
+          campo_alterado: item.campo_alterado,
+          valor_anterior: item.valor_anterior,
+          valor_novo: item.valor_novo,
+          data_movimentacao: item.created_at,
+          data_carga: null,
+          carga_id: item.carga_historico_id,
+          tipo_movimentacao: getTipoMovimentacao(item.campo_alterado, item.valor_novo)
+        }));
 
       // Filtrar por divisão se especificado (entrada ou saída da divisão)
       if (options?.divisao) {
@@ -109,6 +112,30 @@ const getTipoMovimentacao = (campo: string, valorNovo: string | null): Movimenta
   if (campo === 'ativo' && valorNovo === 'false') return 'INATIVACAO';
   if (campo === 'ativo' && valorNovo === 'true') return 'REATIVACAO';
   return 'OUTRO';
+};
+
+// Helper para verificar se é uma mudança real (não apenas normalização de texto)
+const isMudancaReal = (campo: string, valorAnterior: string | null, valorNovo: string | null): boolean => {
+  // Campo ativo: só é válido se valor_novo for 'true' ou 'false' explícito
+  if (campo === 'ativo') {
+    return valorNovo === 'true' || valorNovo === 'false';
+  }
+  
+  // Campo divisão: comparar normalizado para evitar falsos positivos de formatação
+  if (campo === 'divisao_texto') {
+    const anteriorNorm = normalizarDivisao(valorAnterior || '');
+    const novoNorm = normalizarDivisao(valorNovo || '');
+    return anteriorNorm !== novoNorm;
+  }
+  
+  // Campo regional: comparar normalizado
+  if (campo === 'regional_texto') {
+    const anteriorNorm = normalizarRegional(valorAnterior || '');
+    const novoNorm = normalizarRegional(valorNovo || '');
+    return anteriorNorm !== novoNorm;
+  }
+  
+  return true;
 };
 
 // Hook com filtro baseado nos INTEGRANTES ATUAIS de uma divisão/regional
@@ -213,24 +240,27 @@ export const useMovimentacoesComFiltro = (options?: UseMovimentacoesComFiltroOpt
       }
 
       // 3. Mapear para o formato esperado, incluindo divisão atual
-      let movimentacoes: MovimentacaoIntegrante[] = (data || []).map(item => {
-        const infoAtual = item.integrante_id ? integrantesMap.get(item.integrante_id) : null;
-        return {
-          id: item.id,
-          integrante_id: item.integrante_id,
-          registro_id: item.registro_id,
-          nome_colete: item.nome_colete,
-          campo_alterado: item.campo_alterado,
-          valor_anterior: item.valor_anterior,
-          valor_novo: item.valor_novo,
-          data_movimentacao: item.created_at,
-          data_carga: null,
-          carga_id: item.carga_historico_id,
-          tipo_movimentacao: getTipoMovimentacao(item.campo_alterado, item.valor_novo),
-          divisao_atual: infoAtual?.divisao || null,
-          regional_atual: infoAtual?.regional || null
-        };
-      });
+      // Filtrar primeiro: remover mudanças que não são reais (apenas normalização de texto)
+      let movimentacoes: MovimentacaoIntegrante[] = (data || [])
+        .filter(item => isMudancaReal(item.campo_alterado, item.valor_anterior, item.valor_novo))
+        .map(item => {
+          const infoAtual = item.integrante_id ? integrantesMap.get(item.integrante_id) : null;
+          return {
+            id: item.id,
+            integrante_id: item.integrante_id,
+            registro_id: item.registro_id,
+            nome_colete: item.nome_colete,
+            campo_alterado: item.campo_alterado,
+            valor_anterior: item.valor_anterior,
+            valor_novo: item.valor_novo,
+            data_movimentacao: item.created_at,
+            data_carga: null,
+            carga_id: item.carga_historico_id,
+            tipo_movimentacao: getTipoMovimentacao(item.campo_alterado, item.valor_novo),
+            divisao_atual: infoAtual?.divisao || null,
+            regional_atual: infoAtual?.regional || null
+          };
+        });
 
       // 4. Filtrar por tipos se especificado
       if (options?.tipos && options.tipos.length > 0) {
@@ -279,6 +309,11 @@ export const useSugestoesEntradasSaidas = (divisao: string | null, dataInicio: D
       const saidas: MovimentacaoIntegrante[] = [];
 
       (data || []).forEach(item => {
+        // Ignorar se não for mudança real (apenas normalização de texto)
+        if (!isMudancaReal(item.campo_alterado, item.valor_anterior, item.valor_novo)) {
+          return;
+        }
+
         const mov: MovimentacaoIntegrante = {
           id: item.id,
           integrante_id: item.integrante_id,
@@ -293,12 +328,16 @@ export const useSugestoesEntradasSaidas = (divisao: string | null, dataInicio: D
           tipo_movimentacao: 'MUDANCA_DIVISAO'
         };
 
-        // Entrada: valor_novo = divisão selecionada
-        if (item.valor_novo === divisao) {
+        // Usar comparação normalizada para entradas/saídas
+        const divisaoNorm = normalizarDivisao(divisao);
+        
+        // Entrada: valor_novo = divisão selecionada (comparação normalizada)
+        if (normalizarDivisao(item.valor_novo || '') === divisaoNorm) {
           entradas.push(mov);
         }
-        // Saída: valor_anterior = divisão selecionada
-        if (item.valor_anterior === divisao) {
+        // Saída: valor_anterior = divisão selecionada (comparação normalizada)
+        if (normalizarDivisao(item.valor_anterior || '') === divisaoNorm) {
+          saidas.push(mov);
           saidas.push(mov);
         }
       });
