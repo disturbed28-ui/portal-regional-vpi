@@ -84,12 +84,13 @@ export const useFrequenciaPonderada = ({
         tiposEvento,
       });
 
-      // 1. Buscar eventos do período com peso (limitado até hoje)
+      // 1. Buscar TODOS os eventos do período (sem filtro de divisão/regional)
+      // A filtragem será feita por INTEGRANTE, não por evento
       const hoje = new Date();
       hoje.setHours(23, 59, 59, 999);
       const dataFimReal = dataFim > hoje ? hoje : dataFim;
       
-      let queryEventos = supabase
+      const { data: eventos, error: eventosError } = await supabase
         .from('eventos_agenda')
         .select(`
           id,
@@ -101,18 +102,6 @@ export const useFrequenciaPonderada = ({
         `)
         .gte('data_evento', dataInicio.toISOString())
         .lte('data_evento', dataFimReal.toISOString());
-
-      // Filtrar por divisões E/OU regional
-      if (divisaoIds && divisaoIds.length > 0 && regionalId) {
-        // Buscar eventos das divisões especificadas OU eventos da regional (sem divisão específica)
-        queryEventos = queryEventos.or(`divisao_id.in.(${divisaoIds.join(',')}),regional_id.eq.${regionalId}`);
-      } else if (divisaoIds && divisaoIds.length > 0) {
-        queryEventos = queryEventos.in('divisao_id', divisaoIds);
-      } else if (regionalId) {
-        queryEventos = queryEventos.eq('regional_id', regionalId);
-      }
-
-      const { data: eventos, error: eventosError } = await queryEventos;
       
       if (eventosError) {
         console.error('[useFrequenciaPonderada] Erro ao buscar eventos:', eventosError);
@@ -172,21 +161,23 @@ export const useFrequenciaPonderada = ({
       const justificativasMap = new Map(pesosJustificativas?.map(j => [j.tipo, j.peso]) || []);
 
       // 5. Agrupar por integrante e calcular pontuação
-      // Filtrar presenças:
-      // - Por divisão do integrante (Grau VI) - prioridade
-      // - Por regional do integrante (Grau V)
+      // Filtrar presenças pelo INTEGRANTE (não pelo evento):
+      // - Por divisão do integrante (quando uma divisão específica é selecionada)
+      // - Por regional do integrante (quando "todas" + usuário é Grau V)
       let presencasFiltradas = presencas;
       
       if (integrantesDivisaoId) {
-        // Grau VI: filtrar por divisão do INTEGRANTE (não do evento)
+        // Filtrar por divisão do INTEGRANTE (mostra todos eventos que esse integrante participou)
         presencasFiltradas = presencas?.filter(p => 
           p.integrantes_portal.divisao_id === integrantesDivisaoId
         );
+        console.log('[useFrequenciaPonderada] Filtrando por divisão do integrante:', integrantesDivisaoId, 'Presenças:', presencasFiltradas?.length);
       } else if (regionalId) {
-        // Grau V: filtrar por regional do integrante
+        // Filtrar por regional do INTEGRANTE (mostra todos eventos que integrantes dessa regional participaram)
         presencasFiltradas = presencas?.filter(p => 
           p.integrantes_portal.regional_id === regionalId
         );
+        console.log('[useFrequenciaPonderada] Filtrando por regional do integrante:', regionalId, 'Presenças:', presencasFiltradas?.length);
       }
       
       const integrantesMap = new Map<string, IntegranteFrequencia>();

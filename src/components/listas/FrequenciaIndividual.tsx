@@ -57,48 +57,12 @@ export const FrequenciaIndividual = ({ grau, regionalId, divisaoId, isAdmin = fa
     nivelAcesso === 'regional' ? regionalId : null
   );
 
-  // Determinar quais IDs de divisão usar para filtrar EVENTOS
-  // IMPORTANTE: Quando uma divisão é selecionada no filtro, NÃO filtrar eventos por ela
-  // O filtro será feito por INTEGRANTES da divisão (integrantesDivisaoId)
-  const divisaoIdsParaFiltro = useMemo(() => {
-    // Se uma divisão específica foi selecionada, NÃO usar para filtrar eventos
-    // Os integrantes podem ter participado de eventos de outras divisões
-    if (divisaoSelecionada && divisaoSelecionada !== 'todas') {
-      // Admin/CMD: buscar todos eventos
-      if (isAdmin || nivelAcesso === 'comando') {
-        return undefined;
-      }
-      // Regional: buscar eventos da regional toda
-      if (nivelAcesso === 'regional' && divisaoIdsDaRegional.length > 0) {
-        return divisaoIdsDaRegional;
-      }
-      // Fallback: não filtrar eventos
-      return undefined;
-    }
-    
-    // Admin ou CMD: sem filtro (undefined = todos)
-    if (isAdmin || nivelAcesso === 'comando') {
-      return undefined;
-    }
-    
-    // Grau VI (divisao): NÃO filtrar eventos por divisão
-    // Os integrantes podem ter participado de eventos de outras divisões
-    // O filtro será feito por integrantesDivisaoId
-    if (nivelAcesso === 'divisao') {
-      return undefined;
-    }
-    
-    // Grau V (regional): todas as divisões da regional
-    if (nivelAcesso === 'regional' && divisaoIdsDaRegional.length > 0) {
-      return divisaoIdsDaRegional;
-    }
-    
-    // Fallback
-    return divisaoId ? [divisaoId] : undefined;
-  }, [divisaoSelecionada, isAdmin, nivelAcesso, divisaoId, divisaoIdsDaRegional]);
+  // REMOVIDO: divisaoIdsParaFiltro não é mais usado
+  // A lógica agora é: buscar TODOS os eventos e filtrar por INTEGRANTE
+  const divisaoIdsParaFiltro = undefined;
 
   // Filtrar por INTEGRANTES da divisão (não por eventos da divisão)
-  // Prioridade: divisão selecionada no filtro > divisão do usuário (Grau VI)
+  // Mostra todos os eventos que os integrantes da divisão/regional participaram
   const integrantesDivisaoIdParaFiltro = useMemo(() => {
     // Se uma divisão específica foi selecionada no filtro, usar ela
     if (divisaoSelecionada && divisaoSelecionada !== 'todas') {
@@ -108,23 +72,23 @@ export const FrequenciaIndividual = ({ grau, regionalId, divisaoId, isAdmin = fa
     if (nivelAcesso === 'divisao' && divisaoId) {
       return divisaoId;
     }
+    // Admin/CMD com "todas" selecionado: sem filtro por divisão
     return null;
   }, [divisaoSelecionada, nivelAcesso, divisaoId]);
 
   // Determinar quais divisões mostrar no seletor
-  // IMPORTANTE: Priorizar nivelAcesso sobre isAdmin para que Grau V veja apenas divisões da sua regional
   const divisoesParaSelecao = useMemo(() => {
     // Grau VI: não mostrar seletor (apenas sua divisão)
     if (nivelAcesso === 'divisao') {
       return [];
     }
     
-    // Grau V (Regional): apenas divisões da sua regional (independente de role admin)
+    // Grau V (Regional): apenas divisões da sua regional
     if (nivelAcesso === 'regional') {
       return divisoesDaRegional;
     }
     
-    // CMD (Graus I-IV) ou Admin sem grau definido: todas as divisões
+    // CMD (Graus I-IV) ou Admin: todas as divisões
     if (isAdmin || nivelAcesso === 'comando') {
       return todasDivisoes || [];
     }
@@ -132,21 +96,32 @@ export const FrequenciaIndividual = ({ grau, regionalId, divisaoId, isAdmin = fa
     return [];
   }, [nivelAcesso, isAdmin, todasDivisoes, divisoesDaRegional]);
 
-  // Determinar se deve filtrar por regional (para usuários não admin/comando)
+  // Determinar se deve filtrar por regional do INTEGRANTE
   const regionalIdParaFiltro = useMemo(() => {
-    // Admin ou CMD: sem filtro (vê tudo)
+    // Se uma divisão específica foi selecionada, não filtrar por regional
+    // (o filtro integrantesDivisaoId já cuida disso)
+    if (divisaoSelecionada && divisaoSelecionada !== 'todas') {
+      return null;
+    }
+    
+    // Admin ou CMD com "todas": sem filtro (vê tudo)
     if (isAdmin || nivelAcesso === 'comando') {
       return null;
     }
-    // Grau VI (divisao): NÃO filtrar eventos por regional
-    // Os eventos no banco têm regional_id = NULL, e o filtro integrantesDivisaoId
-    // já garante que só apareçam participações de integrantes da divisão correta
+    
+    // Grau VI (divisao): não precisa filtrar por regional
+    // (integrantesDivisaoId já cuida disso)
     if (nivelAcesso === 'divisao') {
       return null;
     }
-    // Grau V (regional): filtrar por regional
-    return regionalId || null;
-  }, [isAdmin, nivelAcesso, regionalId]);
+    
+    // Grau V (regional) com "todas": filtrar por integrantes da sua regional
+    if (nivelAcesso === 'regional') {
+      return regionalId || null;
+    }
+    
+    return null;
+  }, [divisaoSelecionada, isAdmin, nivelAcesso, regionalId]);
 
   const { data: dadosFrequencia, isLoading } = useFrequenciaPonderada({
     dataInicio,
