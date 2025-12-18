@@ -134,9 +134,17 @@ export const FrequenciaIndividual = ({ grau, regionalId, divisaoId, isAdmin = fa
 
   // Determinar se deve filtrar por regional (para usuários não admin/comando)
   const regionalIdParaFiltro = useMemo(() => {
+    // Admin ou CMD: sem filtro (vê tudo)
     if (isAdmin || nivelAcesso === 'comando') {
-      return null; // Admin/CMD vê tudo
+      return null;
     }
+    // Grau VI (divisao): NÃO filtrar eventos por regional
+    // Os eventos no banco têm regional_id = NULL, e o filtro integrantesDivisaoId
+    // já garante que só apareçam participações de integrantes da divisão correta
+    if (nivelAcesso === 'divisao') {
+      return null;
+    }
+    // Grau V (regional): filtrar por regional
     return regionalId || null;
   }, [isAdmin, nivelAcesso, regionalId]);
 
