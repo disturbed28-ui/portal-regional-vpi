@@ -58,10 +58,22 @@ export const FrequenciaIndividual = ({ grau, regionalId, divisaoId, isAdmin = fa
   );
 
   // Determinar quais IDs de divisão usar para filtrar EVENTOS
+  // IMPORTANTE: Quando uma divisão é selecionada no filtro, NÃO filtrar eventos por ela
+  // O filtro será feito por INTEGRANTES da divisão (integrantesDivisaoId)
   const divisaoIdsParaFiltro = useMemo(() => {
-    // Se uma divisão específica foi selecionada
+    // Se uma divisão específica foi selecionada, NÃO usar para filtrar eventos
+    // Os integrantes podem ter participado de eventos de outras divisões
     if (divisaoSelecionada && divisaoSelecionada !== 'todas') {
-      return [divisaoSelecionada];
+      // Admin/CMD: buscar todos eventos
+      if (isAdmin || nivelAcesso === 'comando') {
+        return undefined;
+      }
+      // Regional: buscar eventos da regional toda
+      if (nivelAcesso === 'regional' && divisaoIdsDaRegional.length > 0) {
+        return divisaoIdsDaRegional;
+      }
+      // Fallback: não filtrar eventos
+      return undefined;
     }
     
     // Admin ou CMD: sem filtro (undefined = todos)
@@ -85,13 +97,19 @@ export const FrequenciaIndividual = ({ grau, regionalId, divisaoId, isAdmin = fa
     return divisaoId ? [divisaoId] : undefined;
   }, [divisaoSelecionada, isAdmin, nivelAcesso, divisaoId, divisaoIdsDaRegional]);
 
-  // Para Grau VI: filtrar por integrantes da divisão (não por eventos)
+  // Filtrar por INTEGRANTES da divisão (não por eventos da divisão)
+  // Prioridade: divisão selecionada no filtro > divisão do usuário (Grau VI)
   const integrantesDivisaoIdParaFiltro = useMemo(() => {
+    // Se uma divisão específica foi selecionada no filtro, usar ela
+    if (divisaoSelecionada && divisaoSelecionada !== 'todas') {
+      return divisaoSelecionada;
+    }
+    // Grau VI: filtrar por integrantes da sua divisão automaticamente
     if (nivelAcesso === 'divisao' && divisaoId) {
       return divisaoId;
     }
     return null;
-  }, [nivelAcesso, divisaoId]);
+  }, [divisaoSelecionada, nivelAcesso, divisaoId]);
 
   // Determinar quais divisões mostrar no seletor
   // IMPORTANTE: Priorizar nivelAcesso sobre isAdmin para que Grau V veja apenas divisões da sua regional
