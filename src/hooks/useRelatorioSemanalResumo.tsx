@@ -188,10 +188,19 @@ export const useRelatorioSemanalResumo = (regionalId: string, ano?: number, mes?
         divisoesMap.forEach((divisaoData, nomeDivisao) => {
           // Normalizar para MAIÚSCULO para match com chave do snapshot
           const nomeDivisaoUpper = nomeDivisao?.toUpperCase();
+          
+          // Versão sem acentos MAS COM PREFIXO (para match exato com snapshot)
+          const nomeDivisaoSemAcentos = nomeDivisao
+            ?.normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toUpperCase();
+          
+          // Versão totalmente normalizada (sem prefixo)
           const nomeDivisaoNormalizado = normalizeText(nomeDivisao)?.toUpperCase();
           
           // Tentar múltiplas formas de match
           divisaoData.total_anterior = totaisPorDivisao.get(nomeDivisaoUpper) 
+                                    || totaisPorDivisao.get(nomeDivisaoSemAcentos)
                                     || totaisPorDivisao.get(nomeDivisaoNormalizado) 
                                     || 0;
         });
