@@ -6,6 +6,7 @@ interface FrequenciaParams {
   dataFim: Date;
   divisaoIds?: string[];
   regionalId?: string | null;
+  integrantesDivisaoId?: string | null; // Filtrar por divisão do INTEGRANTE (para Grau VI)
   tiposEvento?: string[];
 }
 
@@ -68,16 +69,18 @@ export const useFrequenciaPonderada = ({
   dataFim,
   divisaoIds,
   regionalId,
+  integrantesDivisaoId,
   tiposEvento,
 }: FrequenciaParams) => {
   return useQuery({
-    queryKey: ['frequencia-ponderada', dataInicio, dataFim, divisaoIds, regionalId, tiposEvento],
+    queryKey: ['frequencia-ponderada', dataInicio, dataFim, divisaoIds, regionalId, integrantesDivisaoId, tiposEvento],
     queryFn: async () => {
       console.log('[useFrequenciaPonderada] Iniciando cálculo', {
         dataInicio,
         dataFim,
         divisaoIds,
         regionalId,
+        integrantesDivisaoId,
         tiposEvento,
       });
 
@@ -169,10 +172,22 @@ export const useFrequenciaPonderada = ({
       const justificativasMap = new Map(pesosJustificativas?.map(j => [j.tipo, j.peso]) || []);
 
       // 5. Agrupar por integrante e calcular pontuação
-      // Filtrar presenças por regional se especificado (para garantir escopo correto)
-      const presencasFiltradas = regionalId 
-        ? presencas?.filter(p => p.integrantes_portal.regional_id === regionalId)
-        : presencas;
+      // Filtrar presenças:
+      // - Por divisão do integrante (Grau VI) - prioridade
+      // - Por regional do integrante (Grau V)
+      let presencasFiltradas = presencas;
+      
+      if (integrantesDivisaoId) {
+        // Grau VI: filtrar por divisão do INTEGRANTE (não do evento)
+        presencasFiltradas = presencas?.filter(p => 
+          p.integrantes_portal.divisao_id === integrantesDivisaoId
+        );
+      } else if (regionalId) {
+        // Grau V: filtrar por regional do integrante
+        presencasFiltradas = presencas?.filter(p => 
+          p.integrantes_portal.regional_id === regionalId
+        );
+      }
       
       const integrantesMap = new Map<string, IntegranteFrequencia>();
 
