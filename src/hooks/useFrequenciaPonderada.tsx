@@ -35,6 +35,34 @@ export interface IntegranteFrequencia {
   totalEventos: number;
 }
 
+// Função para mapear justificativa_ausencia para o formato padronizado
+const mapearJustificativa = (ausencia: string | null, tipo: string | null): string => {
+  // Priorizar justificativa_tipo se existir e for válido
+  if (tipo && tipo.trim() !== '' && !['(outra divisão)', 'Presente', ''].includes(tipo)) {
+    return tipo;
+  }
+  
+  // Mapear justificativa_ausencia para formato com acentos/capitalizado
+  if (!ausencia || ausencia.trim() === '') return 'Não justificou';
+  
+  const mapeamento: Record<string, string> = {
+    'trabalho': 'Trabalho',
+    'familia': 'Família',
+    'família': 'Família',
+    'saude': 'Saúde',
+    'saúde': 'Saúde',
+    'nao_justificado': 'Não justificou',
+    'nao justificado': 'Não justificou',
+    'não justificou': 'Não justificou',
+    'viagem': 'Viagem',
+    'outro': 'Outro',
+    'outra': 'Outro',
+  };
+  
+  const chave = ausencia.toLowerCase().trim();
+  return mapeamento[chave] || ausencia; // Retorna o original se não encontrar mapeamento
+};
+
 export const useFrequenciaPonderada = ({
   dataInicio,
   dataFim,
@@ -175,9 +203,12 @@ export const useFrequenciaPonderada = ({
         const pesoEvento = pesosMap.get(evento.tipo_evento_peso || '') || 1;
         
         let pesoPresenca = 1;
+        let justificativaReal: string | null = null;
+        
         if (p.status === 'ausente') {
-          const justificativaTipo = p.justificativa_tipo || 'Não justificou';
-          pesoPresenca = justificativasMap.get(justificativaTipo) || 0.001;
+          // Mapear justificativa_ausencia para formato padronizado
+          justificativaReal = mapearJustificativa(p.justificativa_ausencia, p.justificativa_tipo);
+          pesoPresenca = justificativasMap.get(justificativaReal) || 0.001;
         }
 
         const pontos = pesoEvento * pesoPresenca;
@@ -189,7 +220,7 @@ export const useFrequenciaPonderada = ({
           titulo: evento.titulo,
           data: evento.data_evento,
           status: p.status,
-          justificativa: p.justificativa_tipo,
+          justificativa: justificativaReal,
           pesoEvento,
           pesoPresenca,
           pontos,
