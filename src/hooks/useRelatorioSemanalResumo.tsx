@@ -110,12 +110,26 @@ export const useRelatorioSemanalResumo = (regionalId: string, ano?: number, mes?
       // Agrupar por divisão
       const divisoesMap = new Map<string, DivisaoRelatorio>();
 
-      // Inicializar divisões com integrantes atuais
-      integrantesAtuais.forEach((integrante) => {
-        const divisao = integrante.divisao_texto;
-        if (!divisoesMap.has(divisao)) {
-          divisoesMap.set(divisao, {
-            nome: divisao,
+      // Filtrar integrantes de Grau V (que têm divisao_texto = nome da Regional) antes de agrupar
+      const integrantesParaAgrupar = integrantesAtuais.filter(integrante => {
+        const divisaoTexto = integrante.divisao_texto?.toUpperCase() || '';
+        // Excluir integrantes cuja "divisão" é na verdade uma regional (Grau V)
+        return !divisaoTexto.startsWith('REGIONAL');
+      });
+
+      // Inicializar divisões com integrantes atuais (normalizando divisao_texto para evitar duplicações)
+      integrantesParaAgrupar.forEach((integrante) => {
+        const divisaoTextoOriginal = integrante.divisao_texto;
+        const divisaoNormalizada = divisaoTextoOriginal?.toUpperCase().trim() || 'SEM DIVISÃO';
+        
+        // Usar nome canônico se existir, senão usar versão normalizada
+        const divisaoCanonica = mapNomesParaRegional.get(divisaoNormalizada) 
+                             || mapNomesParaRegional.get(normalizeText(divisaoTextoOriginal)?.toUpperCase())
+                             || divisaoTextoOriginal;
+        
+        if (!divisoesMap.has(divisaoCanonica)) {
+          divisoesMap.set(divisaoCanonica, {
+            nome: divisaoCanonica,
             entrada: 0,
             saida: 0,
             saldo: 0,
@@ -133,7 +147,7 @@ export const useRelatorioSemanalResumo = (regionalId: string, ano?: number, mes?
           });
         }
 
-        const divisaoData = divisoesMap.get(divisao)!;
+        const divisaoData = divisoesMap.get(divisaoCanonica)!;
         divisaoData.total_atual++;
 
         // Veículos (prioridade: moto > carro > sem veículo)
@@ -216,17 +230,25 @@ export const useRelatorioSemanalResumo = (regionalId: string, ano?: number, mes?
         }
       });
 
-      // Calcular devedores ÚNICOS por divisão
+      // Calcular devedores ÚNICOS por divisão (usando normalização)
       const devedoresPorDivisao = new Map<string, Set<number>>();
       mensalidadesData.forEach((m) => {
-        const integrante = integrantesAtuais.find(i => i.registro_id === m.registro_id);
+        // Usar integrantesParaAgrupar (exclui Grau V)
+        const integrante = integrantesParaAgrupar.find(i => i.registro_id === m.registro_id);
         
         if (integrante) {
-          const divisao = integrante.divisao_texto;
-          if (!devedoresPorDivisao.has(divisao)) {
-            devedoresPorDivisao.set(divisao, new Set());
+          const divisaoTextoOriginal = integrante.divisao_texto;
+          const divisaoNormalizada = divisaoTextoOriginal?.toUpperCase().trim() || 'SEM DIVISÃO';
+          
+          // Usar nome canônico se existir
+          const divisaoCanonica = mapNomesParaRegional.get(divisaoNormalizada) 
+                               || mapNomesParaRegional.get(normalizeText(divisaoTextoOriginal)?.toUpperCase())
+                               || divisaoTextoOriginal;
+          
+          if (!devedoresPorDivisao.has(divisaoCanonica)) {
+            devedoresPorDivisao.set(divisaoCanonica, new Set());
           }
-          devedoresPorDivisao.get(divisao)!.add(m.registro_id);
+          devedoresPorDivisao.get(divisaoCanonica)!.add(m.registro_id);
         }
       });
 

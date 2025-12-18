@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useScreenAccess } from '@/hooks/useScreenAccess';
@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { RelatorioSemanalDetalheDialog } from './RelatorioSemanalDetalheDialog';
 import { RelatorioSemanalResumo } from './RelatorioSemanalResumo';
 import { toast } from 'sonner';
+import { calcularSemanaOperacional } from '@/lib/normalizeText';
 
 const CMD_REGIONAL_ID = 'da8de519-f9c1-45cb-9d26-af56b7c4aa6d';
 
@@ -45,10 +46,13 @@ export const RelatorioSemanalDivisaoAba = () => {
   const { hasAccess, loading: loadingAccess } = useScreenAccess('/relatorios/semanal-divisao', user?.id);
   const { regionais } = useRegionais();
 
+  // Calcular semana atual para pré-seleção
+  const semanaAtual = useMemo(() => calcularSemanaOperacional(), []);
+
   const [regionalSelecionada, setRegionalSelecionada] = useState<string>('');
-  const [mesSelecionado, setMesSelecionado] = useState(new Date().getMonth() + 1);
-  const [anoSelecionado, setAnoSelecionado] = useState(new Date().getFullYear());
-  const [semanaSelecionada, setSemanaSelecionada] = useState(1);
+  const [mesSelecionado, setMesSelecionado] = useState(semanaAtual.mes_referencia);
+  const [anoSelecionado, setAnoSelecionado] = useState(semanaAtual.ano_referencia);
+  const [semanaSelecionada, setSemanaSelecionada] = useState(semanaAtual.semana_no_mes);
   
   const [divisoesStatus, setDivisoesStatus] = useState<DivisaoStatus[]>([]);
   const [loading, setLoading] = useState(false);
