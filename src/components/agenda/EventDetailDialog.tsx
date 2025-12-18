@@ -45,9 +45,9 @@ export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDial
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="w-[95vw] max-w-lg sm:w-auto px-4 sm:px-6">
         <DialogHeader>
-          <div className="flex items-start gap-3 mb-2">
+          <div className="flex items-start gap-2 mb-2 flex-wrap">
             <Badge 
               variant="outline"
               style={{ 
@@ -81,7 +81,7 @@ export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDial
               </Badge>
             )}
           </div>
-          <DialogTitle className="text-2xl">{event.title}</DialogTitle>
+          <DialogTitle className="text-xl sm:text-2xl">{event.title}</DialogTitle>
           <DialogDescription className="sr-only">
             Detalhes do evento
           </DialogDescription>
@@ -148,12 +148,12 @@ export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDial
             </div>
           )}
 
-          <div className="flex gap-2 mt-4">
+          <div className="flex flex-col sm:flex-row gap-2 mt-4">
             {/* Só renderiza botão se tiver permissão */}
             {!loadingListaAccess && canSeeLista && (
               <Button
                 variant="default"
-                className="flex-1"
+                className="w-full sm:flex-1"
                 onClick={() => setListaPresencaOpen(true)}
               >
                 <Users className="mr-2 h-4 w-4" />
@@ -164,9 +164,11 @@ export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDial
             {event.htmlLink && (
               <Button
                 variant="outline"
+                className="w-full sm:w-auto"
                 onClick={() => window.open(event.htmlLink, "_blank")}
               >
-                <ExternalLink className="h-4 w-4" />
+                <ExternalLink className="h-4 w-4 mr-2 sm:mr-0" />
+                <span className="sm:hidden">Abrir no Google</span>
               </Button>
             )}
           </div>
