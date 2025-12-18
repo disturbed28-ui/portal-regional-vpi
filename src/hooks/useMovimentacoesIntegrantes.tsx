@@ -25,85 +25,12 @@ interface UseMovimentacoesOptions {
   tipos?: string[];
 }
 
-// Interface para o novo hook com filtro por integrantes atuais
+// Interface para o hook com filtro por envolvimento da divisão/regional
 interface UseMovimentacoesComFiltroOptions {
-  integrantesDaDivisao?: string;    // Busca histórico de quem está HOJE nessa divisão
-  integrantesDaRegional?: string;   // Busca histórico de quem está HOJE nessa regional
+  integrantesDaDivisao?: string;    // Busca movimentações onde esta divisão está envolvida (origem ou destino)
+  integrantesDaRegional?: string;   // Busca movimentações onde esta regional está envolvida (origem ou destino)
   tipos?: string[];
 }
-
-// Hook para buscar movimentações de integrantes
-export const useMovimentacoesIntegrantes = (options?: UseMovimentacoesOptions) => {
-  return useQuery({
-    queryKey: ['movimentacoes-integrantes', options?.divisao, options?.dataInicio?.toISOString(), options?.dataFim?.toISOString(), options?.tipos],
-    queryFn: async (): Promise<MovimentacaoIntegrante[]> => {
-      // Buscar da tabela atualizacoes_carga diretamente (a view pode não estar no types ainda)
-      let query = supabase
-        .from('atualizacoes_carga')
-        .select(`
-          id,
-          integrante_id,
-          registro_id,
-          nome_colete,
-          campo_alterado,
-          valor_anterior,
-          valor_novo,
-          created_at,
-          carga_historico_id
-        `)
-        .in('campo_alterado', ['divisao_texto', 'regional_texto', 'ativo'])
-        .order('created_at', { ascending: false });
-
-      // Filtro por período
-      if (options?.dataInicio) {
-        query = query.gte('created_at', options.dataInicio.toISOString());
-      }
-      if (options?.dataFim) {
-        query = query.lte('created_at', options.dataFim.toISOString() + 'T23:59:59');
-      }
-
-      const { data, error } = await query;
-      
-      if (error) {
-        console.error('Erro ao buscar movimentações:', error);
-        throw error;
-      }
-
-      // Mapear para o formato esperado
-      let movimentacoes: MovimentacaoIntegrante[] = (data || [])
-        // Filtrar primeiro: remover mudanças que não são reais (apenas normalização de texto)
-        .filter(item => isMudancaReal(item.campo_alterado, item.valor_anterior, item.valor_novo))
-        .map(item => ({
-          id: item.id,
-          integrante_id: item.integrante_id,
-          registro_id: item.registro_id,
-          nome_colete: item.nome_colete,
-          campo_alterado: item.campo_alterado,
-          valor_anterior: item.valor_anterior,
-          valor_novo: item.valor_novo,
-          data_movimentacao: item.created_at,
-          data_carga: null,
-          carga_id: item.carga_historico_id,
-          tipo_movimentacao: getTipoMovimentacao(item.campo_alterado, item.valor_novo)
-        }));
-
-      // Filtrar por divisão se especificado (entrada ou saída da divisão)
-      if (options?.divisao) {
-        return movimentacoes.filter(m => 
-          m.valor_anterior === options.divisao || m.valor_novo === options.divisao
-        );
-      }
-
-      // Filtrar por tipos se especificado
-      if (options?.tipos && options.tipos.length > 0) {
-        return movimentacoes.filter(m => options.tipos!.includes(m.tipo_movimentacao));
-      }
-
-      return movimentacoes;
-    },
-    enabled: true
-  });
-};
 
 // Helper para determinar tipo de movimentação
 const getTipoMovimentacao = (campo: string, valorNovo: string | null): MovimentacaoIntegrante['tipo_movimentacao'] => {
@@ -138,75 +65,11 @@ const isMudancaReal = (campo: string, valorAnterior: string | null, valorNovo: s
   return true;
 };
 
-// Hook com filtro baseado nos INTEGRANTES ATUAIS de uma divisão/regional
-// Busca o histórico COMPLETO de quem está HOJE na divisão/regional
-export const useMovimentacoesComFiltro = (options?: UseMovimentacoesComFiltroOptions) => {
+// Hook para buscar movimentações de integrantes
+export const useMovimentacoesIntegrantes = (options?: UseMovimentacoesOptions) => {
   return useQuery({
-    queryKey: ['movimentacoes-com-filtro', options?.integrantesDaDivisao, options?.integrantesDaRegional, options?.tipos],
+    queryKey: ['movimentacoes-integrantes', options?.divisao, options?.dataInicio?.toISOString(), options?.dataFim?.toISOString(), options?.tipos],
     queryFn: async (): Promise<MovimentacaoIntegrante[]> => {
-      // 1. Se houver filtro por divisão/regional, primeiro buscar os IDs dos integrantes atuais
-      let integranteIds: string[] | null = null;
-      let integrantesMap: Map<string, { divisao: string; regional: string }> = new Map();
-      
-      if (options?.integrantesDaDivisao) {
-        // Buscar integrantes que estão HOJE nessa divisão
-        // Usar busca normalizada para evitar problemas de case/acentos
-        const { data: integrantes, error: intError } = await supabase
-          .from('integrantes_portal')
-          .select('id, divisao_texto, regional_texto')
-          .eq('ativo', true);
-        
-        if (intError) {
-          console.error('Erro ao buscar integrantes da divisão:', intError);
-          throw intError;
-        }
-        
-        // Filtrar localmente com normalização
-        const divisaoNormalizada = normalizarDivisao(options.integrantesDaDivisao);
-        const integrantesFiltrados = (integrantes || []).filter(i => 
-          normalizarDivisao(i.divisao_texto) === divisaoNormalizada
-        );
-        
-        integranteIds = integrantesFiltrados.map(i => i.id);
-        integrantesFiltrados.forEach(i => {
-          integrantesMap.set(i.id, { divisao: i.divisao_texto, regional: i.regional_texto });
-        });
-      } else if (options?.integrantesDaRegional) {
-        // Buscar integrantes que estão HOJE nessa regional
-        // Usar busca normalizada para evitar problemas de case/acentos/romanos
-        const { data: integrantes, error: intError } = await supabase
-          .from('integrantes_portal')
-          .select('id, divisao_texto, regional_texto')
-          .eq('ativo', true);
-        
-        if (intError) {
-          console.error('Erro ao buscar integrantes da regional:', intError);
-          throw intError;
-        }
-        
-        // Filtrar localmente com normalização (converte VP III → VP 3)
-        const regionalNormalizada = normalizarRegional(options.integrantesDaRegional);
-        const integrantesFiltrados = (integrantes || []).filter(i => 
-          normalizarRegional(i.regional_texto) === regionalNormalizada
-        );
-        
-        integranteIds = integrantesFiltrados.map(i => i.id);
-        integrantesFiltrados.forEach(i => {
-          integrantesMap.set(i.id, { divisao: i.divisao_texto, regional: i.regional_texto });
-        });
-      } else {
-        // Sem filtro - buscar todos os integrantes ativos para o mapa
-        const { data: integrantes } = await supabase
-          .from('integrantes_portal')
-          .select('id, divisao_texto, regional_texto')
-          .eq('ativo', true);
-        
-        (integrantes || []).forEach(i => {
-          integrantesMap.set(i.id, { divisao: i.divisao_texto, regional: i.regional_texto });
-        });
-      }
-
-      // 2. Buscar movimentações - com filtro de integrante_id se necessário
       let query = supabase
         .from('atualizacoes_carga')
         .select(`
@@ -223,13 +86,11 @@ export const useMovimentacoesComFiltro = (options?: UseMovimentacoesComFiltroOpt
         .in('campo_alterado', ['divisao_texto', 'regional_texto', 'ativo'])
         .order('created_at', { ascending: false });
 
-      // Se tem lista de IDs, filtrar por eles
-      if (integranteIds !== null) {
-        if (integranteIds.length === 0) {
-          // Nenhum integrante na divisão/regional
-          return [];
-        }
-        query = query.in('integrante_id', integranteIds);
+      if (options?.dataInicio) {
+        query = query.gte('created_at', options.dataInicio.toISOString());
+      }
+      if (options?.dataFim) {
+        query = query.lte('created_at', options.dataFim.toISOString() + 'T23:59:59');
       }
 
       const { data, error } = await query;
@@ -239,8 +100,106 @@ export const useMovimentacoesComFiltro = (options?: UseMovimentacoesComFiltroOpt
         throw error;
       }
 
-      // 3. Mapear para o formato esperado, incluindo divisão atual
-      // Filtrar primeiro: remover mudanças que não são reais (apenas normalização de texto)
+      let movimentacoes: MovimentacaoIntegrante[] = (data || [])
+        .filter(item => isMudancaReal(item.campo_alterado, item.valor_anterior, item.valor_novo))
+        .map(item => ({
+          id: item.id,
+          integrante_id: item.integrante_id,
+          registro_id: item.registro_id,
+          nome_colete: item.nome_colete,
+          campo_alterado: item.campo_alterado,
+          valor_anterior: item.valor_anterior,
+          valor_novo: item.valor_novo,
+          data_movimentacao: item.created_at,
+          data_carga: null,
+          carga_id: item.carga_historico_id,
+          tipo_movimentacao: getTipoMovimentacao(item.campo_alterado, item.valor_novo)
+        }));
+
+      if (options?.divisao) {
+        return movimentacoes.filter(m => 
+          m.valor_anterior === options.divisao || m.valor_novo === options.divisao
+        );
+      }
+
+      if (options?.tipos && options.tipos.length > 0) {
+        return movimentacoes.filter(m => options.tipos!.includes(m.tipo_movimentacao));
+      }
+
+      return movimentacoes;
+    },
+    enabled: true
+  });
+};
+
+// Hook com filtro baseado em ENVOLVIMENTO da divisão/regional
+// Mostra movimentações onde a divisão/regional aparece como ORIGEM ou DESTINO
+export const useMovimentacoesComFiltro = (options?: UseMovimentacoesComFiltroOptions) => {
+  return useQuery({
+    queryKey: ['movimentacoes-com-filtro', options?.integrantesDaDivisao, options?.integrantesDaRegional, options?.tipos],
+    queryFn: async (): Promise<MovimentacaoIntegrante[]> => {
+      // 1. Buscar TODAS as movimentações relevantes
+      const { data, error } = await supabase
+        .from('atualizacoes_carga')
+        .select(`
+          id,
+          integrante_id,
+          registro_id,
+          nome_colete,
+          campo_alterado,
+          valor_anterior,
+          valor_novo,
+          created_at,
+          carga_historico_id
+        `)
+        .in('campo_alterado', ['divisao_texto', 'regional_texto', 'ativo'])
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao buscar movimentações:', error);
+        throw error;
+      }
+
+      // 2. Buscar informações atuais dos integrantes para enriquecer os dados
+      const { data: integrantes } = await supabase
+        .from('integrantes_portal')
+        .select('id, divisao_texto, regional_texto')
+        .eq('ativo', true);
+      
+      const integrantesMap = new Map<string, { divisao: string; regional: string }>();
+      (integrantes || []).forEach(i => {
+        integrantesMap.set(i.id, { divisao: i.divisao_texto, regional: i.regional_texto });
+      });
+
+      // 3. Buscar lista de divisões da regional (para filtro por regional)
+      let divisoesDaRegional: string[] = [];
+      if (options?.integrantesDaRegional) {
+        const { data: divisoes } = await supabase
+          .from('divisoes')
+          .select('nome, regional:regionais!inner(nome)')
+          .eq('regional.nome', options.integrantesDaRegional);
+        
+        if (divisoes) {
+          divisoesDaRegional = divisoes.map(d => normalizarDivisao(d.nome));
+        }
+        
+        // Se não encontrou por nome exato, tentar buscar com normalização
+        if (divisoesDaRegional.length === 0) {
+          const { data: todasDivisoes } = await supabase
+            .from('divisoes')
+            .select('nome, regional:regionais(nome)');
+          
+          const regionalNorm = normalizarRegional(options.integrantesDaRegional);
+          divisoesDaRegional = (todasDivisoes || [])
+            .filter(d => {
+              const regNome = (d.regional as any)?.nome;
+              return regNome && normalizarRegional(regNome) === regionalNorm;
+            })
+            .map(d => normalizarDivisao(d.nome));
+        }
+      }
+
+      // 4. Mapear e filtrar movimentações
       let movimentacoes: MovimentacaoIntegrante[] = (data || [])
         .filter(item => isMudancaReal(item.campo_alterado, item.valor_anterior, item.valor_novo))
         .map(item => {
@@ -262,7 +221,71 @@ export const useMovimentacoesComFiltro = (options?: UseMovimentacoesComFiltroOpt
           };
         });
 
-      // 4. Filtrar por tipos se especificado
+      // 5. Aplicar filtro por ENVOLVIMENTO na divisão
+      if (options?.integrantesDaDivisao) {
+        const divisaoNorm = normalizarDivisao(options.integrantesDaDivisao);
+        
+        movimentacoes = movimentacoes.filter(m => {
+          if (m.campo_alterado === 'divisao_texto') {
+            // Mudança de divisão: incluir se a divisão está envolvida como origem OU destino
+            const anteriorNorm = normalizarDivisao(m.valor_anterior || '');
+            const novoNorm = normalizarDivisao(m.valor_novo || '');
+            return anteriorNorm === divisaoNorm || novoNorm === divisaoNorm;
+          }
+          
+          if (m.campo_alterado === 'regional_texto') {
+            // Mudança de regional: não mostrar para filtro de divisão específica
+            return false;
+          }
+          
+          if (m.campo_alterado === 'ativo') {
+            // Inativação/Reativação: incluir se o integrante é/era desta divisão
+            const divisaoAtualNorm = m.divisao_atual ? normalizarDivisao(m.divisao_atual) : null;
+            return divisaoAtualNorm === divisaoNorm;
+          }
+          
+          return false;
+        });
+      }
+      
+      // 6. Aplicar filtro por ENVOLVIMENTO na regional
+      else if (options?.integrantesDaRegional) {
+        const regionalNorm = normalizarRegional(options.integrantesDaRegional);
+        
+        movimentacoes = movimentacoes.filter(m => {
+          if (m.campo_alterado === 'divisao_texto') {
+            // Mudança de divisão: incluir se alguma das divisões pertence à regional
+            const anteriorNorm = normalizarDivisao(m.valor_anterior || '');
+            const novoNorm = normalizarDivisao(m.valor_novo || '');
+            
+            const origemDaRegional = divisoesDaRegional.includes(anteriorNorm);
+            const destinoDaRegional = divisoesDaRegional.includes(novoNorm);
+            
+            return origemDaRegional || destinoDaRegional;
+          }
+          
+          if (m.campo_alterado === 'regional_texto') {
+            // Mudança de regional: incluir se a regional está envolvida como origem OU destino
+            const anteriorNorm = normalizarRegional(m.valor_anterior || '');
+            const novoNorm = normalizarRegional(m.valor_novo || '');
+            return anteriorNorm === regionalNorm || novoNorm === regionalNorm;
+          }
+          
+          if (m.campo_alterado === 'ativo') {
+            // Inativação/Reativação: incluir se o integrante é/era desta regional
+            const regionalAtualNorm = m.regional_atual ? normalizarRegional(m.regional_atual) : null;
+            if (regionalAtualNorm === regionalNorm) return true;
+            
+            // Também verificar se a divisão atual pertence à regional
+            const divisaoAtualNorm = m.divisao_atual ? normalizarDivisao(m.divisao_atual) : null;
+            return divisaoAtualNorm ? divisoesDaRegional.includes(divisaoAtualNorm) : false;
+          }
+          
+          return false;
+        });
+      }
+
+      // 7. Filtrar por tipos se especificado
       if (options?.tipos && options.tipos.length > 0) {
         movimentacoes = movimentacoes.filter(m => options.tipos!.includes(m.tipo_movimentacao));
       }
@@ -309,7 +332,6 @@ export const useSugestoesEntradasSaidas = (divisao: string | null, dataInicio: D
       const saidas: MovimentacaoIntegrante[] = [];
 
       (data || []).forEach(item => {
-        // Ignorar se não for mudança real (apenas normalização de texto)
         if (!isMudancaReal(item.campo_alterado, item.valor_anterior, item.valor_novo)) {
           return;
         }
@@ -328,16 +350,12 @@ export const useSugestoesEntradasSaidas = (divisao: string | null, dataInicio: D
           tipo_movimentacao: 'MUDANCA_DIVISAO'
         };
 
-        // Usar comparação normalizada para entradas/saídas
         const divisaoNorm = normalizarDivisao(divisao);
         
-        // Entrada: valor_novo = divisão selecionada (comparação normalizada)
         if (normalizarDivisao(item.valor_novo || '') === divisaoNorm) {
           entradas.push(mov);
         }
-        // Saída: valor_anterior = divisão selecionada (comparação normalizada)
         if (normalizarDivisao(item.valor_anterior || '') === divisaoNorm) {
-          saidas.push(mov);
           saidas.push(mov);
         }
       });
