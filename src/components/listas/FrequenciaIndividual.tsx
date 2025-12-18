@@ -57,7 +57,7 @@ export const FrequenciaIndividual = ({ grau, regionalId, divisaoId, isAdmin = fa
     nivelAcesso === 'regional' ? regionalId : null
   );
 
-  // Determinar quais IDs de divisão usar para filtrar os dados
+  // Determinar quais IDs de divisão usar para filtrar EVENTOS
   const divisaoIdsParaFiltro = useMemo(() => {
     // Se uma divisão específica foi selecionada
     if (divisaoSelecionada && divisaoSelecionada !== 'todas') {
@@ -69,9 +69,11 @@ export const FrequenciaIndividual = ({ grau, regionalId, divisaoId, isAdmin = fa
       return undefined;
     }
     
-    // Grau VI (divisao): apenas a divisão do usuário
-    if (nivelAcesso === 'divisao' && divisaoId) {
-      return [divisaoId];
+    // Grau VI (divisao): NÃO filtrar eventos por divisão
+    // Os integrantes podem ter participado de eventos de outras divisões
+    // O filtro será feito por integrantesDivisaoId
+    if (nivelAcesso === 'divisao') {
+      return undefined;
     }
     
     // Grau V (regional): todas as divisões da regional
@@ -82,6 +84,14 @@ export const FrequenciaIndividual = ({ grau, regionalId, divisaoId, isAdmin = fa
     // Fallback
     return divisaoId ? [divisaoId] : undefined;
   }, [divisaoSelecionada, isAdmin, nivelAcesso, divisaoId, divisaoIdsDaRegional]);
+
+  // Para Grau VI: filtrar por integrantes da divisão (não por eventos)
+  const integrantesDivisaoIdParaFiltro = useMemo(() => {
+    if (nivelAcesso === 'divisao' && divisaoId) {
+      return divisaoId;
+    }
+    return null;
+  }, [nivelAcesso, divisaoId]);
 
   // Determinar quais divisões mostrar no seletor
   // IMPORTANTE: Priorizar nivelAcesso sobre isAdmin para que Grau V veja apenas divisões da sua regional
@@ -117,6 +127,7 @@ export const FrequenciaIndividual = ({ grau, regionalId, divisaoId, isAdmin = fa
     dataFim,
     divisaoIds: divisaoIdsParaFiltro,
     regionalId: regionalIdParaFiltro,
+    integrantesDivisaoId: integrantesDivisaoIdParaFiltro,
   });
 
   // Agrupar dados conforme nível de acesso (mesmo padrão do IntegrantesTab/useIntegrantesRelatorio)
