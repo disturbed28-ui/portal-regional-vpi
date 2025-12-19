@@ -17,7 +17,77 @@ interface HierarquiaIds {
 // Cache para evitar queries repetidas
 const cacheHierarquia = new Map<string, HierarquiaIds>();
 
-// Função para normalizar texto de divisão para busca
+/**
+ * Função de normalização de texto: maiúsculo + sem acentos
+ */
+function normalizarTexto(texto: string): string {
+  if (!texto) return '';
+  return texto
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+}
+
+/**
+ * Normaliza divisão para salvar no banco
+ */
+function normalizarDivisaoParaSalvar(texto: string): string {
+  if (!texto) return '';
+  let normalizado = normalizarTexto(texto);
+  
+  // Se contém REGIONAL (caso Grau V), manter prefixo REGIONAL
+  if (normalizado.includes('REGIONAL')) {
+    normalizado = normalizado.replace(/^(DIVISAO\s+)?REGIONAL\s*/i, 'REGIONAL ');
+  } else {
+    // Garantir prefixo DIVISAO
+    if (!normalizado.startsWith('DIVISAO')) {
+      normalizado = 'DIVISAO ' + normalizado;
+    }
+  }
+  
+  // Garantir sufixo - SP
+  if (!normalizado.endsWith('- SP')) {
+    normalizado = normalizado.replace(/\s*-?\s*SP?\s*$/, '') + ' - SP';
+  }
+  
+  return normalizado;
+}
+
+/**
+ * Normaliza regional para salvar no banco
+ */
+function normalizarRegionalParaSalvar(texto: string): string {
+  if (!texto) return '';
+  let normalizado = normalizarTexto(texto);
+  
+  // Remover prefixo existente e adicionar padronizado
+  normalizado = normalizado.replace(/^REGIONAL\s*/, '');
+  normalizado = 'REGIONAL ' + normalizado;
+  
+  // Garantir sufixo - SP
+  if (!normalizado.endsWith('- SP')) {
+    normalizado = normalizado.replace(/\s*-?\s*SP?\s*$/, '') + ' - SP';
+  }
+  
+  return normalizado;
+}
+
+/**
+ * Normaliza comando para salvar no banco
+ */
+function normalizarComandoParaSalvar(texto: string): string {
+  if (!texto) return '';
+  let normalizado = normalizarTexto(texto);
+  
+  // Remover prefixo existente e adicionar padronizado
+  normalizado = normalizado.replace(/^COMANDO\s*/, '');
+  normalizado = 'COMANDO ' + normalizado;
+  
+  return normalizado;
+}
+
+// Função para normalizar texto de divisão para busca (usado internamente)
 function normalizarDivisaoTexto(texto: string): string {
   return texto
     .replace(/^DIVISAO\s*/i, '')
@@ -28,7 +98,7 @@ function normalizarDivisaoTexto(texto: string): string {
     .replace(/[\u0300-\u036f]/g, '');
 }
 
-// Normalizar texto de regional para busca
+// Normalizar texto de regional para busca (usado internamente)
 function normalizarRegionalTexto(texto: string): string {
   return texto
     .replace(/^REGIONAL\s*/i, '')
@@ -273,7 +343,7 @@ Deno.serve(async (req) => {
         deltasPendentes.push({
           registro_id: novo.registro_id,
           nome_colete: novo.nome_colete,
-          divisao_texto: novo.divisao_texto,
+          divisao_texto: normalizarDivisaoParaSalvar(novo.divisao_texto),
           tipo_delta: 'NOVO_ATIVOS',
           prioridade: 0,
           dados_adicionais: { 
@@ -312,8 +382,8 @@ Deno.serve(async (req) => {
       
       console.log('[admin-import-integrantes] Unique novos after dedup:', uniqueNovos.length);
       
-      // Enriquecer com IDs de divisão e regional (buscar da tabela divisoes)
-      console.log('[admin-import-integrantes] Enriquecendo registros com IDs de hierarquia...');
+      // Enriquecer com IDs de divisão e regional + NORMALIZAR TEXTOS
+      console.log('[admin-import-integrantes] Enriquecendo registros com IDs de hierarquia e normalizando textos...');
       const novosEnriquecidos = [];
       
       for (const item of uniqueNovos) {
@@ -330,14 +400,18 @@ Deno.serve(async (req) => {
         // Buscar IDs de hierarquia baseado no texto da divisão e regional
         const hierarquia = await buscarIdsHierarquia(supabase, item.divisao_texto, item.regional_texto);
         
+        // NORMALIZAR TEXTOS ANTES DE SALVAR
         novosEnriquecidos.push({
           ...item,
+          divisao_texto: normalizarDivisaoParaSalvar(item.divisao_texto),
+          regional_texto: normalizarRegionalParaSalvar(item.regional_texto),
+          comando_texto: normalizarComandoParaSalvar(item.comando_texto),
           divisao_id: hierarquia.divisao_id,
           regional_id: hierarquia.regional_id
         });
       }
       
-      console.log('[admin-import-integrantes] Registros enriquecidos:', novosEnriquecidos.length);
+      console.log('[admin-import-integrantes] Registros enriquecidos e normalizados:', novosEnriquecidos.length);
       
       const { error: upsertError } = await supabase
         .from('integrantes_portal')
@@ -377,15 +451,25 @@ Deno.serve(async (req) => {
           dadosAntigos.set(id, oldData);
         }
         
-        // Enriquecer com IDs de hierarquia se houver divisao_texto
+        // Enriquecer com IDs de hierarquia + NORMALIZAR TEXTOS se houver divisao_texto
         let updateDataEnriquecido = { ...updateData };
+        
+        // NORMALIZAR TEXTOS ANTES DE SALVAR
+        if (updateData.divisao_texto) {
+          updateDataEnriquecido.divisao_texto = normalizarDivisaoParaSalvar(updateData.divisao_texto);
+        }
+        if (updateData.regional_texto) {
+          updateDataEnriquecido.regional_texto = normalizarRegionalParaSalvar(updateData.regional_texto);
+        }
+        if (updateData.comando_texto) {
+          updateDataEnriquecido.comando_texto = normalizarComandoParaSalvar(updateData.comando_texto);
+        }
+        
+        // Buscar IDs de hierarquia
         if (updateData.divisao_texto) {
           const hierarquia = await buscarIdsHierarquia(supabase, updateData.divisao_texto, updateData.regional_texto);
-          updateDataEnriquecido = {
-            ...updateData,
-            divisao_id: hierarquia.divisao_id,
-            regional_id: hierarquia.regional_id
-          };
+          updateDataEnriquecido.divisao_id = hierarquia.divisao_id;
+          updateDataEnriquecido.regional_id = hierarquia.regional_id;
           
           // Log se houver mudança de regional
           if (oldData && oldData.regional_id !== hierarquia.regional_id) {

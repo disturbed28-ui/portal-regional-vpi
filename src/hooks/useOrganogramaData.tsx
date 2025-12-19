@@ -8,6 +8,7 @@ export interface IntegranteComFoto {
   cargo_nome: string | null;
   grau: string | null;
   divisao_texto: string;
+  divisao_id: string | null;
   regional_texto: string;
   data_entrada: string | null;
   vinculado: boolean;
@@ -85,6 +86,7 @@ export const useOrganogramaData = (regionalId: string | null) => {
           cargo_nome: i.cargo_nome,
           grau: i.grau,
           divisao_texto: i.divisao_texto,
+          divisao_id: i.divisao_id,
           regional_texto: i.regional_texto,
           data_entrada: i.data_entrada,
           vinculado: i.vinculado,
@@ -133,13 +135,17 @@ export const useOrganogramaData = (regionalId: string | null) => {
           .filter(i => cargoMatch(i.cargo_nome, 'Adm. Divisao'))
           .sort(ordenarIntegrantes);
 
-        // 6. Agrupar integrantes por divisão
+        // 6. Agrupar integrantes por divisão usando divisao_id como chave primária
+        // Isso evita problemas de case/acentos no divisao_texto
         const divisoesMap = new Map<string, IntegranteComFoto[]>();
         integrantesComFoto.forEach(integrante => {
-          if (!divisoesMap.has(integrante.divisao_texto)) {
-            divisoesMap.set(integrante.divisao_texto, []);
+          // Usar divisao_id como chave primária para evitar problemas de normalização
+          // Se não tiver divisao_id, usar divisao_texto como fallback
+          const chave = integrante.divisao_id || integrante.divisao_texto;
+          if (!divisoesMap.has(chave)) {
+            divisoesMap.set(chave, []);
           }
-          divisoesMap.get(integrante.divisao_texto)?.push(integrante);
+          divisoesMap.get(chave)?.push(integrante);
         });
 
         // Ordenar integrantes de cada divisão

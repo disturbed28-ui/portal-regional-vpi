@@ -5,6 +5,18 @@ import { handleDatabaseError, logError } from '../_shared/error-handler.ts';
 import { sendEmail, renderProfileStatusChangeTemplate } from '../_shared/email-service.ts';
 
 /**
+ * Função de normalização de texto: maiúsculo + sem acentos
+ */
+function normalizarTexto(texto: string): string {
+  if (!texto) return '';
+  return texto
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+}
+
+/**
  * Notifica o integrante sobre mudança de status via email
  */
 async function notifyIntegranteStatusChange(
@@ -293,7 +305,7 @@ Deno.serve(async (req) => {
         if (regional_id !== undefined) syncPayload.regional_id = regional_id;
         if (combate_insano !== undefined) syncPayload.combate_insano = combate_insano;
 
-        // Buscar nomes das entidades para popular campos _texto (NORMALIZADO PARA MAIÚSCULO)
+        // Buscar nomes das entidades para popular campos _texto (NORMALIZADO)
         if (regional_id) {
           const { data: regionalData } = await supabase
             .from('regionais')
@@ -301,8 +313,9 @@ Deno.serve(async (req) => {
             .eq('id', regional_id)
             .single();
           if (regionalData) {
-            // Normalizar para MAIÚSCULO (consistência com carga Excel)
-            syncPayload.regional_texto = `REGIONAL ${regionalData.nome.toUpperCase()}`;
+            // Normalizar para MAIÚSCULO + SEM ACENTOS
+            const regionalNome = normalizarTexto(regionalData.nome);
+            syncPayload.regional_texto = `REGIONAL ${regionalNome} - SP`;
           }
         }
 
@@ -313,11 +326,27 @@ Deno.serve(async (req) => {
             .eq('id', divisao_id)
             .single();
           if (divisaoData) {
-            // Normalizar para MAIÚSCULO (consistência com carga Excel)
-            let nomeNormalizado = divisaoData.nome.toUpperCase();
-            if (!nomeNormalizado.startsWith('DIVISAO')) {
-              nomeNormalizado = `DIVISAO ${nomeNormalizado}`;
+            // Normalizar para MAIÚSCULO + SEM ACENTOS
+            let nomeNormalizado = normalizarTexto(divisaoData.nome);
+            
+            // Verificar se é cargo regional (Grau V)
+            if (nomeNormalizado.includes('REGIONAL')) {
+              // Manter como regional
+              if (!nomeNormalizado.startsWith('REGIONAL')) {
+                nomeNormalizado = 'REGIONAL ' + nomeNormalizado.replace(/^DIVISAO\s*/, '');
+              }
+            } else {
+              // Garantir prefixo DIVISAO
+              if (!nomeNormalizado.startsWith('DIVISAO')) {
+                nomeNormalizado = 'DIVISAO ' + nomeNormalizado;
+              }
             }
+            
+            // Garantir sufixo - SP
+            if (!nomeNormalizado.endsWith('- SP')) {
+              nomeNormalizado = nomeNormalizado + ' - SP';
+            }
+            
             syncPayload.divisao_texto = nomeNormalizado;
           }
         }
