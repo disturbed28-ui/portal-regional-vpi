@@ -368,29 +368,51 @@ export const useAutoImportAcoesSociais = () => {
     }
   }, [user?.id, profile?.regional_id]);
 
-  useEffect(() => {
-    if (!user?.id || !profile?.regional_id) return;
+useEffect(() => {
+  if (!user?.id || !profile?.regional_id) return;
 
-    console.log('[AutoImport] Configurando importação automática...');
+  console.log('[AutoImport] Disparo imediato da importação após login');
+
+  // DISPARO IMEDIATO (login / profile pronto)
+  importarAcoesDaRegional();
+
+  // REPETIÇÃO A CADA 60 MINUTOS
+  intervalRef.current = setInterval(() => {
+    console.log('[AutoImport] Executando importação agendada (60 min)');
+    importarAcoesDaRegional();
+  }, IMPORT_INTERVAL);
+
+  return () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+  };
+}, [user?.id, profile?.regional_id, importarAcoesDaRegional]);
+
+
+  //useEffect(() => {
+   //if (!user?.id || !profile?.regional_id) return;
+
+    //console.log('[AutoImport] Configurando importação automática...');
 
     // Executar após 5 segundos (dar tempo para carregar tudo)
-    const initialTimeout = setTimeout(() => {
-      importarAcoesDaRegional();
-    }, 5000);
+    //const initialTimeout = setTimeout(() => {
+      //importarAcoesDaRegional();
+    //}, 5000);
 
     // Configurar intervalo de 60 minutos
-    intervalRef.current = setInterval(() => {
-      console.log('[AutoImport] Executando importação agendada (60 min)');
-      importarAcoesDaRegional();
-    }, IMPORT_INTERVAL);
+    //intervalRef.current = setInterval(() => {
+      //console.log('[AutoImport] Executando importação agendada (60 min)');
+      //importarAcoesDaRegional();
+    //}, IMPORT_INTERVAL);
 
-    return () => {
-      clearTimeout(initialTimeout);
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [user?.id, profile?.regional_id, importarAcoesDaRegional]);
+    //return () => {
+      //clearTimeout(initialTimeout);
+      //if (intervalRef.current) {
+        //clearInterval(intervalRef.current);
+      //}
+    //};
+  //}, [user?.id, profile?.regional_id, importarAcoesDaRegional]);
 
   return { lastImport, isImporting };
 };
