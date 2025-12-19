@@ -9,7 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useIntegrantes, useBuscaIntegrante, useBuscaIntegranteTodos } from "@/hooks/useIntegrantes";
-import { useMovimentacoesConsolidadas, gerarChaveDedupMovimentacao, MovimentacaoConsolidada } from "@/hooks/useMovimentacoesConsolidadas";
+import { useMovimentacoesConsolidadas } from "@/hooks/useMovimentacoesConsolidadas";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { normalizeText, calcularSemanaOperacional, formatDateToSQL } from "@/lib/normalizeText";
@@ -843,115 +843,67 @@ const FormularioRelatorioSemanal = () => {
     acoesSociais,
   ]);
 
-  // Função para classificar motivo de entrada corretamente
-  const classificarMotivoEntrada = (m: MovimentacaoConsolidada): string => {
-    if (m.tipo === 'REATIVACAO') return 'Reativado';
-    if (m.tipo === 'NOVO_ATIVOS' || m.detalhes?.includes('NOVO_ATIVOS') || m.detalhes?.includes('Novo integrante')) {
-      return 'Novo integrante';
-    }
-    return 'Transferido';
-  };
-
-  // Função para classificar motivo de saída corretamente
-  const classificarMotivoSaida = (m: MovimentacaoConsolidada): string => {
-    if (m.tipo === 'INATIVACAO') return 'INATIVACAO';
-    if (m.tipo === 'SUMIU_ATIVOS' || m.detalhes?.includes('SUMIU_ATIVOS')) return 'SUMIU_CARGA';
-    return 'TRANSFERENCIA';
-  };
-
   // T6: Carregar entradas e saídas automaticamente das movimentações consolidadas
-  // Implementação com MERGE INCREMENTAL por bloco
   useEffect(() => {
     // Não sobrescrever em modo de edição
     if (modoEdicao === "editar") return;
     
-    // Se já aplicamos movimentações, não re-aplicar
+    // Se já aplicamos movimentações ou já houver dados, não sobrescrever
     if (movimentacoesAplicadas.current) return;
+    if ((entradas && entradas.length > 0) || (saidas && saidas.length > 0)) return;
     
     // Precisamos ter movimentações carregadas
     if (!movimentacoesConsolidadas) return;
     
     const { entradas: entradasConsolidadas, saidas: saidasConsolidadas } = movimentacoesConsolidadas;
     
-    // Se não há nenhuma movimentação, marcar como aplicado e sair
-    if (entradasConsolidadas.length === 0 && saidasConsolidadas.length === 0) {
-      movimentacoesAplicadas.current = true;
-      return;
-    }
-    
     // Marcar como já aplicado para evitar re-aplicação
     movimentacoesAplicadas.current = true;
     
-    // Processar ENTRADAS separadamente (merge incremental)
+    // Mapear entradas para o formato do formulário
     if (entradasConsolidadas.length > 0) {
       const entradasMapeadas = entradasConsolidadas.map(m => ({
         nome_colete: m.nome_colete,
         data_entrada: m.data_movimentacao?.split("T")[0] || "",
-        motivo_entrada: classificarMotivoEntrada(m),
+        motivo_entrada: m.tipo === 'REATIVACAO' ? 'Reativado' : 'Transferido',
         possui_carro: false,
         possui_moto: false,
         nenhum: true,
         origem: "automatico",
         tipo_movimentacao: m.tipo,
-        detalhes: m.detalhes,
-        _chave_dedup: gerarChaveDedupMovimentacao(m)
+        detalhes: m.detalhes
       }));
-      
-      // Merge com existentes (deduplicar)
-      const existentesChaves = new Set(
-        (entradas || [])
-          .filter((e: any) => e._chave_dedup || e.nome_colete)
-          .map((e: any) => e._chave_dedup || `manual_${e.nome_colete}_${e.data_entrada}`)
-      );
-      
-      const novasEntradas = entradasMapeadas.filter(e => !existentesChaves.has(e._chave_dedup));
-      
-      if (novasEntradas.length > 0) {
-        setTeveEntradas(true);
-        setEntradas(prev => [...(prev || []), ...novasEntradas]);
-        setEntradasAplicadasAuto(true);
-        console.log("[FormularioRelatorioSemanal] Entradas aplicadas (merge):", novasEntradas.length, "novas de", entradasMapeadas.length);
-      }
+      setTeveEntradas(true);
+      setEntradas(entradasMapeadas);
+      setEntradasAplicadasAuto(true);
+      console.log("[FormularioRelatorioSemanal] Entradas aplicadas automaticamente:", entradasMapeadas.length);
     }
     
-    // Processar SAÍDAS separadamente (merge incremental)
+    // Mapear saídas para o formato do formulário
     if (saidasConsolidadas.length > 0) {
       const saidasMapeadas = saidasConsolidadas.map(m => ({
         integrante_id: m.integrante_id || "",
         nome_colete: m.nome_colete,
         data_saida: m.data_movimentacao?.split("T")[0] || "",
-        motivo_codigo: classificarMotivoSaida(m),
+        motivo_codigo: m.tipo === 'INATIVACAO' ? 'INATIVACAO' : 'TRANSFERENCIA',
         justificativa: m.detalhes || "",
         tem_moto: false,
         tem_carro: false,
         origem: "automatico",
-        tipo_movimentacao: m.tipo,
-        _chave_dedup: gerarChaveDedupMovimentacao(m)
+        tipo_movimentacao: m.tipo
       }));
-      
-      // Merge com existentes (deduplicar)
-      const existentesChaves = new Set(
-        (saidas || [])
-          .filter((s: any) => s._chave_dedup || s.nome_colete)
-          .map((s: any) => s._chave_dedup || `manual_${s.nome_colete}_${s.data_saida}`)
-      );
-      
-      const novasSaidas = saidasMapeadas.filter(s => !existentesChaves.has(s._chave_dedup));
-      
-      if (novasSaidas.length > 0) {
-        setTeveSaidas(true);
-        setSaidas(prev => [...(prev || []), ...novasSaidas]);
-        setSaidasAplicadasAuto(true);
-        console.log("[FormularioRelatorioSemanal] Saídas aplicadas (merge):", novasSaidas.length, "novas de", saidasMapeadas.length);
-      }
+      setTeveSaidas(true);
+      setSaidas(saidasMapeadas);
+      setSaidasAplicadasAuto(true);
+      console.log("[FormularioRelatorioSemanal] Saídas aplicadas automaticamente:", saidasMapeadas.length);
     }
     
-    console.log("[FormularioRelatorioSemanal] Movimentações consolidadas processadas (merge incremental):", {
-      entradasDisponiveis: entradasConsolidadas.length,
-      saidasDisponiveis: saidasConsolidadas.length
+    console.log("[FormularioRelatorioSemanal] Movimentações consolidadas aplicadas:", {
+      entradas: entradasConsolidadas.length,
+      saidas: saidasConsolidadas.length
     });
     
-  }, [movimentacoesConsolidadas, modoEdicao]);
+  }, [movimentacoesConsolidadas, modoEdicao, entradas, saidas]);
 
   // Recarregar relatório existente quando divisão do relatório mudar
   useEffect(() => {
