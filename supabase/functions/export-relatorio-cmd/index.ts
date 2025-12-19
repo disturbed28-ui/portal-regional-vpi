@@ -384,14 +384,13 @@ function adicionarBlocoAcoesInadimplencia(wsData: any[][], dados: DadosRelatorio
   dados.divisoes.forEach(div => {
     const inadimplencias = div.relatorio?.inadimplencias_json || [];
     inadimplencias.forEach((inad: any) => {
-      if (inad.acao_cobranca) {
-        wsData[row++] = [
-          div.divisao_nome,
-          inad.nome_colete || '',
-          inad.acao_cobranca || ''
-        ];
-        temAcoes = true;
-      }
+      // Exportar TODAS as inadimplências, mesmo sem ação descrita
+      wsData[row++] = [
+        div.divisao_nome,
+        inad.nome_colete || '',
+        inad.acao_cobranca || '-'  // Usar "-" quando não tem ação
+      ];
+      temAcoes = true;
     });
   });
   

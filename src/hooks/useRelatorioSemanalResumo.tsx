@@ -110,12 +110,8 @@ export const useRelatorioSemanalResumo = (regionalId: string, ano?: number, mes?
       // Agrupar por divisão
       const divisoesMap = new Map<string, DivisaoRelatorio>();
 
-      // Filtrar integrantes de Grau V (que têm divisao_texto = nome da Regional) antes de agrupar
-      const integrantesParaAgrupar = integrantesAtuais.filter(integrante => {
-        const divisaoTexto = integrante.divisao_texto?.toUpperCase() || '';
-        // Excluir integrantes cuja "divisão" é na verdade uma regional (Grau V)
-        return !divisaoTexto.startsWith('REGIONAL');
-      });
+      // INCLUIR TODOS os integrantes (inclusive Grau V que têm divisao_texto = nome da Regional)
+      const integrantesParaAgrupar = integrantesAtuais;
 
       // Inicializar divisões com integrantes atuais (normalizando divisao_texto para evitar duplicações)
       integrantesParaAgrupar.forEach((integrante) => {
