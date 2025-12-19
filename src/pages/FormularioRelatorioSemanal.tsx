@@ -211,6 +211,15 @@ const ItemSaida = ({ saida, idx, acoes, saidas, setSaidas, busca, setBusca, divi
               setMostrarResultados(true);
             }}
             onFocus={() => setMostrarResultados(true)}
+            onBlur={() => {
+              // Sincroniza o texto digitado com nome_colete se não selecionou da lista
+              if (busca && !saida.integrante_id) {
+                const novo = [...saidas];
+                novo[idx].nome_colete = busca;
+                setSaidas(novo);
+              }
+              setTimeout(() => setMostrarResultados(false), 200);
+            }}
             placeholder="Buscar integrante (ativos e inativos)..."
           />
           {mostrarResultados && resultados.length > 0 && (
@@ -1072,6 +1081,19 @@ const FormularioRelatorioSemanal = () => {
         variant: "destructive"
       });
       return;
+    }
+
+    // Validação 4: Saídas sem nome de colete
+    if (teveSaidas && saidas.length > 0) {
+      const saidasSemNome = saidas.filter((s: any) => !s.nome_colete || s.nome_colete.trim() === '');
+      if (saidasSemNome.length > 0) {
+        toast({
+          title: "Dados incompletos",
+          description: `${saidasSemNome.length} saída(s) está(ão) sem nome de colete preenchido.`,
+          variant: "destructive"
+        });
+        return;
+      }
     }
 
     const semana = calcularSemanaOperacional();
