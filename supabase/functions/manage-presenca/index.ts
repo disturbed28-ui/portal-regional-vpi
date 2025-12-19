@@ -37,54 +37,6 @@ Deno.serve(async (req) => {
       }
     );
 
-    // ============================================================================
-    // HELPER: Identificação de Eventos CMD
-    // ============================================================================
-
-    /**
-     * Normaliza string removendo acentos, cedilhas e convertendo para maiúsculas
-     */
-    function normalize(str?: string | null): string {
-      return (str || '')
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toUpperCase()
-        .trim();
-    }
-
-/**
- * Determina se um evento é ESPECIAL (CMD ou REGIONAL)
- * 
- * Eventos especiais sempre têm status 'presente', nunca 'visitante'
- * 
- * Critérios para CMD:
- * - Título contém " CMD" (ex: "Reunião - CMD V e XX")
- * - tipo_evento contém "CMD"
- * - Nome da divisão contém "CMD"
- * 
- * Critérios para REGIONAL:
- * - Título contém "REGIONAL" (ex: "Reunião - Regional - Grau V Reunião")
- * - tipo_evento contém "REGIONAL"
- */
-function isEventoEspecial(evento: { 
-  titulo?: string | null; 
-  tipo_evento?: string | null 
-} | null | undefined, divisaoNome?: string | null): boolean {
-  if (!evento) return false;
-  
-  const t = normalize(evento?.titulo);
-  const tipo = normalize(evento?.tipo_evento);
-  const div = normalize(divisaoNome);
-  
-  // Detectar CMD
-  const isCmd = t.includes(' CMD') || tipo.includes('CMD') || div.includes('CMD');
-  
-  // Detectar REGIONAL
-  const isRegional = t.includes('REGIONAL') || tipo.includes('REGIONAL');
-  
-  return isCmd || isRegional;
-}
-
     console.log('[manage-presenca] user_id recebido:', user_id);
 
     // Verificar se o usuário tem role de admin ou moderator
@@ -104,7 +56,12 @@ function isEventoEspecial(evento: {
     const roles = userRoles?.map(r => r.role) || [];
     console.log('[manage-presenca] Roles do usuário:', roles);
 
-    const isAuthorized = roles.includes('admin') || roles.includes('moderator') || roles.includes('diretor_divisao');
+    const isAuthorized = 
+      roles.includes('admin') || 
+      roles.includes('moderator') || 
+      roles.includes('regional') ||
+      roles.includes('diretor_regional') ||
+      roles.includes('diretor_divisao');
 
     if (!isAuthorized) {
       console.log('[manage-presenca] Usuário não autorizado');
@@ -112,69 +69,6 @@ function isEventoEspecial(evento: {
         JSON.stringify({ error: 'Sem permissão para gerenciar presenças' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
-    }
-
-    // Se for diretor_divisao, validar que o evento pertence à sua divisão
-    if (roles.includes('diretor_divisao') && !roles.includes('admin')) {
-      // Buscar divisão do usuário
-      const { data: userProfile, error: profileError } = await supabaseAdmin
-        .from('profiles')
-        .select('divisao_id')
-        .eq('id', user_id)
-        .single();
-      
-      if (profileError || !userProfile?.divisao_id) {
-        console.log('[manage-presenca] Diretor sem divisão atribuída');
-        return new Response(
-          JSON.stringify({ error: 'Você não possui divisão atribuída' }),
-          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      // Buscar dados completos do evento (incluindo campos para detectar CMD)
-      const { data: evento, error: eventoError } = await supabaseAdmin
-        .from('eventos_agenda')
-        .select('divisao_id, titulo, tipo_evento')
-        .eq('id', evento_agenda_id)
-        .single();
-      
-      if (eventoError || !evento) {
-        console.log('[manage-presenca] Evento não encontrado');
-        return new Response(
-          JSON.stringify({ error: 'Evento não encontrado' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      // Buscar nome da divisão do evento (para detectar CMD)
-      let divisaoEventoNome: string | null = null;
-      if (evento.divisao_id) {
-        const { data: divisaoData } = await supabaseAdmin
-          .from('divisoes')
-          .select('nome')
-          .eq('id', evento.divisao_id)
-          .single();
-        divisaoEventoNome = divisaoData?.nome || null;
-      }
-
-  // Verificar se é evento especial (CMD ou REGIONAL)
-  const isEspecial = isEventoEspecial(evento, divisaoEventoNome);
-  console.log('[manage-presenca] Evento Especial (CMD/Regional) detectado:', isEspecial);
-
-  // Se for evento especial, permitir acesso independentemente da divisão
-  if (isEspecial) {
-    console.log('[manage-presenca] Evento Especial (CMD/Regional) - permissão concedida para diretor_divisao');
-        // Pular validação de divisão para eventos CMD
-      } else {
-        // Validar se o evento é da mesma divisão (APENAS para eventos não-CMD)
-        if (evento.divisao_id !== userProfile.divisao_id) {
-          console.log('[manage-presenca] Diretor tentando editar evento de outra divisão');
-          return new Response(
-            JSON.stringify({ error: 'Você só pode gerenciar presenças de eventos da sua divisão' }),
-            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-      }
     }
 
     // Buscar nome do colete do usuário que está confirmando
@@ -190,92 +84,8 @@ function isEventoEspecial(evento: {
     // Executar ação
     if (action === 'initialize') {
       console.log('[manage-presenca] Inicializando lista de presença...');
-
-      // ========================================================================
-      // REGRA: Carga automática só pode ser executada por:
-      // - moderator (qualquer divisão)
-      // - diretor_divisao (apenas da MESMA divisão do evento, exceto CMD)
-      // ========================================================================
-
-      // Buscar dados do evento para verificar se é CMD
-      const { data: eventoInit, error: eventoInitError } = await supabaseAdmin
-        .from('eventos_agenda')
-        .select('divisao_id, titulo, tipo_evento')
-        .eq('id', evento_agenda_id)
-        .single();
-
-      if (eventoInitError || !eventoInit) {
-        console.error('[manage-presenca] Erro ao buscar evento:', eventoInitError);
-        return new Response(
-          JSON.stringify({ error: 'Evento não encontrado' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // Buscar nome da divisão do evento
-      let divisaoEventoNomeInit: string | null = null;
-      if (eventoInit.divisao_id) {
-        const { data: divisaoData } = await supabaseAdmin
-          .from('divisoes')
-          .select('nome')
-          .eq('id', eventoInit.divisao_id)
-          .single();
-        divisaoEventoNomeInit = divisaoData?.nome || null;
-      }
-
-  // Verificar se é evento especial (CMD ou REGIONAL)
-  const isEspecialInit = isEventoEspecial(eventoInit, divisaoEventoNomeInit);
-  console.log('[manage-presenca] Initialize - Evento Especial (CMD/Regional):', isEspecialInit);
-
-  // Validar permissão para carga automática
-  const isAdmin = roles.includes('admin');
-  const isModerator = roles.includes('moderator');
-  const isDiretorDivisao = roles.includes('diretor_divisao');
-
-  // Admin e Moderator podem inicializar qualquer evento
-  if (!isAdmin && !isModerator) {
-    // Se não é admin nem moderator, deve ser diretor_divisao
-    if (!isDiretorDivisao) {
-      console.log('[manage-presenca][initialize] Usuário sem permissão para carga automática');
-      return new Response(
-        JSON.stringify({ error: 'Apenas administradores, moderadores ou diretores de divisão podem inicializar listas de presença' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    // Se é diretor_divisao e NÃO é evento especial, validar se é da mesma divisão
-    if (!isEspecialInit) {
-      // Buscar divisão do usuário
-      const { data: userProfileInit, error: profileInitError } = await supabaseAdmin
-        .from('profiles')
-        .select('divisao_id')
-        .eq('id', user_id)
-        .single();
-      
-      if (profileInitError || !userProfileInit?.divisao_id) {
-        console.log('[manage-presenca][initialize] Diretor sem divisão atribuída');
-        return new Response(
-          JSON.stringify({ error: 'Você não possui divisão atribuída' }),
-          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      if (eventoInit.divisao_id !== userProfileInit.divisao_id) {
-        console.log('[manage-presenca][initialize] Diretor tentando inicializar evento de outra divisão');
-        return new Response(
-          JSON.stringify({ error: 'Apenas usuários pertencentes à divisão do evento podem inicializar esta lista de presença' }),
-          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    } else {
-      // Se for evento especial (CMD/Regional), diretor_divisao pode inicializar
-      console.log('[manage-presenca][initialize] Evento especial - diretor_divisao pode inicializar');
-    }
-  }
-
-      // ========================================================================
-      // FIM DA VALIDAÇÃO - Continua com a lógica existente de initialize
-      // ========================================================================
+      // Usuário já foi validado como autorizado (admin, moderator, regional, diretor_regional ou diretor_divisao)
+      // Qualquer role autorizada pode inicializar qualquer evento
       
       // Buscar nome da divisão
       const { data: divisao, error: divisaoError } = await supabaseAdmin

@@ -37,7 +37,12 @@ export const useCanManagePresenca = () => {
       const roles = userRoles?.map(r => r.role) || [];
       console.log('[useCanManagePresenca] Roles encontradas:', roles);
 
-      const hasPermission = roles.includes('admin') || roles.includes('moderator') || roles.includes('diretor_divisao');
+      const hasPermission = 
+        roles.includes('admin') || 
+        roles.includes('moderator') || 
+        roles.includes('regional') ||
+        roles.includes('diretor_regional') ||
+        roles.includes('diretor_divisao');
       setCanManage(hasPermission);
       setLoading(false);
     };
