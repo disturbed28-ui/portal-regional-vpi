@@ -90,7 +90,7 @@ export const useMovimentacoesIntegrantes = (options?: UseMovimentacoesOptions) =
         query = query.gte('created_at', options.dataInicio.toISOString());
       }
       if (options?.dataFim) {
-        query = query.lte('created_at', options.dataFim.toISOString() + 'T23:59:59');
+        query = query.lte('created_at', options.dataFim.toISOString());
       }
 
       const { data, error } = await query;
@@ -320,7 +320,7 @@ export const useSugestoesEntradasSaidas = (divisao: string | null, dataInicio: D
         `)
         .eq('campo_alterado', 'divisao_texto')
         .gte('created_at', dataInicio.toISOString())
-        .lte('created_at', dataFim.toISOString() + 'T23:59:59')
+        .lte('created_at', dataFim.toISOString())
         .order('created_at', { ascending: false });
 
       if (error) {

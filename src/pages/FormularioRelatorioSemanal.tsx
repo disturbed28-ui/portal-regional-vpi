@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Info, ArrowRightLeft } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Info, ArrowRightLeft, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,7 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useIntegrantes, useBuscaIntegrante, useBuscaIntegranteTodos } from "@/hooks/useIntegrantes";
-import { useSugestoesEntradasSaidas } from "@/hooks/useMovimentacoesIntegrantes";
+import { useMovimentacoesConsolidadas } from "@/hooks/useMovimentacoesConsolidadas";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { normalizeText, calcularSemanaOperacional, formatDateToSQL } from "@/lib/normalizeText";
@@ -23,10 +23,9 @@ const DIAS_SEMANA_NOMES = [
 ];
 
 // Componente auxiliar: Seção de Saídas
-const SecaoSaidas = ({ teveSaidas, setTeveSaidas, saidas, setSaidas, divisaoAtual, sugestoesSaidas }: any) => {
+const SecaoSaidas = ({ teveSaidas, setTeveSaidas, saidas, setSaidas, divisaoAtual, saidasAplicadasAuto }: any) => {
   const { acoes } = useAcoesResolucaoDelta();
   const [buscas, setBuscas] = useState<{ [key: number]: string }>({});
-  const [sugestoesAplicadas, setSugestoesAplicadas] = useState(false);
 
   const adicionarSaida = () => {
     setSaidas([...saidas, {
@@ -40,52 +39,18 @@ const SecaoSaidas = ({ teveSaidas, setTeveSaidas, saidas, setSaidas, divisaoAtua
     }]);
   };
 
-  // Aplicar sugestões automáticas
-  const aplicarSugestoes = () => {
-    if (!sugestoesSaidas || sugestoesSaidas.length === 0) return;
-    
-    const novasSaidas = sugestoesSaidas.map((s: any) => ({
-      integrante_id: s.integrante_id || "",
-      nome_colete: s.nome_colete,
-      data_saida: s.data_movimentacao?.split("T")[0] || "",
-      motivo_codigo: "TRANSFERENCIA",
-      justificativa: `Transferido para: ${s.valor_novo || "outra divisão"}`,
-      tem_moto: false,
-      tem_carro: false,
-      origem: "sugestao"
-    }));
-    
-    setSaidas([...saidas, ...novasSaidas]);
-    setSugestoesAplicadas(true);
-    setTeveSaidas(true);
-  };
-
   return (
     <Card className="p-4 sm:p-6 space-y-4">
       <h3 className="font-semibold">Saída de Integrantes</h3>
       
-      {/* Banner de sugestões automáticas */}
-      {sugestoesSaidas && sugestoesSaidas.length > 0 && !sugestoesAplicadas && (
-        <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800">
-          <ArrowRightLeft className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-          <AlertTitle className="text-blue-800 dark:text-blue-200">Transferências Detectadas</AlertTitle>
-          <AlertDescription className="text-blue-700 dark:text-blue-300">
-            {sugestoesSaidas.length} integrante(s) saíram desta divisão na semana:
-            <ul className="mt-1 text-sm list-disc list-inside">
-              {sugestoesSaidas.slice(0, 3).map((s: any) => (
-                <li key={s.id}>{s.nome_colete} → {s.valor_novo}</li>
-              ))}
-              {sugestoesSaidas.length > 3 && <li>...e mais {sugestoesSaidas.length - 3}</li>}
-            </ul>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="mt-2"
-              onClick={aplicarSugestoes}
-            >
-              Adicionar como saídas
-            </Button>
+      {/* Banner informativo se houve preenchimento automático */}
+      {saidasAplicadasAuto && saidas.length > 0 && saidas.some((s: any) => s.origem === 'automatico') && (
+        <Alert className="bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800">
+          <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+          <AlertTitle className="text-green-800 dark:text-green-200">Saídas Detectadas Automaticamente</AlertTitle>
+          <AlertDescription className="text-green-700 dark:text-green-300">
+            {saidas.filter((s: any) => s.origem === 'automatico').length} saída(s) foi(ram) preenchida(s) automaticamente. 
+            Revise e complete os dados conforme necessário.
           </AlertDescription>
         </Alert>
       )}
@@ -183,9 +148,9 @@ const ItemSaida = ({ saida, idx, acoes, saidas, setSaidas, busca, setBusca, divi
               Detectado na carga
             </span>
           )}
-          {saida.origem === "sugestao" && (
-            <span className="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2 py-0.5 rounded">
-              Sugestão automática
+          {(saida.origem === "sugestao" || saida.origem === "automatico") && (
+            <span className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-2 py-0.5 rounded">
+              Detectado automaticamente
             </span>
           )}
         </div>
@@ -517,14 +482,23 @@ const FormularioRelatorioSemanal = () => {
   const [estatisticas, setEstatisticas] = useState<any>(null);
   const [carregandoAcoesSociaisAuto, setCarregandoAcoesSociaisAuto] = useState(false);
 
-  // Calcular semana operacional para buscar sugestões
+  // Calcular semana operacional para buscar movimentações consolidadas
   const semanaOp = calcularSemanaOperacional();
   
-  // Hook para buscar sugestões de entradas/saídas baseado em movimentações
-  const { data: sugestoes } = useSugestoesEntradasSaidas(
-    divisaoSelecionada?.nome || null,
-    semanaOp?.periodo_inicio || null,
-    semanaOp?.periodo_fim || null
+  // Flag para controlar se já aplicou movimentações automáticas
+  const movimentacoesAplicadas = useRef(false);
+  const [saidasAplicadasAuto, setSaidasAplicadasAuto] = useState(false);
+  const [entradasAplicadasAuto, setEntradasAplicadasAuto] = useState(false);
+  
+  // Hook consolidado para buscar entradas/saídas
+  const { data: movimentacoesConsolidadas } = useMovimentacoesConsolidadas(
+    divisaoSelecionada?.nome && semanaOp 
+      ? {
+          divisao: divisaoSelecionada.nome,
+          dataInicio: semanaOp.periodo_inicio,
+          dataFim: semanaOp.periodo_fim
+        }
+      : null
   );
 
   // Calcular dia permitido
@@ -869,113 +843,67 @@ const FormularioRelatorioSemanal = () => {
     acoesSociais,
   ]);
 
-  // T6: Carregar entradas e saídas automaticamente da tabela deltas_pendentes
+  // T6: Carregar entradas e saídas automaticamente das movimentações consolidadas
   useEffect(() => {
-    const carregarEntradasSaidasDaSemana = async () => {
-      try {
-        // Não sobrescrever em modo de edição
-        if (modoEdicao === "editar") return;
-        
-        // Se já houver entradas ou saídas carregadas, não sobrescrever
-        if ((entradas && entradas.length > 0) || (saidas && saidas.length > 0)) return;
-        
-        // Precisamos ter divisaoSelecionada carregada
-        if (!divisaoSelecionada) return;
-        
-        const semana = calcularSemanaOperacional();
-        const divisaoNormalizada = normalizeText(divisaoSelecionada.nome);
-        
-        // Buscar NOVO_ATIVOS da semana (entradas reais)
-        // Inclui PENDENTE e RESOLVIDO - retornos de afastamento já são filtrados pelo sistema
-        const { data: deltasEntradas, error: errorEntradas } = await supabase
-          .from("deltas_pendentes")
-          .select("*")
-          .eq("tipo_delta", "NOVO_ATIVOS")
-          .gte("created_at", semana.periodo_inicio.toISOString())
-          .lte("created_at", semana.periodo_fim.toISOString() + "T23:59:59");
-        
-        // Buscar SUMIU_ATIVOS da semana (possíveis saídas)
-        // Inclui PENDENTE e RESOLVIDO para não perder saídas já confirmadas
-        const { data: deltasSaidas, error: errorSaidas } = await supabase
-          .from("deltas_pendentes")
-          .select("*")
-          .eq("tipo_delta", "SUMIU_ATIVOS")
-          .gte("created_at", semana.periodo_inicio.toISOString())
-          .lte("created_at", semana.periodo_fim.toISOString() + "T23:59:59");
-        
-        // Buscar NOVO_AFASTADOS do mesmo período para filtrar quem entrou em afastamento
-        const { data: novosAfastados, error: errorAfastados } = await supabase
-          .from("deltas_pendentes")
-          .select("registro_id")
-          .eq("tipo_delta", "NOVO_AFASTADOS")
-          .gte("created_at", semana.periodo_inicio.toISOString())
-          .lte("created_at", semana.periodo_fim.toISOString() + "T23:59:59");
-        
-        if (errorEntradas || errorSaidas || errorAfastados) {
-          console.error("[FormularioRelatorioSemanal] Erro ao carregar deltas:", errorEntradas || errorSaidas || errorAfastados);
-          return;
-        }
-        
-        // Criar Set de registro_ids que entraram em afastamento (não são saídas reais)
-        const registrosAfastados = new Set((novosAfastados || []).map(d => d.registro_id));
-        
-        // Filtrar entradas pela divisão normalizada
-        const entradasDivisao = (deltasEntradas || []).filter(d => 
-          normalizeText(d.divisao_texto) === divisaoNormalizada
-        );
-        
-        // Filtrar saídas: remover quem entrou em afastamento + filtrar por divisão
-        const saidasReais = (deltasSaidas || []).filter(d => 
-          normalizeText(d.divisao_texto) === divisaoNormalizada &&
-          !registrosAfastados.has(d.registro_id)
-        );
-        
-        // Mapear entradas para o formato do formulário
-        if (entradasDivisao.length > 0) {
-          const entradasMapeadas = entradasDivisao.map(d => ({
-            nome_colete: d.nome_colete,
-            data_entrada: (d.dados_adicionais as any)?.data_entrada || "",
-            motivo_entrada: "Novo",
-            possui_carro: false,
-            possui_moto: false,
-            nenhum: true,
-            origem: "delta",
-            delta_id: d.id
-          }));
-          setTeveEntradas(true);
-          setEntradas(entradasMapeadas);
-        }
-        
-        // Mapear saídas para o formato do formulário
-        if (saidasReais.length > 0) {
-          const saidasMapeadas = saidasReais.map(d => ({
-            integrante_id: "",
-            nome_colete: d.nome_colete,
-            data_saida: d.created_at?.split("T")[0] || "",
-            motivo_codigo: "",
-            justificativa: "",
-            tem_moto: false,
-            tem_carro: false,
-            origem: "delta",
-            delta_id: d.id
-          }));
-          setTeveSaidas(true);
-          setSaidas(saidasMapeadas);
-        }
-        
-        console.log("[FormularioRelatorioSemanal] Deltas carregados:", {
-          entradas: entradasDivisao.length,
-          saidas: saidasReais.length,
-          afastadosFiltrados: registrosAfastados.size
-        });
-        
-      } catch (error) {
-        console.error("[FormularioRelatorioSemanal] Erro ao carregar deltas:", error);
-      }
-    };
+    // Não sobrescrever em modo de edição
+    if (modoEdicao === "editar") return;
     
-    carregarEntradasSaidasDaSemana();
-  }, [divisaoSelecionada, modoEdicao, entradas, saidas]);
+    // Se já aplicamos movimentações ou já houver dados, não sobrescrever
+    if (movimentacoesAplicadas.current) return;
+    if ((entradas && entradas.length > 0) || (saidas && saidas.length > 0)) return;
+    
+    // Precisamos ter movimentações carregadas
+    if (!movimentacoesConsolidadas) return;
+    
+    const { entradas: entradasConsolidadas, saidas: saidasConsolidadas } = movimentacoesConsolidadas;
+    
+    // Marcar como já aplicado para evitar re-aplicação
+    movimentacoesAplicadas.current = true;
+    
+    // Mapear entradas para o formato do formulário
+    if (entradasConsolidadas.length > 0) {
+      const entradasMapeadas = entradasConsolidadas.map(m => ({
+        nome_colete: m.nome_colete,
+        data_entrada: m.data_movimentacao?.split("T")[0] || "",
+        motivo_entrada: m.tipo === 'REATIVACAO' ? 'Reativado' : 'Transferido',
+        possui_carro: false,
+        possui_moto: false,
+        nenhum: true,
+        origem: "automatico",
+        tipo_movimentacao: m.tipo,
+        detalhes: m.detalhes
+      }));
+      setTeveEntradas(true);
+      setEntradas(entradasMapeadas);
+      setEntradasAplicadasAuto(true);
+      console.log("[FormularioRelatorioSemanal] Entradas aplicadas automaticamente:", entradasMapeadas.length);
+    }
+    
+    // Mapear saídas para o formato do formulário
+    if (saidasConsolidadas.length > 0) {
+      const saidasMapeadas = saidasConsolidadas.map(m => ({
+        integrante_id: m.integrante_id || "",
+        nome_colete: m.nome_colete,
+        data_saida: m.data_movimentacao?.split("T")[0] || "",
+        motivo_codigo: m.tipo === 'INATIVACAO' ? 'INATIVACAO' : 'TRANSFERENCIA',
+        justificativa: m.detalhes || "",
+        tem_moto: false,
+        tem_carro: false,
+        origem: "automatico",
+        tipo_movimentacao: m.tipo
+      }));
+      setTeveSaidas(true);
+      setSaidas(saidasMapeadas);
+      setSaidasAplicadasAuto(true);
+      console.log("[FormularioRelatorioSemanal] Saídas aplicadas automaticamente:", saidasMapeadas.length);
+    }
+    
+    console.log("[FormularioRelatorioSemanal] Movimentações consolidadas aplicadas:", {
+      entradas: entradasConsolidadas.length,
+      saidas: saidasConsolidadas.length
+    });
+    
+  }, [movimentacoesConsolidadas, modoEdicao, entradas, saidas]);
 
   // Recarregar relatório existente quando divisão do relatório mudar
   useEffect(() => {
@@ -1312,40 +1240,14 @@ const FormularioRelatorioSemanal = () => {
         <Card className="p-4 sm:p-6 space-y-4">
           <h3 className="font-semibold">Entradas de Integrantes</h3>
           
-          {/* Banner de sugestões de entradas */}
-          {sugestoes?.entradas && sugestoes.entradas.length > 0 && entradas.length === 0 && !teveEntradas && (
+          {/* Banner informativo se houve preenchimento automático */}
+          {entradasAplicadasAuto && entradas.length > 0 && entradas.some((e: any) => e.origem === 'automatico') && (
             <Alert className="bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800">
-              <ArrowRightLeft className="h-4 w-4 text-green-600 dark:text-green-400" />
-              <AlertTitle className="text-green-800 dark:text-green-200">Transferências Detectadas</AlertTitle>
+              <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <AlertTitle className="text-green-800 dark:text-green-200">Entradas Detectadas Automaticamente</AlertTitle>
               <AlertDescription className="text-green-700 dark:text-green-300">
-                {sugestoes.entradas.length} integrante(s) entraram nesta divisão na semana:
-                <ul className="mt-1 text-sm list-disc list-inside">
-                  {sugestoes.entradas.slice(0, 3).map((s: any) => (
-                    <li key={s.id}>{s.nome_colete} (vindo de: {s.valor_anterior || "outra divisão"})</li>
-                  ))}
-                  {sugestoes.entradas.length > 3 && <li>...e mais {sugestoes.entradas.length - 3}</li>}
-                </ul>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="mt-2"
-                  onClick={() => {
-                    const novasEntradas = sugestoes.entradas.map((s: any) => ({
-                      nome_colete: s.nome_colete,
-                      data_entrada: s.data_movimentacao?.split("T")[0] || "",
-                      motivo_entrada: "Transferido",
-                      possui_carro: false,
-                      possui_moto: false,
-                      nenhum: true,
-                      origem: "sugestao"
-                    }));
-                    setEntradas([...entradas, ...novasEntradas]);
-                    setTeveEntradas(true);
-                  }}
-                >
-                  Adicionar como entradas
-                </Button>
+                {entradas.filter((e: any) => e.origem === 'automatico').length} entrada(s) foi(ram) preenchida(s) automaticamente baseada(s) em transferências detectadas.
+                Revise e complete os dados conforme necessário.
               </AlertDescription>
             </Alert>
           )}
@@ -1387,9 +1289,9 @@ const FormularioRelatorioSemanal = () => {
                           Detectado na carga
                         </span>
                       )}
-                      {entrada.origem === "sugestao" && (
+                      {(entrada.origem === "sugestao" || entrada.origem === "automatico") && (
                         <span className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-2 py-0.5 rounded">
-                          Sugestão automática
+                          Detectado automaticamente
                         </span>
                       )}
                     </div>
@@ -1536,7 +1438,7 @@ const FormularioRelatorioSemanal = () => {
           saidas={saidas}
           setSaidas={setSaidas}
           divisaoAtual={divisaoSelecionada?.nome}
-          sugestoesSaidas={sugestoes?.saidas || []}
+          saidasAplicadasAuto={saidasAplicadasAuto}
         />
 
         {/* Seção: Inadimplência */}
