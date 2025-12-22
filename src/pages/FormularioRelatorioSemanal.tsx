@@ -768,8 +768,8 @@ const FormularioRelatorioSemanal = () => {
           nome_colete: d.nome_colete,
           status: "Confirmado",
           justificativa_remocao: null,
-          // ✅ sempre normalizado (nunca "-" vindo de base)
-          acao_cobranca: normalizeAcaoCobranca(d.acao_cobranca),
+          // Campo preenchido manualmente pelo usuário - inicializa vazio
+          acao_cobranca: "",
         }))
       );
     };

@@ -11,19 +11,20 @@ Deno.serve(async (req) => {
 
   try {
     const requestSchema = z.object({
-      action: z.enum(['initialize', 'add', 'add_visitante_externo', 'remove']),
+      action: z.enum(['initialize', 'initialize_regional', 'initialize_divisao_cmd', 'add', 'add_visitante_externo', 'remove']),
       user_id: z.string().uuid('ID de usuário inválido'),
       evento_agenda_id: z.string().uuid('ID de evento inválido').optional(),
       integrante_id: z.string().uuid('ID de integrante inválido').optional(),
       profile_id: z.string().optional().nullable(),
       divisao_id: z.string().uuid('ID de divisão inválido').optional(),
+      regional_id: z.string().uuid('ID de regional inválido').optional(),
       justificativa_ausencia: z.enum(['saude', 'trabalho', 'familia', 'nao_justificado']).optional(),
       // Novos campos para visitante externo
       visitante_nome: z.string().min(1).optional(),
       visitante_tipo: z.enum(['externo']).optional(),
     });
 
-    const { action, user_id, evento_agenda_id, integrante_id, profile_id, divisao_id, justificativa_ausencia, visitante_nome, visitante_tipo } = requestSchema.parse(await req.json());
+    const { action, user_id, evento_agenda_id, integrante_id, profile_id, divisao_id, regional_id, justificativa_ausencia, visitante_nome, visitante_tipo } = requestSchema.parse(await req.json());
 
     // Criar cliente Supabase com service role (bypassa RLS)
     const supabaseAdmin = createClient(
@@ -37,7 +38,7 @@ Deno.serve(async (req) => {
       }
     );
 
-    console.log('[manage-presenca] user_id recebido:', user_id);
+    console.log('[manage-presenca] user_id recebido:', user_id, 'action:', action);
 
     // Verificar se o usuário tem role de admin ou moderator
     const { data: userRoles, error: rolesError } = await supabaseAdmin
@@ -81,11 +82,21 @@ Deno.serve(async (req) => {
     const confirmado_por_nome = userProfile?.nome_colete || user_id;
     console.log('[manage-presenca] Confirmado por:', confirmado_por_nome);
 
-    // Executar ação
+    // Função para remover acentos e normalizar texto
+    const normalizeText = (text: string) => {
+      return text
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ')
+        .toLowerCase()
+        .trim();
+    };
+
+    // ========================================================================
+    // ACTION: initialize - Inicializar lista de presença para DIVISÃO
+    // ========================================================================
     if (action === 'initialize') {
-      console.log('[manage-presenca] Inicializando lista de presença...');
-      // Usuário já foi validado como autorizado (admin, moderator, regional, diretor_regional ou diretor_divisao)
-      // Qualquer role autorizada pode inicializar qualquer evento
+      console.log('[manage-presenca] Inicializando lista de presença para divisão...');
       
       // Buscar nome da divisão
       const { data: divisao, error: divisaoError } = await supabaseAdmin
@@ -101,16 +112,6 @@ Deno.serve(async (req) => {
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
-      // Função para remover acentos e normalizar texto
-      const normalizeText = (text: string) => {
-        return text
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '')
-          .replace(/\s+/g, ' ') // Normaliza múltiplos espaços em um único
-          .toLowerCase()
-          .trim();
-      };
       
       // Buscar TODOS os integrantes ativos
       const { data: allIntegrantes, error: integrantesError } = await supabaseAdmin
@@ -130,7 +131,6 @@ Deno.serve(async (req) => {
       const divisaoNormalizada = normalizeText(divisao.nome);
       const integrantes = (allIntegrantes || []).filter(i => {
         const divisaoIntegranteNormalizada = normalizeText(i.divisao_texto || '');
-        // Match exato para evitar que "SJC Norte" pegue integrantes de "SJC Extremo Norte"
         return divisaoIntegranteNormalizada === divisaoNormalizada;
       });
       
@@ -174,6 +174,210 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ========================================================================
+    // ACTION: initialize_regional - Inicializar lista para EVENTO REGIONAL
+    // ========================================================================
+    if (action === 'initialize_regional') {
+      console.log('[manage-presenca] Inicializando lista para evento REGIONAL...');
+      
+      if (!regional_id) {
+        return new Response(
+          JSON.stringify({ error: 'regional_id é obrigatório para eventos regionais' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Buscar todas as divisões da regional
+      const { data: divisoes, error: divisoesError } = await supabaseAdmin
+        .from('divisoes')
+        .select('id, nome')
+        .eq('regional_id', regional_id);
+      
+      if (divisoesError) {
+        console.error('[manage-presenca] Erro ao buscar divisões:', divisoesError);
+        return new Response(
+          JSON.stringify({ error: 'Erro ao buscar divisões da regional' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      console.log('[manage-presenca] Divisões da regional:', divisoes?.length || 0);
+      
+      // Buscar TODOS os integrantes ativos da regional
+      const { data: integrantes, error: integrantesError } = await supabaseAdmin
+        .from('integrantes_portal')
+        .select('id, profile_id, divisao_texto')
+        .eq('ativo', true)
+        .eq('regional_id', regional_id);
+      
+      if (integrantesError) {
+        console.error('[manage-presenca] Erro ao buscar integrantes:', integrantesError);
+        return new Response(
+          JSON.stringify({ error: 'Erro ao buscar integrantes' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      console.log('[manage-presenca] Integrantes da regional:', integrantes?.length || 0);
+      
+      if (!integrantes || integrantes.length === 0) {
+        return new Response(
+          JSON.stringify({ success: true, count: 0 }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Criar registros de presença com status='ausente'
+      const presencasParaInserir = integrantes.map(i => ({
+        evento_agenda_id,
+        integrante_id: i.id,
+        profile_id: i.profile_id || null,
+        status: 'ausente',
+        confirmado_por: confirmado_por_nome,
+      }));
+      
+      const { data, error } = await supabaseAdmin
+        .from('presencas')
+        .insert(presencasParaInserir)
+        .select();
+      
+      if (error) {
+        console.error('[manage-presenca] Erro ao inicializar regional:', error);
+        return new Response(
+          JSON.stringify({ error: 'Erro ao inicializar lista regional' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      console.log(`[manage-presenca] Regional: ${data.length} registros criados`);
+      return new Response(
+        JSON.stringify({ success: true, count: data.length }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ========================================================================
+    // ACTION: initialize_divisao_cmd - Carregar divisão em EVENTO CMD
+    // ========================================================================
+    if (action === 'initialize_divisao_cmd') {
+      console.log('[manage-presenca] Carregando divisão para evento CMD...');
+      
+      if (!divisao_id) {
+        return new Response(
+          JSON.stringify({ error: 'divisao_id é obrigatório para carregar divisão em evento CMD' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Buscar nome da divisão
+      const { data: divisao, error: divisaoError } = await supabaseAdmin
+        .from('divisoes')
+        .select('nome')
+        .eq('id', divisao_id)
+        .single();
+      
+      if (divisaoError || !divisao) {
+        console.error('[manage-presenca] Erro ao buscar divisão:', divisaoError);
+        return new Response(
+          JSON.stringify({ error: 'Divisão não encontrada' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      const divisaoNormalizada = normalizeText(divisao.nome);
+      
+      // Verificar se já existem integrantes DESTA divisão no evento
+      const { data: presencasExistentes, error: checkError } = await supabaseAdmin
+        .from('presencas')
+        .select(`
+          id,
+          integrante:integrantes_portal (divisao_texto)
+        `)
+        .eq('evento_agenda_id', evento_agenda_id)
+        .not('integrante_id', 'is', null);
+      
+      if (checkError) {
+        console.error('[manage-presenca] Erro ao verificar presenças existentes:', checkError);
+        return new Response(
+          JSON.stringify({ error: 'Erro ao verificar presenças' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Verificar se alguma presença é da mesma divisão
+      const jaPossui = (presencasExistentes || []).some((p: any) => {
+        const divIntegrante = normalizeText(p.integrante?.divisao_texto || '');
+        return divIntegrante === divisaoNormalizada;
+      });
+      
+      if (jaPossui) {
+        console.log('[manage-presenca] Divisão já carregada neste evento CMD');
+        return new Response(
+          JSON.stringify({ success: true, already_loaded: true, count: 0 }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Buscar integrantes da divisão
+      const { data: allIntegrantes, error: integrantesError } = await supabaseAdmin
+        .from('integrantes_portal')
+        .select('id, profile_id, divisao_texto')
+        .eq('ativo', true);
+      
+      if (integrantesError) {
+        console.error('[manage-presenca] Erro ao buscar integrantes:', integrantesError);
+        return new Response(
+          JSON.stringify({ error: 'Erro ao buscar integrantes' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      const integrantes = (allIntegrantes || []).filter(i => {
+        const divisaoIntegranteNormalizada = normalizeText(i.divisao_texto || '');
+        return divisaoIntegranteNormalizada === divisaoNormalizada;
+      });
+      
+      console.log('[manage-presenca] CMD: Integrantes da divisão:', integrantes.length);
+      
+      if (integrantes.length === 0) {
+        return new Response(
+          JSON.stringify({ success: true, already_loaded: false, count: 0 }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Criar registros de presença
+      const presencasParaInserir = integrantes.map(i => ({
+        evento_agenda_id,
+        integrante_id: i.id,
+        profile_id: i.profile_id || null,
+        status: 'ausente',
+        confirmado_por: confirmado_por_nome,
+      }));
+      
+      const { data, error } = await supabaseAdmin
+        .from('presencas')
+        .insert(presencasParaInserir)
+        .select();
+      
+      if (error) {
+        console.error('[manage-presenca] Erro ao inserir:', error);
+        return new Response(
+          JSON.stringify({ error: 'Erro ao carregar divisão' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      console.log(`[manage-presenca] CMD: ${data.length} integrantes carregados`);
+      return new Response(
+        JSON.stringify({ success: true, already_loaded: false, count: data.length }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ========================================================================
+    // ACTION: add - Marcar como presente
+    // ========================================================================
     if (action === 'add') {
       console.log('[manage-presenca] Adicionando presença...');
       
@@ -193,7 +397,7 @@ Deno.serve(async (req) => {
           .eq('id', integrante_id)
           .single();
         
-        // Buscar dados do evento (incluindo campos para detectar CMD)
+        // Buscar dados do evento
         const { data: evento } = await supabaseAdmin
           .from('eventos_agenda')
           .select('divisao_id, titulo, tipo_evento')
@@ -211,83 +415,58 @@ Deno.serve(async (req) => {
           divisaoEvento = divisaoData?.nome || null;
         }
 
-    // ========================================================================
-    // REGRA: Integrantes cadastrados SEMPRE recebem status 'presente'
-    // Se a divisão for diferente, adiciona justificativa_tipo = '(outra divisão)'
-    // ========================================================================
-    
-    // Normalizar divisões para comparação
-    const divisaoIntegranteNorm = (integrante?.divisao_texto || '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim();
-    
-    const divisaoEventoNorm = (divisaoEvento || '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim();
-    
-    // Verificar se divisões são diferentes
-    const divisaoDiferente = divisaoEventoNorm && divisaoIntegranteNorm && 
-      divisaoIntegranteNorm !== divisaoEventoNorm;
-    
-    // Determinar justificativa_tipo
-    const justificativaTipo = divisaoDiferente ? '(outra divisão)' : null;
-    
-    console.log(`[manage-presenca] Integrante divisão: ${integrante?.divisao_texto}, Evento divisão: ${divisaoEvento}, Divisão diferente: ${divisaoDiferente}`);
+        // Normalizar divisões para comparação
+        const divisaoIntegranteNorm = normalizeText(integrante?.divisao_texto || '');
+        const divisaoEventoNorm = normalizeText(divisaoEvento || '');
         
-    // Atualizar registro - SEMPRE status 'presente' para integrantes cadastrados
-    const { data, error } = await supabaseAdmin
-      .from('presencas')
-      .update({ 
-        status: 'presente',
-        confirmado_em: new Date().toISOString(),
-        confirmado_por: confirmado_por_nome,
-        justificativa_ausencia: null,
-        justificativa_tipo: justificativaTipo,
-      })
-      .eq('id', existente.id)
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('[manage-presenca] Erro ao atualizar:', error);
-      return new Response(
-        JSON.stringify({ error: 'Erro ao atualizar presença' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    const tipoLog = divisaoDiferente ? 'presente (outra divisão)' : 'presente';
-    console.log(`[manage-presenca] Presença atualizada para ${tipoLog}`);
-    return new Response(
-      JSON.stringify({ success: true, data }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+        // Verificar se divisões são diferentes
+        const divisaoDiferente = divisaoEventoNorm && divisaoIntegranteNorm && 
+          divisaoIntegranteNorm !== divisaoEventoNorm;
+        
+        const justificativaTipo = divisaoDiferente ? '(outra divisão)' : null;
+        
+        console.log(`[manage-presenca] Integrante divisão: ${integrante?.divisao_texto}, Evento divisão: ${divisaoEvento}`);
+            
+        const { data, error } = await supabaseAdmin
+          .from('presencas')
+          .update({ 
+            status: 'presente',
+            confirmado_em: new Date().toISOString(),
+            confirmado_por: confirmado_por_nome,
+            justificativa_ausencia: null,
+            justificativa_tipo: justificativaTipo,
+          })
+          .eq('id', existente.id)
+          .select()
+          .single();
+        
+        if (error) {
+          console.error('[manage-presenca] Erro ao atualizar:', error);
+          return new Response(
+            JSON.stringify({ error: 'Erro ao atualizar presença' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        console.log(`[manage-presenca] Presença atualizada`);
+        return new Response(
+          JSON.stringify({ success: true, data }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       } else {
-        // ========================================================================
         // Não existe registro - criar novo
-        // REGRA: Integrantes cadastrados SEMPRE recebem status 'presente'
-        // Se a divisão for diferente, adiciona justificativa_tipo = '(outra divisão)'
-        // ========================================================================
-        
-        // Buscar dados do integrante para verificar sua divisão
         const { data: integranteNovo } = await supabaseAdmin
           .from('integrantes_portal')
           .select('divisao_texto')
           .eq('id', integrante_id)
           .single();
         
-        // Buscar dados do evento
         const { data: eventoNovo } = await supabaseAdmin
           .from('eventos_agenda')
           .select('divisao_id, titulo, tipo_evento')
           .eq('id', evento_agenda_id)
           .single();
         
-        // Buscar nome da divisão do evento
         let divisaoEventoNomeNovo: string | null = null;
         if (eventoNovo?.divisao_id) {
           const { data: divisaoData } = await supabaseAdmin
@@ -298,29 +477,14 @@ Deno.serve(async (req) => {
           divisaoEventoNomeNovo = divisaoData?.nome || null;
         }
         
-        // Normalizar divisões para comparação
-        const divisaoIntegranteNormNovo = (integranteNovo?.divisao_texto || '')
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '')
-          .toLowerCase()
-          .trim();
+        const divisaoIntegranteNormNovo = normalizeText(integranteNovo?.divisao_texto || '');
+        const divisaoEventoNormNovo = normalizeText(divisaoEventoNomeNovo || '');
         
-        const divisaoEventoNormNovo = (divisaoEventoNomeNovo || '')
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '')
-          .toLowerCase()
-          .trim();
-        
-        // Verificar se divisões são diferentes
         const divisaoDiferenteNovo = divisaoEventoNormNovo && divisaoIntegranteNormNovo && 
           divisaoIntegranteNormNovo !== divisaoEventoNormNovo;
         
-        // Determinar justificativa_tipo
         const justificativaTipoNovo = divisaoDiferenteNovo ? '(outra divisão)' : null;
         
-        console.log(`[manage-presenca] Novo registro - Integrante divisão: ${integranteNovo?.divisao_texto}, Evento divisão: ${divisaoEventoNomeNovo}, Divisão diferente: ${divisaoDiferenteNovo}`);
-        
-        // Inserir novo registro - SEMPRE status 'presente' para integrantes cadastrados
         const { data, error } = await supabaseAdmin
           .from('presencas')
           .insert({
@@ -342,8 +506,7 @@ Deno.serve(async (req) => {
           );
         }
         
-        const tipoPresencaNovo = divisaoDiferenteNovo ? 'presente (outra divisão)' : 'presente';
-        console.log(`[manage-presenca] Presença adicionada (${tipoPresencaNovo})`);
+        console.log('[manage-presenca] Presença adicionada');
         return new Response(
           JSON.stringify({ success: true, data }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -351,6 +514,9 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ========================================================================
+    // ACTION: remove - Marcar como ausente
+    // ========================================================================
     if (action === 'remove') {
       console.log('[manage-presenca] Marcando como ausente...', { justificativa_ausencia });
       
@@ -387,6 +553,9 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ========================================================================
+    // ACTION: add_visitante_externo
+    // ========================================================================
     if (action === 'add_visitante_externo') {
       console.log('[manage-presenca] Adicionando visitante externo...', { visitante_nome, visitante_tipo });
       
@@ -455,10 +624,10 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
-    logError('manage-presenca', error);
+
+    logError('manage-presenca', error, {});
     return new Response(
-      JSON.stringify({ error: 'Erro ao processar solicitação' }),
+      JSON.stringify({ error: 'Erro interno do servidor' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

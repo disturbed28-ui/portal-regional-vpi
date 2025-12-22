@@ -123,6 +123,58 @@ export const useEventoPresenca = (eventoId: string | null) => {
     return data;
   };
 
+  // Nova função para inicializar evento REGIONAL
+  const inicializarListaRegional = async (
+    eventoAgendaId: string,
+    regionalId: string,
+    userId: string
+  ) => {
+    console.log('[inicializarListaRegional] Inicializando...', { eventoAgendaId, regionalId });
+    
+    const { data, error } = await supabase.functions.invoke('manage-presenca', {
+      body: {
+        action: 'initialize_regional',
+        user_id: userId,
+        evento_agenda_id: eventoAgendaId,
+        regional_id: regionalId,
+      }
+    });
+    
+    if (error) {
+      console.error('[inicializarListaRegional] Erro:', error);
+      throw error;
+    }
+    
+    console.log(`[inicializarListaRegional] ${data.count} integrantes registrados`);
+    return data;
+  };
+
+  // Nova função para carregar divisão em evento CMD
+  const carregarDivisaoCMD = async (
+    eventoAgendaId: string,
+    divisaoId: string,
+    userId: string
+  ) => {
+    console.log('[carregarDivisaoCMD] Carregando...', { eventoAgendaId, divisaoId });
+    
+    const { data, error } = await supabase.functions.invoke('manage-presenca', {
+      body: {
+        action: 'initialize_divisao_cmd',
+        user_id: userId,
+        evento_agenda_id: eventoAgendaId,
+        divisao_id: divisaoId,
+      }
+    });
+    
+    if (error) {
+      console.error('[carregarDivisaoCMD] Erro:', error);
+      throw error;
+    }
+    
+    console.log(`[carregarDivisaoCMD] Resultado:`, data);
+    return data;
+  };
+
   const criarEvento = async (
     eventoGoogleId: string,
     titulo: string,
@@ -173,7 +225,7 @@ export const useEventoPresenca = (eventoId: string | null) => {
     console.log('[criarEvento] Evento criado com sucesso:', data);
     setEvento(data.data);
     
-    // Inicializar lista de presença após criar evento
+    // Inicializar lista de presença após criar evento (somente para eventos de DIVISÃO)
     if (data.data && divisaoId && userId) {
       try {
         await inicializarListaPresenca(data.data.id, divisaoId, userId);
@@ -346,6 +398,8 @@ export const useEventoPresenca = (eventoId: string | null) => {
     registrarPresenca,
     removerPresenca,
     registrarVisitanteExterno,
+    inicializarListaRegional,
+    carregarDivisaoCMD,
     refetch: fetchEvento,
   };
 };
