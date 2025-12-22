@@ -56,6 +56,74 @@ interface IntegranteDivisao {
   profile_id: string | null;
 }
 
+// Funções de ordenação FORA do componente para evitar recriação a cada render
+const romanToNumberLocal = (roman: string | null): number => {
+  if (!roman) return 999;
+  const romanMap: { [key: string]: number } = {
+    'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5,
+    'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10,
+    'XI': 11, 'XII': 12
+  };
+  return romanMap[roman.toUpperCase()] || 999;
+};
+
+const getCargoOrderLocal = (cargo: string | null, grau: string | null): number => {
+  if (!cargo) return 999;
+  const cargoLower = cargo.toLowerCase();
+  
+  if (grau === 'V') {
+    if (cargoLower.includes('diretor regional')) return 1;
+    if (cargoLower.includes('operacional regional')) return 2;
+    if (cargoLower.includes('social regional')) return 3;
+    if (cargoLower.includes('adm') && cargoLower.includes('regional')) return 4;
+    if (cargoLower.includes('comunicação') || cargoLower.includes('comunicacao')) return 5;
+  }
+  
+  if (grau === 'VI') {
+    if (cargoLower.includes('diretor') && cargoLower.includes('divisão')) return 1;
+    if (cargoLower.includes('sub diretor')) return 2;
+    if (cargoLower.includes('social') && cargoLower.includes('divisão')) return 3;
+    if (cargoLower.includes('adm') && cargoLower.includes('divisão')) return 4;
+    if (cargoLower.includes('armas') || cargoLower.includes('sgt')) return 5;
+  }
+  
+  return 999;
+};
+
+const ordenarPorHierarquiaLocal = (a: any, b: any) => {
+  const grauA = romanToNumberLocal(a.grau);
+  const grauB = romanToNumberLocal(b.grau);
+  
+  if (grauA !== grauB) return grauA - grauB;
+  
+  const getTipoGrau = (cargo: string | null): number => {
+    if (!cargo) return 3;
+    const cargoUpper = cargo.toUpperCase();
+    if (cargoUpper.includes('PP')) return 1;
+    if (cargoUpper.includes('FULL')) return 2;
+    return 3;
+  };
+  
+  const tipoA = getTipoGrau(a.cargo_nome);
+  const tipoB = getTipoGrau(b.cargo_nome);
+  
+  if (tipoA !== tipoB) return tipoA - tipoB;
+  
+  const ordemCargoA = getCargoOrderLocal(a.cargo_nome, a.grau);
+  const ordemCargoB = getCargoOrderLocal(b.cargo_nome, b.grau);
+  
+  if (ordemCargoA !== ordemCargoB) return ordemCargoA - ordemCargoB;
+  
+  const cargoA = a.cargo_nome || '';
+  const cargoB = b.cargo_nome || '';
+  
+  if (cargoA !== cargoB) return cargoA.localeCompare(cargoB, 'pt-BR');
+  
+  const nomeA = a.nome_colete || '';
+  const nomeB = b.nome_colete || '';
+  return nomeA.localeCompare(nomeB, 'pt-BR');
+};
+
 export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps) {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [nomeColeteSearch, setNomeColeteSearch] = useState("");
@@ -485,74 +553,6 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
 
   const startDate = new Date(event.start);
   
-  // Função para converter grau romano em número para ordenação
-  const romanToNumber = (roman: string | null): number => {
-    if (!roman) return 999;
-    const romanMap: { [key: string]: number } = {
-      'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5,
-      'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10,
-      'XI': 11, 'XII': 12
-    };
-    return romanMap[roman.toUpperCase()] || 999;
-  };
-
-  const getCargoOrder = (cargo: string | null, grau: string | null): number => {
-    if (!cargo) return 999;
-    const cargoLower = cargo.toLowerCase();
-    
-    if (grau === 'V') {
-      if (cargoLower.includes('diretor regional')) return 1;
-      if (cargoLower.includes('operacional regional')) return 2;
-      if (cargoLower.includes('social regional')) return 3;
-      if (cargoLower.includes('adm') && cargoLower.includes('regional')) return 4;
-      if (cargoLower.includes('comunicação') || cargoLower.includes('comunicacao')) return 5;
-    }
-    
-    if (grau === 'VI') {
-      if (cargoLower.includes('diretor') && cargoLower.includes('divisão')) return 1;
-      if (cargoLower.includes('sub diretor')) return 2;
-      if (cargoLower.includes('social') && cargoLower.includes('divisão')) return 3;
-      if (cargoLower.includes('adm') && cargoLower.includes('divisão')) return 4;
-      if (cargoLower.includes('armas') || cargoLower.includes('sgt')) return 5;
-    }
-    
-    return 999;
-  };
-
-  const ordenarPorHierarquia = (a: any, b: any) => {
-    const grauA = romanToNumber(a.grau);
-    const grauB = romanToNumber(b.grau);
-    
-    if (grauA !== grauB) return grauA - grauB;
-    
-    const getTipoGrau = (cargo: string | null): number => {
-      if (!cargo) return 3;
-      const cargoUpper = cargo.toUpperCase();
-      if (cargoUpper.includes('PP')) return 1;
-      if (cargoUpper.includes('FULL')) return 2;
-      return 3;
-    };
-    
-    const tipoA = getTipoGrau(a.cargo_nome);
-    const tipoB = getTipoGrau(b.cargo_nome);
-    
-    if (tipoA !== tipoB) return tipoA - tipoB;
-    
-    const ordemCargoA = getCargoOrder(a.cargo_nome, a.grau);
-    const ordemCargoB = getCargoOrder(b.cargo_nome, b.grau);
-    
-    if (ordemCargoA !== ordemCargoB) return ordemCargoA - ordemCargoB;
-    
-    const cargoA = a.cargo_nome || '';
-    const cargoB = b.cargo_nome || '';
-    
-    if (cargoA !== cargoB) return cargoA.localeCompare(cargoB, 'pt-BR');
-    
-    const nomeA = a.nome_colete || '';
-    const nomeB = b.nome_colete || '';
-    return nomeA.localeCompare(nomeB, 'pt-BR');
-  };
-  
   // Separar por status e ordenar - MEMOIZADO para evitar loop infinito
   const { presentes, visitantes, todosPresentes, ausentes, totalDivisao } = useMemo(() => {
     const _presentes = presencas
@@ -562,7 +562,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
         presencaId: p.id,
         isVisitante: false,
       }))
-      .sort(ordenarPorHierarquia);
+      .sort(ordenarPorHierarquiaLocal);
 
     const _visitantesInternos = presencas
       .filter(p => p.status === 'visitante' && p.integrante_id !== null)
@@ -572,7 +572,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
         isVisitante: true,
         isExterno: false,
       }))
-      .sort(ordenarPorHierarquia);
+      .sort(ordenarPorHierarquiaLocal);
 
     const _visitantesExternos = presencas
       .filter(p => p.status === 'visitante' && p.integrante_id === null)
@@ -598,7 +598,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
         presencaId: p.id,
         justificativa_ausencia: p.justificativa_ausencia,
       }))
-      .sort(ordenarPorHierarquia);
+      .sort(ordenarPorHierarquiaLocal);
 
     return {
       presentes: _presentes,
