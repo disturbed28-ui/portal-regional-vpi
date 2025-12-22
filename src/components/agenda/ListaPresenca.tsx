@@ -553,53 +553,61 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     return nomeA.localeCompare(nomeB, 'pt-BR');
   };
   
-  // Separar por status e ordenar
-  const presentes = presencas
-    .filter(p => p.status === 'presente')
-    .map(p => ({
-      ...p.integrante,
-      presencaId: p.id,
-      isVisitante: false,
-    }))
-    .sort(ordenarPorHierarquia);
+  // Separar por status e ordenar - MEMOIZADO para evitar loop infinito
+  const { presentes, visitantes, todosPresentes, ausentes, totalDivisao } = useMemo(() => {
+    const _presentes = presencas
+      .filter(p => p.status === 'presente')
+      .map(p => ({
+        ...p.integrante,
+        presencaId: p.id,
+        isVisitante: false,
+      }))
+      .sort(ordenarPorHierarquia);
 
-  const visitantesInternos = presencas
-    .filter(p => p.status === 'visitante' && p.integrante_id !== null)
-    .map(p => ({
-      ...p.integrante!,
-      presencaId: p.id,
-      isVisitante: true,
-      isExterno: false,
-    }))
-    .sort(ordenarPorHierarquia);
+    const _visitantesInternos = presencas
+      .filter(p => p.status === 'visitante' && p.integrante_id !== null)
+      .map(p => ({
+        ...p.integrante!,
+        presencaId: p.id,
+        isVisitante: true,
+        isExterno: false,
+      }))
+      .sort(ordenarPorHierarquia);
 
-  const visitantesExternos = presencas
-    .filter(p => p.status === 'visitante' && p.integrante_id === null)
-    .map(p => ({
-      id: p.id,
-      nome_colete: p.visitante_nome || 'Visitante Externo',
-      cargo_nome: null,
-      grau: null,
-      divisao_texto: 'Externo',
-      profile_id: null,
-      presencaId: p.id,
-      isVisitante: true,
-      isExterno: true,
-    }));
+    const _visitantesExternos = presencas
+      .filter(p => p.status === 'visitante' && p.integrante_id === null)
+      .map(p => ({
+        id: p.id,
+        nome_colete: p.visitante_nome || 'Visitante Externo',
+        cargo_nome: null,
+        grau: null,
+        divisao_texto: 'Externo',
+        profile_id: null,
+        presencaId: p.id,
+        isVisitante: true,
+        isExterno: true,
+      }));
 
-  const visitantes = [...visitantesInternos, ...visitantesExternos];
-  const todosPresentes = [...presentes, ...visitantes];
+    const _visitantes = [..._visitantesInternos, ..._visitantesExternos];
+    const _todosPresentes = [..._presentes, ..._visitantes];
 
-  const ausentes = presencas
-    .filter(p => p.status === 'ausente')
-    .map(p => ({
-      ...p.integrante,
-      presencaId: p.id,
-      justificativa_ausencia: p.justificativa_ausencia,
-    }))
-    .sort(ordenarPorHierarquia);
+    const _ausentes = presencas
+      .filter(p => p.status === 'ausente')
+      .map(p => ({
+        ...p.integrante,
+        presencaId: p.id,
+        justificativa_ausencia: p.justificativa_ausencia,
+      }))
+      .sort(ordenarPorHierarquia);
 
-  const totalDivisao = presentes.length + ausentes.length;
+    return {
+      presentes: _presentes,
+      visitantes: _visitantes,
+      todosPresentes: _todosPresentes,
+      ausentes: _ausentes,
+      totalDivisao: _presentes.length + _ausentes.length,
+    };
+  }, [presencas]);
 
   // Agrupar por divisão para eventos Regional/CMD
   const presencasAgrupadasPorDivisao = useMemo(() => {
