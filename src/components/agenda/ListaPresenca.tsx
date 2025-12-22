@@ -540,21 +540,23 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     setDivisoesExpandidas(novas);
   };
 
-  // Não renderizar durante carregamento ou sem permissão
-  if (loadingScreenAccessLista) {
-    return null;
-  }
+  // ==========================================
+  // TODOS OS useMemo ANTES DOS EARLY RETURNS
+  // para respeitar a regra de hooks do React
+  // ==========================================
 
-  if (!hasScreenAccessLista) {
-    return null;
-  }
-
-  if (!event) return null;
-
-  const startDate = new Date(event.start);
-  
   // Separar por status e ordenar - MEMOIZADO para evitar loop infinito
   const { presentes, visitantes, todosPresentes, ausentes, totalDivisao } = useMemo(() => {
+    if (!presencas || presencas.length === 0) {
+      return {
+        presentes: [],
+        visitantes: [],
+        todosPresentes: [],
+        ausentes: [],
+        totalDivisao: 0,
+      };
+    }
+
     const _presentes = presencas
       .filter(p => p.status === 'presente')
       .map(p => ({
@@ -609,7 +611,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     };
   }, [presencas]);
 
-  // Agrupar por divisão para eventos Regional/CMD - usando presencas como dependência
+  // Agrupar por divisão para eventos Regional/CMD
   const presencasAgrupadasPorDivisao = useMemo(() => {
     if (!isRegional && !isCMD) return null;
     
@@ -628,7 +630,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     });
     
     return grupos;
-  }, [presencas, isRegional, isCMD]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isRegional, isCMD, todosPresentes, ausentes]);
 
   // Lista de divisões únicas para o filtro
   const divisoesUnicas = useMemo(() => {
@@ -647,7 +649,23 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
       presentes: grupo?.presentes || [],
       ausentes: grupo?.ausentes || [],
     };
-  }, [filtroDivisao, presencasAgrupadasPorDivisao, presencas]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [filtroDivisao, presencasAgrupadasPorDivisao, todosPresentes, ausentes]);
+
+  // ==========================================
+  // EARLY RETURNS (após todos os hooks)
+  // ==========================================
+  
+  if (loadingScreenAccessLista) {
+    return null;
+  }
+
+  if (!hasScreenAccessLista) {
+    return null;
+  }
+
+  if (!event) return null;
+
+  const startDate = new Date(event.start);
 
   // Renderização de integrante para cards mobile
   const renderIntegranteCardPresente = (integrante: any) => (
