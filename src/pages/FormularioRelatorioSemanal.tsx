@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Info, ArrowRightLeft, Check } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
-import { useIntegrantes, useBuscaIntegrante, useBuscaIntegranteTodos } from "@/hooks/useIntegrantes";
+import { useBuscaIntegrante, useBuscaIntegranteTodos } from "@/hooks/useIntegrantes";
 import { useMovimentacoesConsolidadas } from "@/hooks/useMovimentacoesConsolidadas";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -16,49 +16,78 @@ import { normalizeText, calcularSemanaOperacional, formatDateToSQL } from "@/lib
 import { cn } from "@/lib/utils";
 import { useSubmitRelatorioSemanal, SubmitRelatorioParams } from "@/hooks/useRelatorioSemanal";
 import { useAcoesResolucaoDelta } from "@/hooks/useAcoesResolucaoDelta";
+
 // Constante com nomes de dias da semana
 const DIAS_SEMANA_NOMES = [
-  'Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 
-  'Quinta-feira', 'Sexta-feira', 'Sábado'
+  "Domingo",
+  "Segunda-feira",
+  "Terça-feira",
+  "Quarta-feira",
+  "Quinta-feira",
+  "Sexta-feira",
+  "Sábado",
 ];
 
+// Helpers (novos): normalizacao e validacao de acao de cobranca
+const normalizeAcaoCobranca = (v?: string | null) => {
+  const s = (v ?? "").trim();
+  return s === "-" ? "" : s;
+};
+
+const isAcaoCobrancaValida = (v?: string | null) => {
+  const s = (v ?? "").trim();
+  return s.length > 0 && s !== "-";
+};
+
 // Componente auxiliar: Seção de Saídas
-const SecaoSaidas = ({ teveSaidas, setTeveSaidas, saidas, setSaidas, divisaoAtual, saidasAplicadasAuto }: any) => {
+const SecaoSaidas = ({
+  teveSaidas,
+  setTeveSaidas,
+  saidas,
+  setSaidas,
+  divisaoAtual,
+  saidasAplicadasAuto,
+}: any) => {
   const { acoes } = useAcoesResolucaoDelta();
   const [buscas, setBuscas] = useState<{ [key: number]: string }>({});
 
   const adicionarSaida = () => {
-    setSaidas([...saidas, {
-      integrante_id: "",
-      nome_colete: "",
-      data_saida: "",
-      motivo_codigo: "",
-      justificativa: "",
-      tem_moto: false,
-      tem_carro: false
-    }]);
+    setSaidas([
+      ...saidas,
+      {
+        integrante_id: "",
+        nome_colete: "",
+        data_saida: "",
+        motivo_codigo: "",
+        justificativa: "",
+        tem_moto: false,
+        tem_carro: false,
+      },
+    ]);
   };
 
   return (
     <Card className="p-4 sm:p-6 space-y-4">
       <h3 className="font-semibold">Saída de Integrantes</h3>
-      
+
       {/* Banner informativo se houve preenchimento automático */}
-      {saidasAplicadasAuto && saidas.length > 0 && saidas.some((s: any) => s.origem === 'automatico') && (
+      {saidasAplicadasAuto && saidas.length > 0 && saidas.some((s: any) => s.origem === "automatico") && (
         <Alert className="bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800">
           <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
-          <AlertTitle className="text-green-800 dark:text-green-200">Saídas Detectadas Automaticamente</AlertTitle>
+          <AlertTitle className="text-green-800 dark:text-green-200">
+            Saídas Detectadas Automaticamente
+          </AlertTitle>
           <AlertDescription className="text-green-700 dark:text-green-300">
-            {saidas.filter((s: any) => s.origem === 'automatico').length} saída(s) foi(ram) preenchida(s) automaticamente. 
-            Revise e complete os dados conforme necessário.
+            {saidas.filter((s: any) => s.origem === "automatico").length} saída(s) foi(ram) preenchida(s)
+            automaticamente. Revise e complete os dados conforme necessário.
           </AlertDescription>
         </Alert>
       )}
-      
+
       <div className="space-y-2">
         <p className="text-sm text-muted-foreground">Houve saída de integrantes nesta semana?</p>
         <div className="flex gap-2">
-          <Button 
+          <Button
             type="button"
             variant={teveSaidas ? "default" : "outline"}
             className="min-h-[44px]"
@@ -66,7 +95,7 @@ const SecaoSaidas = ({ teveSaidas, setTeveSaidas, saidas, setSaidas, divisaoAtua
           >
             Sim
           </Button>
-          <Button 
+          <Button
             type="button"
             variant={!teveSaidas ? "default" : "outline"}
             className="min-h-[44px]"
@@ -96,12 +125,7 @@ const SecaoSaidas = ({ teveSaidas, setTeveSaidas, saidas, setSaidas, divisaoAtua
             />
           ))}
 
-          <Button
-            type="button"
-            variant="outline"
-            className="min-h-[44px]"
-            onClick={adicionarSaida}
-          >
+          <Button type="button" variant="outline" className="min-h-[44px]" onClick={adicionarSaida}>
             <Plus className="h-4 w-4 mr-2" />
             Adicionar Saída
           </Button>
@@ -130,12 +154,27 @@ const ItemSaida = ({ saida, idx, acoes, saidas, setSaidas, busca, setBusca, divi
   // Função para determinar badge de status
   const getStatusBadge = (integrante: any) => {
     if (!integrante.ativo) {
-      return <Badge variant="destructive" className="ml-2 text-xs">Inativo</Badge>;
+      return (
+        <Badge variant="destructive" className="ml-2 text-xs">
+          Inativo
+        </Badge>
+      );
     }
     if (divisaoAtual && integrante.divisao_texto !== divisaoAtual) {
-      return <Badge variant="secondary" className="ml-2 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">Transferido</Badge>;
+      return (
+        <Badge
+          variant="secondary"
+          className="ml-2 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+        >
+          Transferido
+        </Badge>
+      );
     }
-    return <Badge variant="outline" className="ml-2 text-xs">Ativo</Badge>;
+    return (
+      <Badge variant="outline" className="ml-2 text-xs">
+        Ativo
+      </Badge>
+    );
   };
 
   return (
@@ -163,7 +202,7 @@ const ItemSaida = ({ saida, idx, acoes, saidas, setSaidas, busca, setBusca, divi
           <Trash2 className="h-4 w-4" />
         </Button>
       </div>
-      
+
       <div className="space-y-3">
         <div className="relative">
           <label className="text-xs text-muted-foreground">Nome de Colete</label>
@@ -269,18 +308,12 @@ const ItemSaida = ({ saida, idx, acoes, saidas, setSaidas, busca, setBusca, divi
 };
 
 // Componente auxiliar: Seção de Inadimplência
-const SecaoInadimplencia = ({ inadimplencias, setInadimplencias, divisaoSelecionada }: any) => {
+const SecaoInadimplencia = ({ inadimplencias, setInadimplencias }: any) => {
   const [buscaManual, setBuscaManual] = useState("");
   const [acaoCobranca, setAcaoCobranca] = useState("");
   const { resultados } = useBuscaIntegrante(buscaManual);
   const [mostrarResultados, setMostrarResultados] = useState(false);
   const [integranteSelecionado, setIntegranteSelecionado] = useState<any | null>(null);
-
-  const removerDevedor = (idx: number) => {
-    const novo = [...inadimplencias];
-    novo[idx].status = "Removido";
-    setInadimplencias(novo);
-  };
 
   const adicionarManual = () => {
     if (!integranteSelecionado) {
@@ -288,21 +321,21 @@ const SecaoInadimplencia = ({ inadimplencias, setInadimplencias, divisaoSelecion
       return;
     }
 
-    if (!acaoCobranca) {
+    if (!isAcaoCobrancaValida(acaoCobranca)) {
       alert("Preencha a ação de cobrança antes de adicionar.");
       return;
     }
-    
+
     setInadimplencias([
       ...inadimplencias,
       {
         nome_colete: integranteSelecionado.nome_colete,
         status: "Adicionado_manual",
-        acao_cobranca: acaoCobranca,
-        justificativa_remocao: null
-      }
+        acao_cobranca: normalizeAcaoCobranca(acaoCobranca),
+        justificativa_remocao: null,
+      },
     ]);
-    
+
     setBuscaManual("");
     setAcaoCobranca("");
     setIntegranteSelecionado(null);
@@ -312,13 +345,17 @@ const SecaoInadimplencia = ({ inadimplencias, setInadimplencias, divisaoSelecion
   return (
     <Card className="p-4 sm:p-6 space-y-4">
       <h3 className="font-semibold">Inadimplência / Mensalidades</h3>
-      
+
       {inadimplencias.length > 0 && (
         <div className="space-y-3">
           <p className="text-sm font-medium">Devedores da Divisão:</p>
           <p className="text-xs text-muted-foreground">
             Confirme abaixo os devedores e registre qual ação de cobrança está sendo tomada com cada um.
+            <span className="ml-1 font-medium text-amber-700 dark:text-amber-300">
+              (Campo obrigatório)
+            </span>
           </p>
+
           {inadimplencias.map((inad: any, idx: number) => {
             const getStatusLabel = () => {
               if (inad.status === "Removido") return "Removido (justificado)";
@@ -327,29 +364,28 @@ const SecaoInadimplencia = ({ inadimplencias, setInadimplencias, divisaoSelecion
               return inad.status || "—";
             };
 
+            const acaoValida = isAcaoCobrancaValida(inad.acao_cobranca);
+
             return (
               <Card key={idx} className="p-3 bg-muted/50">
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="font-medium text-sm">{inad.nome_colete}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Status: {getStatusLabel()}
-                    </p>
+                    <p className="text-xs text-muted-foreground">Status: {getStatusLabel()}</p>
                     {inad.justificativa_remocao && (
                       <p className="text-xs mt-2 p-2 bg-background rounded">
                         Justificativa: {inad.justificativa_remocao}
                       </p>
                     )}
                   </div>
+
                   {inad.status !== "Removido" && (
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        const justificativa = prompt(
-                          "Por que este devedor deve ser removido da lista?"
-                        );
+                        const justificativa = prompt("Por que este devedor deve ser removido da lista?");
                         if (justificativa) {
                           const novo = [...inadimplencias];
                           novo[idx].status = "Removido";
@@ -366,19 +402,24 @@ const SecaoInadimplencia = ({ inadimplencias, setInadimplencias, divisaoSelecion
                 {inad.status !== "Removido" && (
                   <div className="mt-3">
                     <label className="text-xs text-muted-foreground">
-                      Qual ação está sendo tomada para este devedor?
+                      Qual ação está sendo tomada para este devedor? <span className="text-red-600">*</span>
                     </label>
                     <Textarea
-                      className="w-full mt-1"
+                      className={cn("w-full mt-1", !acaoValida && "border border-red-500")}
                       rows={2}
                       value={inad.acao_cobranca || ""}
                       onChange={(e) => {
                         const novo = [...inadimplencias];
-                        novo[idx].acao_cobranca = e.target.value;
+                        novo[idx].acao_cobranca = normalizeAcaoCobranca(e.target.value);
                         setInadimplencias(novo);
                       }}
                       placeholder="Descreva a ação de cobrança (contato, prazo, tratativa, etc.)..."
                     />
+                    {!acaoValida && (
+                      <p className="text-xs mt-1 text-red-600">
+                        Obrigatório preencher a ação de cobrança (não pode ficar vazio ou “-”).
+                      </p>
+                    )}
                   </div>
                 )}
               </Card>
@@ -427,22 +468,20 @@ const SecaoInadimplencia = ({ inadimplencias, setInadimplencias, divisaoSelecion
         </div>
 
         <div>
-          <label className="text-xs text-muted-foreground">Qual ação está sendo tomada?</label>
+          <label className="text-xs text-muted-foreground">
+            Qual ação está sendo tomada? <span className="text-red-600">*</span>
+          </label>
           <Textarea
-            className="w-full mt-1"
+            className={cn("w-full mt-1", !isAcaoCobrancaValida(acaoCobranca) && acaoCobranca.length > 0 && "border border-red-500")}
             rows={2}
             value={acaoCobranca}
-            onChange={(e) => setAcaoCobranca(e.target.value)}
+            onChange={(e) => setAcaoCobranca(normalizeAcaoCobranca(e.target.value))}
             placeholder="Descreva a ação de cobrança..."
           />
         </div>
 
         <div className="mt-3 flex justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={adicionarManual}
-          >
+          <Button type="button" variant="outline" onClick={adicionarManual}>
             Adicionar Devedor
           </Button>
         </div>
@@ -466,14 +505,14 @@ const FormularioRelatorioSemanal = () => {
   const [formularioId, setFormularioId] = useState<string | null>(null);
   const [formConfig, setFormConfig] = useState<any>(null);
   const [existingReport, setExistingReport] = useState<any>(null);
-  const [modoEdicao, setModoEdicao] = useState<'nova' | 'editar' | null>(null);
-  
+  const [modoEdicao, setModoEdicao] = useState<"nova" | "editar" | null>(null);
+
   // Seções do formulário
   const [teveEntradas, setTeveEntradas] = useState(false);
   const [teveSaidas, setTeveSaidas] = useState(false);
   const [teveConflitos, setTeveConflitos] = useState(false);
   const [teveAcoesSociais, setTeveAcoesSociais] = useState(false);
-  
+
   const [entradas, setEntradas] = useState<any[]>([]);
   const [saidas, setSaidas] = useState<any[]>([]);
   const [inadimplencias, setInadimplencias] = useState<any[]>([]);
@@ -484,19 +523,19 @@ const FormularioRelatorioSemanal = () => {
 
   // Calcular semana operacional para buscar movimentações consolidadas
   const semanaOp = calcularSemanaOperacional();
-  
+
   // Flag para controlar se já aplicou movimentações automáticas
   const movimentacoesAplicadas = useRef(false);
   const [saidasAplicadasAuto, setSaidasAplicadasAuto] = useState(false);
   const [entradasAplicadasAuto, setEntradasAplicadasAuto] = useState(false);
-  
+
   // Hook consolidado para buscar entradas/saídas
   const { data: movimentacoesConsolidadas } = useMovimentacoesConsolidadas(
-    divisaoSelecionada?.nome && semanaOp 
+    divisaoSelecionada?.nome && semanaOp
       ? {
           divisao: divisaoSelecionada.nome,
           dataInicio: semanaOp.periodo_inicio,
-          dataFim: semanaOp.periodo_fim
+          dataFim: semanaOp.periodo_fim,
         }
       : null
   );
@@ -505,18 +544,17 @@ const FormularioRelatorioSemanal = () => {
   const hoje = new Date();
   const diaHoje = hoje.getDay(); // 0=Dom, 1=Seg, ..., 6=Sab
   const diasPermitidos = formConfig?.dias_semana;
-  const hojePermitido = !diasPermitidos || 
-                        diasPermitidos.length === 0 || 
-                        diasPermitidos.includes(diaHoje);
+  const hojePermitido =
+    !diasPermitidos || diasPermitidos.length === 0 || diasPermitidos.includes(diaHoje);
 
   // Log de diagnóstico
-  console.log('[FormularioRelatorioSemanal] Dia hoje:', diaHoje, DIAS_SEMANA_NOMES[diaHoje]);
-  console.log('[FormularioRelatorioSemanal] Dias permitidos:', diasPermitidos);
-  console.log('[FormularioRelatorioSemanal] Hoje permitido?', hojePermitido);
-  console.log('[FormularioRelatorioSemanal] Limite respostas:', formConfig?.limite_respostas);
-  console.log('[FormularioRelatorioSemanal] Relatório existente:', existingReport?.id);
-  console.log('[FormularioRelatorioSemanal] Divisão selecionada:', divisaoSelecionada?.nome, divisaoSelecionada?.id);
-  console.log('[FormularioRelatorioSemanal] Responsável do relatório existente:', existingReport?.responsavel_nome_colete);
+  console.log("[FormularioRelatorioSemanal] Dia hoje:", diaHoje, DIAS_SEMANA_NOMES[diaHoje]);
+  console.log("[FormularioRelatorioSemanal] Dias permitidos:", diasPermitidos);
+  console.log("[FormularioRelatorioSemanal] Hoje permitido?", hojePermitido);
+  console.log("[FormularioRelatorioSemanal] Limite respostas:", formConfig?.limite_respostas);
+  console.log("[FormularioRelatorioSemanal] Relatório existente:", existingReport?.id);
+  console.log("[FormularioRelatorioSemanal] Divisão selecionada:", divisaoSelecionada?.nome, divisaoSelecionada?.id);
+  console.log("[FormularioRelatorioSemanal] Responsável do relatório existente:", existingReport?.responsavel_nome_colete);
 
   // T6: Carregar dados iniciais do responsável
   useEffect(() => {
@@ -526,52 +564,50 @@ const FormularioRelatorioSemanal = () => {
       try {
         // Buscar integrante pelo profile_id
         const { data: integrante, error: integranteError } = await supabase
-          .from('integrantes_portal')
-          .select('*')
-          .eq('profile_id', user.id)
-          .eq('ativo', true)
+          .from("integrantes_portal")
+          .select("*")
+          .eq("profile_id", user.id)
+          .eq("ativo", true)
           .single();
 
         if (integranteError) throw integranteError;
 
         // Buscar regional usando normalização de texto
         const regionalNormalizado = normalizeText(integrante.regional_texto);
-        const { data: regionais, error: regionaisError } = await supabase
-          .from('regionais')
-          .select('*');
+        const { data: regionais, error: regionaisError } = await supabase.from("regionais").select("*");
 
         if (regionaisError) throw regionaisError;
 
-        const regional = regionais?.find(r => normalizeText(r.nome) === regionalNormalizado);
+        const regional = regionais?.find((r) => normalizeText(r.nome) === regionalNormalizado);
 
         if (!regional) {
           toast({
             title: "Erro",
             description: "Regional não encontrada",
-            variant: "destructive"
+            variant: "destructive",
           });
           return;
         }
 
         // Buscar divisões da regional
         const { data: divisoes, error: divisoesError } = await supabase
-          .from('divisoes')
-          .select('*')
-          .eq('regional_id', regional.id);
+          .from("divisoes")
+          .select("*")
+          .eq("regional_id", regional.id);
 
         if (divisoesError) throw divisoesError;
 
         // Encontrar divisão do integrante
         const divisaoNormalizada = normalizeText(integrante.divisao_texto);
-        const divisaoIntegrante = divisoes?.find(d => normalizeText(d.nome) === divisaoNormalizada);
+        const divisaoIntegrante = divisoes?.find((d) => normalizeText(d.nome) === divisaoNormalizada);
 
         // Buscar formulário COM todos os campos relevantes
         const { data: formulario, error: formularioError } = await supabase
-          .from('formularios_catalogo')
-          .select('id, dias_semana, limite_respostas, periodicidade')
-          .eq('link_interno', '/formularios/relatorio-semanal-divisao')
-          .eq('regional_id', regional.id)
-          .eq('ativo', true)
+          .from("formularios_catalogo")
+          .select("id, dias_semana, limite_respostas, periodicidade")
+          .eq("link_interno", "/formularios/relatorio-semanal-divisao")
+          .eq("regional_id", regional.id)
+          .eq("ativo", true)
           .single();
 
         if (formularioError) throw formularioError;
@@ -582,21 +618,25 @@ const FormularioRelatorioSemanal = () => {
         // Buscar relatório existente da semana atual para a divisão inicial
         if (formulario?.id && divisaoIntegrante?.id) {
           const semana = calcularSemanaOperacional();
-          
+
           const { data: relatorioExistente } = await supabase
-            .from('relatorios_semanais_divisao')
-            .select('*')
-            .eq('formulario_id', formulario.id)
-            .eq('divisao_relatorio_id', divisaoIntegrante.id)
-            .eq('semana_inicio', formatDateToSQL(semana.periodo_inicio))
-            .eq('semana_fim', formatDateToSQL(semana.periodo_fim))
+            .from("relatorios_semanais_divisao")
+            .select("*")
+            .eq("formulario_id", formulario.id)
+            .eq("divisao_relatorio_id", divisaoIntegrante.id)
+            .eq("semana_inicio", formatDateToSQL(semana.periodo_inicio))
+            .eq("semana_fim", formatDateToSQL(semana.periodo_fim))
             .maybeSingle();
-          
+
           if (relatorioExistente) {
             setExistingReport(relatorioExistente);
-            console.log('[FormularioRelatorioSemanal] Relatório existente para divisão:', divisaoIntegrante.nome, relatorioExistente.id);
+            console.log(
+              "[FormularioRelatorioSemanal] Relatório existente para divisão:",
+              divisaoIntegrante.nome,
+              relatorioExistente.id
+            );
           } else {
-            console.log('[FormularioRelatorioSemanal] Nenhum relatório existente para divisão:', divisaoIntegrante.nome);
+            console.log("[FormularioRelatorioSemanal] Nenhum relatório existente para divisão:", divisaoIntegrante.nome);
           }
         }
 
@@ -604,19 +644,18 @@ const FormularioRelatorioSemanal = () => {
           ...integrante,
           regional_id: regional.id,
           regional_nome: regional.nome,
-          divisao_id: divisaoIntegrante?.id
+          divisao_id: divisaoIntegrante?.id,
         });
         setDivisoesDisponiveis(divisoes || []);
         setDivisaoSelecionada(divisaoIntegrante || divisoes?.[0]);
         setFormularioId(formulario?.id || null);
         setCarregando(false);
-
       } catch (error: any) {
         console.error("Erro ao carregar dados:", error);
         toast({
           title: "Erro",
           description: error.message,
-          variant: "destructive"
+          variant: "destructive",
         });
         setCarregando(false);
       }
@@ -631,12 +670,12 @@ const FormularioRelatorioSemanal = () => {
 
     const carregarEstatisticas = async () => {
       const divisaoNormalizada = normalizeText(divisaoSelecionada.nome);
-      
+
       // Buscar integrantes ativos
       const { data: integrantesDivisao, error } = await supabase
-        .from('integrantes_portal')
-        .select('*')
-        .eq('ativo', true);
+        .from("integrantes_portal")
+        .select("*")
+        .eq("ativo", true);
 
       if (error) {
         console.error("Erro ao carregar estatísticas:", error);
@@ -644,67 +683,60 @@ const FormularioRelatorioSemanal = () => {
       }
 
       // Buscar afastados ativos
-      const { data: afastados } = await supabase
-        .from('integrantes_afastados')
-        .select('*')
-        .eq('ativo', true);
+      const { data: afastados } = await supabase.from("integrantes_afastados").select("*").eq("ativo", true);
 
       // Buscar devedores
-      const { data: devedores } = await supabase
-        .from('vw_devedores_ativos')
-        .select('*');
+      const { data: devedores } = await supabase.from("vw_devedores_ativos").select("*");
 
       // Filtrar por divisão usando normalização
-      const integrantesFiltrados = integrantesDivisao?.filter(i => 
-        normalizeText(i.divisao_texto) === divisaoNormalizada
-      ) || [];
+      const integrantesFiltrados =
+        integrantesDivisao?.filter((i) => normalizeText(i.divisao_texto) === divisaoNormalizada) || [];
 
-      const afastadosFiltrados = afastados?.filter(a => 
-        normalizeText(a.divisao_texto) === divisaoNormalizada
-      ) || [];
+      const afastadosFiltrados = afastados?.filter((a) => normalizeText(a.divisao_texto) === divisaoNormalizada) || [];
 
-      const devedoresFiltrados = devedores?.filter(d => 
-        normalizeText(d.divisao_texto) === divisaoNormalizada
-      ) || [];
+      const devedoresFiltrados = devedores?.filter((d) => normalizeText(d.divisao_texto) === divisaoNormalizada) || [];
 
       // Separar por grau/status
-      const estagiarios = integrantesFiltrados.filter(i => 
-        i.grau === 'I' || i.cargo_estagio?.toLowerCase().includes('estagiário') || i.cargo_estagio?.toLowerCase().includes('estagiario')
+      const estagiarios = integrantesFiltrados.filter(
+        (i) =>
+          i.grau === "I" ||
+          i.cargo_estagio?.toLowerCase().includes("estagiário") ||
+          i.cargo_estagio?.toLowerCase().includes("estagiario")
       );
 
       const stats = {
         // Campos agregados para o modal de detalhes
         total_integrantes: integrantesFiltrados.length,
-        total_aptos: integrantesFiltrados.filter(i => i.grau && i.grau !== 'I').length,
+        total_aptos: integrantesFiltrados.filter((i) => i.grau && i.grau !== "I").length,
         total_estagiarios: estagiarios.length,
         total_afastados: afastadosFiltrados.length,
         total_devedores: devedoresFiltrados.length,
-        total_veiculos: integrantesFiltrados.filter(i => i.tem_moto || i.tem_carro).length,
-        
+        total_veiculos: integrantesFiltrados.filter((i) => i.tem_moto || i.tem_carro).length,
+
         // Campos detalhados existentes
-        total_caveiras: integrantesFiltrados.filter(i => i.caveira).length,
-        total_suplentes_caveira: integrantesFiltrados.filter(i => i.caveira_suplente).length,
-        total_batedores: integrantesFiltrados.filter(i => i.batedor).length,
-        total_lobos: integrantesFiltrados.filter(i => i.lobo).length,
-        total_ursos: integrantesFiltrados.filter(i => i.ursinho).length,
-        total_tem_moto: integrantesFiltrados.filter(i => i.tem_moto).length,
-        total_tem_carro: integrantesFiltrados.filter(i => i.tem_carro).length,
-        total_sem_veiculo: integrantesFiltrados.filter(i => !i.tem_moto && !i.tem_carro).length,
-        total_combate_insano: integrantesFiltrados.filter(i => i.combate_insano).length,
-        
+        total_caveiras: integrantesFiltrados.filter((i) => i.caveira).length,
+        total_suplentes_caveira: integrantesFiltrados.filter((i) => i.caveira_suplente).length,
+        total_batedores: integrantesFiltrados.filter((i) => i.batedor).length,
+        total_lobos: integrantesFiltrados.filter((i) => i.lobo).length,
+        total_ursos: integrantesFiltrados.filter((i) => i.ursinho).length,
+        total_tem_moto: integrantesFiltrados.filter((i) => i.tem_moto).length,
+        total_tem_carro: integrantesFiltrados.filter((i) => i.tem_carro).length,
+        total_sem_veiculo: integrantesFiltrados.filter((i) => !i.tem_moto && !i.tem_carro).length,
+        total_combate_insano: integrantesFiltrados.filter((i) => i.combate_insano).length,
+
         // Lista de estagiários com detalhes
-        estagiarios: estagiarios.map(i => ({
+        estagiarios: estagiarios.map((i) => ({
           nome_colete: i.nome_colete,
-          estagio: i.cargo_estagio || 'Estagiário'
+          estagio: i.cargo_estagio || "Estagiário",
         })),
-        
+
         // Manter compatibilidade com campo antigo
         estagio: integrantesFiltrados
-          .filter(i => i.cargo_estagio && normalizeText(i.cargo_estagio) !== "SEM CARGO")
-          .map(i => ({
+          .filter((i) => i.cargo_estagio && normalizeText(i.cargo_estagio) !== "SEM CARGO")
+          .map((i) => ({
             nome_colete: i.nome_colete,
-            cargo_estagio: i.cargo_estagio
-          }))
+            cargo_estagio: i.cargo_estagio,
+          })),
       };
 
       setEstatisticas(stats);
@@ -713,17 +745,14 @@ const FormularioRelatorioSemanal = () => {
     carregarEstatisticas();
   }, [divisaoSelecionada]);
 
-  // T6: Carregar inadimplências da divisão
+  // T6: Carregar inadimplências da divisão (com normalizacao para impedir "-" e vazio)
   useEffect(() => {
     if (!divisaoSelecionada) return;
 
     const carregarInadimplencias = async () => {
       const divisaoNormalizada = normalizeText(divisaoSelecionada.nome);
 
-      // Usar view se existir, senão mensalidades_atraso
-      const { data: devedores, error } = await supabase
-        .from('vw_devedores_ativos')
-        .select('*');
+      const { data: devedores, error } = await supabase.from("vw_devedores_ativos").select("*");
 
       if (error) {
         console.error("Erro ao carregar inadimplências:", error);
@@ -731,16 +760,18 @@ const FormularioRelatorioSemanal = () => {
       }
 
       // Filtrar por divisão usando normalização
-      const devedoresFiltrados = devedores?.filter(d => 
-        normalizeText(d.divisao_texto) === divisaoNormalizada
-      ) || [];
+      const devedoresFiltrados =
+        devedores?.filter((d) => normalizeText(d.divisao_texto) === divisaoNormalizada) || [];
 
-      setInadimplencias(devedoresFiltrados.map(d => ({
-        nome_colete: d.nome_colete,
-        status: "Confirmado",
-        justificativa_remocao: null,
-        acao_cobranca: ""
-      })));
+      setInadimplencias(
+        devedoresFiltrados.map((d) => ({
+          nome_colete: d.nome_colete,
+          status: "Confirmado",
+          justificativa_remocao: null,
+          // ✅ sempre normalizado (nunca "-" vindo de base)
+          acao_cobranca: normalizeAcaoCobranca(d.acao_cobranca),
+        }))
+      );
     };
 
     carregarInadimplencias();
@@ -824,7 +855,7 @@ const FormularioRelatorioSemanal = () => {
           setAcoesSociais(itensResumo);
           console.log("[FormularioRelatorioSemanal] Ações carregadas:", {
             semanaAtual: itensSemanaAtual.length,
-            passivo: itensPassivo.length
+            passivo: itensPassivo.length,
           });
         } else {
           console.log("[FormularioRelatorioSemanal] Nenhuma ação social encontrada");
@@ -836,73 +867,67 @@ const FormularioRelatorioSemanal = () => {
     };
 
     carregarAcoesSociaisDaSemana();
-  }, [
-    divisaoSelecionada,
-    formConfig,
-    modoEdicao,
-    acoesSociais,
-  ]);
+  }, [divisaoSelecionada, formConfig, modoEdicao, acoesSociais]);
 
   // T6: Carregar entradas e saídas automaticamente das movimentações consolidadas
   useEffect(() => {
     // Não sobrescrever em modo de edição
     if (modoEdicao === "editar") return;
-    
+
     // Se já aplicamos movimentações ou já houver dados, não sobrescrever
     if (movimentacoesAplicadas.current) return;
     if ((entradas && entradas.length > 0) || (saidas && saidas.length > 0)) return;
-    
+
     // Precisamos ter movimentações carregadas
     if (!movimentacoesConsolidadas) return;
-    
+
     const { entradas: entradasConsolidadas, saidas: saidasConsolidadas } = movimentacoesConsolidadas;
-    
+
     // Marcar como já aplicado para evitar re-aplicação
     movimentacoesAplicadas.current = true;
-    
+
     // Mapear entradas para o formato do formulário
     if (entradasConsolidadas.length > 0) {
-      const entradasMapeadas = entradasConsolidadas.map(m => ({
+      const entradasMapeadas = entradasConsolidadas.map((m: any) => ({
         nome_colete: m.nome_colete,
         data_entrada: m.data_movimentacao?.split("T")[0] || "",
-        motivo_entrada: m.tipo === 'REATIVACAO' ? 'Reativado' : 'Transferido',
+        motivo_entrada: m.tipo === "REATIVACAO" ? "Reativado" : "Transferido",
         possui_carro: false,
         possui_moto: false,
         nenhum: true,
         origem: "automatico",
         tipo_movimentacao: m.tipo,
-        detalhes: m.detalhes
+        detalhes: m.detalhes,
       }));
       setTeveEntradas(true);
       setEntradas(entradasMapeadas);
       setEntradasAplicadasAuto(true);
       console.log("[FormularioRelatorioSemanal] Entradas aplicadas automaticamente:", entradasMapeadas.length);
     }
-    
+
     // Mapear saídas para o formato do formulário
     if (saidasConsolidadas.length > 0) {
-      const saidasMapeadas = saidasConsolidadas.map(m => ({
+      const saidasMapeadas = saidasConsolidadas.map((m: any) => ({
         integrante_id: m.integrante_id || "",
         nome_colete: m.nome_colete,
         data_saida: m.data_movimentacao?.split("T")[0] || "",
-        motivo_codigo: m.tipo === 'INATIVACAO' ? 'INATIVACAO' : 'TRANSFERENCIA',
+        motivo_codigo: m.tipo === "INATIVACAO" ? "INATIVACAO" : "TRANSFERENCIA",
         justificativa: m.detalhes || "",
         tem_moto: false,
         tem_carro: false,
         origem: "automatico",
-        tipo_movimentacao: m.tipo
+        tipo_movimentacao: m.tipo,
       }));
       setTeveSaidas(true);
       setSaidas(saidasMapeadas);
       setSaidasAplicadasAuto(true);
       console.log("[FormularioRelatorioSemanal] Saídas aplicadas automaticamente:", saidasMapeadas.length);
     }
-    
+
     console.log("[FormularioRelatorioSemanal] Movimentações consolidadas aplicadas:", {
       entradas: entradasConsolidadas.length,
-      saidas: saidasConsolidadas.length
+      saidas: saidasConsolidadas.length,
     });
-    
   }, [movimentacoesConsolidadas, modoEdicao, entradas, saidas]);
 
   // Recarregar relatório existente quando divisão do relatório mudar
@@ -911,24 +936,24 @@ const FormularioRelatorioSemanal = () => {
 
     const verificarRelatorioExistente = async () => {
       const semana = calcularSemanaOperacional();
-      
+
       const { data: relatorioExistente } = await supabase
-        .from('relatorios_semanais_divisao')
-        .select('*')
-        .eq('formulario_id', formularioId)
-        .eq('divisao_relatorio_id', divisaoSelecionada.id)
-        .eq('semana_inicio', formatDateToSQL(semana.periodo_inicio))
-        .eq('semana_fim', formatDateToSQL(semana.periodo_fim))
+        .from("relatorios_semanais_divisao")
+        .select("*")
+        .eq("formulario_id", formularioId)
+        .eq("divisao_relatorio_id", divisaoSelecionada.id)
+        .eq("semana_inicio", formatDateToSQL(semana.periodo_inicio))
+        .eq("semana_fim", formatDateToSQL(semana.periodo_fim))
         .maybeSingle();
-      
+
       if (relatorioExistente) {
         setExistingReport(relatorioExistente);
         setModoEdicao(null); // Reset modo edição ao trocar divisão
-        console.log('[FormularioRelatorioSemanal] Relatório existente para divisão:', divisaoSelecionada.nome, relatorioExistente.id);
+        console.log("[FormularioRelatorioSemanal] Relatório existente para divisão:", divisaoSelecionada.nome, relatorioExistente.id);
       } else {
         setExistingReport(null);
         setModoEdicao(null);
-        console.log('[FormularioRelatorioSemanal] Nenhum relatório existente para divisão:', divisaoSelecionada.nome);
+        console.log("[FormularioRelatorioSemanal] Nenhum relatório existente para divisão:", divisaoSelecionada.nome);
       }
     };
 
@@ -939,23 +964,26 @@ const FormularioRelatorioSemanal = () => {
     // Preencher estados com dados do relatório existente
     setTeveEntradas(relatorio.entradas_json?.length > 0);
     setEntradas(relatorio.entradas_json || []);
-    
+
     setTeveSaidas(relatorio.saidas_json?.length > 0);
     setSaidas(relatorio.saidas_json || []);
-    
-    setInadimplencias(relatorio.inadimplencias_json || []);
-    
+
+    // ✅ normalizar inadimplencias ao carregar (evita "-" e valida obrigatoriedade)
+    const inad = (relatorio.inadimplencias_json || []).map((x: any) => ({
+      ...x,
+      acao_cobranca: normalizeAcaoCobranca(x.acao_cobranca),
+    }));
+    setInadimplencias(inad);
+
     setTeveConflitos(relatorio.conflitos_json?.length > 0);
     setConflitos(relatorio.conflitos_json || []);
-    
+
     setTeveAcoesSociais(relatorio.acoes_sociais_json?.length > 0);
     setAcoesSociais(relatorio.acoes_sociais_json || []);
-    
-    // Estatísticas permanecem recalculadas (dados atuais da divisão)
-    
+
     toast({
       title: "Respostas carregadas",
-      description: "Edite os campos desejados e clique em 'Atualizar Relatório'."
+      description: "Edite os campos desejados e clique em 'Atualizar Relatório'.",
     });
   };
 
@@ -969,10 +997,10 @@ const FormularioRelatorioSemanal = () => {
     setTeveAcoesSociais(false);
     setAcoesSociais([]);
     // Inadimplências e estatísticas são sempre recalculadas automaticamente
-    
+
     toast({
       title: "Formulário limpo",
-      description: "Preencha novamente e clique em 'Enviar Relatório' para sobrescrever."
+      description: "Preencha novamente e clique em 'Enviar Relatório' para sobrescrever.",
     });
   };
 
@@ -981,22 +1009,20 @@ const FormularioRelatorioSemanal = () => {
     if (!hojePermitido) {
       toast({
         title: "Dia não permitido",
-        description: `Este formulário só pode ser respondido em: ${
-          (formConfig?.dias_semana || [])
-            .map((d: number) => DIAS_SEMANA_NOMES[d])
-            .join(', ')
-        }`,
-        variant: "destructive"
+        description: `Este formulário só pode ser respondido em: ${(formConfig?.dias_semana || [])
+          .map((d: number) => DIAS_SEMANA_NOMES[d])
+          .join(", ")}`,
+        variant: "destructive",
       });
       return;
     }
 
     // Validação 2: Limite 'unica' + já existe para esta divisão
-    if (formConfig?.limite_respostas === 'unica' && existingReport) {
+    if (formConfig?.limite_respostas === "unica" && existingReport) {
       toast({
         title: "Relatório já enviado",
         description: `A divisão "${divisaoSelecionada?.nome}" já possui relatório nesta semana. Apenas 1 relatório por divisão é permitido.`,
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -1006,22 +1032,36 @@ const FormularioRelatorioSemanal = () => {
       toast({
         title: "Erro",
         description: "Dados incompletos",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
     // Validação 4: Saídas sem nome de colete
     if (teveSaidas && saidas.length > 0) {
-      const saidasSemNome = saidas.filter((s: any) => !s.nome_colete || s.nome_colete.trim() === '');
+      const saidasSemNome = saidas.filter((s: any) => !s.nome_colete || s.nome_colete.trim() === "");
       if (saidasSemNome.length > 0) {
         toast({
           title: "Dados incompletos",
           description: `${saidasSemNome.length} saída(s) está(ão) sem nome de colete preenchido.`,
-          variant: "destructive"
+          variant: "destructive",
         });
         return;
       }
+    }
+
+    // ✅ Validação 5 (NOVA): Ação de cobrança obrigatória para todos os inadimplentes não removidos
+    const inadInvalidos = (inadimplencias || [])
+      .map((it: any, idx: number) => ({ it, idx }))
+      .filter(({ it }) => it.status !== "Removido" && !isAcaoCobrancaValida(it.acao_cobranca));
+
+    if (inadInvalidos.length > 0) {
+      toast({
+        title: "Ação de cobrança obrigatória",
+        description: `Preencha a ação de cobrança de ${inadInvalidos.length} inadimplente(s). Não pode ficar vazio ou "-"`,
+        variant: "destructive",
+      });
+      return;
     }
 
     const semana = calcularSemanaOperacional();
@@ -1047,16 +1087,20 @@ const FormularioRelatorioSemanal = () => {
       semana_no_mes: semana.semana_no_mes,
       entradas_json: teveEntradas ? entradas : [],
       saidas_json: teveSaidas ? saidas : [],
-      inadimplencias_json: inadimplencias,
+      // ✅ normalizar antes de enviar para garantir que nao salva "-"
+      inadimplencias_json: (inadimplencias || []).map((x: any) => ({
+        ...x,
+        acao_cobranca: normalizeAcaoCobranca(x.acao_cobranca),
+      })),
       conflitos_json: teveConflitos ? conflitos : [],
       acoes_sociais_json: teveAcoesSociais ? acoesSociais : [],
-      estatisticas_divisao_json: estatisticas || {}
+      estatisticas_divisao_json: estatisticas || {},
     };
 
     // Extrair IDs das ações vindas do form de ações sociais para marcar como reportadas
     const acoesSociaisParaMarcar = acoesSociais
-      .filter((item) => item.origem === "form_acoes_sociais" && item.registro_id)
-      .map((item) => item.registro_id);
+      .filter((item: any) => item.origem === "form_acoes_sociais" && item.registro_id)
+      .map((item: any) => item.registro_id);
 
     // Preparar parâmetros para o hook
     const params: SubmitRelatorioParams = {
@@ -1066,16 +1110,16 @@ const FormularioRelatorioSemanal = () => {
       acoesSociaisParaMarcar,
     };
 
-    console.log('[FormularioRelatorioSemanal] Enviando relatório:', {
-      modo: existingReport ? 'UPDATE' : 'INSERT',
+    console.log("[FormularioRelatorioSemanal] Enviando relatório:", {
+      modo: existingReport ? "UPDATE" : "INSERT",
       existingReportId: existingReport?.id,
-      limiteRespostas: formConfig?.limite_respostas
+      limiteRespostas: formConfig?.limite_respostas,
     });
 
     submitRelatorio(params, {
       onSuccess: () => {
         navigate("/formularios");
-      }
+      },
     });
   };
 
@@ -1107,15 +1151,11 @@ const FormularioRelatorioSemanal = () => {
             <div className="flex items-start gap-3">
               <div className="text-2xl">⚠️</div>
               <div>
-                <h4 className="font-semibold text-amber-900 dark:text-amber-100 mb-1">
-                  Dia não permitido para responder
-                </h4>
+                <h4 className="font-semibold text-amber-900 dark:text-amber-100 mb-1">Dia não permitido para responder</h4>
                 <p className="text-sm text-amber-800 dark:text-amber-200">
                   Este formulário só pode ser respondido nos seguintes dias:
                   <strong className="ml-1">
-                    {(formConfig.dias_semana || [])
-                      .map((d: number) => DIAS_SEMANA_NOMES[d])
-                      .join(', ')}
+                    {(formConfig.dias_semana || []).map((d: number) => DIAS_SEMANA_NOMES[d]).join(", ")}
                   </strong>
                 </p>
                 <p className="text-sm text-amber-700 dark:text-amber-300 mt-2">
@@ -1127,28 +1167,26 @@ const FormularioRelatorioSemanal = () => {
         )}
 
         {/* Banner: Limite 'unica' - já respondeu */}
-        {formConfig?.limite_respostas === 'unica' && existingReport && (
+        {formConfig?.limite_respostas === "unica" && existingReport && (
           <Card className="p-4 bg-blue-50 dark:bg-blue-950 border-blue-300 dark:border-blue-700">
             <div className="flex items-start gap-3">
               <div className="text-2xl">ℹ️</div>
               <div>
-                <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
-                  Relatório já enviado
-                </h4>
+                <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">Relatório já enviado</h4>
                 <p className="text-sm text-blue-800 dark:text-blue-200">
-                  Esta divisão (<strong>{divisaoSelecionada?.nome}</strong>) já possui um relatório 
-                  enviado nesta semana em{' '}
-                  <strong>
-                    {new Date(existingReport.created_at).toLocaleString('pt-BR')}
-                  </strong>
+                  Esta divisão (<strong>{divisaoSelecionada?.nome}</strong>) já possui um relatório enviado nesta semana em{" "}
+                  <strong>{new Date(existingReport.created_at).toLocaleString("pt-BR")}</strong>
                   {existingReport.profile_id !== user?.id && (
-                    <span> por <strong>{existingReport.responsavel_nome_colete}</strong></span>
-                  )}.
+                    <span>
+                      {" "}
+                      por <strong>{existingReport.responsavel_nome_colete}</strong>
+                    </span>
+                  )}
+                  .
                 </p>
                 <p className="text-sm text-blue-700 dark:text-blue-300 mt-2">
-                  Como este formulário permite apenas <strong>1 relatório por semana para cada divisão</strong>, 
-                  não é possível enviar outro. Se precisar corrigir informações, entre em contato com o 
-                  ADM Regional.
+                  Como este formulário permite apenas <strong>1 relatório por semana para cada divisão</strong>, não é
+                  possível enviar outro. Se precisar corrigir informações, entre em contato com o ADM Regional.
                 </p>
               </div>
             </div>
@@ -1156,7 +1194,7 @@ const FormularioRelatorioSemanal = () => {
         )}
 
         {/* Banner: Limite 'multipla' - opção de editar ou sobrescrever */}
-        {formConfig?.limite_respostas === 'multipla' && existingReport && !modoEdicao && (
+        {formConfig?.limite_respostas === "multipla" && existingReport && !modoEdicao && (
           <Card className="p-3 sm:p-4 bg-purple-50 dark:bg-purple-950 border-purple-300 dark:border-purple-700">
             <div className="flex items-start gap-2 sm:gap-3">
               <div className="text-xl sm:text-2xl shrink-0">🔄</div>
@@ -1165,21 +1203,22 @@ const FormularioRelatorioSemanal = () => {
                   Relatório já enviado
                 </h4>
                 <p className="text-xs sm:text-sm text-purple-800 dark:text-purple-200 mb-3 break-words">
-                  A divisão <strong>{divisaoSelecionada?.nome}</strong> já possui um relatório 
-                  enviado em{' '}
-                  <strong>
-                    {new Date(existingReport.created_at).toLocaleString('pt-BR')}
-                  </strong>
+                  A divisão <strong>{divisaoSelecionada?.nome}</strong> já possui um relatório enviado em{" "}
+                  <strong>{new Date(existingReport.created_at).toLocaleString("pt-BR")}</strong>
                   {existingReport.profile_id !== user?.id && (
-                    <span> por <strong>{existingReport.responsavel_nome_colete}</strong></span>
-                  )}.
+                    <span>
+                      {" "}
+                      por <strong>{existingReport.responsavel_nome_colete}</strong>
+                    </span>
+                  )}
+                  .
                 </p>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <Button
                     size="sm"
                     className="w-full sm:w-auto text-xs sm:text-sm"
                     onClick={() => {
-                      setModoEdicao('editar');
+                      setModoEdicao("editar");
                       carregarRespostasExistentes(existingReport);
                     }}
                   >
@@ -1190,7 +1229,7 @@ const FormularioRelatorioSemanal = () => {
                     size="sm"
                     className="w-full sm:w-auto text-xs sm:text-sm"
                     onClick={() => {
-                      setModoEdicao('nova');
+                      setModoEdicao("nova");
                       limparFormulario();
                     }}
                   >
@@ -1221,16 +1260,18 @@ const FormularioRelatorioSemanal = () => {
 
           <div className="pt-3 border-t">
             <label className="text-sm text-muted-foreground">Divisão do Relatório</label>
-            <select 
+            <select
               className="w-full mt-1 p-2 border rounded bg-secondary text-secondary-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               value={divisaoSelecionada?.id || ""}
               onChange={(e) => {
-                const div = divisoesDisponiveis.find(d => d.id === e.target.value);
+                const div = divisoesDisponiveis.find((d) => d.id === e.target.value);
                 setDivisaoSelecionada(div);
               }}
             >
-              {divisoesDisponiveis.map(d => (
-                <option key={d.id} value={d.id}>{d.nome}</option>
+              {divisoesDisponiveis.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.nome}
+                </option>
               ))}
             </select>
           </div>
@@ -1239,23 +1280,23 @@ const FormularioRelatorioSemanal = () => {
         {/* Seção: Entradas de Integrantes */}
         <Card className="p-4 sm:p-6 space-y-4">
           <h3 className="font-semibold">Entradas de Integrantes</h3>
-          
+
           {/* Banner informativo se houve preenchimento automático */}
-          {entradasAplicadasAuto && entradas.length > 0 && entradas.some((e: any) => e.origem === 'automatico') && (
+          {entradasAplicadasAuto && entradas.length > 0 && entradas.some((e: any) => e.origem === "automatico") && (
             <Alert className="bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800">
               <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
               <AlertTitle className="text-green-800 dark:text-green-200">Entradas Detectadas Automaticamente</AlertTitle>
               <AlertDescription className="text-green-700 dark:text-green-300">
-                {entradas.filter((e: any) => e.origem === 'automatico').length} entrada(s) foi(ram) preenchida(s) automaticamente baseada(s) em transferências detectadas.
-                Revise e complete os dados conforme necessário.
+                {entradas.filter((e: any) => e.origem === "automatico").length} entrada(s) foi(ram) preenchida(s)
+                automaticamente baseada(s) em transferências detectadas. Revise e complete os dados conforme necessário.
               </AlertDescription>
             </Alert>
           )}
-          
+
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">Houve entrada de integrantes nesta semana?</p>
             <div className="flex gap-2">
-              <Button 
+              <Button
                 type="button"
                 variant={teveEntradas ? "default" : "outline"}
                 className="min-h-[44px]"
@@ -1263,7 +1304,7 @@ const FormularioRelatorioSemanal = () => {
               >
                 Sim
               </Button>
-              <Button 
+              <Button
                 type="button"
                 variant={!teveEntradas ? "default" : "outline"}
                 className="min-h-[44px]"
@@ -1279,7 +1320,7 @@ const FormularioRelatorioSemanal = () => {
 
           {teveEntradas && (
             <div className="space-y-4">
-              {entradas.map((entrada, idx) => (
+              {entradas.map((entrada: any, idx: number) => (
                 <Card key={idx} className="p-4 space-y-3 bg-muted/50">
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-2">
@@ -1295,18 +1336,12 @@ const FormularioRelatorioSemanal = () => {
                         </span>
                       )}
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setEntradas(entradas.filter((_, i) => i !== idx))}
-                    >
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setEntradas(entradas.filter((_: any, i: number) => i !== idx))}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                  
+
                   <div className="grid gap-3">
-                    {/* Nome de Colete (único nome digitado) */}
                     <div>
                       <label className="text-xs text-muted-foreground">Nome de Colete</label>
                       <input
@@ -1321,7 +1356,6 @@ const FormularioRelatorioSemanal = () => {
                       />
                     </div>
 
-                    {/* Manter Data de Entrada */}
                     <div>
                       <label className="text-xs text-muted-foreground">Data de Entrada</label>
                       <input
@@ -1336,7 +1370,6 @@ const FormularioRelatorioSemanal = () => {
                       />
                     </div>
 
-                    {/* Motivo da Entrada */}
                     <div>
                       <label className="text-xs text-muted-foreground">Motivo da Entrada</label>
                       <select
@@ -1356,7 +1389,6 @@ const FormularioRelatorioSemanal = () => {
                       </select>
                     </div>
 
-                    {/* Veículos */}
                     <div>
                       <label className="text-xs text-muted-foreground">Veículos</label>
                       <div className="flex gap-4 mt-2">
@@ -1412,17 +1444,19 @@ const FormularioRelatorioSemanal = () => {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setEntradas([
-                  ...entradas,
-                  {
-                    nome_colete: "",
-                    data_entrada: "",
-                    motivo_entrada: "",
-                    possui_carro: false,
-                    possui_moto: false,
-                    nenhum: false
-                  }
-                ])}
+                onClick={() =>
+                  setEntradas([
+                    ...entradas,
+                    {
+                      nome_colete: "",
+                      data_entrada: "",
+                      motivo_entrada: "",
+                      possui_carro: false,
+                      possui_moto: false,
+                      nenhum: false,
+                    },
+                  ])
+                }
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Adicionar Entrada
@@ -1442,11 +1476,7 @@ const FormularioRelatorioSemanal = () => {
         />
 
         {/* Seção: Inadimplência */}
-        <SecaoInadimplencia
-          inadimplencias={inadimplencias}
-          setInadimplencias={setInadimplencias}
-          divisaoSelecionada={divisaoSelecionada}
-        />
+        <SecaoInadimplencia inadimplencias={inadimplencias} setInadimplencias={setInadimplencias} />
 
         {/* Seção: Conflitos */}
         <Card className="p-4 sm:p-6 space-y-4">
@@ -1454,15 +1484,10 @@ const FormularioRelatorioSemanal = () => {
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">Houve conflitos esta semana?</p>
             <div className="flex gap-2">
-              <Button 
-                type="button"
-                variant={teveConflitos ? "default" : "outline"}
-                className="min-h-[44px]"
-                onClick={() => setTeveConflitos(true)}
-              >
+              <Button type="button" variant={teveConflitos ? "default" : "outline"} className="min-h-[44px]" onClick={() => setTeveConflitos(true)}>
                 Sim
               </Button>
-              <Button 
+              <Button
                 type="button"
                 variant={!teveConflitos ? "default" : "outline"}
                 className="min-h-[44px]"
@@ -1478,20 +1503,15 @@ const FormularioRelatorioSemanal = () => {
 
           {teveConflitos && (
             <div className="space-y-4">
-              {conflitos.map((conflito, idx) => (
+              {conflitos.map((conflito: any, idx: number) => (
                 <Card key={idx} className="p-4 space-y-3 bg-muted/50">
                   <div className="flex justify-between items-start">
                     <h4 className="text-sm font-medium">Conflito #{idx + 1}</h4>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setConflitos(conflitos.filter((_, i) => i !== idx))}
-                    >
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setConflitos(conflitos.filter((_: any, i: number) => i !== idx))}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                  
+
                   <div className="space-y-3">
                     <div>
                       <label className="text-xs text-muted-foreground">Data da Ocorrência</label>
@@ -1529,10 +1549,15 @@ const FormularioRelatorioSemanal = () => {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setConflitos([...conflitos, {
-                  data_ocorrencia: "",
-                  descricao: ""
-                }])}
+                onClick={() =>
+                  setConflitos([
+                    ...conflitos,
+                    {
+                      data_ocorrencia: "",
+                      descricao: "",
+                    },
+                  ])
+                }
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Adicionar Conflito
@@ -1547,15 +1572,10 @@ const FormularioRelatorioSemanal = () => {
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">Houve ações sociais esta semana?</p>
             <div className="flex gap-2">
-              <Button 
-                type="button"
-                variant={teveAcoesSociais ? "default" : "outline"}
-                className="min-h-[44px]"
-                onClick={() => setTeveAcoesSociais(true)}
-              >
+              <Button type="button" variant={teveAcoesSociais ? "default" : "outline"} className="min-h-[44px]" onClick={() => setTeveAcoesSociais(true)}>
                 Sim
               </Button>
-              <Button 
+              <Button
                 type="button"
                 variant={!teveAcoesSociais ? "default" : "outline"}
                 className="min-h-[44px]"
@@ -1571,12 +1591,12 @@ const FormularioRelatorioSemanal = () => {
 
           {teveAcoesSociais && (
             <div className="space-y-4">
-              {acoesSociais.map((acao, idx) => (
-                <Card 
-                  key={idx} 
+              {acoesSociais.map((acao: any, idx: number) => (
+                <Card
+                  key={idx}
                   className={cn(
                     "p-4 space-y-3",
-                    acao.marcador_relatorio === "semana_anterior_nao_reportada" 
+                    acao.marcador_relatorio === "semana_anterior_nao_reportada"
                       ? "bg-yellow-50 dark:bg-yellow-950 border-yellow-300 dark:border-yellow-700"
                       : "bg-muted/50"
                   )}
@@ -1586,26 +1606,19 @@ const FormularioRelatorioSemanal = () => {
                       <h4 className="text-sm font-medium">Ação Social #{idx + 1}</h4>
                       {acao.marcador_relatorio === "semana_anterior_nao_reportada" && (
                         <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1 font-medium">
-                          ⚠️ Esta ação não foi reportada no relatório da semana anterior. 
-                          Revise e exclua se não fizer sentido manter.
+                          ⚠️ Esta ação não foi reportada no relatório da semana anterior. Revise e exclua se não fizer
+                          sentido manter.
                         </p>
                       )}
                       {acao.origem === "form_acoes_sociais" && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          (Importada do formulário de ações sociais)
-                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">(Importada do formulário de ações sociais)</p>
                       )}
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setAcoesSociais(acoesSociais.filter((_, i) => i !== idx))}
-                    >
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setAcoesSociais(acoesSociais.filter((_: any, i: number) => i !== idx))}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                  
+
                   <div className="space-y-3">
                     <div>
                       <label className="text-xs text-muted-foreground">Data da Ação</label>
@@ -1659,11 +1672,16 @@ const FormularioRelatorioSemanal = () => {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setAcoesSociais([...acoesSociais, {
-                  data_acao: "",
-                  titulo: "",
-                  status: ""
-                }])}
+                onClick={() =>
+                  setAcoesSociais([
+                    ...acoesSociais,
+                    {
+                      data_acao: "",
+                      titulo: "",
+                      status: "",
+                    },
+                  ])
+                }
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Adicionar Ação Social
@@ -1707,20 +1725,16 @@ const FormularioRelatorioSemanal = () => {
           <Button onClick={() => navigate("/formularios")} variant="outline" className="flex-1 text-sm">
             Cancelar
           </Button>
-          <Button 
-            onClick={handleEnviar} 
+          <Button
+            onClick={handleEnviar}
             className="flex-1 text-sm"
-            disabled={
-              !hojePermitido || 
-              (formConfig?.limite_respostas === 'unica' && existingReport)
-            }
+            disabled={!hojePermitido || (formConfig?.limite_respostas === "unica" && existingReport)}
           >
-            {existingReport && modoEdicao === 'editar' 
-              ? 'Atualizar'
-              : existingReport && modoEdicao === 'nova'
-              ? 'Sobrescrever'
-              : 'Enviar Relatório'
-            }
+            {existingReport && modoEdicao === "editar"
+              ? "Atualizar"
+              : existingReport && modoEdicao === "nova"
+              ? "Sobrescrever"
+              : "Enviar Relatório"}
           </Button>
         </div>
       </div>
