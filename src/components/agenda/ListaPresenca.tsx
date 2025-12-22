@@ -609,7 +609,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     };
   }, [presencas]);
 
-  // Agrupar por divisão para eventos Regional/CMD
+  // Agrupar por divisão para eventos Regional/CMD - usando presencas como dependência
   const presencasAgrupadasPorDivisao = useMemo(() => {
     if (!isRegional && !isCMD) return null;
     
@@ -628,7 +628,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     });
     
     return grupos;
-  }, [todosPresentes, ausentes, isRegional, isCMD]);
+  }, [presencas, isRegional, isCMD]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Lista de divisões únicas para o filtro
   const divisoesUnicas = useMemo(() => {
@@ -647,7 +647,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
       presentes: grupo?.presentes || [],
       ausentes: grupo?.ausentes || [],
     };
-  }, [filtroDivisao, presencasAgrupadasPorDivisao, todosPresentes, ausentes]);
+  }, [filtroDivisao, presencasAgrupadasPorDivisao, presencas]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Renderização de integrante para cards mobile
   const renderIntegranteCardPresente = (integrante: any) => (
