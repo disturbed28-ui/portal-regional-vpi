@@ -8,10 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Users, FileSpreadsheet } from "lucide-react";
+import { Calendar, Users, FileSpreadsheet, Building2 } from "lucide-react";
 import { removeAccents } from "@/lib/utils";
-import { getNivelAcesso, romanToNumber } from "@/lib/grauUtils";
+import { getNivelAcesso } from "@/lib/grauUtils";
 import { useDivisoesPorRegional } from "@/hooks/useDivisoesPorRegional";
+import { ordenarIntegrantes } from "@/lib/integranteOrdering";
 import * as XLSX from 'xlsx';
 
 interface ListasConsultaProps {
@@ -24,6 +25,9 @@ interface ListasConsultaProps {
 /**
  * Deriva o status de exibição baseado no status real e na justificativa
  */
+/**
+ * Deriva o status de exibição baseado no status real e na justificativa
+ */
 const getStatusExibicao = (status: string, justificativa: string | null): string => {
   if (status === 'presente') return 'presente';
   if (status === 'visitante') return 'visitante';
@@ -32,45 +36,6 @@ const getStatusExibicao = (status: string, justificativa: string | null): string
     return 'justificado';
   }
   return 'ausente';
-};
-
-const getCargoOrder = (cargo: string | null, grau: string | null): number => {
-  if (!cargo) return 999;
-  const cargoLower = cargo.toLowerCase();
-  
-  if (grau === 'V') {
-    if (cargoLower.includes('diretor regional')) return 1;
-    if (cargoLower.includes('operacional regional')) return 2;
-    if (cargoLower.includes('social regional')) return 3;
-    if (cargoLower.includes('adm') && cargoLower.includes('regional')) return 4;
-    if (cargoLower.includes('comunicação') || cargoLower.includes('comunicacao')) return 5;
-  }
-  
-  if (grau === 'VI') {
-    if (cargoLower.includes('diretor') && cargoLower.includes('divisão')) return 1;
-    if (cargoLower.includes('sub diretor')) return 2;
-    if (cargoLower.includes('social') && cargoLower.includes('divisão')) return 3;
-    if (cargoLower.includes('adm') && cargoLower.includes('divisão')) return 4;
-    if (cargoLower.includes('armas') || cargoLower.includes('sgt')) return 5;
-  }
-  
-  if (grau === 'X') {
-    if (cargoLower === 'pp' || cargoLower.includes('sgt armas pp')) return 1;
-    if (cargoLower.includes('camiseta')) return 2;
-  }
-  
-  return 999;
-};
-
-const getStatusOrder = (status: string, justificativa: string | null): number => {
-  const statusExibicao = getStatusExibicao(status, justificativa);
-  switch (statusExibicao) {
-    case 'presente': return 1;
-    case 'visitante': return 2;
-    case 'justificado': return 3;
-    case 'ausente': return 4;
-    default: return 999;
-  }
 };
 
 export const ListasConsulta = ({ grau, regionalId, divisaoId, isAdmin = false }: ListasConsultaProps) => {
@@ -160,28 +125,68 @@ export const ListasConsulta = ({ grau, regionalId, divisaoId, isAdmin = false }:
 
   const eventoAtual = eventos?.find(e => e.id === eventoSelecionado);
 
-  // Ordenar presenças hierarquicamente
-  const presencasOrdenadas = useMemo(() => {
-    if (!presencas) return [];
+  // Agrupar presenças por divisão e ordenar hierarquicamente dentro de cada grupo
+  const presencasAgrupadasPorDivisao = useMemo(() => {
+    if (!presencas || presencas.length === 0) return new Map<string, typeof presencas>();
     
-    return [...presencas].sort((a, b) => {
-      const statusOrderA = getStatusOrder(a.status, a.justificativa_ausencia);
-      const statusOrderB = getStatusOrder(b.status, b.justificativa_ausencia);
-      if (statusOrderA !== statusOrderB) return statusOrderA - statusOrderB;
+    const grupos = new Map<string, typeof presencas>();
+    
+    // Agrupar por divisão
+    presencas.forEach(p => {
+      const divisao = p.integrantes_portal?.divisao_texto || 
+                      (p.visitante_tipo === 'externo' ? 'Visitantes Externos' : 'Sem Divisão');
       
-      const grauA = romanToNumber(a.integrantes_portal?.grau || null);
-      const grauB = romanToNumber(b.integrantes_portal?.grau || null);
-      if (grauA !== grauB) return grauA - grauB;
-      
-      const cargoOrderA = getCargoOrder(a.integrantes_portal?.cargo_nome || null, a.integrantes_portal?.grau || null);
-      const cargoOrderB = getCargoOrder(b.integrantes_portal?.cargo_nome || null, b.integrantes_portal?.grau || null);
-      if (cargoOrderA !== cargoOrderB) return cargoOrderA - cargoOrderB;
-      
-      const nomeA = a.integrantes_portal?.nome_colete || a.visitante_nome || '';
-      const nomeB = b.integrantes_portal?.nome_colete || b.visitante_nome || '';
-      return nomeA.localeCompare(nomeB, 'pt-BR');
+      if (!grupos.has(divisao)) {
+        grupos.set(divisao, []);
+      }
+      grupos.get(divisao)?.push(p);
     });
+    
+    // Ordenar integrantes dentro de cada divisão pela hierarquia do organograma
+    grupos.forEach((integrantes, divisao) => {
+      const ordenados = [...integrantes].sort((a, b) => {
+        // Adaptar para o formato esperado por ordenarIntegrantes
+        const integranteA = {
+          cargo_nome: a.integrantes_portal?.cargo_nome || null,
+          grau: a.integrantes_portal?.grau || null,
+          data_entrada: null,
+          nome_colete: a.integrantes_portal?.nome_colete || a.visitante_nome || ''
+        };
+        const integranteB = {
+          cargo_nome: b.integrantes_portal?.cargo_nome || null,
+          grau: b.integrantes_portal?.grau || null,
+          data_entrada: null,
+          nome_colete: b.integrantes_portal?.nome_colete || b.visitante_nome || ''
+        };
+        return ordenarIntegrantes(integranteA, integranteB);
+      });
+      grupos.set(divisao, ordenados);
+    });
+    
+    return grupos;
   }, [presencas]);
+
+  // Ordenar divisões alfabeticamente, com "Visitantes Externos" e "Sem Divisão" por último
+  const divisoesOrdenadas = useMemo(() => {
+    const divisoes = Array.from(presencasAgrupadasPorDivisao.keys());
+    return divisoes.sort((a, b) => {
+      if (a === 'Visitantes Externos') return 1;
+      if (b === 'Visitantes Externos') return -1;
+      if (a === 'Sem Divisão') return 1;
+      if (b === 'Sem Divisão') return -1;
+      return a.localeCompare(b, 'pt-BR');
+    });
+  }, [presencasAgrupadasPorDivisao]);
+
+  // Lista plana para estatísticas e exportação Excel
+  const presencasOrdenadas = useMemo(() => {
+    const resultado: typeof presencas = [];
+    divisoesOrdenadas.forEach(divisao => {
+      const integrantes = presencasAgrupadasPorDivisao.get(divisao) || [];
+      resultado.push(...integrantes);
+    });
+    return resultado;
+  }, [divisoesOrdenadas, presencasAgrupadasPorDivisao]);
 
   const getStatusBadge = (status: string, justificativa: string | null) => {
     const statusExibicao = getStatusExibicao(status, justificativa);
@@ -368,65 +373,78 @@ export const ListasConsulta = ({ grau, regionalId, divisaoId, isAdmin = false }:
               <div className="flex justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
-            ) : presencasOrdenadas && presencasOrdenadas.length > 0 ? (
-              <div className="overflow-x-auto -mx-4 md:mx-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[120px]">Nome</TableHead>
-                      <TableHead className="hidden md:table-cell">Divisão</TableHead>
-                      <TableHead className="hidden lg:table-cell">Cargo</TableHead>
-                      <TableHead className="hidden lg:table-cell">Grau</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="hidden md:table-cell">Confirmado Por</TableHead>
-                      <TableHead className="hidden lg:table-cell">Data/Hora</TableHead>
-                      <TableHead className="hidden sm:table-cell">Justificativa</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {presencasOrdenadas.map((presenca) => (
-                      <TableRow key={presenca.id}>
-                        <TableCell className="font-medium text-sm">
-                          {presenca.integrantes_portal?.nome_colete 
-                            ? removeAccents(presenca.integrantes_portal.nome_colete)
-                            : presenca.visitante_nome 
-                              ? removeAccents(presenca.visitante_nome)
-                              : '-'}
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          {presenca.integrantes_portal?.divisao_texto 
-                            ? removeAccents(presenca.integrantes_portal.divisao_texto)
-                            : presenca.visitante_tipo === 'externo' 
-                              ? 'Externo' 
-                              : '-'}
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell">
-                          {presenca.integrantes_portal?.cargo_nome 
-                            ? removeAccents(presenca.integrantes_portal.cargo_nome)
-                            : presenca.visitante_tipo === 'externo' 
-                              ? 'Visitante Externo' 
-                              : '-'}
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell">
-                          {presenca.integrantes_portal?.grau || '-'}
-                        </TableCell>
-                        <TableCell>{getStatusBadge(presenca.status, presenca.justificativa_ausencia)}</TableCell>
-                        <TableCell className="hidden md:table-cell">{presenca.confirmado_por || '-'}</TableCell>
-                        <TableCell className="hidden lg:table-cell">
-                          {presenca.confirmado_em 
-                            ? format(new Date(presenca.confirmado_em), "dd/MM/yy HH:mm", { locale: ptBR })
-                            : '-'}
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell text-sm">
-                          {getStatusExibicao(presenca.status, presenca.justificativa_ausencia) === 'presente' ||
-                           getStatusExibicao(presenca.status, presenca.justificativa_ausencia) === 'visitante'
-                            ? '-'
-                            : presenca.justificativa_ausencia || 'Não justificado'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+            ) : divisoesOrdenadas.length > 0 ? (
+              <div className="space-y-6">
+                {divisoesOrdenadas.map(divisao => {
+                  const integrantesDaDivisao = presencasAgrupadasPorDivisao.get(divisao) || [];
+                  return (
+                    <div key={divisao} className="border rounded-lg overflow-hidden">
+                      {/* Cabeçalho da Divisão */}
+                      <div className="bg-muted/50 px-4 py-3 flex items-center gap-2 border-b">
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                        <h3 className="font-semibold text-sm">
+                          {removeAccents(divisao)}
+                        </h3>
+                        <Badge variant="secondary" className="ml-auto">
+                          {integrantesDaDivisao.length}
+                        </Badge>
+                      </div>
+                      
+                      {/* Tabela da Divisão */}
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="min-w-[120px]">Nome</TableHead>
+                              <TableHead className="hidden lg:table-cell">Cargo</TableHead>
+                              <TableHead className="hidden lg:table-cell">Grau</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead className="hidden md:table-cell">Confirmado Por</TableHead>
+                              <TableHead className="hidden lg:table-cell">Data/Hora</TableHead>
+                              <TableHead className="hidden sm:table-cell">Justificativa</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {integrantesDaDivisao.map((presenca) => (
+                              <TableRow key={presenca.id}>
+                                <TableCell className="font-medium text-sm">
+                                  {presenca.integrantes_portal?.nome_colete 
+                                    ? removeAccents(presenca.integrantes_portal.nome_colete)
+                                    : presenca.visitante_nome 
+                                      ? removeAccents(presenca.visitante_nome)
+                                      : '-'}
+                                </TableCell>
+                                <TableCell className="hidden lg:table-cell">
+                                  {presenca.integrantes_portal?.cargo_nome 
+                                    ? removeAccents(presenca.integrantes_portal.cargo_nome)
+                                    : presenca.visitante_tipo === 'externo' 
+                                      ? 'Visitante Externo' 
+                                      : '-'}
+                                </TableCell>
+                                <TableCell className="hidden lg:table-cell">
+                                  {presenca.integrantes_portal?.grau || '-'}
+                                </TableCell>
+                                <TableCell>{getStatusBadge(presenca.status, presenca.justificativa_ausencia)}</TableCell>
+                                <TableCell className="hidden md:table-cell">{presenca.confirmado_por || '-'}</TableCell>
+                                <TableCell className="hidden lg:table-cell">
+                                  {presenca.confirmado_em 
+                                    ? format(new Date(presenca.confirmado_em), "dd/MM/yy HH:mm", { locale: ptBR })
+                                    : '-'}
+                                </TableCell>
+                                <TableCell className="hidden sm:table-cell text-sm">
+                                  {getStatusExibicao(presenca.status, presenca.justificativa_ausencia) === 'presente' ||
+                                   getStatusExibicao(presenca.status, presenca.justificativa_ausencia) === 'visitante'
+                                    ? '-'
+                                    : presenca.justificativa_ausencia || 'Não justificado'}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
