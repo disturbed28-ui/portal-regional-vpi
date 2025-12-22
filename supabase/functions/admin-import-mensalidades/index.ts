@@ -27,11 +27,36 @@ const normalizarTexto = (texto: string): string => {
   if (!texto) return '';
   
   return texto
+    .toUpperCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '') // Remove acentos
-    .replace(/ç/g, 'c')
-    .replace(/Ç/g, 'C')
     .trim();
+};
+
+/**
+ * Normaliza divisão para formato padrão: DIVISAO [NOME] - SP
+ * Trata também casos de Grau V onde divisão é uma regional
+ */
+const normalizarDivisaoParaSalvar = (texto: string): string => {
+  if (!texto) return '';
+  let normalizado = normalizarTexto(texto);
+  
+  // Se contém REGIONAL (caso Grau V), manter prefixo REGIONAL
+  if (normalizado.includes('REGIONAL')) {
+    normalizado = normalizado.replace(/^(DIVISAO\s+)?REGIONAL\s*/i, 'REGIONAL ');
+  } else {
+    // Garantir prefixo DIVISAO
+    if (!normalizado.startsWith('DIVISAO')) {
+      normalizado = 'DIVISAO ' + normalizado.replace(/^DIVISAO\s*/i, '');
+    }
+  }
+  
+  // Garantir sufixo - SP
+  if (!normalizado.endsWith('- SP')) {
+    normalizado = normalizado.replace(/\s*-?\s*SP?\s*$/, '') + ' - SP';
+  }
+  
+  return normalizado;
 };
 
 Deno.serve(async (req) => {
@@ -224,8 +249,8 @@ Deno.serve(async (req) => {
       // Se for Grau V, usar regional_texto como divisao
       let divisaoFinal = regionalGrauV || m.divisao_texto;
       
-      // SEMPRE normalizar removendo acentos
-      divisaoFinal = normalizarTexto(divisaoFinal);
+      // NORMALIZAÇÃO COMPLETA: UPPERCASE, prefixo DIVISAO/REGIONAL, sufixo - SP
+      divisaoFinal = normalizarDivisaoParaSalvar(divisaoFinal);
       
       // Inferir regional_id para cada registro
       let regionalId = integranteRegionalMap.get(m.registro_id);

@@ -11,6 +11,44 @@ interface AfastadoInput {
   data_retorno_prevista: string;
 }
 
+/**
+ * Normaliza texto: UPPERCASE e remove acentos
+ */
+const normalizarTexto = (texto: string): string => {
+  if (!texto) return '';
+  
+  return texto
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+    .trim();
+};
+
+/**
+ * Normaliza divisão para formato padrão: DIVISAO [NOME] - SP
+ */
+const normalizarDivisaoParaSalvar = (texto: string): string => {
+  if (!texto) return '';
+  let normalizado = normalizarTexto(texto);
+  
+  // Se contém REGIONAL (caso Grau V), manter prefixo REGIONAL
+  if (normalizado.includes('REGIONAL')) {
+    normalizado = normalizado.replace(/^(DIVISAO\s+)?REGIONAL\s*/i, 'REGIONAL ');
+  } else {
+    // Garantir prefixo DIVISAO
+    if (!normalizado.startsWith('DIVISAO')) {
+      normalizado = 'DIVISAO ' + normalizado.replace(/^DIVISAO\s*/i, '');
+    }
+  }
+  
+  // Garantir sufixo - SP
+  if (!normalizado.endsWith('- SP')) {
+    normalizado = normalizado.replace(/\s*-?\s*SP?\s*$/, '') + ' - SP';
+  }
+  
+  return normalizado;
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -144,7 +182,7 @@ Deno.serve(async (req) => {
         const afastadoData = {
           registro_id: afastado.registro_id,
           nome_colete: afastado.nome_colete,
-          divisao_texto: afastado.divisao_texto,
+          divisao_texto: normalizarDivisaoParaSalvar(afastado.divisao_texto), // NORMALIZAÇÃO COMPLETA
           cargo_grau_texto: afastado.cargo_grau_texto,
           tipo_afastamento: afastado.tipo_afastamento,
           data_afastamento: afastado.data_afastamento,
