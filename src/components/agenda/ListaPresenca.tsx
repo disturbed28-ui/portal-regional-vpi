@@ -231,7 +231,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
 
     if (!existingEvento) {
       // Criar evento se não existir
-      const divisaoId = await getDivisaoIdFromEvent(event);
+      const divisaoId = getDivisaoIdFromEvent(event);
       const regionalId = await getRegionalIdFromEvent(event);
       
       await criarEvento(
@@ -343,32 +343,16 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     return regional?.id || null;
   };
 
-  const getDivisaoIdFromEvent = async (event: CalendarEvent): Promise<string | null> => {
-    if (!event.division) return null;
-
-    const normalizeText = (text: string) => {
-      return removeAccents(text).toLowerCase().replace(/\s+/g, ' ').trim();
-    };
-
-    const divisaoEventoNormalizada = normalizeText(event.division);
-    console.log('[getDivisaoIdFromEvent] Buscando divisão para:', event.division);
+  const getDivisaoIdFromEvent = (event: CalendarEvent): string | null => {
+    // Usar diretamente o divisao_id que já vem do CalendarEvent
+    // Já foi resolvido no parsing do Google Calendar - 100% preciso
+    if (event.divisao_id) {
+      console.log('[getDivisaoIdFromEvent] Usando divisao_id do evento:', event.divisao_id);
+      return event.divisao_id;
+    }
     
-    const { data: allDivisoes } = await supabase
-      .from('divisoes')
-      .select('id, nome');
-    
-    if (!allDivisoes) return null;
-    
-    const palavrasChave = divisaoEventoNormalizada
-      .split(' ')
-      .filter(p => !['divisao', 'div', 'sp', '-', 'de', 'do', 'da', 'dos'].includes(p) && p.length > 2);
-    
-    const divisaoEncontrada = allDivisoes.find(d => {
-      const nomeNormalizado = normalizeText(d.nome);
-      return palavrasChave.every(palavra => nomeNormalizado.includes(palavra));
-    });
-
-    return divisaoEncontrada?.id || null;
+    console.log('[getDivisaoIdFromEvent] Evento sem divisao_id:', event.title);
+    return null;
   };
 
   const handleLoadDivisaoCMD = async () => {
