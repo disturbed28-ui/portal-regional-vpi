@@ -109,6 +109,7 @@ export const useFrequenciaPonderada = ({
       }
 
       console.log('[useFrequenciaPonderada] Eventos encontrados:', eventos?.length);
+      console.log('[useFrequenciaPonderada] IDs dos eventos:', eventos?.map(e => e.id));
 
       if (!eventos || eventos.length === 0) {
         return [];
@@ -153,6 +154,21 @@ export const useFrequenciaPonderada = ({
       }
 
       console.log('[useFrequenciaPonderada] Presenças encontradas:', presencas?.length);
+      
+      // DEBUG: Log específico para Painkiller
+      const painkillerPresencasAntesFiltro = presencas?.filter(p => 
+        p.integrantes_portal.nome_colete?.toLowerCase().includes('painkiller') ||
+        p.integrantes_portal.nome_colete?.toLowerCase().includes('pain killer')
+      );
+      console.log('[DEBUG Painkiller] Presenças ANTES do filtro por divisão:', 
+        painkillerPresencasAntesFiltro?.length, 
+        painkillerPresencasAntesFiltro?.map(p => ({
+          evento_id: p.evento_agenda_id,
+          status: p.status,
+          divisao_id: p.integrantes_portal.divisao_id,
+          nome: p.integrantes_portal.nome_colete
+        }))
+      );
 
       // 4. Buscar pesos das justificativas
       const { data: pesosJustificativas } = await supabase
@@ -173,6 +189,21 @@ export const useFrequenciaPonderada = ({
           p.integrantes_portal.divisao_id === integrantesDivisaoId
         );
         console.log('[useFrequenciaPonderada] Filtrando por divisão do integrante:', integrantesDivisaoId, 'Presenças:', presencasFiltradas?.length);
+        
+        // DEBUG: Log específico para Painkiller após filtro
+        const painkillerAposFiltro = presencasFiltradas?.filter(p => 
+          p.integrantes_portal.nome_colete?.toLowerCase().includes('painkiller') ||
+          p.integrantes_portal.nome_colete?.toLowerCase().includes('pain killer')
+        );
+        console.log('[DEBUG Painkiller] Presenças APÓS filtro por divisão:', 
+          painkillerAposFiltro?.length,
+          painkillerAposFiltro?.map(p => ({
+            evento_id: p.evento_agenda_id,
+            status: p.status,
+            divisao_id: p.integrantes_portal.divisao_id,
+            nome: p.integrantes_portal.nome_colete
+          }))
+        );
       } else if (regionalId) {
         // Filtrar por regional do INTEGRANTE (mostra todos eventos que integrantes dessa regional participaram)
         presencasFiltradas = presencas?.filter(p => 
@@ -205,7 +236,20 @@ export const useFrequenciaPonderada = ({
         const integrante = integrantesMap.get(key)!;
         const evento = eventos.find(e => e.id === p.evento_agenda_id);
         
-        if (!evento) return;
+        if (!evento) {
+          // DEBUG: Log quando evento não é encontrado
+          const isPainkiller = p.integrantes_portal.nome_colete?.toLowerCase().includes('painkiller') ||
+            p.integrantes_portal.nome_colete?.toLowerCase().includes('pain killer');
+          if (isPainkiller) {
+            console.warn('[DEBUG Painkiller] EVENTO NÃO ENCONTRADO:', {
+              presenca_id: p.id,
+              evento_agenda_id: p.evento_agenda_id,
+              integrante: p.integrantes_portal.nome_colete,
+              eventoIds_disponiveis: eventos.map(e => e.id)
+            });
+          }
+          return;
+        }
 
         const pesoEvento = pesosMap.get(evento.tipo_evento_peso || '') || 1;
         
@@ -248,6 +292,6 @@ export const useFrequenciaPonderada = ({
 
       return resultado;
     },
-    staleTime: 5 * 60 * 1000, // Cache de 5 minutos
+    staleTime: 30 * 1000, // Cache de 30 segundos (temporário para debug)
   });
 };
