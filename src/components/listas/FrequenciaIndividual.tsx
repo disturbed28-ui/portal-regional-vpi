@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Calendar as CalendarIcon, ChevronDown, Download, Users } from "lucide-react";
-import { format, subMonths, startOfYear } from "date-fns";
+import { format, subMonths, startOfYear, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useFrequenciaPonderada, IntegranteFrequencia } from "@/hooks/useFrequenciaPonderada";
 import { useDivisoes } from "@/hooks/useDivisoes";
@@ -38,8 +38,8 @@ interface GrupoFrequencia {
 export const FrequenciaIndividual = ({ grau, regionalId, divisaoId, isAdmin = false }: FrequenciaIndividualProps) => {
   const hoje = new Date();
   const [periodoPreset, setPeriodoPreset] = useState<PeriodoPreset>('ultimo_mes');
-  const [dataInicio, setDataInicio] = useState<Date>(subMonths(hoje, 1));
-  const [dataFim, setDataFim] = useState<Date>(hoje);
+  const [dataInicio, setDataInicio] = useState<Date>(startOfDay(subMonths(hoje, 1)));
+  const [dataFim, setDataFim] = useState<Date>(endOfDay(hoje));
   const [divisaoSelecionada, setDivisaoSelecionada] = useState<string>('todas');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
@@ -260,20 +260,19 @@ export const FrequenciaIndividual = ({ grau, regionalId, divisaoId, isAdmin = fa
   const handlePeriodoChange = (preset: PeriodoPreset) => {
     setPeriodoPreset(preset);
     const hoje = new Date();
-    hoje.setHours(23, 59, 59, 999);
     
     switch (preset) {
       case 'ultimo_mes':
-        setDataInicio(subMonths(hoje, 1));
-        setDataFim(hoje);
+        setDataInicio(startOfDay(subMonths(hoje, 1)));
+        setDataFim(endOfDay(hoje));
         break;
       case 'ultimos_3_meses':
-        setDataInicio(subMonths(hoje, 3));
-        setDataFim(hoje);
+        setDataInicio(startOfDay(subMonths(hoje, 3)));
+        setDataFim(endOfDay(hoje));
         break;
       case 'ano_atual':
-        setDataInicio(startOfYear(hoje));
-        setDataFim(hoje);
+        setDataInicio(startOfDay(startOfYear(hoje)));
+        setDataFim(endOfDay(hoje));
         break;
     }
   };
