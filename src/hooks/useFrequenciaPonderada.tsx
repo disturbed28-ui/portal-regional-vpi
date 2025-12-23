@@ -75,6 +75,9 @@ export const useFrequenciaPonderada = ({
   return useQuery({
     queryKey: ['frequencia-ponderada', dataInicio, dataFim, divisaoIds, regionalId, integrantesDivisaoId, tiposEvento],
     queryFn: async () => {
+      // Log de versão para confirmar código atualizado
+      console.log('[useFrequenciaPonderada] VERSÃO: 2025-12-23T15:05 - Limite 10000');
+      
       console.log('[useFrequenciaPonderada] Iniciando cálculo', {
         dataInicio,
         dataFim,
@@ -293,5 +296,6 @@ export const useFrequenciaPonderada = ({
       return resultado;
     },
     staleTime: 30 * 1000, // Cache de 30 segundos (temporário para debug)
+    refetchOnWindowFocus: true, // Forçar recarregamento ao voltar à aba
   });
 };
