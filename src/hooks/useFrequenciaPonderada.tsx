@@ -144,7 +144,8 @@ export const useFrequenciaPonderada = ({
           )
         `)
         .in('evento_agenda_id', eventoIds)
-        .neq('status', 'visitante');
+        .neq('status', 'visitante')
+        .limit(10000); // Aumentar limite para evitar truncamento silencioso (padrão Supabase: 1000)
 
       if (presencasError) {
         console.error('[useFrequenciaPonderada] Erro ao buscar presenças:', presencasError);
