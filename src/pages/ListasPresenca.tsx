@@ -129,6 +129,8 @@ const ListasPresenca = () => {
               regionalId={profile?.regional_id}
               divisaoId={profile?.divisao_id}
               isAdmin={isAdmin}
+              isCaveira={profile?.integrante?.caveira || false}
+              isBatedor={profile?.integrante?.batedor || false}
             />
           </TabsContent>
 

@@ -20,6 +20,8 @@ interface ListasConsultaProps {
   regionalId?: string | null;
   divisaoId?: string | null;
   isAdmin?: boolean;
+  isCaveira?: boolean;
+  isBatedor?: boolean;
 }
 
 /**
@@ -38,7 +40,14 @@ const getStatusExibicao = (status: string, justificativa: string | null): string
   return 'ausente';
 };
 
-export const ListasConsulta = ({ grau, regionalId, divisaoId, isAdmin = false }: ListasConsultaProps) => {
+export const ListasConsulta = ({ 
+  grau, 
+  regionalId, 
+  divisaoId, 
+  isAdmin = false,
+  isCaveira = false,
+  isBatedor = false
+}: ListasConsultaProps) => {
   const [eventoSelecionado, setEventoSelecionado] = useState<string>('');
   
   // Determinar nível de acesso
@@ -49,9 +58,38 @@ export const ListasConsulta = ({ grau, regionalId, divisaoId, isAdmin = false }:
     (nivelAcesso === 'regional' || nivelAcesso === 'divisao') ? regionalId : null
   );
 
+  // Buscar a divisão que representa a regional (ex: "REGIONAL VALE DO PARAIBA I - SP")
+  const { data: divisaoRegional } = useQuery({
+    queryKey: ['divisao-regional', regionalId],
+    queryFn: async () => {
+      if (!regionalId) return null;
+      const { data } = await supabase
+        .from('divisoes')
+        .select('id')
+        .eq('regional_id', regionalId)
+        .ilike('nome', 'REGIONAL%')
+        .maybeSingle();
+      return data?.id || null;
+    },
+    enabled: !!regionalId
+  });
+
+  // Buscar o ID da divisão CMD (eventos de comando são visíveis para todos)
+  const { data: divisaoCMD } = useQuery({
+    queryKey: ['divisao-cmd'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('divisoes')
+        .select('id')
+        .eq('nome', 'CMD')
+        .maybeSingle();
+      return data?.id || null;
+    }
+  });
+
   // Buscar eventos disponíveis (apenas passados ou de hoje)
   const { data: eventos, isLoading: loadingEventos } = useQuery({
-    queryKey: ['eventos-lista', isAdmin, nivelAcesso, divisoesDaRegional, divisaoId],
+    queryKey: ['eventos-lista', isAdmin, nivelAcesso, divisoesDaRegional, divisaoId, divisaoRegional, divisaoCMD],
     queryFn: async () => {
       const hoje = new Date();
       const dataLimite = new Date(Date.UTC(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 23, 59, 59, 999));
@@ -63,6 +101,7 @@ export const ListasConsulta = ({ grau, regionalId, divisaoId, isAdmin = false }:
           titulo,
           data_evento,
           divisao_id,
+          tipo_evento,
           divisoes(nome)
         `)
         .lte('data_evento', dataLimite.toISOString())
@@ -72,13 +111,28 @@ export const ListasConsulta = ({ grau, regionalId, divisaoId, isAdmin = false }:
       // Aplicar filtro baseado no nível de acesso
       if (!isAdmin) {
         if (nivelAcesso === 'comando') {
-          // Graus I-IV: ver todos (sem filtro adicional)
-        } else if ((nivelAcesso === 'regional' || nivelAcesso === 'divisao') && divisoesDaRegional.length > 0) {
-          // Graus V e VI: ver eventos da regional inteira
-          query = query.in('divisao_id', divisoesDaRegional);
-        } else if (divisaoId) {
-          // Fallback: apenas a divisão do usuário
-          query = query.eq('divisao_id', divisaoId);
+          // Graus I-IV: ver todos (sem filtro adicional de divisão)
+        } else {
+          // Construir lista de divisões visíveis
+          let divisoesVisiveis = [...divisoesDaRegional];
+
+          // Adicionar a divisão "REGIONAL X" se existir
+          if (divisaoRegional) {
+            divisoesVisiveis.push(divisaoRegional);
+          }
+
+          // Adicionar divisão CMD (eventos de comando são visíveis para todos)
+          if (divisaoCMD) {
+            divisoesVisiveis.push(divisaoCMD);
+          }
+
+          if (divisoesVisiveis.length > 0) {
+            // Graus V e VI: ver eventos da regional + CMD + regional específica
+            query = query.in('divisao_id', divisoesVisiveis);
+          } else if (divisaoId) {
+            // Fallback: apenas a divisão do usuário
+            query = query.eq('divisao_id', divisaoId);
+          }
         }
       }
 
@@ -87,8 +141,25 @@ export const ListasConsulta = ({ grau, regionalId, divisaoId, isAdmin = false }:
       if (error) throw error;
       return data;
     },
-    enabled: isAdmin || nivelAcesso === 'comando' || divisoesDaRegional.length > 0 || !!divisaoId
+    enabled: isAdmin || nivelAcesso === 'comando' || divisoesDaRegional.length > 0 || !!divisaoId || !!divisaoRegional || !!divisaoCMD
   });
+
+  // Filtrar eventos de Caveira/Batedor no cliente
+  const eventosFiltrados = useMemo(() => {
+    if (!eventos) return [];
+    
+    return eventos.filter(evento => {
+      // Eventos de Caveira só aparecem para quem é caveira
+      if (evento.tipo_evento === 'Caveira' && !isCaveira) {
+        return false;
+      }
+      // Eventos de Batedor só aparecem para quem é batedor (se existir esse tipo)
+      if (evento.tipo_evento === 'Batedor' && !isBatedor) {
+        return false;
+      }
+      return true;
+    });
+  }, [eventos, isCaveira, isBatedor]);
 
   // Buscar presenças do evento selecionado
   const { data: presencas, isLoading: loadingPresencas } = useQuery({
@@ -123,7 +194,7 @@ export const ListasConsulta = ({ grau, regionalId, divisaoId, isAdmin = false }:
     enabled: !!eventoSelecionado
   });
 
-  const eventoAtual = eventos?.find(e => e.id === eventoSelecionado);
+  const eventoAtual = eventosFiltrados?.find(e => e.id === eventoSelecionado);
 
   // Agrupar presenças por divisão e ordenar hierarquicamente dentro de cada grupo
   const presencasAgrupadasPorDivisao = useMemo(() => {
@@ -267,8 +338,8 @@ export const ListasConsulta = ({ grau, regionalId, divisaoId, isAdmin = false }:
             <SelectContent>
               {loadingEventos ? (
                 <SelectItem value="loading" disabled>Carregando...</SelectItem>
-              ) : eventos && eventos.length > 0 ? (
-                eventos.map(evento => (
+              ) : eventosFiltrados && eventosFiltrados.length > 0 ? (
+                eventosFiltrados.map(evento => (
                   <SelectItem key={evento.id} value={evento.id}>
                     {format(new Date(evento.data_evento), "dd/MM/yyyy", { locale: ptBR })} - {removeAccents(evento.titulo)}
                     {evento.divisoes && ` (${removeAccents(evento.divisoes.nome)})`}
