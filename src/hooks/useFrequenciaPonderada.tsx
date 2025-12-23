@@ -130,33 +130,53 @@ export const useFrequenciaPonderada = ({
 
       const pesosMap = new Map(pesosTipos?.map(p => [p.tipo, p.peso]) || []);
 
-      // 3. Buscar todas as presenças desses eventos
+      // 3. Buscar todas as presenças desses eventos usando paginação
+      // O Supabase tem limite máximo de 1000 por requisição no PostgREST
       const eventoIds = eventos.map(e => e.id);
-      const { data: presencas, error: presencasError } = await supabase
-        .from('presencas')
-        .select(`
-          *,
-          integrantes_portal!inner(
-            nome_colete,
-            divisao_texto,
-            divisao_id,
-            regional_id,
-            regional_texto,
-            cargo_nome,
-            grau,
-            ativo
-          )
-        `)
-        .in('evento_agenda_id', eventoIds)
-        .neq('status', 'visitante')
-        .limit(10000); // Aumentar limite para evitar truncamento silencioso (padrão Supabase: 1000)
+      let allPresencas: any[] = [];
+      let offset = 0;
+      const pageSize = 1000;
+      let hasMore = true;
 
-      if (presencasError) {
-        console.error('[useFrequenciaPonderada] Erro ao buscar presenças:', presencasError);
-        throw presencasError;
+      console.log('[useFrequenciaPonderada] VERSÃO: 2025-12-23T16:00 - Buscando com paginação');
+
+      while (hasMore) {
+        const { data: presencasPage, error: presencasError } = await supabase
+          .from('presencas')
+          .select(`
+            *,
+            integrantes_portal!inner(
+              nome_colete,
+              divisao_texto,
+              divisao_id,
+              regional_id,
+              regional_texto,
+              cargo_nome,
+              grau,
+              ativo
+            )
+          `)
+          .in('evento_agenda_id', eventoIds)
+          .neq('status', 'visitante')
+          .range(offset, offset + pageSize - 1);
+
+        if (presencasError) {
+          console.error('[useFrequenciaPonderada] Erro ao buscar presenças:', presencasError);
+          throw presencasError;
+        }
+
+        if (presencasPage && presencasPage.length > 0) {
+          allPresencas = [...allPresencas, ...presencasPage];
+          offset += pageSize;
+          hasMore = presencasPage.length === pageSize;
+          console.log(`[useFrequenciaPonderada] Página carregada: ${presencasPage.length} presenças, total: ${allPresencas.length}`);
+        } else {
+          hasMore = false;
+        }
       }
 
-      console.log('[useFrequenciaPonderada] Presenças encontradas:', presencas?.length);
+      const presencas = allPresencas;
+      console.log('[useFrequenciaPonderada] Total de presenças carregadas:', presencas?.length);
       
       // DEBUG: Log específico para Painkiller
       const painkillerPresencasAntesFiltro = presencas?.filter(p => 
