@@ -39,7 +39,7 @@ const Organograma = () => {
   const [nivel, setNivel] = useState<Nivel>('regional');
   const [tipoLista, setTipoLista] = useState<TipoLista>(null);
   const [divisaoSelecionada, setDivisaoSelecionada] = useState<string | null>(null);
-
+  const [divisaoTexto, setDivisaoTexto] = useState<string | null>(null);
   const [regionalId, setRegionalId] = useState<string | null>(null);
   const [regionalNome, setRegionalNome] = useState<string | null>(null);
 
@@ -139,8 +139,9 @@ const Organograma = () => {
     setNivel('lista');
   };
 
-  const navegarParaDivisao = (divisao: string) => {
-    setDivisaoSelecionada(divisao);
+  const navegarParaDivisao = (divisaoId: string, divisaoNome: string) => {
+    setDivisaoSelecionada(divisaoId);
+    setDivisaoTexto(divisaoNome);
     setNivel('divisao');
   };
 
@@ -153,6 +154,7 @@ const Organograma = () => {
   const voltarParaLista = () => {
     setNivel('lista');
     setDivisaoSelecionada(null);
+    setDivisaoTexto(null);
   };
 
   if (loadingAccess || profileLoading || dataLoading || roleLoading) {
@@ -219,7 +221,7 @@ const Organograma = () => {
           nivel={nivel}
           regionalNome={regionalNome || 'Regional'}
           cargoAtual={nivel !== 'regional' ? getTituloLista() : undefined}
-          divisaoAtual={divisaoSelecionada || undefined}
+          divisaoAtual={divisaoTexto || undefined}
           onVoltar={nivel === 'divisao' ? voltarParaLista : voltarParaRegional}
         />
 
@@ -285,7 +287,7 @@ const Organograma = () => {
               divisao={integrante.divisao_texto}
               foto={integrante.foto}
               badges={getBadges(integrante)}
-              onClick={() => navegarParaDivisao(integrante.divisao_texto)}
+              onClick={() => navegarParaDivisao(integrante.divisao_id || integrante.divisao_texto, integrante.divisao_texto)}
             />
                 ))}
               </div>
