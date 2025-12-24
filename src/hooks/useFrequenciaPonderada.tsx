@@ -207,26 +207,28 @@ export const useFrequenciaPonderada = ({
       let presencasFiltradas = presencas;
       
       if (integrantesDivisaoId) {
-        // Filtrar por divisão do INTEGRANTE (mostra todos eventos que esse integrante participou)
-        presencasFiltradas = presencas?.filter(p => 
-          p.integrantes_portal.divisao_id === integrantesDivisaoId
-        );
-        console.log('[useFrequenciaPonderada] Filtrando por divisão do integrante:', integrantesDivisaoId, 'Presenças:', presencasFiltradas?.length);
+        // Buscar o nome da divisão para comparar com divisao_texto
+        // Isso é necessário para integrantes da Regional que têm divisao_id = null
+        const { data: divisaoInfo } = await supabase
+          .from('divisoes')
+          .select('nome')
+          .eq('id', integrantesDivisaoId)
+          .single();
         
-        // DEBUG: Log específico para Painkiller após filtro
-        const painkillerAposFiltro = presencasFiltradas?.filter(p => 
-          p.integrantes_portal.nome_colete?.toLowerCase().includes('painkiller') ||
-          p.integrantes_portal.nome_colete?.toLowerCase().includes('pain killer')
+        const nomeDivisao = divisaoInfo?.nome;
+        
+        // Filtrar por divisão do INTEGRANTE
+        // Considerar tanto divisao_id quanto divisao_texto (para integrantes da Regional sem divisao_id)
+        presencasFiltradas = presencas?.filter(p => 
+          p.integrantes_portal.divisao_id === integrantesDivisaoId ||
+          (p.integrantes_portal.divisao_id === null && 
+           p.integrantes_portal.divisao_texto === nomeDivisao)
         );
-        console.log('[DEBUG Painkiller] Presenças APÓS filtro por divisão:', 
-          painkillerAposFiltro?.length,
-          painkillerAposFiltro?.map(p => ({
-            evento_id: p.evento_agenda_id,
-            status: p.status,
-            divisao_id: p.integrantes_portal.divisao_id,
-            nome: p.integrantes_portal.nome_colete
-          }))
-        );
+        
+        console.log('[useFrequenciaPonderada] Filtrando por divisão do integrante:', 
+          integrantesDivisaoId, 
+          'Nome:', nomeDivisao, 
+          'Presenças:', presencasFiltradas?.length);
       } else if (regionalId) {
         // Filtrar por regional do INTEGRANTE (mostra todos eventos que integrantes dessa regional participaram)
         presencasFiltradas = presencas?.filter(p => 

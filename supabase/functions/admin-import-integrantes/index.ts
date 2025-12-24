@@ -126,7 +126,41 @@ async function buscarIdsHierarquia(
   if (divisaoUpper.startsWith('REGIONAL ') || divisaoUpper === 'REGIONAL') {
     console.log(`[HIERARQUIA] Detectado cargo regional: "${divisaoTexto}"`);
     
-    // Para cargos regionais, buscar diretamente na tabela regionais
+    // 🆕 PRIMEIRO: Verificar se existe uma DIVISÃO cadastrada com esse nome "REGIONAL..."
+    // Isso acontece quando existe uma divisão com nome "REGIONAL VALE DO PARAIBA I - SP" por exemplo
+    const divisaoNorm = normalizarDivisaoTexto(divisaoTexto);
+    const { data: divisoes } = await supabase
+      .from('divisoes')
+      .select('id, nome, regional_id, nome_ascii')
+      .order('nome');
+    
+    if (divisoes && divisoes.length > 0) {
+      // Tentar match na tabela divisoes
+      const divisaoEncontrada = divisoes.find((d: any) => {
+        const nomeNorm = normalizarDivisaoTexto(d.nome);
+        const asciiNorm = d.nome_ascii ? d.nome_ascii.toLowerCase() : '';
+        // Match exato com o nome da divisão (ex: "REGIONAL VALE DO PARAIBA I - SP")
+        return d.nome.toUpperCase() === normalizarDivisaoParaSalvar(divisaoTexto).toUpperCase() ||
+               nomeNorm === divisaoNorm || 
+               nomeNorm.includes(divisaoNorm) || 
+               divisaoNorm.includes(nomeNorm) ||
+               asciiNorm.includes(divisaoNorm) ||
+               divisaoNorm.includes(asciiNorm);
+      });
+      
+      if (divisaoEncontrada) {
+        // Existe divisão cadastrada com esse nome - USAR!
+        const resultado = {
+          divisao_id: divisaoEncontrada.id,
+          regional_id: divisaoEncontrada.regional_id
+        };
+        cacheHierarquia.set(cacheKey, resultado);
+        console.log(`[HIERARQUIA] Divisão regional encontrada: ${divisaoTexto} -> divisao_id=${resultado.divisao_id}, regional_id=${resultado.regional_id} (${divisaoEncontrada.nome})`);
+        return resultado;
+      }
+    }
+    
+    // Se não existe divisão, buscar apenas na tabela regionais (manter comportamento original)
     const regionalParaBuscar = regionalTexto || divisaoTexto;
     const regionalNorm = normalizarRegionalTexto(regionalParaBuscar);
     
@@ -149,11 +183,11 @@ async function buscarIdsHierarquia(
       
       if (regionalEncontrada) {
         const resultado = {
-          divisao_id: null,  // Cargos regionais não têm divisão
+          divisao_id: null,  // Cargos regionais sem divisão cadastrada
           regional_id: regionalEncontrada.id
         };
         cacheHierarquia.set(cacheKey, resultado);
-        console.log(`[HIERARQUIA] Cargo regional: ${divisaoTexto} -> regional_id=${resultado.regional_id} (${regionalEncontrada.nome})`);
+        console.log(`[HIERARQUIA] Cargo regional (sem divisão): ${divisaoTexto} -> regional_id=${resultado.regional_id} (${regionalEncontrada.nome})`);
         return resultado;
       }
     }
