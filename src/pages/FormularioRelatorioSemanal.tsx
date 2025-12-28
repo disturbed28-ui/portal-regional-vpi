@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Check } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Check, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,10 +12,11 @@ import { useBuscaIntegrante, useBuscaIntegranteTodos } from "@/hooks/useIntegran
 import { useMovimentacoesConsolidadas } from "@/hooks/useMovimentacoesConsolidadas";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { normalizeText, calcularSemanaOperacional, formatDateToSQL } from "@/lib/normalizeText";
+import { normalizeText, calcularSemanaOperacional, formatDateToSQL, SemanaOperacional } from "@/lib/normalizeText";
 import { cn } from "@/lib/utils";
 import { useSubmitRelatorioSemanal, SubmitRelatorioParams } from "@/hooks/useRelatorioSemanal";
 import { useAcoesResolucaoDelta } from "@/hooks/useAcoesResolucaoDelta";
+import { format } from "date-fns";
 
 // Constante com nomes de dias da semana
 const DIAS_SEMANA_NOMES = [
@@ -521,36 +522,61 @@ const FormularioRelatorioSemanal = () => {
   const [estatisticas, setEstatisticas] = useState<any>(null);
   const [carregandoAcoesSociaisAuto, setCarregandoAcoesSociaisAuto] = useState(false);
 
-  // Calcular semana operacional para buscar movimentações consolidadas
-  const semanaOp = calcularSemanaOperacional();
+  // ==============================
+  // ESTADOS PARA CONTROLE DE SEMANA SELECIONADA (domingo com semana anterior pendente)
+  // ==============================
+  const hoje = new Date();
+  const diaHoje = hoje.getDay(); // 0=Dom, 1=Seg, ..., 6=Sab
+  
+  const calcularSemanaAnterior = (): SemanaOperacional => {
+    const setesDiasAtras = new Date();
+    setesDiasAtras.setDate(setesDiasAtras.getDate() - 7);
+    return calcularSemanaOperacional(setesDiasAtras);
+  };
+
+  const [semanaResposta, setSemanaResposta] = useState<SemanaOperacional>(calcularSemanaOperacional());
+  const [semanaRespostaModo, setSemanaRespostaModo] = useState<"atual" | "anterior">("atual");
+  const [pendenciaSemanaAnterior, setPendenciaSemanaAnterior] = useState(false);
+  const [verificandoPendencia, setVerificandoPendencia] = useState(false);
 
   // Flag para controlar se já aplicou movimentações automáticas
   const movimentacoesAplicadas = useRef(false);
   const [saidasAplicadasAuto, setSaidasAplicadasAuto] = useState(false);
   const [entradasAplicadasAuto, setEntradasAplicadasAuto] = useState(false);
 
-  // Hook consolidado para buscar entradas/saídas
+  // Hook consolidado para buscar entradas/saídas - USANDO semanaResposta
   const { data: movimentacoesConsolidadas } = useMovimentacoesConsolidadas(
-    divisaoSelecionada?.nome && semanaOp
+    divisaoSelecionada?.nome && semanaResposta
       ? {
           divisao: divisaoSelecionada.nome,
-          dataInicio: semanaOp.periodo_inicio,
-          dataFim: semanaOp.periodo_fim,
+          dataInicio: semanaResposta.periodo_inicio,
+          dataFim: semanaResposta.periodo_fim,
         }
       : null
   );
 
   // Calcular dia permitido
-  const hoje = new Date();
-  const diaHoje = hoje.getDay(); // 0=Dom, 1=Seg, ..., 6=Sab
   const diasPermitidos = formConfig?.dias_semana;
   const hojePermitido =
     !diasPermitidos || diasPermitidos.length === 0 || diasPermitidos.includes(diaHoje);
+  
+  // EXCEÇÃO: Domingo + semana anterior pendente + modo "anterior" = permitir envio
+  const excecaoDomingoSemanaAnterior = diaHoje === 0 && pendenciaSemanaAnterior && semanaRespostaModo === "anterior";
+  const hojePermitidoEfetivo = hojePermitido || excecaoDomingoSemanaAnterior;
 
   // Log de diagnóstico
-  console.log("[FormularioRelatorioSemanal] Dia hoje:", diaHoje, DIAS_SEMANA_NOMES[diaHoje]);
-  console.log("[FormularioRelatorioSemanal] Dias permitidos:", diasPermitidos);
-  console.log("[FormularioRelatorioSemanal] Hoje permitido?", hojePermitido);
+  console.log("[FormularioRelatorioSemanal] Diagnóstico semana:", {
+    hoje: hoje.toISOString(),
+    dow: diaHoje,
+    diaNome: DIAS_SEMANA_NOMES[diaHoje],
+    semanaRespostaModo,
+    semanaResposta_inicio: semanaResposta?.periodo_inicio?.toISOString(),
+    semanaResposta_fim: semanaResposta?.periodo_fim?.toISOString(),
+    pendenciaSemanaAnterior,
+    hojePermitido,
+    excecaoDomingoSemanaAnterior,
+    hojePermitidoEfetivo,
+  });
   console.log("[FormularioRelatorioSemanal] Limite respostas:", formConfig?.limite_respostas);
   console.log("[FormularioRelatorioSemanal] Relatório existente:", existingReport?.id);
   console.log("[FormularioRelatorioSemanal] Divisão selecionada:", divisaoSelecionada?.nome, divisaoSelecionada?.id);
@@ -616,6 +642,8 @@ const FormularioRelatorioSemanal = () => {
         setFormConfig(formulario);
 
         // Buscar relatório existente da semana atual para a divisão inicial
+        // Nota: isso usa calcularSemanaOperacional() apenas para carga inicial
+        // Depois o useEffect de verificação de pendência ajustará semanaResposta se necessário
         if (formulario?.id && divisaoIntegrante?.id) {
           const semana = calcularSemanaOperacional();
 
@@ -745,6 +773,67 @@ const FormularioRelatorioSemanal = () => {
     carregarEstatisticas();
   }, [divisaoSelecionada]);
 
+  // ==============================
+  // USEEFFECT: VERIFICAR PENDÊNCIA DA SEMANA ANTERIOR NO DOMINGO
+  // ==============================
+  useEffect(() => {
+    const verificarPendenciaDomingo = async () => {
+      // Só verificar se hoje é domingo (dow === 0)
+      const dow = new Date().getDay();
+      if (dow !== 0) {
+        setPendenciaSemanaAnterior(false);
+        return;
+      }
+
+      // Precisa ter formularioId e divisaoSelecionada
+      if (!formularioId || !divisaoSelecionada?.id) return;
+
+      setVerificandoPendencia(true);
+
+      const semanaAtual = calcularSemanaOperacional();
+      const semanaAnterior = calcularSemanaAnterior();
+
+      console.log("[FormularioRelatorioSemanal] Verificando pendência no domingo:", {
+        semanaAnterior_inicio: formatDateToSQL(semanaAnterior.periodo_inicio),
+        semanaAnterior_fim: formatDateToSQL(semanaAnterior.periodo_fim),
+        divisaoId: divisaoSelecionada.id,
+      });
+
+      // Verificar se existe relatório da semana anterior
+      const { data: relatorioSemanaAnterior, error } = await supabase
+        .from("relatorios_semanais_divisao")
+        .select("id")
+        .eq("formulario_id", formularioId)
+        .eq("divisao_relatorio_id", divisaoSelecionada.id)
+        .eq("semana_inicio", formatDateToSQL(semanaAnterior.periodo_inicio))
+        .eq("semana_fim", formatDateToSQL(semanaAnterior.periodo_fim))
+        .maybeSingle();
+
+      setVerificandoPendencia(false);
+
+      if (error) {
+        console.error("[FormularioRelatorioSemanal] Erro ao verificar pendência:", error);
+        return;
+      }
+
+      if (!relatorioSemanaAnterior) {
+        // Semana anterior PENDENTE
+        setPendenciaSemanaAnterior(true);
+        setSemanaResposta(semanaAnterior);
+        setSemanaRespostaModo("anterior");
+        console.log("[FormularioRelatorioSemanal] Domingo: semana anterior pendente, sugerindo responder");
+      } else {
+        // Semana anterior já enviada
+        setPendenciaSemanaAnterior(false);
+        setSemanaResposta(semanaAtual);
+        setSemanaRespostaModo("atual");
+        console.log("[FormularioRelatorioSemanal] Domingo: semana anterior já enviada");
+      }
+    };
+
+    verificarPendenciaDomingo();
+  }, [formularioId, divisaoSelecionada?.id]);
+
   // T6: Carregar inadimplências da divisão (com normalizacao para impedir "-" e vazio)
   useEffect(() => {
     if (!divisaoSelecionada) return;
@@ -792,15 +881,15 @@ const FormularioRelatorioSemanal = () => {
 
         setCarregandoAcoesSociaisAuto(true);
 
-        const semana = calcularSemanaOperacional();
+        const semana = semanaResposta; // USAR semanaResposta ao invés de calcularSemanaOperacional()
 
-        // Calcular semana anterior
+        // Calcular semana anterior à semanaResposta (para buscar passivo)
         const inicioSemanaAnterior = new Date(semana.periodo_inicio);
         inicioSemanaAnterior.setDate(inicioSemanaAnterior.getDate() - 7);
         const fimSemanaAnterior = new Date(semana.periodo_fim);
         fimSemanaAnterior.setDate(fimSemanaAnterior.getDate() - 7);
 
-        // Buscar ações da SEMANA ATUAL
+        // Buscar ações da SEMANA SELECIONADA (semanaResposta)
         const { data: acoesSemanaAtual, error: errorAtual } = await supabase
           .from("acoes_sociais_registros")
           .select("id, data_acao, escopo_acao, tipo_acao_nome_snapshot")
@@ -808,7 +897,7 @@ const FormularioRelatorioSemanal = () => {
           .gte("data_acao", formatDateToSQL(semana.periodo_inicio))
           .lte("data_acao", formatDateToSQL(semana.periodo_fim));
 
-        // Buscar ações da SEMANA ANTERIOR que NÃO foram reportadas
+        // Buscar ações da SEMANA ANTERIOR (à semanaResposta) que NÃO foram reportadas
         const { data: acoesSemanaAnterior, error: errorAnterior } = await supabase
           .from("acoes_sociais_registros")
           .select("id, data_acao, escopo_acao, tipo_acao_nome_snapshot")
@@ -867,7 +956,7 @@ const FormularioRelatorioSemanal = () => {
     };
 
     carregarAcoesSociaisDaSemana();
-  }, [divisaoSelecionada, formConfig, modoEdicao, acoesSociais]);
+  }, [divisaoSelecionada, formConfig, modoEdicao, acoesSociais, semanaResposta]);
 
   // T6: Carregar entradas e saídas automaticamente das movimentações consolidadas
   useEffect(() => {
@@ -930,35 +1019,34 @@ const FormularioRelatorioSemanal = () => {
     });
   }, [movimentacoesConsolidadas, modoEdicao, entradas, saidas]);
 
-  // Recarregar relatório existente quando divisão do relatório mudar
+  // Recarregar relatório existente quando divisão ou semanaResposta mudar
   useEffect(() => {
     if (!divisaoSelecionada?.id || !formularioId) return;
 
     const verificarRelatorioExistente = async () => {
-      const semana = calcularSemanaOperacional();
-
+      // USAR semanaResposta ao invés de calcularSemanaOperacional()
       const { data: relatorioExistente } = await supabase
         .from("relatorios_semanais_divisao")
         .select("*")
         .eq("formulario_id", formularioId)
         .eq("divisao_relatorio_id", divisaoSelecionada.id)
-        .eq("semana_inicio", formatDateToSQL(semana.periodo_inicio))
-        .eq("semana_fim", formatDateToSQL(semana.periodo_fim))
+        .eq("semana_inicio", formatDateToSQL(semanaResposta.periodo_inicio))
+        .eq("semana_fim", formatDateToSQL(semanaResposta.periodo_fim))
         .maybeSingle();
 
       if (relatorioExistente) {
         setExistingReport(relatorioExistente);
         setModoEdicao(null); // Reset modo edição ao trocar divisão
-        console.log("[FormularioRelatorioSemanal] Relatório existente para divisão:", divisaoSelecionada.nome, relatorioExistente.id);
+        console.log("[FormularioRelatorioSemanal] Relatório existente para divisão/semana:", divisaoSelecionada.nome, relatorioExistente.id);
       } else {
         setExistingReport(null);
         setModoEdicao(null);
-        console.log("[FormularioRelatorioSemanal] Nenhum relatório existente para divisão:", divisaoSelecionada.nome);
+        console.log("[FormularioRelatorioSemanal] Nenhum relatório existente para divisão/semana:", divisaoSelecionada.nome);
       }
     };
 
     verificarRelatorioExistente();
-  }, [divisaoSelecionada?.id, formularioId]);
+  }, [divisaoSelecionada?.id, formularioId, semanaResposta]);
 
   const carregarRespostasExistentes = (relatorio: any) => {
     // Preencher estados com dados do relatório existente
@@ -1004,9 +1092,28 @@ const FormularioRelatorioSemanal = () => {
     });
   };
 
+  // Função para resetar formulário quando trocar de semana
+  const resetarFormularioParaNovaSemana = () => {
+    setTeveEntradas(false);
+    setEntradas([]);
+    setTeveSaidas(false);
+    setSaidas([]);
+    setTeveConflitos(false);
+    setConflitos([]);
+    setTeveAcoesSociais(false);
+    setAcoesSociais([]);
+    // Limpar flags de auto-preenchimento para permitir re-aplicação
+    movimentacoesAplicadas.current = false;
+    setSaidasAplicadasAuto(false);
+    setEntradasAplicadasAuto(false);
+    // Limpar relatório existente e modo edição
+    setExistingReport(null);
+    setModoEdicao(null);
+  };
+
   const handleEnviar = () => {
-    // Validação 1: Dia permitido
-    if (!hojePermitido) {
+    // Validação 1: Dia permitido (com exceção para domingo + semana anterior pendente)
+    if (!hojePermitidoEfetivo) {
       toast({
         title: "Dia não permitido",
         description: `Este formulário só pode ser respondido em: ${(formConfig?.dias_semana || [])
@@ -1064,7 +1171,8 @@ const FormularioRelatorioSemanal = () => {
       return;
     }
 
-    const semana = calcularSemanaOperacional();
+    // USAR semanaResposta ao invés de calcularSemanaOperacional()
+    // Isso garante que o relatório será salvo na semana selecionada (atual ou anterior)
 
     // T1: Montar dados com estatisticas_divisao_json
     const dados = {
@@ -1080,11 +1188,11 @@ const FormularioRelatorioSemanal = () => {
       divisao_relatorio_texto: divisaoSelecionada.nome,
       regional_relatorio_id: dadosResponsavel.regional_id,
       regional_relatorio_texto: dadosResponsavel.regional_nome,
-      semana_inicio: formatDateToSQL(semana.periodo_inicio),
-      semana_fim: formatDateToSQL(semana.periodo_fim),
-      ano_referencia: semana.ano_referencia,
-      mes_referencia: semana.mes_referencia,
-      semana_no_mes: semana.semana_no_mes,
+      semana_inicio: formatDateToSQL(semanaResposta.periodo_inicio),
+      semana_fim: formatDateToSQL(semanaResposta.periodo_fim),
+      ano_referencia: semanaResposta.ano_referencia,
+      mes_referencia: semanaResposta.mes_referencia,
+      semana_no_mes: semanaResposta.semana_no_mes,
       entradas_json: teveEntradas ? entradas : [],
       saidas_json: teveSaidas ? saidas : [],
       // ✅ normalizar antes de enviar para garantir que nao salva "-"
@@ -1145,8 +1253,72 @@ const FormularioRelatorioSemanal = () => {
           </div>
         </div>
 
-        {/* Banner: Dia não permitido */}
-        {!hojePermitido && formConfig && (
+        {/* Banner: Domingo com semana anterior pendente - ESCOLHA DE SEMANA */}
+        {pendenciaSemanaAnterior && diaHoje === 0 && divisaoSelecionada && (
+          <Card className="p-4 bg-orange-50 dark:bg-orange-950 border-orange-300 dark:border-orange-700">
+            <div className="flex items-start gap-3">
+              <Calendar className="h-6 w-6 text-orange-600 dark:text-orange-400 mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <h4 className="font-semibold text-orange-900 dark:text-orange-100 mb-1">
+                  Relatório da última semana não foi respondido
+                </h4>
+                <p className="text-sm text-orange-800 dark:text-orange-200 mb-3">
+                  Detectamos que a divisão <strong>{divisaoSelecionada?.nome}</strong> não enviou 
+                  o relatório da semana <strong>
+                    {format(calcularSemanaAnterior().periodo_inicio, "dd/MM")} a{" "}
+                    {format(calcularSemanaAnterior().periodo_fim, "dd/MM")}
+                  </strong>. 
+                  Deseja responder a semana anterior agora ou iniciar a semana atual?
+                </p>
+                
+                <div className="text-xs text-orange-700 dark:text-orange-300 mb-3 space-y-1">
+                  <p>• Semana anterior: {format(calcularSemanaAnterior().periodo_inicio, "dd/MM")} a {format(calcularSemanaAnterior().periodo_fim, "dd/MM")}</p>
+                  <p>• Semana atual: {format(calcularSemanaOperacional().periodo_inicio, "dd/MM")} a {format(calcularSemanaOperacional().periodo_fim, "dd/MM")}</p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    size="sm"
+                    className={cn(
+                      "w-full sm:w-auto",
+                      semanaRespostaModo === "anterior" && "ring-2 ring-orange-500"
+                    )}
+                    onClick={() => {
+                      setSemanaResposta(calcularSemanaAnterior());
+                      setSemanaRespostaModo("anterior");
+                      resetarFormularioParaNovaSemana();
+                    }}
+                  >
+                    Responder semana anterior (pendente)
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "w-full sm:w-auto",
+                      semanaRespostaModo === "atual" && "ring-2 ring-orange-500"
+                    )}
+                    onClick={() => {
+                      setSemanaResposta(calcularSemanaOperacional());
+                      setSemanaRespostaModo("atual");
+                      resetarFormularioParaNovaSemana();
+                    }}
+                  >
+                    Responder semana atual
+                  </Button>
+                </div>
+
+                {/* Indicador da semana selecionada */}
+                <p className="text-xs text-orange-700 dark:text-orange-300 mt-3 font-medium">
+                  ✓ Respondendo: {semanaRespostaModo === "anterior" ? "Semana anterior" : "Semana atual"} ({format(semanaResposta.periodo_inicio, "dd/MM")} a {format(semanaResposta.periodo_fim, "dd/MM")})
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Banner: Dia não permitido (apenas se não for exceção de domingo) */}
+        {!hojePermitidoEfetivo && formConfig && (
           <Card className="p-4 bg-amber-50 dark:bg-amber-950 border-amber-300 dark:border-amber-700">
             <div className="flex items-start gap-3">
               <div className="text-2xl">⚠️</div>
@@ -1728,7 +1900,7 @@ const FormularioRelatorioSemanal = () => {
           <Button
             onClick={handleEnviar}
             className="flex-1 text-sm"
-            disabled={!hojePermitido || (formConfig?.limite_respostas === "unica" && existingReport)}
+            disabled={!hojePermitidoEfetivo || (formConfig?.limite_respostas === "unica" && existingReport)}
           >
             {existingReport && modoEdicao === "editar"
               ? "Atualizar"
