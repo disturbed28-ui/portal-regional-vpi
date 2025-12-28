@@ -515,20 +515,26 @@ Deno.serve(async (req) => {
           );
         }
 
-        // Se mudou de regional, atualizar também o profile vinculado
-        if (updateDataEnriquecido.regional_id && oldData?.profile_id && oldData.regional_id !== updateDataEnriquecido.regional_id) {
+        // SEMPRE sincronizar profile vinculado com regional_id e divisao_id
+        if (oldData?.profile_id && (updateDataEnriquecido.regional_id || updateDataEnriquecido.divisao_id)) {
+          const profileUpdate: Record<string, unknown> = { updated_at: new Date().toISOString() };
+          
+          if (updateDataEnriquecido.regional_id) {
+            profileUpdate.regional_id = updateDataEnriquecido.regional_id;
+          }
+          if (updateDataEnriquecido.divisao_id) {
+            profileUpdate.divisao_id = updateDataEnriquecido.divisao_id;
+          }
+          
           const { error: profileUpdateError } = await supabase
             .from('profiles')
-            .update({ 
-              regional_id: updateDataEnriquecido.regional_id,
-              updated_at: new Date().toISOString()
-            })
+            .update(profileUpdate)
             .eq('id', oldData.profile_id);
           
           if (profileUpdateError) {
-            console.error('[admin-import-integrantes] Erro ao atualizar profile regional:', profileUpdateError);
+            console.error('[admin-import-integrantes] Erro ao sincronizar profile:', profileUpdateError);
           } else {
-            console.log(`[PROFILE_ATUALIZADO] ${oldData.profile_id} -> regional_id = ${updateDataEnriquecido.regional_id}`);
+            console.log(`[PROFILE_SYNC] ${oldData.profile_id} -> regional_id=${profileUpdate.regional_id}, divisao_id=${profileUpdate.divisao_id}`);
           }
         }
 
