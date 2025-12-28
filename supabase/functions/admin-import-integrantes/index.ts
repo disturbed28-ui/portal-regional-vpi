@@ -110,134 +110,125 @@ function normalizarRegionalTexto(texto: string): string {
 }
 
 // Buscar IDs de divisão e regional baseado no texto da divisão
+// IMPORTANTE: Usa matching EXATO para evitar conflitos entre regionais similares
 async function buscarIdsHierarquia(
   supabase: any,
   divisaoTexto: string,
   regionalTexto?: string
 ): Promise<HierarquiaIds> {
-  // Verificar cache primeiro
-  const cacheKey = divisaoTexto.toLowerCase();
+  // Verificar cache primeiro - incluir regionalTexto na chave para evitar conflitos
+  const cacheKey = `${divisaoTexto.toLowerCase()}|${regionalTexto?.toLowerCase() || ''}`;
   if (cacheHierarquia.has(cacheKey)) {
     return cacheHierarquia.get(cacheKey)!;
   }
   
-  // 🆕 VERIFICAR SE É CARGO REGIONAL (divisao_texto contém "REGIONAL" no início)
+  console.log(`[HIERARQUIA] Buscando IDs para divisao="${divisaoTexto}" regional="${regionalTexto}"`);
+  
+  // Normalizar textos para comparação EXATA
+  const divisaoNormalizada = normalizarDivisaoParaSalvar(divisaoTexto).toUpperCase();
   const divisaoUpper = divisaoTexto.toUpperCase();
+  
+  // Buscar todas as divisões e regionais uma vez
+  const { data: divisoes } = await supabase
+    .from('divisoes')
+    .select('id, nome, regional_id')
+    .order('nome');
+  
+  const { data: regionais } = await supabase
+    .from('regionais')
+    .select('id, nome')
+    .order('nome');
+  
+  // CASO 1: CARGO REGIONAL (divisao_texto começa com "REGIONAL")
   if (divisaoUpper.startsWith('REGIONAL ') || divisaoUpper === 'REGIONAL') {
-    console.log(`[HIERARQUIA] Detectado cargo regional: "${divisaoTexto}"`);
+    console.log(`[HIERARQUIA] Detectado cargo regional: "${divisaoTexto}" | Regional do Excel: "${regionalTexto}"`);
     
-    // 🆕 PRIMEIRO: Verificar se existe uma DIVISÃO cadastrada com esse nome "REGIONAL..."
-    // Isso acontece quando existe uma divisão com nome "REGIONAL VALE DO PARAIBA I - SP" por exemplo
-    const divisaoNorm = normalizarDivisaoTexto(divisaoTexto);
-    const { data: divisoes } = await supabase
-      .from('divisoes')
-      .select('id, nome, regional_id, nome_ascii')
-      .order('nome');
+    // 1) Buscar divisão com nome EXATAMENTE igual (ex: "REGIONAL VALE DO PARAIBA I - SP")
+    const divisaoExata = divisoes?.find((d: any) => 
+      d.nome.toUpperCase() === divisaoNormalizada
+    );
     
-    if (divisoes && divisoes.length > 0) {
-      // Tentar match na tabela divisoes
-      const divisaoEncontrada = divisoes.find((d: any) => {
-        const nomeNorm = normalizarDivisaoTexto(d.nome);
-        const asciiNorm = d.nome_ascii ? d.nome_ascii.toLowerCase() : '';
-        // Match exato com o nome da divisão (ex: "REGIONAL VALE DO PARAIBA I - SP")
-        return d.nome.toUpperCase() === normalizarDivisaoParaSalvar(divisaoTexto).toUpperCase() ||
-               nomeNorm === divisaoNorm || 
-               nomeNorm.includes(divisaoNorm) || 
-               divisaoNorm.includes(nomeNorm) ||
-               asciiNorm.includes(divisaoNorm) ||
-               divisaoNorm.includes(asciiNorm);
+    if (divisaoExata) {
+      const resultado = {
+        divisao_id: divisaoExata.id,
+        regional_id: divisaoExata.regional_id
+      };
+      cacheHierarquia.set(cacheKey, resultado);
+      console.log(`[HIERARQUIA] ✅ Divisão EXATA encontrada: "${divisaoNormalizada}" -> divisao_id=${resultado.divisao_id}, regional_id=${resultado.regional_id} (${divisaoExata.nome})`);
+      return resultado;
+    }
+    
+    // 2) Se não encontrou divisão, buscar regional pelo regional_texto do Excel (EXATO)
+    if (regionalTexto) {
+      // Extrair nome da regional sem prefixo/sufixo
+      const regionalNormalizada = regionalTexto
+        .toUpperCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/^REGIONAL\s*/, '')
+        .replace(/\s*-\s*SP\s*$/, '')
+        .trim();
+      
+      const regionalExata = regionais?.find((r: any) => {
+        const nomeNorm = r.nome
+          .toUpperCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/\s*-\s*SP\s*$/, '')
+          .trim();
+        // Match EXATO: o nome normalizado deve ser igual
+        return nomeNorm === regionalNormalizada;
       });
       
-      if (divisaoEncontrada) {
-        // Existe divisão cadastrada com esse nome - USAR!
+      if (regionalExata) {
+        // Buscar se existe uma divisão "REGIONAL X - SP" para essa regional
+        const divisaoRegional = divisoes?.find((d: any) => 
+          d.regional_id === regionalExata.id && d.nome.toUpperCase().startsWith('REGIONAL ')
+        );
+        
         const resultado = {
-          divisao_id: divisaoEncontrada.id,
-          regional_id: divisaoEncontrada.regional_id
+          divisao_id: divisaoRegional?.id || null,
+          regional_id: regionalExata.id
         };
         cacheHierarquia.set(cacheKey, resultado);
-        console.log(`[HIERARQUIA] Divisão regional encontrada: ${divisaoTexto} -> divisao_id=${resultado.divisao_id}, regional_id=${resultado.regional_id} (${divisaoEncontrada.nome})`);
+        console.log(`[HIERARQUIA] ✅ Regional EXATA encontrada via regional_texto: "${regionalTexto}" -> divisao_id=${resultado.divisao_id}, regional_id=${resultado.regional_id} (${regionalExata.nome})`);
         return resultado;
       }
     }
     
-    // Se não existe divisão, buscar apenas na tabela regionais (manter comportamento original)
-    const regionalParaBuscar = regionalTexto || divisaoTexto;
-    const regionalNorm = normalizarRegionalTexto(regionalParaBuscar);
-    
-    const { data: regionais } = await supabase
-      .from('regionais')
-      .select('id, nome, nome_ascii')
-      .order('nome');
-    
-    if (regionais && regionais.length > 0) {
-      // Tentar match
-      const regionalEncontrada = regionais.find((r: any) => {
-        const nomeNorm = normalizarRegionalTexto(r.nome);
-        const asciiNorm = r.nome_ascii ? r.nome_ascii.toLowerCase() : '';
-        return nomeNorm === regionalNorm || 
-               nomeNorm.includes(regionalNorm) || 
-               regionalNorm.includes(nomeNorm) ||
-               asciiNorm.includes(regionalNorm) ||
-               regionalNorm.includes(asciiNorm);
-      });
-      
-      if (regionalEncontrada) {
-        const resultado = {
-          divisao_id: null,  // Cargos regionais sem divisão cadastrada
-          regional_id: regionalEncontrada.id
-        };
-        cacheHierarquia.set(cacheKey, resultado);
-        console.log(`[HIERARQUIA] Cargo regional (sem divisão): ${divisaoTexto} -> regional_id=${resultado.regional_id} (${regionalEncontrada.nome})`);
-        return resultado;
-      }
-    }
-    
-    console.warn(`[HIERARQUIA] Regional não encontrada para cargo regional: "${divisaoTexto}" / "${regionalParaBuscar}"`);
+    console.warn(`[HIERARQUIA] ⚠️ Não encontrou divisão nem regional EXATA para: "${divisaoTexto}" / "${regionalTexto}"`);
     const resultadoVazio = { divisao_id: null, regional_id: null };
     cacheHierarquia.set(cacheKey, resultadoVazio);
     return resultadoVazio;
   }
   
-  // Para divisões normais, buscar na tabela divisoes
-  const divisaoNorm = normalizarDivisaoTexto(divisaoTexto);
+  // CASO 2: DIVISÃO NORMAL (ex: "DIVISAO SAO JOSE DOS CAMPOS CENTRO - SP")
+  // Primeiro tentar match EXATO
+  let divisaoEncontrada = divisoes?.find((d: any) => 
+    d.nome.toUpperCase() === divisaoNormalizada
+  );
   
-  // Buscar divisão pelo nome (fonte de verdade para regional_id)
-  const { data: divisoes } = await supabase
-    .from('divisoes')
-    .select('id, nome, regional_id, nome_ascii')
-    .order('nome');
-  
-  if (divisoes && divisoes.length > 0) {
-    // Tentar match exato primeiro
-    let divisaoEncontrada = divisoes.find((d: any) => {
+  // Se não encontrou exato, tentar match por nome normalizado sem prefixo/sufixo
+  if (!divisaoEncontrada) {
+    const divisaoNorm = normalizarDivisaoTexto(divisaoTexto);
+    divisaoEncontrada = divisoes?.find((d: any) => {
       const nomeNorm = normalizarDivisaoTexto(d.nome);
+      // Match EXATO do nome normalizado (não usar includes!)
       return nomeNorm === divisaoNorm;
     });
-    
-    // Se não encontrou, tentar match parcial
-    if (!divisaoEncontrada) {
-      divisaoEncontrada = divisoes.find((d: any) => {
-        const nomeNorm = normalizarDivisaoTexto(d.nome);
-        const asciiNorm = d.nome_ascii ? d.nome_ascii.toLowerCase() : '';
-        return nomeNorm.includes(divisaoNorm) || 
-               divisaoNorm.includes(nomeNorm) ||
-               asciiNorm.includes(divisaoNorm) ||
-               divisaoNorm.includes(asciiNorm);
-      });
-    }
-    
-    if (divisaoEncontrada) {
-      const resultado = {
-        divisao_id: divisaoEncontrada.id,
-        regional_id: divisaoEncontrada.regional_id  // Fonte de verdade!
-      };
-      cacheHierarquia.set(cacheKey, resultado);
-      console.log(`[HIERARQUIA] ${divisaoTexto} -> divisao_id=${resultado.divisao_id}, regional_id=${resultado.regional_id}`);
-      return resultado;
-    }
   }
   
-  console.warn(`[HIERARQUIA] Divisão não encontrada: "${divisaoTexto}"`);
+  if (divisaoEncontrada) {
+    const resultado = {
+      divisao_id: divisaoEncontrada.id,
+      regional_id: divisaoEncontrada.regional_id  // Fonte de verdade!
+    };
+    cacheHierarquia.set(cacheKey, resultado);
+    console.log(`[HIERARQUIA] ✅ ${divisaoTexto} -> divisao_id=${resultado.divisao_id}, regional_id=${resultado.regional_id} (${divisaoEncontrada.nome})`);
+    return resultado;
+  }
+  
+  console.warn(`[HIERARQUIA] ⚠️ Divisão não encontrada: "${divisaoTexto}"`);
   const resultadoVazio = { divisao_id: null, regional_id: null };
   cacheHierarquia.set(cacheKey, resultadoVazio);
   return resultadoVazio;

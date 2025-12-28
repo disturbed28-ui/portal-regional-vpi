@@ -54,6 +54,8 @@ export const useOrganogramaData = (regionalId: string | null) => {
       try {
         setLoading(true);
 
+        console.log('[useOrganogramaData] Buscando integrantes da regional:', regionalId);
+
         // 1. Buscar integrantes ativos da regional usando regional_id (UUID)
         const { data: integrantes, error: integrantesError } = await supabase
           .from('integrantes_portal')
@@ -62,6 +64,8 @@ export const useOrganogramaData = (regionalId: string | null) => {
           .eq('ativo', true);
 
         if (integrantesError) throw integrantesError;
+
+        console.log('[useOrganogramaData] Integrantes encontrados:', integrantes?.length);
 
         // 2. Buscar fotos dos vinculados
         const vinculadosIds = integrantes
@@ -118,6 +122,14 @@ export const useOrganogramaData = (regionalId: string | null) => {
           adm_regional: integrantesComFoto.find(i => cargoMatch(i.cargo_nome, 'Adm. Regional')) || null,
           comunicacao_regional: integrantesComFoto.find(i => cargoMatch(i.cargo_nome, 'Comunicacao')) || null,
         };
+
+        console.log('[useOrganogramaData] Hierarquia encontrada:', {
+          diretor: hierarquia.diretor_regional?.nome_colete,
+          operacional: hierarquia.operacional_regional?.nome_colete,
+          social: hierarquia.social_regional?.nome_colete,
+          adm: hierarquia.adm_regional?.nome_colete,
+          comunicacao: hierarquia.comunicacao_regional?.nome_colete,
+        });
 
         const diretores = integrantesComFoto
           .filter(i => cargoMatch(i.cargo_nome, 'Diretor Divisao'))
