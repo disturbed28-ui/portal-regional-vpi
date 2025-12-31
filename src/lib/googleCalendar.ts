@@ -89,6 +89,32 @@ async function matchDivisaoToId(divisaoText: string): Promise<{ id: string | nul
   
   console.log('[matchDivisaoToId] Tentando match para:', divisaoText, '→', normalizado);
   
+  // CASO ESPECIAL: "Regional VP1/VP2/VP3/LN" → buscar a regional correspondente
+  const siglaMatch = normalizado.match(/^REGIONAL\s*(VP1|VP2|VP3|LN)$/i);
+  if (siglaMatch) {
+    const sigla = siglaMatch[1].toUpperCase();
+    const siglaToNome: Record<string, string> = {
+      'VP1': 'REGIONAL VALE DO PARAIBA I',
+      'VP2': 'REGIONAL VALE DO PARAIBA II', 
+      'VP3': 'REGIONAL VALE DO PARAIBA III',
+      'LN': 'REGIONAL LITORAL NORTE'
+    };
+    const nomeBuscado = siglaToNome[sigla];
+    
+    if (nomeBuscado) {
+      for (const div of divisoes) {
+        if (div.normalizado.includes(nomeBuscado)) {
+          console.log('[matchDivisaoToId] ✅ Match por sigla regional:', div.nome, '| Sigla:', sigla);
+          return { id: div.id, regionalSigla: sigla };
+        }
+      }
+    }
+    
+    // Se não encontrou no banco, retornar com a sigla mesmo sem ID
+    console.log('[matchDivisaoToId] ⚠️ Regional não encontrada no banco, usando sigla:', sigla);
+    return { id: null, regionalSigla: sigla };
+  }
+  
   // 1. Match exato
   for (const div of divisoes) {
     if (div.normalizado === normalizado) {
@@ -140,6 +166,33 @@ async function matchDivisaoToId(divisaoText: string): Promise<{ id: string | nul
   
   console.log('[matchDivisaoToId] ❌ Nenhum match encontrado para:', divisaoText);
   return { id: null, regionalSigla: null };
+}
+
+// Detectar sigla de regional no título original (VP1, VP2, VP3, LN ou numerais romanos)
+function detectRegionalSiglaFromTitle(title: string): string | null {
+  // 1. Buscar sigla direta (VP1, VP2, VP3, LN, CMD)
+  const siglaMatch = title.match(/\b(VP1|VP2|VP3|LN|CMD)\b/i);
+  if (siglaMatch) {
+    return siglaMatch[1].toUpperCase();
+  }
+  
+  // 2. Detectar numerais romanos após "Vale do Paraíba" ou "VP"
+  // "Vale do Paraíba III" → VP3
+  // "Vale Paraiba II" → VP2  
+  // "VP III" → VP3
+  const romanoMatch = title.match(/(?:vale\s*(?:do\s*)?paraiba|VP)\s*(III|II|I)\b/i);
+  if (romanoMatch) {
+    const romano = romanoMatch[1].toUpperCase();
+    const mapa: Record<string, string> = { 'III': 'VP3', 'II': 'VP2', 'I': 'VP1' };
+    return mapa[romano] || null;
+  }
+  
+  // 3. "Litoral Norte" → LN
+  if (/litoral\s*norte/i.test(title)) {
+    return 'LN';
+  }
+  
+  return null;
 }
 
 // Parsear componentes do título do evento
@@ -269,8 +322,18 @@ function parseEventComponents(originalTitle: string): ParsedEvent {
       informacoesExtras = tituloParaExtras;
     }
   } else if (isRegional) {
-    // Para eventos Regionais, manter o texto completo
-    divisao = 'Regional';
+    // Para eventos Regionais, detectar qual regional especificamente
+    // Usar a nova função para detectar sigla (VP1, VP2, VP3, LN ou numerais romanos)
+    regionalSiglaDetectada = detectRegionalSiglaFromTitle(originalTitle);
+    
+    console.log('[parseEventComponents] Regional - Sigla detectada:', regionalSiglaDetectada);
+    
+    // Usar a sigla detectada para criar a divisão no formato correto
+    if (regionalSiglaDetectada) {
+      divisao = `Regional ${regionalSiglaDetectada}`;
+    } else {
+      divisao = 'Regional';
+    }
     
     // Usar o título completo como informações extras, removendo apenas tipo de evento
     let tituloParaExtras = originalTitle;
