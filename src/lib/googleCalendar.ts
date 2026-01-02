@@ -4,10 +4,18 @@ const CALENDAR_ID = "3db053177f24bf333254be1f501c71880940cc1eb0e319bf3d45830ba4c
 
 function removeSpecialCharacters(text: string): string {
   return text
+    // Normalizar para forma decomposta (NFD) primeiro
     .normalize('NFD')
+    // Remover marcas diacríticas (acentos, til, etc.)
     .replace(/[\u0300-\u036f]/g, '')
-    .replace(/ç/gi, 'c')
-    .replace(/Ç/g, 'C');
+    // Casos especiais que podem não ser cobertos por NFD (encoding diferente)
+    .replace(/[ãâáàäª]/gi, 'a')
+    .replace(/[êéèë]/gi, 'e')
+    .replace(/[îíìï]/gi, 'i')
+    .replace(/[ôóòöõº]/gi, 'o')
+    .replace(/[ûúùü]/gi, 'u')
+    .replace(/[çć]/gi, 'c')
+    .replace(/ñ/gi, 'n');
 }
 
 // Interface para componentes parseados do evento
@@ -239,8 +247,15 @@ function parseEventComponents(originalTitle: string): ParsedEvent {
   else if (lower.includes('bate e volta')) {
     tipoEvento = 'Bate e Volta';
   }
-  // Reunião (incluindo bate-papo)
-  else if (lower.includes('reuniao') || lower.includes('bate papo') || lower.includes('bate-papo')) {
+  // Reunião (incluindo bate-papo) - múltiplas formas de detecção para diferentes encodings
+  else if (
+    lower.includes('reuniao') || 
+    lower.includes('reunia') ||
+    /reuni[aã]o/i.test(originalTitle) ||
+    /reuni[aã]/i.test(normalized) ||
+    lower.includes('bate papo') || 
+    lower.includes('bate-papo')
+  ) {
     tipoEvento = 'Reuniao';
   }
   // Bonde Insano
