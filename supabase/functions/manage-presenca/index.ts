@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
 
   try {
     const requestSchema = z.object({
-      action: z.enum(['initialize', 'initialize_regional', 'initialize_divisao_cmd', 'add', 'add_visitante_externo', 'remove']),
+      action: z.enum(['initialize', 'initialize_regional', 'initialize_divisao_cmd', 'add', 'add_visitante_externo', 'remove', 'delete_presenca']),
       user_id: z.string().uuid('ID de usuário inválido'),
       evento_agenda_id: z.string().uuid('ID de evento inválido').optional(),
       integrante_id: z.string().uuid('ID de integrante inválido').optional(),
@@ -22,9 +22,11 @@ Deno.serve(async (req) => {
       // Novos campos para visitante externo
       visitante_nome: z.string().min(1).optional(),
       visitante_tipo: z.enum(['externo']).optional(),
+      // Para deletar presença
+      presenca_id: z.string().uuid('ID de presença inválido').optional(),
     });
 
-    const { action, user_id, evento_agenda_id, integrante_id, profile_id, divisao_id, regional_id, justificativa_ausencia, visitante_nome, visitante_tipo } = requestSchema.parse(await req.json());
+    const { action, user_id, evento_agenda_id, integrante_id, profile_id, divisao_id, regional_id, justificativa_ausencia, visitante_nome, visitante_tipo, presenca_id } = requestSchema.parse(await req.json());
 
     // Criar cliente Supabase com service role (bypassa RLS)
     const supabaseAdmin = createClient(
@@ -607,6 +609,56 @@ Deno.serve(async (req) => {
       console.log('[manage-presenca] Visitante externo adicionado:', visitante_nome);
       return new Response(
         JSON.stringify({ success: true, data }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ========================================================================
+    // ACTION: delete_presenca - Excluir completamente da lista
+    // ========================================================================
+    if (action === 'delete_presenca') {
+      console.log('[manage-presenca] Excluindo presença...', { presenca_id });
+      
+      if (!presenca_id) {
+        return new Response(
+          JSON.stringify({ error: 'presenca_id é obrigatório para deletar' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Verificar se a presença existe
+      const { data: presenca, error: fetchError } = await supabaseAdmin
+        .from('presencas')
+        .select('id, evento_agenda_id, integrante_id')
+        .eq('id', presenca_id)
+        .single();
+
+      if (fetchError || !presenca) {
+        console.error('[manage-presenca] Presença não encontrada:', fetchError);
+        return new Response(
+          JSON.stringify({ error: 'Presença não encontrada' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Deletar usando supabaseAdmin (bypassa RLS)
+      const { error: deleteError } = await supabaseAdmin
+        .from('presencas')
+        .delete()
+        .eq('id', presenca_id);
+
+      if (deleteError) {
+        logError('manage-presenca', deleteError, { presenca_id });
+        return new Response(
+          JSON.stringify({ error: 'Erro ao excluir presença' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log('[manage-presenca] Presença excluída:', presenca_id);
+      
+      return new Response(
+        JSON.stringify({ success: true, deleted_id: presenca_id }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

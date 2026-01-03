@@ -390,6 +390,39 @@ export const useEventoPresenca = (eventoId: string | null) => {
     return true;
   };
 
+  const excluirDaLista = async (presencaId: string): Promise<boolean> => {
+    if (!user?.id || !evento) return false;
+
+    console.log('[excluirDaLista] Excluindo presença:', presencaId);
+
+    const { data, error } = await supabase.functions.invoke('manage-presenca', {
+      body: {
+        action: 'delete_presenca',
+        user_id: user.id,
+        evento_agenda_id: evento.id,
+        presenca_id: presencaId,
+      }
+    });
+
+    if (error || data?.error) {
+      console.error('[excluirDaLista] Erro:', error || data?.error);
+      toast({
+        title: "Erro",
+        description: data?.error || "Não foi possível excluir o integrante",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    toast({
+      title: "Integrante removido",
+      description: "O integrante foi excluído da lista de presença",
+    });
+    
+    fetchPresencas(evento.id);
+    return true;
+  };
+
   return {
     evento,
     presencas,
@@ -400,6 +433,7 @@ export const useEventoPresenca = (eventoId: string | null) => {
     registrarVisitanteExterno,
     inicializarListaRegional,
     carregarDivisaoCMD,
+    excluirDaLista,
     refetch: fetchEvento,
   };
 };
