@@ -1,6 +1,17 @@
 import * as XLSX from 'xlsx';
 import { IntegrantePortal } from '@/hooks/useIntegrantes';
 
+// Normaliza texto para comparação (ignora case, acentos e espaços extras)
+function normalizarParaComparacao(texto: string | null | undefined): string {
+  if (!texto) return '';
+  return texto
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')  // Remove acentos
+    .replace(/\s+/g, ' ')              // Normaliza espaços
+    .trim();
+}
+
 export interface ExcelIntegrante {
   comando: string;
   regional: string;
@@ -344,14 +355,14 @@ export const processDelta = (
       // Novo integrante
       novos.push(excelItem);
     } else {
-      // Verificar se houve mudanca
+      // Verificar se houve mudança (usando comparação normalizada para textos)
       const mudou =
-        dbItem.nome_colete !== excelItem.nome_colete ||
-        dbItem.comando_texto !== excelItem.comando ||
-        dbItem.regional_texto !== excelItem.regional ||
-        dbItem.divisao_texto !== excelItem.divisao ||
-        dbItem.cargo_grau_texto !== excelItem.cargo_grau ||
-        dbItem.cargo_estagio !== (excelItem.cargo_estagio || null) ||
+        normalizarParaComparacao(dbItem.nome_colete) !== normalizarParaComparacao(excelItem.nome_colete) ||
+        normalizarParaComparacao(dbItem.comando_texto) !== normalizarParaComparacao(excelItem.comando) ||
+        normalizarParaComparacao(dbItem.regional_texto) !== normalizarParaComparacao(excelItem.regional) ||
+        normalizarParaComparacao(dbItem.divisao_texto) !== normalizarParaComparacao(excelItem.divisao) ||
+        normalizarParaComparacao(dbItem.cargo_grau_texto) !== normalizarParaComparacao(excelItem.cargo_grau) ||
+        normalizarParaComparacao(dbItem.cargo_estagio) !== normalizarParaComparacao(excelItem.cargo_estagio || null) ||
         dbItem.sgt_armas !== (excelItem.sgt_armas || false) ||
         dbItem.caveira !== (excelItem.caveira || false) ||
         dbItem.caveira_suplente !== (excelItem.caveira_suplente || false) ||
