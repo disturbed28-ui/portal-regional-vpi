@@ -94,7 +94,8 @@ export const DeltasPendentes = ({ pendencias, loading, userId, isAdmin }: Deltas
   const handleResolve = async (observacao: string, acao: string) => {
     if (!userId || !selectedDelta) return;
 
-    const success = await resolverDelta(selectedDelta.id, observacao, userId);
+    // Passar acao para o hook salvar em dados_adicionais
+    const success = await resolverDelta(selectedDelta.id, observacao, userId, acao);
     
     if (success) {
       window.location.reload();

@@ -4,10 +4,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Search, ArrowRightLeft, ArrowRight, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import { Calendar, Search, ArrowRightLeft, ArrowRight, ChevronLeft, ChevronRight, RefreshCw, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useMovimentacoesComFiltro } from '@/hooks/useMovimentacoesIntegrantes';
+import { useMovimentacoesDeltas, type MovimentacaoDelta, type TipoMovimentacaoExpandida } from '@/hooks/useMovimentacoesDeltas';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface HistoricoMovimentacoesProps {
   nivelAcesso: 'comando' | 'regional' | 'divisao';
@@ -17,13 +19,41 @@ interface HistoricoMovimentacoesProps {
 
 const TIPOS_MOVIMENTACAO = [
   { value: 'TODOS', label: 'Todos os tipos' },
+  // Movimentações internas
   { value: 'MUDANCA_DIVISAO', label: '📦 Mudança de Divisão' },
   { value: 'MUDANCA_REGIONAL', label: '🌎 Mudança de Regional' },
+  // Entradas
+  { value: 'ENTRADA_NOVO', label: '🆕 Novo Integrante' },
+  { value: 'ENTRADA_TRANSFERENCIA', label: '🔄 Transferência (Entrada)' },
+  { value: 'ENTRADA_RETORNO_AFASTAMENTO', label: '♻️ Retorno de Afastamento' },
+  // Saídas
+  { value: 'SAIDA_TRANSFERENCIA', label: '📤 Transferência (Saída)' },
+  { value: 'SAIDA_DESLIGAMENTO', label: '👋 Desligamento' },
+  { value: 'SAIDA_EXPULSAO', label: '⛔ Expulsão' },
+  { value: 'SAIDA_AFASTAMENTO', label: '⏸️ Entrou em Afastamento' },
+  // Afastamentos
+  { value: 'AFASTAMENTO_NOVO', label: '🏥 Novo Afastamento' },
+  { value: 'AFASTAMENTO_RETORNO', label: '✅ Retorno de Afastado' },
+  { value: 'AFASTAMENTO_SAIDA', label: '🚪 Saída de Afastado' },
+  // Outros
   { value: 'INATIVACAO', label: '🔴 Inativação' },
   { value: 'REATIVACAO', label: '🟢 Reativação' },
 ];
 
 const ITEMS_PER_PAGE = 50;
+
+// Interface unificada para exibição
+interface MovimentacaoUnificada {
+  id: string;
+  nome_colete: string;
+  tipo_movimentacao: string;
+  data_movimentacao: string;
+  valor_anterior?: string | null;
+  valor_novo?: string | null;
+  divisao_atual?: string | null;
+  detalhes?: string | null;
+  origem: 'carga' | 'delta';
+}
 
 export const HistoricoMovimentacoes = ({
   nivelAcesso,
@@ -38,17 +68,79 @@ export const HistoricoMovimentacoes = ({
   const filtroIntegrantesDivisao = nivelAcesso === 'divisao' ? divisaoUsuario : undefined;
   const filtroIntegrantesRegional = nivelAcesso === 'regional' ? regionalUsuario : undefined;
 
-  const { data: movimentacoes, isLoading, refetch } = useMovimentacoesComFiltro({
+  // Tipos para filtro do hook de carga (tipos antigos)
+  const tiposCarga = ['MUDANCA_DIVISAO', 'MUDANCA_REGIONAL', 'INATIVACAO', 'REATIVACAO'];
+  const tiposDeltas = TIPOS_MOVIMENTACAO
+    .map(t => t.value)
+    .filter(t => !tiposCarga.includes(t) && t !== 'TODOS');
+
+  // Hook para movimentações de carga (divisão, regional, ativo)
+  const { data: movimentacoesCarga, isLoading: loadingCarga, refetch: refetchCarga } = useMovimentacoesComFiltro({
     integrantesDaDivisao: filtroIntegrantesDivisao,
     integrantesDaRegional: filtroIntegrantesRegional,
-    tipos: tipoFiltro !== 'TODOS' ? [tipoFiltro] : undefined,
+    tipos: tipoFiltro !== 'TODOS' && tiposCarga.includes(tipoFiltro) ? [tipoFiltro] : undefined,
   });
+
+  // Hook para movimentações de deltas resolvidos
+  const { data: movimentacoesDeltas, isLoading: loadingDeltas, refetch: refetchDeltas } = useMovimentacoesDeltas({
+    integrantesDaDivisao: filtroIntegrantesDivisao,
+    integrantesDaRegional: filtroIntegrantesRegional,
+    tipos: tipoFiltro !== 'TODOS' && tiposDeltas.includes(tipoFiltro) ? [tipoFiltro] : undefined,
+  });
+
+  const isLoading = loadingCarga || loadingDeltas;
+
+  const refetch = () => {
+    refetchCarga();
+    refetchDeltas();
+  };
+
+  // Unificar e ordenar movimentações
+  const movimentacoesUnificadas = useMemo((): MovimentacaoUnificada[] => {
+    const unificadas: MovimentacaoUnificada[] = [];
+
+    // Adicionar movimentações de carga
+    if (movimentacoesCarga && (tipoFiltro === 'TODOS' || tiposCarga.includes(tipoFiltro))) {
+      movimentacoesCarga.forEach(m => {
+        unificadas.push({
+          id: m.id,
+          nome_colete: m.nome_colete,
+          tipo_movimentacao: m.tipo_movimentacao,
+          data_movimentacao: m.data_movimentacao,
+          valor_anterior: m.valor_anterior,
+          valor_novo: m.valor_novo,
+          divisao_atual: m.divisao_atual,
+          origem: 'carga',
+        });
+      });
+    }
+
+    // Adicionar movimentações de deltas
+    if (movimentacoesDeltas && (tipoFiltro === 'TODOS' || tiposDeltas.includes(tipoFiltro))) {
+      movimentacoesDeltas.forEach(m => {
+        unificadas.push({
+          id: m.id,
+          nome_colete: m.nome_colete,
+          tipo_movimentacao: m.tipo_movimentacao,
+          data_movimentacao: m.data_movimentacao,
+          divisao_atual: m.divisao_texto,
+          detalhes: m.detalhes,
+          origem: 'delta',
+        });
+      });
+    }
+
+    // Ordenar por data decrescente
+    unificadas.sort((a, b) => 
+      new Date(b.data_movimentacao).getTime() - new Date(a.data_movimentacao).getTime()
+    );
+
+    return unificadas;
+  }, [movimentacoesCarga, movimentacoesDeltas, tipoFiltro]);
 
   // Filtrar por nome localmente
   const movimentacoesFiltradas = useMemo(() => {
-    if (!movimentacoes) return [];
-    
-    let resultado = movimentacoes;
+    let resultado = movimentacoesUnificadas;
     
     if (buscaNome.trim()) {
       const termo = buscaNome.toLowerCase();
@@ -58,7 +150,7 @@ export const HistoricoMovimentacoes = ({
     }
     
     return resultado;
-  }, [movimentacoes, buscaNome]);
+  }, [movimentacoesUnificadas, buscaNome]);
 
   // Paginação
   const totalPaginas = Math.ceil(movimentacoesFiltradas.length / ITEMS_PER_PAGE);
@@ -78,13 +170,38 @@ export const HistoricoMovimentacoes = ({
     setPagina(1);
   };
 
-  // Helper para formatar tipo
+  // Helper para formatar tipo com badge
   const getTipoBadge = (tipo: string) => {
     switch (tipo) {
+      // Movimentações internas
       case 'MUDANCA_DIVISAO':
         return <Badge className="bg-blue-500 hover:bg-blue-600">📦 Divisão</Badge>;
       case 'MUDANCA_REGIONAL':
         return <Badge className="bg-purple-500 hover:bg-purple-600">🌎 Regional</Badge>;
+      // Entradas
+      case 'ENTRADA_NOVO':
+        return <Badge className="bg-green-500 hover:bg-green-600">🆕 Novo</Badge>;
+      case 'ENTRADA_TRANSFERENCIA':
+        return <Badge className="bg-cyan-500 hover:bg-cyan-600">🔄 Transf. Entrada</Badge>;
+      case 'ENTRADA_RETORNO_AFASTAMENTO':
+        return <Badge className="bg-teal-500 hover:bg-teal-600">♻️ Retorno Afast.</Badge>;
+      // Saídas
+      case 'SAIDA_TRANSFERENCIA':
+        return <Badge className="bg-indigo-500 hover:bg-indigo-600">📤 Transf. Saída</Badge>;
+      case 'SAIDA_DESLIGAMENTO':
+        return <Badge className="bg-orange-500 hover:bg-orange-600">👋 Desligamento</Badge>;
+      case 'SAIDA_EXPULSAO':
+        return <Badge className="bg-red-700 hover:bg-red-800">⛔ Expulsão</Badge>;
+      case 'SAIDA_AFASTAMENTO':
+        return <Badge className="bg-amber-500 hover:bg-amber-600">⏸️ Afastamento</Badge>;
+      // Afastamentos
+      case 'AFASTAMENTO_NOVO':
+        return <Badge className="bg-yellow-600 hover:bg-yellow-700">🏥 Novo Afast.</Badge>;
+      case 'AFASTAMENTO_RETORNO':
+        return <Badge className="bg-emerald-500 hover:bg-emerald-600">✅ Retorno</Badge>;
+      case 'AFASTAMENTO_SAIDA':
+        return <Badge className="bg-rose-500 hover:bg-rose-600">🚪 Saída Afast.</Badge>;
+      // Outros
       case 'INATIVACAO':
         return <Badge variant="destructive">🔴 Inativação</Badge>;
       case 'REATIVACAO':
@@ -137,7 +254,7 @@ export const HistoricoMovimentacoes = ({
             />
           </div>
           <Select value={tipoFiltro} onValueChange={handleTipoChange}>
-            <SelectTrigger className="w-full sm:w-[220px]">
+            <SelectTrigger className="w-full sm:w-[280px]">
               <SelectValue placeholder="Tipo de movimentação" />
             </SelectTrigger>
             <SelectContent>
@@ -168,8 +285,8 @@ export const HistoricoMovimentacoes = ({
                     <th className="text-left p-3 text-muted-foreground">Data</th>
                     <th className="text-left p-3 text-muted-foreground">Integrante</th>
                     <th className="text-left p-3 text-muted-foreground">Tipo</th>
-                    <th className="text-left p-3 text-muted-foreground">De → Para</th>
-                    <th className="text-left p-3 text-muted-foreground">Divisão Atual</th>
+                    <th className="text-left p-3 text-muted-foreground">Detalhes</th>
+                    <th className="text-left p-3 text-muted-foreground">Divisão</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -184,15 +301,37 @@ export const HistoricoMovimentacoes = ({
                       <td className="p-3 font-medium">{mov.nome_colete}</td>
                       <td className="p-3">{getTipoBadge(mov.tipo_movimentacao)}</td>
                       <td className="p-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground">
-                            {mov.valor_anterior || '—'}
-                          </span>
-                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">
-                            {mov.valor_novo || '—'}
-                          </span>
-                        </div>
+                        {mov.origem === 'carga' ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">
+                              {mov.valor_anterior || '—'}
+                            </span>
+                            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">
+                              {mov.valor_novo || '—'}
+                            </span>
+                          </div>
+                        ) : mov.detalhes ? (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center gap-1 cursor-help max-w-[200px]">
+                                  <span className="text-muted-foreground truncate">
+                                    {mov.detalhes.length > 40 
+                                      ? `${mov.detalhes.substring(0, 40)}...` 
+                                      : mov.detalhes}
+                                  </span>
+                                  <Info className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-sm">
+                                <p>{mov.detalhes}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </td>
                       <td className="p-3 text-muted-foreground">
                         {mov.divisao_atual || '—'}
