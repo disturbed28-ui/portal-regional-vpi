@@ -177,27 +177,49 @@ async function matchDivisaoToId(divisaoText: string): Promise<{ id: string | nul
 }
 
 // Detectar sigla de regional no título original (VP1, VP2, VP3, LN ou numerais romanos)
+// Suporta todas as variações: VP1, vp1, VP 1, VPI, vpi, VP I, vp i, VPIII, etc.
 function detectRegionalSiglaFromTitle(title: string): string | null {
-  // 1. Buscar sigla direta (VP1, VP2, VP3, LN, CMD)
-  const siglaMatch = title.match(/\b(VP1|VP2|VP3|LN|CMD)\b/i);
-  if (siglaMatch) {
-    return siglaMatch[1].toUpperCase();
+  // Normalizar título para comparação (sem acentos, uppercase)
+  const normalizado = title
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase();
+  
+  // 1. Buscar VP + número arábico (com ou sem espaço): VP1, VP 1, vp1, vp 1
+  const vpArabicoMatch = normalizado.match(/\bVP\s*([123])\b/);
+  if (vpArabicoMatch) {
+    return `VP${vpArabicoMatch[1]}`;
   }
   
-  // 2. Detectar numerais romanos após "Vale do Paraíba" ou "VP"
-  // "Vale do Paraíba III" → VP3
-  // "Vale Paraiba II" → VP2  
-  // "VP III" → VP3
-  const romanoMatch = title.match(/(?:vale\s*(?:do\s*)?paraiba|VP)\s*(III|II|I)\b/i);
-  if (romanoMatch) {
-    const romano = romanoMatch[1].toUpperCase();
+  // 2. Buscar VP + número romano COLADO ou com espaço: VPI, VPII, VPIII, VP I, VP II, VP III
+  // IMPORTANTE: Testar III antes de II antes de I (para não capturar só o primeiro I de III)
+  const vpRomanoMatch = normalizado.match(/\bVP\s*(III|II|I)\b/);
+  if (vpRomanoMatch) {
     const mapa: Record<string, string> = { 'III': 'VP3', 'II': 'VP2', 'I': 'VP1' };
-    return mapa[romano] || null;
+    return mapa[vpRomanoMatch[1]];
   }
   
-  // 3. "Litoral Norte" → LN
-  if (/litoral\s*norte/i.test(title)) {
+  // 3. Buscar "Vale do Paraíba" + número romano
+  const valeRomanoMatch = normalizado.match(/VALE\s*(?:DO\s*)?PARAIBA\s*(III|II|I)\b/);
+  if (valeRomanoMatch) {
+    const mapa: Record<string, string> = { 'III': 'VP3', 'II': 'VP2', 'I': 'VP1' };
+    return mapa[valeRomanoMatch[1]];
+  }
+  
+  // 4. Buscar "Vale do Paraíba" + número arábico
+  const valeArabicoMatch = normalizado.match(/VALE\s*(?:DO\s*)?PARAIBA\s*([123])\b/);
+  if (valeArabicoMatch) {
+    return `VP${valeArabicoMatch[1]}`;
+  }
+  
+  // 5. Litoral Norte: LN, ln, Litoral Norte
+  if (/\bLN\b/.test(normalizado) || /LITORAL\s*NORTE/.test(normalizado)) {
     return 'LN';
+  }
+  
+  // 6. CMD
+  if (/\bCMD\b/.test(normalizado)) {
+    return 'CMD';
   }
   
   return null;
