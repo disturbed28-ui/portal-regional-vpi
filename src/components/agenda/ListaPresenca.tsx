@@ -157,6 +157,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     registrarVisitanteExterno,
     inicializarListaRegional,
     carregarDivisaoCMD,
+    excluirDaLista,
     refetch 
   } = useEventoPresenca(event?.id || null);
   const { toast } = useToast();
@@ -416,29 +417,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
 
   const handleExcluirDaLista = async (integranteId: string, presencaId: string) => {
     if (!evento) return;
-    
-    try {
-      const { error } = await supabase
-        .from('presencas')
-        .delete()
-        .eq('id', presencaId);
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Integrante removido",
-        description: "O integrante foi excluído da lista de presença",
-      });
-      
-      refetch();
-    } catch (error) {
-      console.error('Erro ao excluir:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível excluir o integrante da lista",
-        variant: "destructive",
-      });
-    }
+    await excluirDaLista(presencaId);
   };
 
   const handleSearchNomeColete = async () => {
