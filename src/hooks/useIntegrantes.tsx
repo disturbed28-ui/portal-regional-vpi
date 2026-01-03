@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeSearchTerm } from "@/lib/utils";
 
@@ -56,10 +56,13 @@ export const useIntegrantes = (options?: UseIntegrantesOptions) => {
     [options?.vinculado, options?.ativo, options?.search]
   );
 
+  // Ref para debounce do realtime
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     fetchIntegrantes();
 
-    // Realtime subscription para detectar mudanças
+    // Realtime subscription para detectar mudanças (com debounce)
     const channel = supabase
       .channel('integrantes-changes')
       .on(
@@ -71,12 +74,22 @@ export const useIntegrantes = (options?: UseIntegrantesOptions) => {
         },
         (payload) => {
           console.log('Integrante changed:', payload);
-          fetchIntegrantes(); // Recarregar lista
+          
+          // Debounce: aguardar 500ms após última mudança antes de recarregar
+          if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current);
+          }
+          debounceTimerRef.current = setTimeout(() => {
+            fetchIntegrantes();
+          }, 500);
         }
       )
       .subscribe();
 
     return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
       supabase.removeChannel(channel);
     };
   }, [stableOptions]);
