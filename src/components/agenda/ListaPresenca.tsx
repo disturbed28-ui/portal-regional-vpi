@@ -138,10 +138,9 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     nome: "",
   });
   
-  // Estados para CMD
-  const [showCmdDialog, setShowCmdDialog] = useState(false);
-  const [loadingRegional, setLoadingRegional] = useState(false);
-  const [loadingCmdDivisao, setLoadingCmdDivisao] = useState(false);
+  // Estados para carregar divisão (CMD e Regional)
+  const [showCarregarDivisaoDialog, setShowCarregarDivisaoDialog] = useState(false);
+  const [loadingDivisao, setLoadingDivisao] = useState(false);
   
   // Estado para filtro por divisão
   const [filtroDivisao, setFiltroDivisao] = useState<string>("todas");
@@ -284,37 +283,9 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
         }
       }
       
-      // EVENTO REGIONAL: Inicializar automaticamente se vazio
-      if (tipoEvento === 'regional' && count === 0 && userProfile?.regional_id) {
-        console.log('[initializeEvento] Evento regional sem presenças, inicializando...');
-        setLoadingRegional(true);
-        try {
-          const result = await inicializarListaRegional(
-            existingEvento.id,
-            userProfile.regional_id,
-            user.id
-          );
-          
-          toast({
-            title: "Lista regional criada",
-            description: `${result.count} integrantes da regional registrados`,
-          });
-          refetch();
-        } catch (error) {
-          console.error('[initializeEvento] Erro ao inicializar regional:', error);
-          toast({
-            title: "Erro",
-            description: "Não foi possível carregar integrantes da regional",
-            variant: "destructive",
-          });
-        } finally {
-          setLoadingRegional(false);
-        }
-      }
-      
-      // EVENTO CMD: Sempre exibir diálogo para carregar divisão
-      if (tipoEvento === 'cmd' && userProfile?.divisao_id) {
-        setShowCmdDialog(true);
+      // EVENTO REGIONAL ou CMD: Exibir diálogo para carregar divisão
+      if ((tipoEvento === 'regional' || tipoEvento === 'cmd') && userProfile?.divisao_id) {
+        setShowCarregarDivisaoDialog(true);
       }
     }
   };
@@ -355,13 +326,13 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     return null;
   };
 
-  const handleLoadDivisaoCMD = async () => {
+  const handleLoadDivisao = async () => {
     if (!evento || !user || !userProfile?.divisao_id) {
-      setShowCmdDialog(false);
+      setShowCarregarDivisaoDialog(false);
       return;
     }
     
-    setLoadingCmdDivisao(true);
+    setLoadingDivisao(true);
     try {
       const result = await carregarDivisaoCMD(
         evento.id,
@@ -382,15 +353,15 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
         refetch();
       }
     } catch (error) {
-      console.error('[handleLoadDivisaoCMD] Erro:', error);
+      console.error('[handleLoadDivisao] Erro:', error);
       toast({
         title: "Erro",
         description: "Não foi possível carregar integrantes da divisão",
         variant: "destructive",
       });
     } finally {
-      setLoadingCmdDivisao(false);
-      setShowCmdDialog(false);
+      setLoadingDivisao(false);
+      setShowCarregarDivisaoDialog(false);
     }
   };
 
@@ -805,11 +776,11 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
               </div>
             </div>
 
-            {/* Loading Regional */}
-            {loadingRegional && (
+            {/* Loading Divisão */}
+            {loadingDivisao && (
               <div className="flex items-center justify-center gap-2 py-4 text-muted-foreground">
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-                <span>Carregando integrantes da regional...</span>
+                <span>Carregando integrantes da divisão...</span>
               </div>
             )}
 
@@ -849,15 +820,15 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
               </div>
             )}
 
-            {/* Botão Carregar Minha Divisão (CMD) */}
-            {isCMD && canManage && userProfile?.divisao_id && (
+            {/* Botão Carregar Minha Divisão (CMD ou Regional) */}
+            {(isCMD || isRegional) && canManage && userProfile?.divisao_id && (
               <Button
-                onClick={() => setShowCmdDialog(true)}
+                onClick={() => setShowCarregarDivisaoDialog(true)}
                 variant="outline"
                 className="w-full"
-                disabled={loadingCmdDivisao}
+                disabled={loadingDivisao}
               >
-                {loadingCmdDivisao ? (
+                {loadingDivisao ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
                     Carregando...
@@ -1242,11 +1213,13 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Diálogo CMD - Carregar Divisão */}
-      <AlertDialog open={showCmdDialog} onOpenChange={setShowCmdDialog}>
+      {/* Diálogo Carregar Divisão (CMD ou Regional) */}
+      <AlertDialog open={showCarregarDivisaoDialog} onOpenChange={setShowCarregarDivisaoDialog}>
         <AlertDialogContent className="w-[95vw] max-w-md sm:w-auto">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-lg sm:text-xl">Evento CMD</AlertDialogTitle>
+            <AlertDialogTitle className="text-lg sm:text-xl">
+              {tipoEvento === 'cmd' ? 'Evento CMD' : 'Evento Regional'}
+            </AlertDialogTitle>
             <AlertDialogDescription className="text-sm">
               Deseja carregar os integrantes da sua divisão neste evento?
               <br /><br />
@@ -1258,11 +1231,11 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
           <AlertDialogFooter className="flex flex-col sm:flex-row gap-2">
             <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={handleLoadDivisaoCMD}
-              disabled={loadingCmdDivisao}
+              onClick={handleLoadDivisao}
+              disabled={loadingDivisao}
               className="w-full sm:w-auto"
             >
-              {loadingCmdDivisao ? 'Carregando...' : 'Confirmar'}
+              {loadingDivisao ? 'Carregando...' : 'Confirmar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
