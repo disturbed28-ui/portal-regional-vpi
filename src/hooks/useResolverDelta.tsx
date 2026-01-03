@@ -5,16 +5,31 @@ export const useResolverDelta = () => {
   const resolverDelta = async (
     deltaId: string,
     observacao: string,
-    userId: string
+    userId: string,
+    acaoResolucao?: string
   ) => {
     try {
+      // Primeiro buscar dados_adicionais existentes para não sobrescrever
+      const { data: deltaAtual } = await supabase
+        .from('deltas_pendentes')
+        .select('dados_adicionais')
+        .eq('id', deltaId)
+        .single();
+      
+      // Mesclar acao_resolucao com dados existentes
+      const dadosAdicionais = {
+        ...(deltaAtual?.dados_adicionais as object || {}),
+        ...(acaoResolucao ? { acao_resolucao: acaoResolucao } : {})
+      };
+
       const { error } = await supabase
         .from('deltas_pendentes')
         .update({
           status: 'RESOLVIDO',
           observacao_admin: observacao,
           resolvido_por: userId,
-          resolvido_em: new Date().toISOString()
+          resolvido_em: new Date().toISOString(),
+          dados_adicionais: dadosAdicionais
         })
         .eq('id', deltaId);
       
