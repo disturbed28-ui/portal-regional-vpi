@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProfile } from '@/hooks/useProfile';
+import { getNivelAcesso } from '@/lib/grauUtils';
 
 interface Aniversariante {
   id: string;
@@ -14,18 +15,6 @@ interface Aniversariante {
 
 interface UseAniversariantesOptions {
   mesFiltro: number | null; // 1-12 ou null para todos
-}
-
-type NivelAcesso = 'comando' | 'regional' | 'divisao';
-
-function getNivelAcesso(grau: string | null | undefined): NivelAcesso {
-  if (!grau) return 'divisao';
-  
-  const grauNum = parseInt(grau.replace(/\D/g, ''), 10);
-  
-  if (grauNum >= 1 && grauNum <= 4) return 'comando';
-  if (grauNum === 5) return 'regional';
-  return 'divisao';
 }
 
 export function useAniversariantes(userId: string | undefined, options: UseAniversariantesOptions) {
