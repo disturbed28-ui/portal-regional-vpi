@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { useInadimplenciaFiltrada } from '@/hooks/useInadimplenciaFiltrada';
-import { AlertTriangle, TrendingUp, Users, DollarSign, ChevronDown } from 'lucide-react';
+import { AlertTriangle, Users, DollarSign, ChevronDown } from 'lucide-react';
 
 interface DashboardInadimplenciaProps {
   userId: string | undefined;
@@ -18,7 +18,8 @@ export const DashboardInadimplencia = ({ userId }: DashboardInadimplenciaProps) 
 
   return (
     <div className="space-y-3 sm:space-y-6">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
+      {/* Cards: Devedores, Total, Crônicos (removido Média) */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         {/* Total Devedores */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 px-3 sm:px-6">
@@ -56,23 +57,9 @@ export const DashboardInadimplencia = ({ userId }: DashboardInadimplenciaProps) 
             <p className="text-[10px] sm:text-xs text-muted-foreground">3+ meses</p>
           </CardContent>
         </Card>
-
-        {/* Média por Devedor */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 px-3 sm:px-6">
-            <CardTitle className="text-xs sm:text-sm font-medium">Média</CardTitle>
-            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="px-3 sm:px-6">
-            <div className="text-lg sm:text-2xl font-bold">
-              R$ {totalDevedores > 0 ? (totalDebito / totalDevedores).toFixed(2) : '0.00'}
-            </div>
-            <p className="text-[10px] sm:text-xs text-muted-foreground">por devedor</p>
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Top 10 Devedores Crônicos */}
+      {/* Top 10 Devedores Crônicos - sem valores monetários */}
       <Card>
         <CardHeader className="px-3 sm:px-6 py-3 sm:py-6">
           <CardTitle className="text-base sm:text-lg">Top 10 Devedores Crônicos</CardTitle>
@@ -98,10 +85,7 @@ export const DashboardInadimplencia = ({ userId }: DashboardInadimplenciaProps) 
                 </div>
                 <div className="text-right flex-shrink-0">
                   <p className="font-bold text-red-600 text-xs sm:text-base">
-                    {devedor.total_meses_historico}m
-                  </p>
-                  <p className="text-[10px] sm:text-sm text-muted-foreground">
-                    R$ {devedor.total_historico_devido?.toFixed(2) || '0.00'}
+                    {devedor.total_meses_historico} {devedor.total_meses_historico === 1 ? 'mês' : 'meses'}
                   </p>
                 </div>
               </div>
