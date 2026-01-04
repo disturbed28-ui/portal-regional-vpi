@@ -18,6 +18,13 @@ interface RequestBody {
   aniversariantes: AniversariantePayload[];
 }
 
+interface IntegranteRecord {
+  id: string;
+  nome_norm: string;
+  divisao_norm: string;
+  registro_id: number;
+}
+
 /**
  * Normaliza texto para comparação (remove acentos, uppercase)
  */
@@ -27,6 +34,42 @@ function normalizeForComparison(texto: string): string {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .trim();
+}
+
+/**
+ * Busca integrante com fallback para matching parcial (divisões truncadas)
+ */
+function findIntegrante(
+  nomeNorm: string,
+  divisaoNorm: string,
+  integrantesMap: Map<string, { id: string; registro_id: number }>,
+  integrantesList: IntegranteRecord[]
+): { id: string; registro_id: number } | null {
+  
+  // 1. Tentar match exato
+  const keyExata = `${nomeNorm}|${divisaoNorm}`;
+  if (integrantesMap.has(keyExata)) {
+    return integrantesMap.get(keyExata)!;
+  }
+  
+  // 2. Tentar match por prefixo - divisão do Excel é início da divisão do banco
+  // Ex: "DIVISAO SAO JOSE DOS CAMPOS EXTREMO NORT" matches "DIVISAO SAO JOSE DOS CAMPOS EXTREMO NORTE - SP"
+  for (const int of integrantesList) {
+    if (int.nome_norm === nomeNorm && int.divisao_norm.startsWith(divisaoNorm)) {
+      console.log(`[admin-import-aniversariantes] Match por prefixo: "${divisaoNorm}" -> "${int.divisao_norm}"`);
+      return { id: int.id, registro_id: int.registro_id };
+    }
+  }
+  
+  // 3. Tentar inverso: divisão do banco é início da divisão do Excel (menos comum)
+  for (const int of integrantesList) {
+    if (int.nome_norm === nomeNorm && divisaoNorm.startsWith(int.divisao_norm)) {
+      console.log(`[admin-import-aniversariantes] Match inverso: "${divisaoNorm}" <- "${int.divisao_norm}"`);
+      return { id: int.id, registro_id: int.registro_id };
+    }
+  }
+  
+  return null;
 }
 
 Deno.serve(async (req) => {
@@ -79,11 +122,23 @@ Deno.serve(async (req) => {
 
     console.log(`[admin-import-aniversariantes] Total de integrantes ativos no banco: ${integrantes?.length || 0}`);
 
-    // Criar mapa para busca rápida por nome_colete_ascii + divisao_texto normalizada
+    // Criar mapa E lista para busca (map para exato, lista para parcial)
     const integrantesMap = new Map<string, { id: string; registro_id: number }>();
+    const integrantesList: IntegranteRecord[] = [];
+    
     for (const int of integrantes || []) {
       const nomeNorm = normalizeForComparison(int.nome_colete_ascii || int.nome_colete);
       const divisaoNorm = normalizeForComparison(int.divisao_texto);
+      
+      // Adicionar à lista para busca parcial
+      integrantesList.push({
+        id: int.id,
+        nome_norm: nomeNorm,
+        divisao_norm: divisaoNorm,
+        registro_id: int.registro_id
+      });
+      
+      // Manter map para match exato (mais rápido)
       const key = `${nomeNorm}|${divisaoNorm}`;
       integrantesMap.set(key, { id: int.id, registro_id: int.registro_id });
     }
@@ -95,9 +150,9 @@ Deno.serve(async (req) => {
     for (const aniv of aniversariantes) {
       const nomeNorm = normalizeForComparison(aniv.nome_colete_normalizado || aniv.nome_colete);
       const divisaoNorm = normalizeForComparison(aniv.divisao_normalizada || aniv.divisao_texto);
-      const key = `${nomeNorm}|${divisaoNorm}`;
       
-      const integrante = integrantesMap.get(key);
+      // Usar função com fallback para matching parcial
+      const integrante = findIntegrante(nomeNorm, divisaoNorm, integrantesMap, integrantesList);
       
       if (integrante) {
         // Atualizar data_nascimento
