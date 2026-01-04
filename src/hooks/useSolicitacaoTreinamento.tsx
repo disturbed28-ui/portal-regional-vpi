@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { addMonths } from 'date-fns';
 
 interface IntegranteTreinamento {
   id: string;
@@ -23,6 +24,8 @@ interface CreateSolicitacaoParams {
   integrante: IntegranteTreinamento;
   cargoTreinamentoId: string;
   solicitante: SolicitanteData;
+  dataInicioTreinamento: Date;
+  tempoTreinamentoMeses: number;
 }
 
 interface EncerrarTreinamentoParams {
@@ -126,6 +129,9 @@ export function useSolicitacaoTreinamento() {
         .limit(1)
         .single();
 
+      // Calcular data de término previsto
+      const dataTerminoPrevisto = addMonths(params.dataInicioTreinamento, params.tempoTreinamentoMeses);
+
       // 1. Criar solicitação
       const { error: solError } = await supabase
         .from('solicitacoes_treinamento')
@@ -139,7 +145,10 @@ export function useSolicitacaoTreinamento() {
           solicitante_nome_colete: params.solicitante.nome_colete,
           solicitante_cargo_id: params.solicitante.cargo_id,
           solicitante_divisao_id: params.solicitante.divisao_id,
-          status: 'Em Aprovacao'
+          status: 'Em Aprovacao',
+          data_inicio_treinamento: params.dataInicioTreinamento.toISOString().split('T')[0],
+          tempo_treinamento_meses: params.tempoTreinamentoMeses,
+          data_termino_previsto: dataTerminoPrevisto.toISOString().split('T')[0]
         });
       
       if (solError) {
