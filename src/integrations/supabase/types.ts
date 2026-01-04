@@ -1868,6 +1868,7 @@ export type Database = {
           cargo_atual_id: string | null
           cargo_treinamento_id: string
           created_at: string
+          data_aprovacao: string | null
           data_hora_solicitacao: string
           divisao_id: string | null
           id: string
@@ -1885,6 +1886,7 @@ export type Database = {
           cargo_atual_id?: string | null
           cargo_treinamento_id: string
           created_at?: string
+          data_aprovacao?: string | null
           data_hora_solicitacao?: string
           divisao_id?: string | null
           id?: string
@@ -1902,6 +1904,7 @@ export type Database = {
           cargo_atual_id?: string | null
           cargo_treinamento_id?: string
           created_at?: string
+          data_aprovacao?: string | null
           data_hora_solicitacao?: string
           divisao_id?: string | null
           id?: string
@@ -2189,6 +2192,7 @@ export type Database = {
           id: string
           integrante_id: string
           observacoes: string
+          solicitacao_id: string | null
           tipo_encerramento: string
         }
         Insert: {
@@ -2201,6 +2205,7 @@ export type Database = {
           id?: string
           integrante_id: string
           observacoes: string
+          solicitacao_id?: string | null
           tipo_encerramento: string
         }
         Update: {
@@ -2213,6 +2218,7 @@ export type Database = {
           id?: string
           integrante_id?: string
           observacoes?: string
+          solicitacao_id?: string | null
           tipo_encerramento?: string
         }
         Relationships: [
@@ -2235,6 +2241,13 @@ export type Database = {
             columns: ["integrante_id"]
             isOneToOne: false
             referencedRelation: "integrantes_portal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treinamentos_historico_solicitacao_id_fkey"
+            columns: ["solicitacao_id"]
+            isOneToOne: false
+            referencedRelation: "solicitacoes_treinamento"
             referencedColumns: ["id"]
           },
         ]
