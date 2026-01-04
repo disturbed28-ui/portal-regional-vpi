@@ -1870,6 +1870,8 @@ export type Database = {
           created_at: string
           data_aprovacao: string | null
           data_hora_solicitacao: string
+          data_inicio_treinamento: string | null
+          data_termino_previsto: string | null
           divisao_id: string | null
           id: string
           integrante_id: string
@@ -1880,6 +1882,7 @@ export type Database = {
           solicitante_integrante_id: string | null
           solicitante_nome_colete: string
           status: string
+          tempo_treinamento_meses: number | null
           updated_at: string
         }
         Insert: {
@@ -1888,6 +1891,8 @@ export type Database = {
           created_at?: string
           data_aprovacao?: string | null
           data_hora_solicitacao?: string
+          data_inicio_treinamento?: string | null
+          data_termino_previsto?: string | null
           divisao_id?: string | null
           id?: string
           integrante_id: string
@@ -1898,6 +1903,7 @@ export type Database = {
           solicitante_integrante_id?: string | null
           solicitante_nome_colete: string
           status?: string
+          tempo_treinamento_meses?: number | null
           updated_at?: string
         }
         Update: {
@@ -1906,6 +1912,8 @@ export type Database = {
           created_at?: string
           data_aprovacao?: string | null
           data_hora_solicitacao?: string
+          data_inicio_treinamento?: string | null
+          data_termino_previsto?: string | null
           divisao_id?: string | null
           id?: string
           integrante_id?: string
@@ -1916,6 +1924,7 @@ export type Database = {
           solicitante_integrante_id?: string | null
           solicitante_nome_colete?: string
           status?: string
+          tempo_treinamento_meses?: number | null
           updated_at?: string
         }
         Relationships: [
