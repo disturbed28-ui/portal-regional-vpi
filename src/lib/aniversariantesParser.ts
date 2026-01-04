@@ -25,7 +25,7 @@ export interface AniversariantesParseResult {
  */
 function findColumnIndex(headers: string[], possibleNames: string[]): number {
   const normalizedHeaders = headers.map(h => 
-    String(h || '').toLowerCase().trim().replace(/[_\s]+/g, '')
+    String(h || '').toLowerCase().trim().replace(/[_\s\/]+/g, '')
   );
   
   for (const name of possibleNames) {
@@ -102,7 +102,10 @@ export function parseAniversariantesExcel(file: File): Promise<AniversariantesPa
         const workbook = XLSX.read(data, { type: 'array', cellDates: false });
         
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as any[][];
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { 
+          header: 1,
+          defval: ''  // Preservar colunas vazias
+        }) as any[][];
         
         if (jsonData.length < 2) {
           resolve({
