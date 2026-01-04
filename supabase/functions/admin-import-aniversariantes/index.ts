@@ -52,19 +52,27 @@ function findIntegrante(
     return integrantesMap.get(keyExata)!;
   }
   
-  // 2. Tentar match por prefixo - divisão do Excel é início da divisão do banco
-  // Ex: "DIVISAO SAO JOSE DOS CAMPOS EXTREMO NORT" matches "DIVISAO SAO JOSE DOS CAMPOS EXTREMO NORTE - SP"
+  // Remover sufixo " - SP" para comparações parciais
+  // Ex: "DIVISAO SAO JOSE DOS CAMPOS EXTREMO NORT - SP" -> "DIVISAO SAO JOSE DOS CAMPOS EXTREMO NORT"
+  const excelSemSP = divisaoNorm.replace(/\s*-\s*SP\s*$/i, '');
+  
+  // 2. Tentar match por prefixo - divisão do Excel (truncada) é início da divisão do banco
+  // Ex: "DIVISAO SAO JOSE DOS CAMPOS EXTREMO NORT" matches "DIVISAO SAO JOSE DOS CAMPOS EXTREMO NORTE"
   for (const int of integrantesList) {
-    if (int.nome_norm === nomeNorm && int.divisao_norm.startsWith(divisaoNorm)) {
-      console.log(`[admin-import-aniversariantes] Match por prefixo: "${divisaoNorm}" -> "${int.divisao_norm}"`);
+    const bancoSemSP = int.divisao_norm.replace(/\s*-\s*SP\s*$/i, '');
+    
+    if (int.nome_norm === nomeNorm && bancoSemSP.startsWith(excelSemSP)) {
+      console.log(`[admin-import-aniversariantes] Match por prefixo: "${excelSemSP}" -> "${bancoSemSP}"`);
       return { id: int.id, registro_id: int.registro_id };
     }
   }
   
   // 3. Tentar inverso: divisão do banco é início da divisão do Excel (menos comum)
   for (const int of integrantesList) {
-    if (int.nome_norm === nomeNorm && divisaoNorm.startsWith(int.divisao_norm)) {
-      console.log(`[admin-import-aniversariantes] Match inverso: "${divisaoNorm}" <- "${int.divisao_norm}"`);
+    const bancoSemSP = int.divisao_norm.replace(/\s*-\s*SP\s*$/i, '');
+    
+    if (int.nome_norm === nomeNorm && excelSemSP.startsWith(bancoSemSP)) {
+      console.log(`[admin-import-aniversariantes] Match inverso: "${excelSemSP}" <- "${bancoSemSP}"`);
       return { id: int.id, registro_id: int.registro_id };
     }
   }

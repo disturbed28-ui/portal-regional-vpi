@@ -4,6 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Cake, Users } from 'lucide-react';
 import { useAniversariantes } from '@/hooks/useAniversariantes';
+import { cn } from '@/lib/utils';
 
 interface AniversariantesListaProps {
   userId: string | undefined;
@@ -36,8 +37,15 @@ function extrairNomeDivisao(divisaoTexto: string): string {
     .trim();
 }
 
+function isAniversarioHoje(dia: number, mes: number): boolean {
+  const hoje = new Date();
+  return dia === hoje.getDate() && mes === (hoje.getMonth() + 1);
+}
+
 export function AniversariantesLista({ userId }: AniversariantesListaProps) {
-  const [mesFiltro, setMesFiltro] = useState<number | null>(null);
+  // Inicializa com o mês atual (Janeiro = 1)
+  const mesAtual = new Date().getMonth() + 1;
+  const [mesFiltro, setMesFiltro] = useState<number | null>(mesAtual);
   
   const { aniversariantes, loading, error, totalCadastrados } = useAniversariantes(userId, {
     mesFiltro
@@ -100,7 +108,12 @@ export function AniversariantesLista({ userId }: AniversariantesListaProps) {
               {aniversariantes.map(aniversariante => (
                 <div
                   key={aniversariante.id}
-                  className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-card hover:bg-muted/30 transition-colors"
+                  className={cn(
+                    "flex items-center justify-between p-3 rounded-lg border transition-colors",
+                    isAniversarioHoje(aniversariante.dia, aniversariante.mes)
+                      ? "border-green-500 bg-green-500/10 hover:bg-green-500/20"
+                      : "border-border/50 bg-card hover:bg-muted/30"
+                  )}
                 >
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-sm truncate">
