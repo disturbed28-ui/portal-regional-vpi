@@ -9,6 +9,8 @@ import { useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
 import { MensalidadesUploadCard } from "@/components/admin/MensalidadesUploadCard";
 import { DashboardInadimplencia } from "@/components/relatorios/DashboardInadimplencia";
+import { AniversariantesUploadCard } from "@/components/admin/AniversariantesUploadCard";
+import { AniversariantesLista } from "@/components/admin/AniversariantesLista";
 
 const GestaoADM = () => {
   const navigate = useNavigate();
@@ -111,7 +113,10 @@ const GestaoADM = () => {
             </TabsContent>
 
             <TabsContent value="aniversariantes" className="m-0">
-              <PlaceholderContent title="Aniversariantes" />
+              <div className="space-y-4">
+                <AniversariantesUploadCard />
+                <AniversariantesLista userId={user?.id} />
+              </div>
             </TabsContent>
           </div>
         </Tabs>

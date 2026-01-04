@@ -1072,6 +1072,7 @@ export type Database = {
           created_at: string | null
           data_entrada: string | null
           data_inativacao: string | null
+          data_nascimento: string | null
           data_vinculacao: string | null
           divisao_id: string | null
           divisao_texto: string
@@ -1108,6 +1109,7 @@ export type Database = {
           created_at?: string | null
           data_entrada?: string | null
           data_inativacao?: string | null
+          data_nascimento?: string | null
           data_vinculacao?: string | null
           divisao_id?: string | null
           divisao_texto: string
@@ -1144,6 +1146,7 @@ export type Database = {
           created_at?: string | null
           data_entrada?: string | null
           data_inativacao?: string | null
+          data_nascimento?: string | null
           data_vinculacao?: string | null
           divisao_id?: string | null
           divisao_texto?: string
