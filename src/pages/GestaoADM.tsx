@@ -7,6 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Users, DollarSign, GraduationCap, Cake, Clock } from "lucide-react";
 import { useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
+import { MensalidadesUploadCard } from "@/components/admin/MensalidadesUploadCard";
+import { DashboardInadimplencia } from "@/components/relatorios/DashboardInadimplencia";
 
 const GestaoADM = () => {
   const navigate = useNavigate();
@@ -95,7 +97,13 @@ const GestaoADM = () => {
             </TabsContent>
 
             <TabsContent value="inadimplencia" className="m-0">
-              <PlaceholderContent title="Inadimplência" />
+              <div className="space-y-4">
+                {/* Bloco 1: Upload de Mensalidades */}
+                <MensalidadesUploadCard />
+                
+                {/* Bloco 2: Visualização de Inadimplência */}
+                <DashboardInadimplencia userId={user?.id} />
+              </div>
             </TabsContent>
 
             <TabsContent value="estagio" className="m-0">
