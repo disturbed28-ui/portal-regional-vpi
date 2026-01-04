@@ -37,7 +37,7 @@ export const useHistoricoTreinamento = ({ userId }: UseHistoricoTreinamentoParam
   const { profile } = useProfile(userId);
 
   // Filtros locais
-  const [filtroStatus, setFiltroStatus] = useState<"todos" | "em_andamento" | "concluido">("todos");
+  const [filtroStatus, setFiltroStatus] = useState<"todos" | "em_andamento" | "concluido">("em_andamento");
   const [filtroDivisao, setFiltroDivisao] = useState<string>("todas");
   const [filtroNome, setFiltroNome] = useState("");
 
