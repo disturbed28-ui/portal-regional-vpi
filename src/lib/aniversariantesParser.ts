@@ -113,11 +113,23 @@ export function parseAniversariantesExcel(file: File): Promise<AniversariantesPa
           return;
         }
         
+        // Detectar linha de cabeçalho dinamicamente (pode não estar na linha 1)
+        let headerRowIndex = 0;
+        for (let i = 0; i < Math.min(10, jsonData.length); i++) {
+          const row = jsonData[i];
+          if (!row) continue;
+          const rowStr = row.map(c => String(c || '')).join(' ').toLowerCase();
+          if (rowStr.includes('nome') && (rowStr.includes('colete') || rowStr.includes('divisao') || rowStr.includes('divisão'))) {
+            headerRowIndex = i;
+            break;
+          }
+        }
+        
         // Encontrar colunas
-        const headers = jsonData[0].map(h => String(h || ''));
+        const headers = jsonData[headerRowIndex].map(h => String(h || ''));
         const nomeColeteIdx = findColumnIndex(headers, ['nome', 'colete', 'nomecolete', 'nome_colete', 'integrante']);
-        const divisaoIdx = findColumnIndex(headers, ['divisao', 'divisão', 'div']);
-        const dataNascIdx = findColumnIndex(headers, ['nascimento', 'aniversario', 'aniversário', 'data', 'datanascimento', 'data_nascimento']);
+        const divisaoIdx = findColumnIndex(headers, ['divisao', 'divisão', 'div', 'regional/divisao', 'regional_divisao', 'regionaldivisao']);
+        const dataNascIdx = findColumnIndex(headers, ['nascimento', 'aniversario', 'aniversário', 'data', 'datanascimento', 'data_nascimento', 'dia/mes', 'dia_mes', 'diames', 'dia']);
         
         const erros: string[] = [];
         
@@ -144,8 +156,8 @@ export function parseAniversariantesExcel(file: File): Promise<AniversariantesPa
         const divisoesSet = new Set<string>();
         let invalidos = 0;
         
-        // Processar linhas (pular header)
-        for (let i = 1; i < jsonData.length; i++) {
+        // Processar linhas (pular até após o header)
+        for (let i = headerRowIndex + 1; i < jsonData.length; i++) {
           const row = jsonData[i];
           if (!row || row.length === 0) continue;
           
