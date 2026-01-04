@@ -6,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
 import { useMensalidades } from "@/hooks/useMensalidades";
 import { parseMensalidadesExcel, formatRef, ParseResult } from "@/lib/mensalidadesParser";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +22,7 @@ interface MensalidadesUploadCardProps {
 export const MensalidadesUploadCard = ({ showTitle = true }: MensalidadesUploadCardProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { profile } = useProfile(user?.id);
   const queryClient = useQueryClient();
   const mensalidadesInputRef = useRef<HTMLInputElement>(null);
   const [processing, setProcessing] = useState(false);
@@ -67,10 +69,18 @@ export const MensalidadesUploadCard = ({ showTitle = true }: MensalidadesUploadC
     try {
       setProcessing(true);
 
+      // Determinar grau do usuário (prioridade: integrante > profile)
+      const userGrau = profile?.integrante?.grau || profile?.grau || null;
+      const userDivisaoId = profile?.divisao_id || null;
+      
+      console.log('[MensalidadesUpload] Sending with scope:', { userGrau, userDivisaoId });
+      
       const { data, error } = await supabase.functions.invoke('admin-import-mensalidades', {
         body: {
           user_id: user.id,
           mensalidades: mensalidadesPreview.mensalidades,
+          user_grau: userGrau,
+          user_divisao_id: userDivisaoId,
         },
       });
 
