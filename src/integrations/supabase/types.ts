@@ -1065,6 +1065,7 @@ export type Database = {
           cargo_estagio: string | null
           cargo_grau_texto: string
           cargo_nome: string | null
+          cargo_treinamento_id: string | null
           caveira: boolean | null
           caveira_suplente: boolean | null
           comando_texto: string
@@ -1102,6 +1103,7 @@ export type Database = {
           cargo_estagio?: string | null
           cargo_grau_texto: string
           cargo_nome?: string | null
+          cargo_treinamento_id?: string | null
           caveira?: boolean | null
           caveira_suplente?: boolean | null
           comando_texto: string
@@ -1139,6 +1141,7 @@ export type Database = {
           cargo_estagio?: string | null
           cargo_grau_texto?: string
           cargo_nome?: string | null
+          cargo_treinamento_id?: string | null
           caveira?: boolean | null
           caveira_suplente?: boolean | null
           comando_texto?: string
@@ -1171,6 +1174,13 @@ export type Database = {
           vinculado?: boolean | null
         }
         Relationships: [
+          {
+            foreignKeyName: "integrantes_portal_cargo_treinamento_id_fkey"
+            columns: ["cargo_treinamento_id"]
+            isOneToOne: false
+            referencedRelation: "cargos"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "integrantes_portal_divisao_id_fkey"
             columns: ["divisao_id"]
@@ -1853,6 +1863,138 @@ export type Database = {
           },
         ]
       }
+      solicitacoes_treinamento: {
+        Row: {
+          cargo_atual_id: string | null
+          cargo_treinamento_id: string
+          created_at: string
+          data_hora_solicitacao: string
+          divisao_id: string | null
+          id: string
+          integrante_id: string
+          observacoes: string | null
+          regional_id: string | null
+          solicitante_cargo_id: string | null
+          solicitante_divisao_id: string | null
+          solicitante_integrante_id: string | null
+          solicitante_nome_colete: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          cargo_atual_id?: string | null
+          cargo_treinamento_id: string
+          created_at?: string
+          data_hora_solicitacao?: string
+          divisao_id?: string | null
+          id?: string
+          integrante_id: string
+          observacoes?: string | null
+          regional_id?: string | null
+          solicitante_cargo_id?: string | null
+          solicitante_divisao_id?: string | null
+          solicitante_integrante_id?: string | null
+          solicitante_nome_colete: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          cargo_atual_id?: string | null
+          cargo_treinamento_id?: string
+          created_at?: string
+          data_hora_solicitacao?: string
+          divisao_id?: string | null
+          id?: string
+          integrante_id?: string
+          observacoes?: string | null
+          regional_id?: string | null
+          solicitante_cargo_id?: string | null
+          solicitante_divisao_id?: string | null
+          solicitante_integrante_id?: string | null
+          solicitante_nome_colete?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solicitacoes_treinamento_cargo_atual_id_fkey"
+            columns: ["cargo_atual_id"]
+            isOneToOne: false
+            referencedRelation: "cargos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_treinamento_cargo_treinamento_id_fkey"
+            columns: ["cargo_treinamento_id"]
+            isOneToOne: false
+            referencedRelation: "cargos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_treinamento_divisao_id_fkey"
+            columns: ["divisao_id"]
+            isOneToOne: false
+            referencedRelation: "divisoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_treinamento_divisao_id_fkey"
+            columns: ["divisao_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["divisao_id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_treinamento_integrante_id_fkey"
+            columns: ["integrante_id"]
+            isOneToOne: false
+            referencedRelation: "integrantes_portal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_treinamento_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "regionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_treinamento_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["regional_id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_treinamento_solicitante_cargo_id_fkey"
+            columns: ["solicitante_cargo_id"]
+            isOneToOne: false
+            referencedRelation: "cargos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_treinamento_solicitante_divisao_id_fkey"
+            columns: ["solicitante_divisao_id"]
+            isOneToOne: false
+            referencedRelation: "divisoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_treinamento_solicitante_divisao_id_fkey"
+            columns: ["solicitante_divisao_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["divisao_id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_treinamento_solicitante_integrante_id_fkey"
+            columns: ["solicitante_integrante_id"]
+            isOneToOne: false
+            referencedRelation: "integrantes_portal"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_logs: {
         Row: {
           created_at: string
@@ -2035,6 +2177,67 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      treinamentos_historico: {
+        Row: {
+          cargo_treinamento_id: string
+          created_at: string
+          data_encerramento: string
+          data_inicio: string | null
+          encerrado_por: string | null
+          encerrado_por_nome_colete: string | null
+          id: string
+          integrante_id: string
+          observacoes: string
+          tipo_encerramento: string
+        }
+        Insert: {
+          cargo_treinamento_id: string
+          created_at?: string
+          data_encerramento?: string
+          data_inicio?: string | null
+          encerrado_por?: string | null
+          encerrado_por_nome_colete?: string | null
+          id?: string
+          integrante_id: string
+          observacoes: string
+          tipo_encerramento: string
+        }
+        Update: {
+          cargo_treinamento_id?: string
+          created_at?: string
+          data_encerramento?: string
+          data_inicio?: string | null
+          encerrado_por?: string | null
+          encerrado_por_nome_colete?: string | null
+          id?: string
+          integrante_id?: string
+          observacoes?: string
+          tipo_encerramento?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treinamentos_historico_cargo_treinamento_id_fkey"
+            columns: ["cargo_treinamento_id"]
+            isOneToOne: false
+            referencedRelation: "cargos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treinamentos_historico_encerrado_por_fkey"
+            columns: ["encerrado_por"]
+            isOneToOne: false
+            referencedRelation: "integrantes_portal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "treinamentos_historico_integrante_id_fkey"
+            columns: ["integrante_id"]
+            isOneToOne: false
+            referencedRelation: "integrantes_portal"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_access_logs: {
         Row: {

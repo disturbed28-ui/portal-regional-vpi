@@ -22,6 +22,7 @@ export interface IntegrantePortal {
   created_at: string;
   updated_at: string;
   cargo_estagio: string | null;
+  cargo_treinamento_id: string | null;
   sgt_armas: boolean;
   caveira: boolean;
   caveira_suplente: boolean;
