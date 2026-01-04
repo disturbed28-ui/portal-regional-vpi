@@ -1,10 +1,11 @@
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useScreenAccess } from "@/hooks/useScreenAccess";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Users, DollarSign, GraduationCap, Cake, Clock } from "lucide-react";
+import { ArrowLeft, Users, DollarSign, GraduationCap, Cake, Clock, FileEdit, History, ClipboardCheck } from "lucide-react";
 import { useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
 import { MensalidadesUploadCard } from "@/components/admin/MensalidadesUploadCard";
@@ -12,6 +13,7 @@ import { DashboardInadimplencia } from "@/components/relatorios/DashboardInadimp
 import { AniversariantesUploadCard } from "@/components/admin/AniversariantesUploadCard";
 import { AniversariantesLista } from "@/components/admin/AniversariantesLista";
 import { SolicitacaoTreinamento } from "@/components/admin/treinamento/SolicitacaoTreinamento";
+import { HistoricoTreinamento } from "@/components/admin/treinamento/HistoricoTreinamento";
 
 const GestaoADM = () => {
   const navigate = useNavigate();
@@ -110,7 +112,51 @@ const GestaoADM = () => {
             </TabsContent>
 
             <TabsContent value="treinamento" className="m-0">
-              <SolicitacaoTreinamento userId={user?.id} />
+              <Tabs defaultValue="solicitacao" className="w-full">
+                <TabsList className="w-full h-auto flex bg-muted/30 p-1 gap-1 mb-4">
+                  <TabsTrigger
+                    value="solicitacao"
+                    className="flex-1 flex items-center gap-1.5 px-2 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                  >
+                    <FileEdit className="h-3.5 w-3.5 shrink-0" />
+                    <span>Solicitação</span>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="historico"
+                    className="flex-1 flex items-center gap-1.5 px-2 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                  >
+                    <History className="h-3.5 w-3.5 shrink-0" />
+                    <span>Histórico</span>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="pendentes"
+                    className="flex-1 flex items-center gap-1.5 px-2 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                  >
+                    <ClipboardCheck className="h-3.5 w-3.5 shrink-0" />
+                    <span>Pendentes</span>
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="solicitacao" className="m-0">
+                  <SolicitacaoTreinamento userId={user?.id} />
+                </TabsContent>
+
+                <TabsContent value="historico" className="m-0">
+                  <HistoricoTreinamento userId={user?.id} />
+                </TabsContent>
+
+                <TabsContent value="pendentes" className="m-0">
+                  <Card className="border-border/50">
+                    <CardContent className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                      <Clock className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                      <h3 className="text-lg font-medium text-foreground mb-2">Em breve</h3>
+                      <p className="text-sm text-muted-foreground max-w-xs">
+                        A funcionalidade de Aprovações Pendentes está em desenvolvimento.
+                      </p>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
             </TabsContent>
 
             <TabsContent value="aniversariantes" className="m-0">
