@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
   try {
     console.log('[admin-import-mensalidades] Request received');
 
-    const requestSchema = z.object({
+const requestSchema = z.object({
       user_id: z.string().uuid('ID de usuário inválido'),
       mensalidades: z.array(z.object({
         registro_id: z.number().int().positive(),
@@ -79,10 +79,12 @@ Deno.serve(async (req) => {
         data_vencimento: z.string(),
         situacao: z.string().max(50)
       })).min(1, 'Pelo menos uma mensalidade é necessária'),
-      realizado_por: z.string().max(100).optional()
+      realizado_por: z.string().max(100).optional(),
+      user_grau: z.string().nullable().optional(),
+      user_divisao_id: z.string().uuid().nullable().optional()
     });
 
-    const { user_id, mensalidades, realizado_por } = requestSchema.parse(await req.json());
+    const { user_id, mensalidades, realizado_por, user_grau, user_divisao_id } = requestSchema.parse(await req.json());
 
     console.log(`[admin-import-mensalidades] Validating admin: ${user_id}`);
     console.log(`[admin-import-mensalidades] Mensalidades count: ${mensalidades.length}`);
@@ -108,6 +110,18 @@ Deno.serve(async (req) => {
     }
 
     console.log('[admin-import-mensalidades] User authenticated:', userData.nome_colete || user_id);
+
+    // ==========================================
+    // ESCOPO: Determinar se processa por REGIONAL ou DIVISAO
+    // ==========================================
+    const isGrauVI = user_grau === 'VI';
+    const escopoDivisao = isGrauVI && user_divisao_id;
+    
+    console.log(`[admin-import-mensalidades] User grau: ${user_grau || 'N/A'}`);
+    console.log(`[admin-import-mensalidades] Scope: ${escopoDivisao ? 'DIVISAO' : 'REGIONAL'}`);
+    if (escopoDivisao) {
+      console.log(`[admin-import-mensalidades] User divisao_id: ${user_divisao_id}`);
+    }
 
     // ==========================================
     // MULTI-REGIONAL: Inferir regional de cada registro
@@ -202,14 +216,21 @@ Deno.serve(async (req) => {
     // MULTI-REGIONAL: Buscar carga anterior APENAS das regionais na carga
     // ==========================================
     
-    // 6. Buscar carga anterior ATIVA apenas das regionais sendo atualizadas
-    console.log('[admin-import-mensalidades] Fetching previous active load for affected regionals...');
-    const { data: cargaAnterior, error: fetchError } = await supabase
+    // 6. Buscar carga anterior ATIVA (filtrada por escopo)
+    console.log(`[admin-import-mensalidades] Fetching previous active load (scope: ${escopoDivisao ? 'DIVISAO' : 'REGIONAL'})...`);
+    
+    let queryAnterior = supabase
       .from('mensalidades_atraso')
-      .select('id, registro_id, ref, data_carga, regional_id')
+      .select('id, registro_id, ref, data_carga, regional_id, divisao_id')
       .eq('ativo', true)
-      .in('regional_id', regionaisArray)
-      .order('data_carga', { ascending: false });
+      .in('regional_id', regionaisArray);
+
+    // Se Grau VI, filtrar apenas pela divisão do usuário
+    if (escopoDivisao) {
+      queryAnterior = queryAnterior.eq('divisao_id', user_divisao_id);
+    }
+
+    const { data: cargaAnterior, error: fetchError } = await queryAnterior.order('data_carga', { ascending: false });
 
     if (fetchError) {
       logError('admin-import-mensalidades', fetchError);
@@ -280,13 +301,21 @@ Deno.serve(async (req) => {
     // MULTI-REGIONAL: Desativar APENAS registros das regionais na carga
     // ==========================================
     
-    // 9. Desativar carga anterior APENAS das regionais afetadas
-    console.log(`[admin-import-mensalidades] Deactivating previous load for regionals: ${regionaisArray.join(', ')}`);
-    const { error: deactivateError } = await supabase
+    // 9. Desativar carga anterior (filtrada por escopo)
+    console.log(`[admin-import-mensalidades] Deactivating previous load (scope: ${escopoDivisao ? 'DIVISAO' : 'REGIONAL'})...`);
+    
+    let queryDesativar = supabase
       .from('mensalidades_atraso')
       .update({ ativo: false })
       .eq('ativo', true)
       .in('regional_id', regionaisArray);
+
+    // Se Grau VI, desativar apenas da divisão do usuário
+    if (escopoDivisao) {
+      queryDesativar = queryDesativar.eq('divisao_id', user_divisao_id);
+    }
+
+    const { error: deactivateError } = await queryDesativar;
 
     if (deactivateError) {
       console.error('[admin-import-mensalidades] Error deactivating previous load:', deactivateError);
