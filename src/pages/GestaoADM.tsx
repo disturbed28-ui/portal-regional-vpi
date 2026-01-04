@@ -1,12 +1,11 @@
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useScreenAccess } from "@/hooks/useScreenAccess";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Users, DollarSign, GraduationCap, Cake, Clock, FileEdit, History, ClipboardCheck } from "lucide-react";
-import { useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
 import { MensalidadesUploadCard } from "@/components/admin/MensalidadesUploadCard";
 import { DashboardInadimplencia } from "@/components/relatorios/DashboardInadimplencia";
@@ -14,6 +13,7 @@ import { AniversariantesUploadCard } from "@/components/admin/AniversariantesUpl
 import { AniversariantesLista } from "@/components/admin/AniversariantesLista";
 import { SolicitacaoTreinamento } from "@/components/admin/treinamento/SolicitacaoTreinamento";
 import { HistoricoTreinamento } from "@/components/admin/treinamento/HistoricoTreinamento";
+import { AprovacoesPendentes } from "@/components/admin/treinamento/AprovacoesPendentes";
 
 const GestaoADM = () => {
   const navigate = useNavigate();
@@ -146,15 +146,7 @@ const GestaoADM = () => {
                 </TabsContent>
 
                 <TabsContent value="pendentes" className="m-0">
-                  <Card className="border-border/50">
-                    <CardContent className="flex flex-col items-center justify-center py-12 px-4 text-center">
-                      <Clock className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                      <h3 className="text-lg font-medium text-foreground mb-2">Em breve</h3>
-                      <p className="text-sm text-muted-foreground max-w-xs">
-                        A funcionalidade de Aprovações Pendentes está em desenvolvimento.
-                      </p>
-                    </CardContent>
-                  </Card>
+                  <AprovacoesPendentes userId={user?.id} />
                 </TabsContent>
               </Tabs>
             </TabsContent>

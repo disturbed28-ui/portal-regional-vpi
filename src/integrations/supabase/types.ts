@@ -372,6 +372,66 @@ export type Database = {
         }
         Relationships: []
       }
+      aprovacoes_treinamento: {
+        Row: {
+          aprovador_cargo: string | null
+          aprovador_integrante_id: string | null
+          aprovador_nome_colete: string | null
+          created_at: string
+          data_hora_acao: string | null
+          id: string
+          justificativa_rejeicao: string | null
+          nivel: number
+          solicitacao_id: string
+          status: string
+          tipo_aprovador: string
+          updated_at: string
+        }
+        Insert: {
+          aprovador_cargo?: string | null
+          aprovador_integrante_id?: string | null
+          aprovador_nome_colete?: string | null
+          created_at?: string
+          data_hora_acao?: string | null
+          id?: string
+          justificativa_rejeicao?: string | null
+          nivel: number
+          solicitacao_id: string
+          status?: string
+          tipo_aprovador: string
+          updated_at?: string
+        }
+        Update: {
+          aprovador_cargo?: string | null
+          aprovador_integrante_id?: string | null
+          aprovador_nome_colete?: string | null
+          created_at?: string
+          data_hora_acao?: string | null
+          id?: string
+          justificativa_rejeicao?: string | null
+          nivel?: number
+          solicitacao_id?: string
+          status?: string
+          tipo_aprovador?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aprovacoes_treinamento_aprovador_integrante_id_fkey"
+            columns: ["aprovador_integrante_id"]
+            isOneToOne: false
+            referencedRelation: "integrantes_portal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aprovacoes_treinamento_solicitacao_id_fkey"
+            columns: ["solicitacao_id"]
+            isOneToOne: false
+            referencedRelation: "solicitacoes_treinamento"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       atualizacoes_carga: {
         Row: {
           campo_alterado: string
@@ -462,6 +522,42 @@ export type Database = {
           total_integrantes?: number
         }
         Relationships: []
+      }
+      cargo_responsavel_regional_mapping: {
+        Row: {
+          cargo_responsavel_id: string
+          cargo_treinamento_id: string
+          created_at: string | null
+          id: string
+        }
+        Insert: {
+          cargo_responsavel_id: string
+          cargo_treinamento_id: string
+          created_at?: string | null
+          id?: string
+        }
+        Update: {
+          cargo_responsavel_id?: string
+          cargo_treinamento_id?: string
+          created_at?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cargo_responsavel_regional_mapping_cargo_responsavel_id_fkey"
+            columns: ["cargo_responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "cargos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cargo_responsavel_regional_mapping_cargo_treinamento_id_fkey"
+            columns: ["cargo_treinamento_id"]
+            isOneToOne: true
+            referencedRelation: "cargos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cargo_role_mapping: {
         Row: {
