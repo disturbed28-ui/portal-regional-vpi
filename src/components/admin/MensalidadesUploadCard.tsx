@@ -69,7 +69,7 @@ export const MensalidadesUploadCard = ({ showTitle = true }: MensalidadesUploadC
 
       const { data, error } = await supabase.functions.invoke('admin-import-mensalidades', {
         body: {
-          admin_user_id: user.id,
+          user_id: user.id,
           mensalidades: mensalidadesPreview.mensalidades,
         },
       });
