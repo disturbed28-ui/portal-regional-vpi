@@ -92,23 +92,22 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // 1. Validate admin role
-    const { data: roleData, error: roleError } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user_id)
-      .eq('role', 'admin')
+    // 1. Validate user exists (authenticated) - permission is controlled by screen access matrix
+    const { data: userData, error: userError } = await supabase
+      .from('profiles')
+      .select('id, nome_colete')
+      .eq('id', user_id)
       .single();
 
-    if (roleError || !roleData) {
-      console.error('[admin-import-mensalidades] Unauthorized access attempt:', user_id);
+    if (userError || !userData) {
+      console.error('[admin-import-mensalidades] User not found:', user_id);
       return new Response(
-        JSON.stringify({ error: 'Acesso não autorizado. Apenas admins podem importar mensalidades.' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Usuário não encontrado.' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('[admin-import-mensalidades] Admin validated successfully');
+    console.log('[admin-import-mensalidades] User authenticated:', userData.nome_colete || user_id);
 
     // ==========================================
     // MULTI-REGIONAL: Inferir regional de cada registro
