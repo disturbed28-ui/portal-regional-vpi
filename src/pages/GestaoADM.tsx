@@ -11,6 +11,7 @@ import { MensalidadesUploadCard } from "@/components/admin/MensalidadesUploadCar
 import { DashboardInadimplencia } from "@/components/relatorios/DashboardInadimplencia";
 import { AniversariantesUploadCard } from "@/components/admin/AniversariantesUploadCard";
 import { AniversariantesLista } from "@/components/admin/AniversariantesLista";
+import { SolicitacaoTreinamento } from "@/components/admin/treinamento/SolicitacaoTreinamento";
 
 const GestaoADM = () => {
   const navigate = useNavigate();
@@ -43,7 +44,7 @@ const GestaoADM = () => {
   const tabs = [
     { value: "integrantes", label: "Integrantes", icon: Users },
     { value: "inadimplencia", label: "Inadimplência", icon: DollarSign },
-    { value: "estagio", label: "Estágio", icon: GraduationCap },
+    { value: "treinamento", label: "Treinamento", icon: GraduationCap },
     { value: "aniversariantes", label: "Aniversários", icon: Cake },
   ];
 
@@ -108,8 +109,8 @@ const GestaoADM = () => {
               </div>
             </TabsContent>
 
-            <TabsContent value="estagio" className="m-0">
-              <PlaceholderContent title="Estágio / Treinamento" />
+            <TabsContent value="treinamento" className="m-0">
+              <SolicitacaoTreinamento userId={user?.id} />
             </TabsContent>
 
             <TabsContent value="aniversariantes" className="m-0">
