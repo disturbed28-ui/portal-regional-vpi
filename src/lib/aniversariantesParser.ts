@@ -128,11 +128,26 @@ export function parseAniversariantesExcel(file: File): Promise<AniversariantesPa
           }
         }
         
+        console.log('[aniversariantesParser] Header row index:', headerRowIndex);
+        console.log('[aniversariantesParser] Headers raw:', jsonData[headerRowIndex]);
+        
         // Encontrar colunas
         const headers = jsonData[headerRowIndex].map(h => String(h || ''));
         const nomeColeteIdx = findColumnIndex(headers, ['nome', 'colete', 'nomecolete', 'nome_colete', 'integrante']);
         const divisaoIdx = findColumnIndex(headers, ['divisao', 'divisão', 'div', 'regional/divisao', 'regional_divisao', 'regionaldivisao']);
         const dataNascIdx = findColumnIndex(headers, ['nascimento', 'aniversario', 'aniversário', 'data', 'datanascimento', 'data_nascimento', 'dia/mes', 'dia_mes', 'diames', 'dia']);
+        
+        console.log('[aniversariantesParser] Índices mapeados:', {
+          nomeColeteIdx,
+          dataNascIdx,
+          divisaoIdx,
+          headersWithIndex: headers.map((h, i) => `[${i}]="${h}"`)
+        });
+        
+        // Log das primeiras linhas de dados para verificar estrutura
+        for (let i = headerRowIndex + 1; i < Math.min(headerRowIndex + 4, jsonData.length); i++) {
+          console.log(`[aniversariantesParser] Linha ${i} dados:`, jsonData[i]);
+        }
         
         const erros: string[] = [];
         
@@ -171,6 +186,14 @@ export function parseAniversariantesExcel(file: File): Promise<AniversariantesPa
           // Validar campos obrigatórios
           if (!nomeColete || !divisaoTexto) {
             invalidos++;
+            console.log(`[aniversariantesParser] Linha ${i + 1} inválida:`, {
+              nomeColete,
+              divisaoTexto,
+              nomeColeteIdx,
+              divisaoIdx,
+              rowLength: row.length,
+              row: row.slice(0, 5)
+            });
             erros.push(`Linha ${i + 1}: Nome ou Divisão em branco`);
             continue;
           }
