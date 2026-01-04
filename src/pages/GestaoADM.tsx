@@ -133,7 +133,7 @@ const GestaoADM = () => {
                     className="flex-1 flex items-center gap-1.5 px-2 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
                   >
                     <ClipboardCheck className="h-3.5 w-3.5 shrink-0" />
-                    <span>Pendentes</span>
+                    <span>Aprovação Pendente</span>
                   </TabsTrigger>
                 </TabsList>
 
