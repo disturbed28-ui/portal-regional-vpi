@@ -31,6 +31,7 @@ const Index = () => {
   const { hasAccess: canSeeRelatorios, loading: loadingRelatoriosAccess } = useScreenAccess('/relatorios', user?.id);
   const { hasAccess: canSeeOrganograma, loading: loadingOrganogramaAccess } = useScreenAccess('/organograma', user?.id);
   const { hasAccess: canSeeAdmin, loading: loadingAdminAccess } = useAdminAccess();
+  const { hasAccess: hasAcessoGestaoADM, loading: loadingGestaoADM } = useScreenAccess('/gestao-adm', user?.id);
   const [showQRCode, setShowQRCode] = useState(false);
 
   // Sincronização automática da Agenda para admins (detecta eventos cancelados/removidos)
@@ -346,6 +347,16 @@ const Index = () => {
                 className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Listas de Presenca
+              </Button>
+            )}
+
+            {hasAcessoGestaoADM && !loadingGestaoADM && (
+              <Button
+                onClick={() => navigate("/gestao-adm")}
+                disabled={!isLoggedIn || !isActive}
+                className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Gestao ADM
               </Button>
             )}
           </div>

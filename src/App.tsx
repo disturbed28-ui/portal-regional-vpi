@@ -33,6 +33,7 @@ import FormularioRelatorioSemanal from "./pages/FormularioRelatorioSemanal";
 import FormularioAcoesSociais from "./pages/FormularioAcoesSociais";
 import AcoesSociais from "./pages/AcoesSociais";
 import AdminEventosAgendaPendentes from "./pages/AdminEventosAgendaPendentes";
+import GestaoADM from "./pages/GestaoADM";
 
 const queryClient = new QueryClient();
 
@@ -69,6 +70,7 @@ const App = () => (
               <Route path="/formularios/relatorio-semanal-divisao" element={<FormularioRelatorioSemanal />} />
               <Route path="/formularios/acoes_sociais" element={<FormularioAcoesSociais />} />
               <Route path="/acoes-sociais" element={<AcoesSociais />} />
+              <Route path="/gestao-adm" element={<GestaoADM />} />
               <Route path="/politica-privacidade" element={<PoliticaPrivacidade />} />
               <Route path="/termos-servico" element={<TermosServico />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
