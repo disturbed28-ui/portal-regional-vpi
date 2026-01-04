@@ -19,7 +19,7 @@ export function useCargosGrau6() {
       const { data, error } = await supabase
         .from('cargos')
         .select('id, nome, grau, nivel')
-        .eq('grau', 'Grau VI')
+        .eq('grau', 'VI')
         .order('nivel', { ascending: true });
       
       if (error) {
