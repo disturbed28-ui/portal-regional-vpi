@@ -372,6 +372,66 @@ export type Database = {
         }
         Relationships: []
       }
+      aprovacoes_estagio: {
+        Row: {
+          aprovador_cargo: string | null
+          aprovador_integrante_id: string | null
+          aprovador_nome_colete: string | null
+          created_at: string
+          data_hora_acao: string | null
+          id: string
+          justificativa_rejeicao: string | null
+          nivel: number
+          solicitacao_id: string
+          status: string
+          tipo_aprovador: string
+          updated_at: string
+        }
+        Insert: {
+          aprovador_cargo?: string | null
+          aprovador_integrante_id?: string | null
+          aprovador_nome_colete?: string | null
+          created_at?: string
+          data_hora_acao?: string | null
+          id?: string
+          justificativa_rejeicao?: string | null
+          nivel: number
+          solicitacao_id: string
+          status?: string
+          tipo_aprovador: string
+          updated_at?: string
+        }
+        Update: {
+          aprovador_cargo?: string | null
+          aprovador_integrante_id?: string | null
+          aprovador_nome_colete?: string | null
+          created_at?: string
+          data_hora_acao?: string | null
+          id?: string
+          justificativa_rejeicao?: string | null
+          nivel?: number
+          solicitacao_id?: string
+          status?: string
+          tipo_aprovador?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aprovacoes_estagio_aprovador_integrante_id_fkey"
+            columns: ["aprovador_integrante_id"]
+            isOneToOne: false
+            referencedRelation: "integrantes_portal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aprovacoes_estagio_solicitacao_id_fkey"
+            columns: ["solicitacao_id"]
+            isOneToOne: false
+            referencedRelation: "solicitacoes_estagio"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       aprovacoes_treinamento: {
         Row: {
           aprovador_cargo: string | null
