@@ -14,12 +14,14 @@ import { AlertCircle, FileSpreadsheet, History, Info, Upload } from "lucide-reac
 import { format } from "date-fns";
 import { HistoricoDevedores } from "@/components/admin/HistoricoDevedores";
 import { useQueryClient } from "@tanstack/react-query";
+import { ReadOnlyBanner } from "@/components/ui/read-only-banner";
 
 interface MensalidadesUploadCardProps {
   showTitle?: boolean;
+  readOnly?: boolean;
 }
 
-export const MensalidadesUploadCard = ({ showTitle = true }: MensalidadesUploadCardProps) => {
+export const MensalidadesUploadCard = ({ showTitle = true, readOnly = false }: MensalidadesUploadCardProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { profile } = useProfile(user?.id);
@@ -123,6 +125,9 @@ export const MensalidadesUploadCard = ({ showTitle = true }: MensalidadesUploadC
           </CardHeader>
         )}
         <CardContent className={`space-y-4 ${showTitle ? 'px-3 sm:px-6' : 'px-3 sm:px-6 pt-4'}`}>
+          {/* Banner de somente leitura */}
+          {readOnly && <ReadOnlyBanner className="mb-2" />}
+
           {/* Upload Section */}
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-2">
@@ -135,7 +140,7 @@ export const MensalidadesUploadCard = ({ showTitle = true }: MensalidadesUploadC
               />
               <Button 
                 onClick={() => mensalidadesInputRef.current?.click()}
-                disabled={processing}
+                disabled={processing || readOnly}
                 variant="outline"
                 className="flex-1"
                 size="sm"
@@ -143,7 +148,7 @@ export const MensalidadesUploadCard = ({ showTitle = true }: MensalidadesUploadC
                 <FileSpreadsheet className="mr-2 h-4 w-4" />
                 Selecionar Arquivo
               </Button>
-              {mensalidadesPreview && (
+              {mensalidadesPreview && !readOnly && (
                 <Button 
                   onClick={handleUploadMensalidades}
                   disabled={processing}

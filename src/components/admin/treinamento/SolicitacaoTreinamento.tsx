@@ -22,6 +22,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { IntegranteTreinamentoCard } from './IntegranteTreinamentoCard';
 import { ModalEncerrarTreinamento } from './ModalEncerrarTreinamento';
+import { ReadOnlyBanner } from '@/components/ui/read-only-banner';
 import { format, addMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -38,9 +39,10 @@ interface IntegranteSelecionado {
 
 interface SolicitacaoTreinamentoProps {
   userId: string | undefined;
+  readOnly?: boolean;
 }
 
-export function SolicitacaoTreinamento({ userId }: SolicitacaoTreinamentoProps) {
+export function SolicitacaoTreinamento({ userId, readOnly = false }: SolicitacaoTreinamentoProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [integranteSelecionado, setIntegranteSelecionado] = useState<IntegranteSelecionado | null>(null);
   const [cargoTreinamentoId, setCargoTreinamentoId] = useState<string>('');
@@ -211,6 +213,26 @@ async function executarCriacao() {
     tempoTreinamentoMeses &&
     !processando && 
     !integranteSelecionado.cargo_treinamento_id;
+
+  // Se for readOnly, mostrar apenas informações sem formulário
+  if (readOnly) {
+    return (
+      <Card className="border-border/50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <GraduationCap className="h-5 w-5 text-primary" />
+            Nova Solicitação de Treinamento
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <ReadOnlyBanner />
+          <p className="text-sm text-muted-foreground text-center py-8">
+            Você está em modo de visualização. Não é possível criar novas solicitações.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <>

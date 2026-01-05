@@ -8,10 +8,12 @@ import { ptBR } from 'date-fns/locale';
 import { useEncerramentoTreinamento, TreinamentoEncerramento } from '@/hooks/useEncerramentoTreinamento';
 import { ModalCancelarSolicitacao } from './ModalCancelarSolicitacao';
 import { ModalEncerrarTreinamento } from './ModalEncerrarTreinamento';
+import { ReadOnlyBanner } from '@/components/ui/read-only-banner';
 import { supabase } from '@/integrations/supabase/client';
 
 interface EncerramentoTreinamentoProps {
   userId: string | undefined;
+  readOnly?: boolean;
 }
 
 interface DadosUsuario {
@@ -21,7 +23,7 @@ interface DadosUsuario {
   divisao: string | null;
 }
 
-export function EncerramentoTreinamento({ userId }: EncerramentoTreinamentoProps) {
+export function EncerramentoTreinamento({ userId, readOnly = false }: EncerramentoTreinamentoProps) {
   const { treinamentos, loading, operando, cancelarSolicitacao, encerrarTreinamento } = useEncerramentoTreinamento(userId);
   
   const [modalCancelar, setModalCancelar] = useState<TreinamentoEncerramento | null>(null);
@@ -106,20 +108,25 @@ export function EncerramentoTreinamento({ userId }: EncerramentoTreinamentoProps
 
   if (treinamentos.length === 0) {
     return (
-      <Card className="border-border/50">
-        <CardContent className="flex flex-col items-center justify-center py-12 px-4 text-center">
-          <CheckCircle className="h-12 w-12 text-muted-foreground/50 mb-4" />
-          <h3 className="text-lg font-medium text-foreground mb-2">Nenhum treinamento ativo</h3>
-          <p className="text-sm text-muted-foreground max-w-xs">
-            Não há treinamentos em andamento ou solicitações pendentes para gerenciar.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        {readOnly && <ReadOnlyBanner />}
+        <Card className="border-border/50">
+          <CardContent className="flex flex-col items-center justify-center py-12 px-4 text-center">
+            <CheckCircle className="h-12 w-12 text-muted-foreground/50 mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-2">Nenhum treinamento ativo</h3>
+            <p className="text-sm text-muted-foreground max-w-xs">
+              Não há treinamentos em andamento ou solicitações pendentes para gerenciar.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      {readOnly && <ReadOnlyBanner />}
+      
       {treinamentos.map((t) => (
         <Card key={t.id} className="border-border/50">
           <CardHeader className="pb-3">
@@ -190,59 +197,64 @@ export function EncerramentoTreinamento({ userId }: EncerramentoTreinamentoProps
               </div>
             )}
 
-            {/* Ações */}
-            <div className="flex gap-2 pt-2 border-t">
-              {t.status === 'Em Aprovacao' && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setModalCancelar(t)}
-                  disabled={operando}
-                  className="flex-1"
-                >
-                  <XCircle className="h-4 w-4 mr-2" />
-                  Cancelar Solicitação
-                </Button>
-              )}
-              {t.status === 'Em Treinamento' && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setModalEncerrar(t)}
-                  disabled={operando}
-                  className="flex-1"
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Encerrar Treinamento
-                </Button>
-              )}
-            </div>
+            {/* Ações - só aparecem se NÃO for readOnly */}
+            {!readOnly && (
+              <div className="flex gap-2 pt-2 border-t">
+                {t.status === 'Em Aprovacao' && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setModalCancelar(t)}
+                    disabled={operando}
+                    className="flex-1"
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Cancelar Solicitação
+                  </Button>
+                )}
+                {t.status === 'Em Treinamento' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setModalEncerrar(t)}
+                    disabled={operando}
+                    className="flex-1"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Encerrar Treinamento
+                  </Button>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       ))}
 
-      {/* Modal Cancelar */}
-      {modalCancelar && (
-        <ModalCancelarSolicitacao
-          open={!!modalCancelar}
-          onOpenChange={(open) => !open && setModalCancelar(null)}
-          cargoTreinamentoNome={modalCancelar.cargo_treinamento_nome}
-          integranteNome={modalCancelar.integrante_nome_colete}
-          onConfirm={handleCancelar}
-          loading={operando}
-        />
-      )}
+      {/* Modais - só renderizam se não for readOnly */}
+      {!readOnly && (
+        <>
+          {modalCancelar && (
+            <ModalCancelarSolicitacao
+              open={!!modalCancelar}
+              onOpenChange={(open) => !open && setModalCancelar(null)}
+              cargoTreinamentoNome={modalCancelar.cargo_treinamento_nome}
+              integranteNome={modalCancelar.integrante_nome_colete}
+              onConfirm={handleCancelar}
+              loading={operando}
+            />
+          )}
 
-      {/* Modal Encerrar */}
-      {modalEncerrar && (
-        <ModalEncerrarTreinamento
-          open={!!modalEncerrar}
-          onOpenChange={(open) => !open && setModalEncerrar(null)}
-          cargoTreinamentoNome={modalEncerrar.cargo_treinamento_nome}
-          integranteNome={modalEncerrar.integrante_nome_colete}
-          onConfirm={handleEncerrar}
-          loading={operando}
-        />
+          {modalEncerrar && (
+            <ModalEncerrarTreinamento
+              open={!!modalEncerrar}
+              onOpenChange={(open) => !open && setModalEncerrar(null)}
+              cargoTreinamentoNome={modalEncerrar.cargo_treinamento_nome}
+              integranteNome={modalEncerrar.integrante_nome_colete}
+              onConfirm={handleEncerrar}
+              loading={operando}
+            />
+          )}
+        </>
       )}
     </div>
   );

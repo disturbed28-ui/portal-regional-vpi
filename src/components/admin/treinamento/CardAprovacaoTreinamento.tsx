@@ -53,9 +53,10 @@ interface SolicitacaoAprovacao {
 
 interface CardAprovacaoTreinamentoProps {
   solicitacao: SolicitacaoAprovacao;
-  onAprovar: (aprovacaoId: string, solicitacaoId: string) => void;
-  onRejeitar: (aprovacaoId: string, solicitacaoId: string) => void;
+  onAprovar?: (aprovacaoId: string, solicitacaoId: string) => void;
+  onRejeitar?: (aprovacaoId: string, solicitacaoId: string) => void;
   operando: boolean;
+  readOnly?: boolean;
 }
 
 const tipoAprovadorLabel: Record<string, string> = {
@@ -68,7 +69,8 @@ export function CardAprovacaoTreinamento({
   solicitacao, 
   onAprovar, 
   onRejeitar,
-  operando 
+  operando,
+  readOnly = false
 }: CardAprovacaoTreinamentoProps) {
   
   function formatDate(dateStr: string): string {
@@ -238,7 +240,7 @@ export function CardAprovacaoTreinamento({
           <div className="space-y-3">
             {solicitacao.aprovacoes.map((aprovacao) => {
               const isAtual = aprovacao.id === solicitacao.aprovacaoAtual?.id;
-              const showButtons = isAtual && solicitacao.isAprovadorDaVez && aprovacao.status === 'pendente';
+              const showButtons = !readOnly && isAtual && solicitacao.isAprovadorDaVez && aprovacao.status === 'pendente' && onAprovar && onRejeitar;
 
               return (
                 <div 

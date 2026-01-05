@@ -10,12 +10,14 @@ import {
 import { Search, FileText, Loader2 } from "lucide-react";
 import { useHistoricoTreinamento } from "@/hooks/useHistoricoTreinamento";
 import { DivisaoTreinamentoCard } from "./DivisaoTreinamentoCard";
+import { ReadOnlyBanner } from "@/components/ui/read-only-banner";
 
 interface HistoricoTreinamentoProps {
   userId?: string;
+  readOnly?: boolean;
 }
 
-export const HistoricoTreinamento = ({ userId }: HistoricoTreinamentoProps) => {
+export const HistoricoTreinamento = ({ userId, readOnly = false }: HistoricoTreinamentoProps) => {
   const {
     treinamentosPorDivisao,
     divisoesDisponiveis,
@@ -52,6 +54,9 @@ export const HistoricoTreinamento = ({ userId }: HistoricoTreinamentoProps) => {
 
   return (
     <div className="space-y-4">
+      {/* Banner de somente leitura */}
+      {readOnly && <ReadOnlyBanner />}
+
       {/* Filtros */}
       <Card className="border-border/50">
         <CardContent className="p-3 space-y-3">

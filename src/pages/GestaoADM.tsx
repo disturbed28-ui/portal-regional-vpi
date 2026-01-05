@@ -2,6 +2,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useScreenAccess } from "@/hooks/useScreenAccess";
+import { useTabAccessLevel } from "@/hooks/useTabAccessLevel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -26,21 +27,21 @@ const GestaoADM = () => {
   // Acesso à página principal
   const { hasAccess, loading } = useScreenAccess('/gestao-adm', user?.id);
   
-  // Acesso às abas principais
-  const { hasAccess: hasIntegrantesAccess, loading: loadingIntegrantes } = useScreenAccess('/gestao-adm-integrantes', user?.id);
-  const { hasAccess: hasInadimplenciaAccess, loading: loadingInadimplencia } = useScreenAccess('/gestao-adm-inadimplencia', user?.id);
-  const { hasAccess: hasTreinamentoAccess, loading: loadingTreinamento } = useScreenAccess('/gestao-adm-treinamento', user?.id);
-  const { hasAccess: hasAniversariantesAccess, loading: loadingAniversariantes } = useScreenAccess('/gestao-adm-aniversariantes', user?.id);
+  // Acesso às abas principais (com nível de acesso)
+  const { hasAnyAccess: hasIntegrantesAccess, isReadOnly: integrantesReadOnly, loading: loadingIntegrantes } = useTabAccessLevel('/gestao-adm-integrantes', user?.id);
+  const { hasAnyAccess: hasInadimplenciaAccess, isReadOnly: inadimplenciaReadOnly, loading: loadingInadimplencia } = useTabAccessLevel('/gestao-adm-inadimplencia', user?.id);
+  const { hasAnyAccess: hasTreinamentoAccess, isReadOnly: treinamentoReadOnly, loading: loadingTreinamento } = useTabAccessLevel('/gestao-adm-treinamento', user?.id);
+  const { hasAnyAccess: hasAniversariantesAccess, isReadOnly: aniversariantesReadOnly, loading: loadingAniversariantes } = useTabAccessLevel('/gestao-adm-aniversariantes', user?.id);
   
   // Acesso às sub-abas de Integrantes
-  const { hasAccess: hasListaAccess, loading: loadingLista } = useScreenAccess('/gestao-adm-integrantes-lista', user?.id);
-  const { hasAccess: hasHistoricoIntegrantesAccess, loading: loadingHistoricoIntegrantes } = useScreenAccess('/gestao-adm-integrantes-historico', user?.id);
+  const { hasAnyAccess: hasListaAccess, isReadOnly: listaReadOnly, loading: loadingLista } = useTabAccessLevel('/gestao-adm-integrantes-lista', user?.id);
+  const { hasAnyAccess: hasHistoricoIntegrantesAccess, isReadOnly: historicoIntegrantesReadOnly, loading: loadingHistoricoIntegrantes } = useTabAccessLevel('/gestao-adm-integrantes-historico', user?.id);
   
   // Acesso às sub-abas de Treinamento
-  const { hasAccess: hasSolicitacaoAccess, loading: loadingSolicitacao } = useScreenAccess('/gestao-adm-treinamento-solicitacao', user?.id);
-  const { hasAccess: hasAprovacaoAccess, loading: loadingAprovacao } = useScreenAccess('/gestao-adm-treinamento-aprovacao', user?.id);
-  const { hasAccess: hasEncerramentoAccess, loading: loadingEncerramento } = useScreenAccess('/gestao-adm-treinamento-encerramento', user?.id);
-  const { hasAccess: hasHistoricoTreinamentoAccess, loading: loadingHistoricoTreinamento } = useScreenAccess('/gestao-adm-treinamento-historico', user?.id);
+  const { hasAnyAccess: hasSolicitacaoAccess, isReadOnly: solicitacaoReadOnly, loading: loadingSolicitacao } = useTabAccessLevel('/gestao-adm-treinamento-solicitacao', user?.id);
+  const { hasAnyAccess: hasAprovacaoAccess, isReadOnly: aprovacaoReadOnly, loading: loadingAprovacao } = useTabAccessLevel('/gestao-adm-treinamento-aprovacao', user?.id);
+  const { hasAnyAccess: hasEncerramentoAccess, isReadOnly: encerramentoReadOnly, loading: loadingEncerramento } = useTabAccessLevel('/gestao-adm-treinamento-encerramento', user?.id);
+  const { hasAnyAccess: hasHistoricoTreinamentoAccess, isReadOnly: historicoTreinamentoReadOnly, loading: loadingHistoricoTreinamento } = useTabAccessLevel('/gestao-adm-treinamento-historico', user?.id);
 
   // Verificar se ainda está carregando
   const isLoading = loading || loadingIntegrantes || loadingInadimplencia || loadingTreinamento || 
@@ -209,7 +210,7 @@ const GestaoADM = () => {
 
                     {hasListaAccess && (
                       <TabsContent value="lista" className="m-0">
-                        <ListaIntegrantes userId={user?.id} />
+                        <ListaIntegrantes userId={user?.id} readOnly={listaReadOnly || integrantesReadOnly} />
                       </TabsContent>
                     )}
 
@@ -236,8 +237,8 @@ const GestaoADM = () => {
             {hasInadimplenciaAccess && (
               <TabsContent value="inadimplencia" className="m-0">
                 <div className="space-y-4">
-                  <MensalidadesUploadCard />
-                  <DashboardInadimplencia userId={user?.id} />
+                  <MensalidadesUploadCard readOnly={inadimplenciaReadOnly} />
+                  <DashboardInadimplencia userId={user?.id} readOnly={inadimplenciaReadOnly} />
                 </div>
               </TabsContent>
             )}
@@ -262,25 +263,25 @@ const GestaoADM = () => {
 
                     {hasSolicitacaoAccess && (
                       <TabsContent value="solicitacao" className="m-0">
-                        <SolicitacaoTreinamento userId={user?.id} />
+                        <SolicitacaoTreinamento userId={user?.id} readOnly={solicitacaoReadOnly || treinamentoReadOnly} />
                       </TabsContent>
                     )}
 
                     {hasAprovacaoAccess && (
                       <TabsContent value="pendentes" className="m-0">
-                        <AprovacoesPendentes userId={user?.id} />
+                        <AprovacoesPendentes userId={user?.id} readOnly={aprovacaoReadOnly || treinamentoReadOnly} />
                       </TabsContent>
                     )}
 
                     {hasEncerramentoAccess && (
                       <TabsContent value="encerramento" className="m-0">
-                        <EncerramentoTreinamento userId={user?.id} />
+                        <EncerramentoTreinamento userId={user?.id} readOnly={encerramentoReadOnly || treinamentoReadOnly} />
                       </TabsContent>
                     )}
 
                     {hasHistoricoTreinamentoAccess && (
                       <TabsContent value="historico" className="m-0">
-                        <HistoricoTreinamento userId={user?.id} />
+                        <HistoricoTreinamento userId={user?.id} readOnly={historicoTreinamentoReadOnly || treinamentoReadOnly} />
                       </TabsContent>
                     )}
                   </Tabs>
@@ -301,7 +302,7 @@ const GestaoADM = () => {
             {hasAniversariantesAccess && (
               <TabsContent value="aniversariantes" className="m-0">
                 <div className="space-y-4">
-                  <AniversariantesUploadCard />
+                  <AniversariantesUploadCard readOnly={aniversariantesReadOnly} />
                   <AniversariantesLista userId={user?.id} />
                 </div>
               </TabsContent>
