@@ -170,6 +170,22 @@ export function CardAprovacaoTreinamento({
                 <span className="font-medium text-primary">{solicitacao.cargo_treinamento_nome}</span>
               </div>
             </div>
+
+            <div className="flex items-start gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+              <div>
+                <span className="text-muted-foreground">Período: </span>
+                <span>{solicitacao.tempo_treinamento_meses} {solicitacao.tempo_treinamento_meses === 1 ? 'mês' : 'meses'}</span>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+              <div>
+                <span className="text-muted-foreground">Término Previsto: </span>
+                <span>{formatDate(solicitacao.data_termino_previsto)}</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -207,27 +223,16 @@ export function CardAprovacaoTreinamento({
               <span className="text-muted-foreground">Data: </span>
               <span>{formatDateTime(solicitacao.created_at)}</span>
             </div>
-
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Período: </span>
-              <span>{solicitacao.tempo_treinamento_meses} {solicitacao.tempo_treinamento_meses === 1 ? 'mês' : 'meses'}</span>
-            </div>
-
-            <div>
-              <span className="text-muted-foreground">Término Previsto: </span>
-              <span>{formatDate(solicitacao.data_termino_previsto)}</span>
-            </div>
           </div>
         </div>
 
         <Separator />
 
-        {/* Seção: Aprovações */}
+        {/* Seção: Aprovações Pendentes */}
         <div className="p-4 space-y-3">
           <div className="flex items-center gap-2 text-sm font-medium text-primary">
             <CheckCircle2 className="h-4 w-4" />
-            APROVAÇÕES
+            APROVAÇÕES PENDENTES
           </div>
 
           <div className="space-y-3">
