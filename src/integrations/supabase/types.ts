@@ -593,6 +593,7 @@ export type Database = {
           id: string
           nivel: number | null
           nome: string
+          sla_treinamento_meses: number | null
         }
         Insert: {
           created_at?: string | null
@@ -600,6 +601,7 @@ export type Database = {
           id?: string
           nivel?: number | null
           nome: string
+          sla_treinamento_meses?: number | null
         }
         Update: {
           created_at?: string | null
@@ -607,6 +609,7 @@ export type Database = {
           id?: string
           nivel?: number | null
           nome?: string
+          sla_treinamento_meses?: number | null
         }
         Relationships: []
       }
@@ -2293,6 +2296,8 @@ export type Database = {
           data_encerramento: string
           data_inicio: string | null
           encerrado_por: string | null
+          encerrado_por_cargo: string | null
+          encerrado_por_divisao: string | null
           encerrado_por_nome_colete: string | null
           id: string
           integrante_id: string
@@ -2306,6 +2311,8 @@ export type Database = {
           data_encerramento?: string
           data_inicio?: string | null
           encerrado_por?: string | null
+          encerrado_por_cargo?: string | null
+          encerrado_por_divisao?: string | null
           encerrado_por_nome_colete?: string | null
           id?: string
           integrante_id: string
@@ -2319,6 +2326,8 @@ export type Database = {
           data_encerramento?: string
           data_inicio?: string | null
           encerrado_por?: string | null
+          encerrado_por_cargo?: string | null
+          encerrado_por_divisao?: string | null
           encerrado_por_nome_colete?: string | null
           id?: string
           integrante_id?: string

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -11,32 +11,59 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { AlertTriangle, Loader2 } from 'lucide-react';
+import { CheckCircle, Loader2 } from 'lucide-react';
 
 interface ModalEncerrarTreinamentoProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   cargoTreinamentoNome: string | null;
+  integranteNome?: string;
   onConfirm: (tipoEncerramento: string, observacoes: string) => Promise<void>;
   loading?: boolean;
 }
 
 const TIPOS_ENCERRAMENTO = [
-  { value: 'Concluido com aproveitamento', label: 'Concluído com aproveitamento' },
-  { value: 'Concluido sem aproveitamento', label: 'Concluído sem aproveitamento' },
+  { 
+    value: 'Concluido com aproveitamento', 
+    label: 'Concluído com aproveitamento',
+    justificativaObrigatoria: false 
+  },
+  { 
+    value: 'Concluido sem aproveitamento', 
+    label: 'Concluído sem aproveitamento',
+    justificativaObrigatoria: true 
+  },
+  { 
+    value: 'Encerrado para novo treinamento', 
+    label: 'Encerrar para iniciar novo treinamento',
+    justificativaObrigatoria: true 
+  },
 ];
+
+const MIN_CHARS = 30;
 
 export function ModalEncerrarTreinamento({
   open,
   onOpenChange,
   cargoTreinamentoNome,
+  integranteNome,
   onConfirm,
   loading = false
 }: ModalEncerrarTreinamentoProps) {
   const [tipoEncerramento, setTipoEncerramento] = useState<string>('');
   const [observacoes, setObservacoes] = useState('');
 
-  const isValid = tipoEncerramento && observacoes.trim().length >= 10;
+  const tipoSelecionado = useMemo(() => 
+    TIPOS_ENCERRAMENTO.find(t => t.value === tipoEncerramento),
+    [tipoEncerramento]
+  );
+
+  const justificativaObrigatoria = tipoSelecionado?.justificativaObrigatoria ?? false;
+  const charsRestantes = MIN_CHARS - observacoes.trim().length;
+
+  const isValid = tipoEncerramento && (
+    !justificativaObrigatoria || observacoes.trim().length >= MIN_CHARS
+  );
 
   async function handleConfirm() {
     if (!isValid) return;
@@ -57,15 +84,28 @@ export function ModalEncerrarTreinamento({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-amber-500" />
-            Encerrar Treinamento Anterior
+            <CheckCircle className="h-5 w-5 text-primary" />
+            Encerrar Treinamento
           </DialogTitle>
           <DialogDescription className="text-left">
-            Este integrante já possui um treinamento em andamento
-            {cargoTreinamentoNome && (
-              <span className="font-medium text-foreground"> ({cargoTreinamentoNome})</span>
+            {integranteNome ? (
+              <>
+                Encerrar o treinamento de{' '}
+                <span className="font-medium text-foreground">{integranteNome}</span>
+                {cargoTreinamentoNome && (
+                  <> para o cargo <span className="font-medium text-foreground">{cargoTreinamentoNome}</span></>
+                )}
+                .
+              </>
+            ) : (
+              <>
+                Encerrar o treinamento atual
+                {cargoTreinamentoNome && (
+                  <> para o cargo <span className="font-medium text-foreground">{cargoTreinamentoNome}</span></>
+                )}
+                .
+              </>
             )}
-            . Deseja encerrar o treinamento anterior para iniciar um novo?
           </DialogDescription>
         </DialogHeader>
 
@@ -92,19 +132,22 @@ export function ModalEncerrarTreinamento({
 
           <div className="space-y-2">
             <Label htmlFor="observacoes" className="text-sm font-medium">
-              Observações <span className="text-destructive">*</span>
+              Observações {justificativaObrigatoria && <span className="text-destructive">*</span>}
             </Label>
             <Textarea
               id="observacoes"
-              placeholder="Descreva o motivo do encerramento (mínimo 10 caracteres)..."
+              placeholder={justificativaObrigatoria 
+                ? `Descreva o motivo do encerramento (mínimo ${MIN_CHARS} caracteres)...`
+                : 'Observações opcionais...'
+              }
               value={observacoes}
               onChange={(e) => setObservacoes(e.target.value)}
               rows={3}
               className="resize-none"
             />
-            {observacoes.length > 0 && observacoes.length < 10 && (
+            {justificativaObrigatoria && observacoes.length > 0 && charsRestantes > 0 && (
               <p className="text-xs text-muted-foreground">
-                {10 - observacoes.length} caracteres restantes
+                {charsRestantes} caracteres restantes
               </p>
             )}
           </div>
@@ -117,7 +160,7 @@ export function ModalEncerrarTreinamento({
             disabled={loading}
             className="w-full sm:w-auto"
           >
-            Não, Cancelar
+            Cancelar
           </Button>
           <Button
             onClick={handleConfirm}
@@ -125,7 +168,7 @@ export function ModalEncerrarTreinamento({
             className="w-full sm:w-auto"
           >
             {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Confirmar e Prosseguir
+            Confirmar Encerramento
           </Button>
         </DialogFooter>
       </DialogContent>

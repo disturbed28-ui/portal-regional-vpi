@@ -5,7 +5,7 @@ import { useScreenAccess } from "@/hooks/useScreenAccess";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Users, DollarSign, GraduationCap, Cake, Clock, FileEdit, History, ClipboardCheck } from "lucide-react";
+import { ArrowLeft, Users, DollarSign, GraduationCap, Cake, Clock, FileEdit, History, ClipboardCheck, XCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { MensalidadesUploadCard } from "@/components/admin/MensalidadesUploadCard";
 import { DashboardInadimplencia } from "@/components/relatorios/DashboardInadimplencia";
@@ -14,6 +14,7 @@ import { AniversariantesLista } from "@/components/admin/AniversariantesLista";
 import { SolicitacaoTreinamento } from "@/components/admin/treinamento/SolicitacaoTreinamento";
 import { HistoricoTreinamento } from "@/components/admin/treinamento/HistoricoTreinamento";
 import { AprovacoesPendentes } from "@/components/admin/treinamento/AprovacoesPendentes";
+import { EncerramentoTreinamento } from "@/components/admin/treinamento/EncerramentoTreinamento";
 
 const GestaoADM = () => {
   const navigate = useNavigate();
@@ -113,27 +114,38 @@ const GestaoADM = () => {
 
             <TabsContent value="treinamento" className="m-0">
               <Tabs defaultValue="solicitacao" className="w-full">
-                <TabsList className="w-full h-auto flex bg-muted/30 p-1 gap-1 mb-4">
+                <TabsList className="w-full h-auto grid grid-cols-4 bg-muted/30 p-1 gap-1 mb-4">
                   <TabsTrigger
                     value="solicitacao"
-                    className="flex-1 flex items-center gap-1.5 px-2 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                    className="flex items-center gap-1.5 px-2 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
                   >
                     <FileEdit className="h-3.5 w-3.5 shrink-0" />
-                    <span>Solicitação</span>
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="historico"
-                    className="flex-1 flex items-center gap-1.5 px-2 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                  >
-                    <History className="h-3.5 w-3.5 shrink-0" />
-                    <span>Histórico</span>
+                    <span className="hidden sm:inline">Solicitação</span>
+                    <span className="sm:hidden">Solic.</span>
                   </TabsTrigger>
                   <TabsTrigger
                     value="pendentes"
-                    className="flex-1 flex items-center gap-1.5 px-2 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                    className="flex items-center gap-1.5 px-2 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
                   >
                     <ClipboardCheck className="h-3.5 w-3.5 shrink-0" />
-                    <span>Aprovação Pendente</span>
+                    <span className="hidden sm:inline">Aprovação Pendente</span>
+                    <span className="sm:hidden">Aprov.</span>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="encerramento"
+                    className="flex items-center gap-1.5 px-2 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                  >
+                    <XCircle className="h-3.5 w-3.5 shrink-0" />
+                    <span className="hidden sm:inline">Encerramento</span>
+                    <span className="sm:hidden">Enc.</span>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="historico"
+                    className="flex items-center gap-1.5 px-2 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                  >
+                    <History className="h-3.5 w-3.5 shrink-0" />
+                    <span className="hidden sm:inline">Histórico</span>
+                    <span className="sm:hidden">Hist.</span>
                   </TabsTrigger>
                 </TabsList>
 
@@ -141,12 +153,16 @@ const GestaoADM = () => {
                   <SolicitacaoTreinamento userId={user?.id} />
                 </TabsContent>
 
-                <TabsContent value="historico" className="m-0">
-                  <HistoricoTreinamento userId={user?.id} />
-                </TabsContent>
-
                 <TabsContent value="pendentes" className="m-0">
                   <AprovacoesPendentes userId={user?.id} />
+                </TabsContent>
+
+                <TabsContent value="encerramento" className="m-0">
+                  <EncerramentoTreinamento userId={user?.id} />
+                </TabsContent>
+
+                <TabsContent value="historico" className="m-0">
+                  <HistoricoTreinamento userId={user?.id} />
                 </TabsContent>
               </Tabs>
             </TabsContent>
