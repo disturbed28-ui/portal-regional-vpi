@@ -23,12 +23,14 @@ import { IntegranteCard } from "./IntegranteCard";
 import { ModalEditarIntegrante } from "./ModalEditarIntegrante";
 import { ModalInativarIntegrante } from "./ModalInativarIntegrante";
 import { IntegrantePortal } from "@/hooks/useIntegrantes";
+import { ReadOnlyBanner } from "@/components/ui/read-only-banner";
 
 interface ListaIntegrantesProps {
   userId: string | undefined;
+  readOnly?: boolean;
 }
 
-export function ListaIntegrantes({ userId }: ListaIntegrantesProps) {
+export function ListaIntegrantes({ userId, readOnly = false }: ListaIntegrantesProps) {
   const {
     escopo,
     integrantesPorDivisao,
@@ -87,6 +89,9 @@ export function ListaIntegrantes({ userId }: ListaIntegrantesProps) {
 
   return (
     <div className="space-y-4">
+      {/* Banner de somente leitura */}
+      {readOnly && <ReadOnlyBanner />}
+
       {/* Filtros */}
       <Card className="border-border/50">
         <CardContent className="p-3 sm:p-4 space-y-3">
@@ -201,8 +206,9 @@ export function ListaIntegrantes({ userId }: ListaIntegrantesProps) {
                     <IntegranteCard
                       key={integrante.id}
                       integrante={integrante}
-                      onEditar={setIntegranteEditar}
-                      onInativar={setIntegranteInativar}
+                      onEditar={readOnly ? undefined : setIntegranteEditar}
+                      onInativar={readOnly ? undefined : setIntegranteInativar}
+                      readOnly={readOnly}
                     />
                   ))}
                 </div>
@@ -212,22 +218,26 @@ export function ListaIntegrantes({ userId }: ListaIntegrantesProps) {
         </Accordion>
       )}
 
-      {/* Modais */}
-      <ModalEditarIntegrante
-        open={!!integranteEditar}
-        onOpenChange={(open) => !open && setIntegranteEditar(null)}
-        integrante={integranteEditar}
-        onSalvar={handleSalvarEdicao}
-        operando={operando}
-      />
+      {/* Modais - só renderizam se não for readOnly */}
+      {!readOnly && (
+        <>
+          <ModalEditarIntegrante
+            open={!!integranteEditar}
+            onOpenChange={(open) => !open && setIntegranteEditar(null)}
+            integrante={integranteEditar}
+            onSalvar={handleSalvarEdicao}
+            operando={operando}
+          />
 
-      <ModalInativarIntegrante
-        open={!!integranteInativar}
-        onOpenChange={(open) => !open && setIntegranteInativar(null)}
-        integrante={integranteInativar}
-        onConfirmar={handleConfirmarInativacao}
-        operando={operando}
-      />
+          <ModalInativarIntegrante
+            open={!!integranteInativar}
+            onOpenChange={(open) => !open && setIntegranteInativar(null)}
+            integrante={integranteInativar}
+            onConfirmar={handleConfirmarInativacao}
+            operando={operando}
+          />
+        </>
+      )}
     </div>
   );
 }

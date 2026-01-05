@@ -3,12 +3,14 @@ import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { useInadimplenciaFiltrada } from '@/hooks/useInadimplenciaFiltrada';
 import { AlertTriangle, Users, DollarSign, ChevronDown } from 'lucide-react';
+import { ReadOnlyBanner } from '@/components/ui/read-only-banner';
 
 interface DashboardInadimplenciaProps {
   userId: string | undefined;
+  readOnly?: boolean;
 }
 
-export const DashboardInadimplencia = ({ userId }: DashboardInadimplenciaProps) => {
+export const DashboardInadimplencia = ({ userId, readOnly = false }: DashboardInadimplenciaProps) => {
   const { ultimaCargaInfo, devedoresAtivos, devedoresCronicos } = useInadimplenciaFiltrada(userId);
 
   // Calcular totais a partir da view vw_devedores_ativos
@@ -18,6 +20,9 @@ export const DashboardInadimplencia = ({ userId }: DashboardInadimplenciaProps) 
 
   return (
     <div className="space-y-3 sm:space-y-6">
+      {/* Banner de somente leitura */}
+      {readOnly && <ReadOnlyBanner className="mb-4" />}
+
       {/* Cards: Devedores, Total, Crônicos (removido Média) */}
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
         {/* Total Devedores */}

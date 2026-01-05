@@ -6,11 +6,12 @@ import { IntegrantePortal } from "@/hooks/useIntegrantes";
 
 interface IntegranteCardProps {
   integrante: IntegrantePortal;
-  onEditar: (integrante: IntegrantePortal) => void;
-  onInativar: (integrante: IntegrantePortal) => void;
+  onEditar?: (integrante: IntegrantePortal) => void;
+  onInativar?: (integrante: IntegrantePortal) => void;
+  readOnly?: boolean;
 }
 
-export function IntegranteCard({ integrante, onEditar, onInativar }: IntegranteCardProps) {
+export function IntegranteCard({ integrante, onEditar, onInativar, readOnly = false }: IntegranteCardProps) {
   return (
     <Card className="bg-card border-border/50 hover:border-border transition-colors">
       <CardContent className="p-3 sm:p-4">
@@ -67,30 +68,34 @@ export function IntegranteCard({ integrante, onEditar, onInativar }: IntegranteC
           </div>
         </div>
         
-        {/* Ações */}
-        <div className="flex gap-2 mt-3 pt-3 border-t border-border/50">
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1 text-xs h-8"
-            onClick={() => onEditar(integrante)}
-          >
-            <Edit className="h-3.5 w-3.5 mr-1.5" />
-            Ver/Editar
-          </Button>
-          
-          {integrante.ativo && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1 text-xs h-8 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
-              onClick={() => onInativar(integrante)}
-            >
-              <UserX className="h-3.5 w-3.5 mr-1.5" />
-              Inativar
-            </Button>
-          )}
-        </div>
+        {/* Ações - só aparecem se NÃO for readOnly */}
+        {!readOnly && (onEditar || onInativar) && (
+          <div className="flex gap-2 mt-3 pt-3 border-t border-border/50">
+            {onEditar && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 text-xs h-8"
+                onClick={() => onEditar(integrante)}
+              >
+                <Edit className="h-3.5 w-3.5 mr-1.5" />
+                Ver/Editar
+              </Button>
+            )}
+            
+            {onInativar && integrante.ativo && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 text-xs h-8 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
+                onClick={() => onInativar(integrante)}
+              >
+                <UserX className="h-3.5 w-3.5 mr-1.5" />
+                Inativar
+              </Button>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

@@ -7,8 +7,13 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { parseAniversariantesExcel, AniversariantesParseResult } from '@/lib/aniversariantesParser';
 import { useAuth } from '@/hooks/useAuth';
+import { ReadOnlyBanner } from '@/components/ui/read-only-banner';
 
-export function AniversariantesUploadCard() {
+interface AniversariantesUploadCardProps {
+  readOnly?: boolean;
+}
+
+export function AniversariantesUploadCard({ readOnly = false }: AniversariantesUploadCardProps) {
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -91,6 +96,26 @@ export function AniversariantesUploadCard() {
       fileInputRef.current.value = '';
     }
   };
+
+  // Se for readOnly, mostrar apenas o banner
+  if (readOnly) {
+    return (
+      <Card className="border-border/50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Upload className="h-4 w-4" />
+            Importar Aniversários
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <ReadOnlyBanner />
+          <p className="text-sm text-muted-foreground text-center py-4">
+            Você está em modo de visualização. Não é possível importar dados.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="border-border/50">
