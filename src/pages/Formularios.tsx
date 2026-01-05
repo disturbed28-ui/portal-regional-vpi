@@ -10,10 +10,10 @@ import { useScreenAccess } from "@/hooks/useScreenAccess";
 import { useUserRole } from "@/hooks/useUserRole";
 
 // Tipo de roles de negócio válidas
-type AppRole = 'admin' | 'moderator' | 'user' | 'diretor_divisao' | 'diretor_regional' | 'regional';
+type AppRole = 'admin' | 'moderator' | 'user' | 'diretor_divisao' | 'diretor_regional' | 'regional' | 'social_divisao' | 'adm_divisao';
 
 // Constante com roles de negócio válidas
-const APP_ROLES: AppRole[] = ['admin', 'moderator', 'diretor_regional', 'diretor_divisao', 'regional', 'user'];
+const APP_ROLES: AppRole[] = ['admin', 'moderator', 'diretor_regional', 'diretor_divisao', 'regional', 'social_divisao', 'adm_divisao', 'user'];
 
 const Formularios = () => {
   const navigate = useNavigate();

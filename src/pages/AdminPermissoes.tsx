@@ -17,6 +17,8 @@ const ROLES = [
   { value: 'diretor_regional' as const, label: 'Diretor Regional', color: 'bg-green-500' },
   { value: 'regional' as const, label: 'Regional', color: 'bg-teal-500' },
   { value: 'diretor_divisao' as const, label: 'Diretor / Subdiretor de Divisão', color: 'bg-purple-500' },
+  { value: 'social_divisao' as const, label: 'Social de Divisão', color: 'bg-pink-500' },
+  { value: 'adm_divisao' as const, label: 'ADM de Divisão', color: 'bg-orange-500' },
   { value: 'user' as const, label: 'Usuário', color: 'bg-gray-500' },
 ];
 
@@ -201,6 +203,8 @@ export default function AdminPermissoes() {
                           {role.value === 'diretor_regional' && 'Gerencia regional e visualiza relatórios'}
                           {role.value === 'regional' && 'Gerencia regional (role legada)'}
                           {role.value === 'diretor_divisao' && 'Gerencia divisão e visualiza relatórios'}
+                          {role.value === 'social_divisao' && 'Gerencia ações sociais da divisão'}
+                          {role.value === 'adm_divisao' && 'Gerencia administrativo da divisão'}
                           {role.value === 'user' && 'Acesso básico'}
                 </span>
               </div>
