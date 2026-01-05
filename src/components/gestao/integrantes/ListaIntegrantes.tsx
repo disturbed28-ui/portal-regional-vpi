@@ -20,12 +20,10 @@ import { Loader2, Search, Users, Filter } from "lucide-react";
 import { useIntegrantesGestao } from "@/hooks/useIntegrantesGestao";
 import { useGerenciarIntegrante } from "@/hooks/useGerenciarIntegrante";
 import { IntegranteCard } from "./IntegranteCard";
+import { ModalEditarIntegrante } from "./ModalEditarIntegrante";
 import { ModalInativarIntegrante } from "./ModalInativarIntegrante";
-import { ProfileDetailDialog } from "@/components/admin/ProfileDetailDialog";
 import { IntegrantePortal } from "@/hooks/useIntegrantes";
 import { ReadOnlyBanner } from "@/components/ui/read-only-banner";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 
 interface ListaIntegrantesProps {
   userId: string | undefined;
@@ -33,7 +31,6 @@ interface ListaIntegrantesProps {
 }
 
 export function ListaIntegrantes({ userId, readOnly = false }: ListaIntegrantesProps) {
-  const { toast } = useToast();
   const {
     escopo,
     integrantesPorDivisao,
@@ -50,53 +47,19 @@ export function ListaIntegrantes({ userId, readOnly = false }: ListaIntegrantesP
     refetch,
   } = useIntegrantesGestao(userId);
 
-  const { inativarIntegrante, operando } = useGerenciarIntegrante();
+  const { editarIntegrante, inativarIntegrante, operando } = useGerenciarIntegrante();
 
   // Estado dos modais
-  const [profileParaEditar, setProfileParaEditar] = useState<any>(null);
-  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [integranteEditar, setIntegranteEditar] = useState<IntegrantePortal | null>(null);
   const [integranteInativar, setIntegranteInativar] = useState<IntegrantePortal | null>(null);
 
-  // Função para abrir o editor completo de perfil
-  const handleAbrirEditor = async (integrante: IntegrantePortal) => {
-    if (!integrante.vinculado || !integrante.profile_id) {
-      toast({
-        title: "Integrante não vinculado",
-        description: "Este integrante não está vinculado a um perfil de usuário. Utilize a área de Administração para vincular.",
-      });
-      return;
+  const handleSalvarEdicao = async (dadosNovos: Record<string, any>, observacao: string) => {
+    if (!integranteEditar || !userId) return false;
+    const success = await editarIntegrante(integranteEditar, dadosNovos, observacao, userId);
+    if (success) {
+      refetch();
     }
-
-    setLoadingProfile(true);
-    try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select(`
-          *,
-          comandos:comando_id(id, nome),
-          regionais:regional_id(id, nome),
-          divisoes:divisao_id(id, nome, regional_id),
-          cargos:cargo_id(id, nome, grau),
-          funcoes:funcao_id(id, nome)
-        `)
-        .eq('id', integrante.profile_id)
-        .single();
-
-      if (error) throw error;
-
-      if (profile) {
-        setProfileParaEditar(profile);
-      }
-    } catch (error) {
-      console.error('Erro ao buscar perfil:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os dados do perfil.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoadingProfile(false);
-    }
+    return success;
   };
 
   const handleConfirmarInativacao = async (motivo: string, justificativa: string) => {
@@ -243,7 +206,7 @@ export function ListaIntegrantes({ userId, readOnly = false }: ListaIntegrantesP
                     <IntegranteCard
                       key={integrante.id}
                       integrante={integrante}
-                      onEditar={readOnly ? undefined : handleAbrirEditor}
+                      onEditar={readOnly ? undefined : setIntegranteEditar}
                       onInativar={readOnly ? undefined : setIntegranteInativar}
                       readOnly={readOnly}
                     />
@@ -258,14 +221,12 @@ export function ListaIntegrantes({ userId, readOnly = false }: ListaIntegrantesP
       {/* Modais - só renderizam se não for readOnly */}
       {!readOnly && (
         <>
-          <ProfileDetailDialog
-            profile={profileParaEditar}
-            open={!!profileParaEditar}
-            onOpenChange={(open) => !open && setProfileParaEditar(null)}
-            onSuccess={() => {
-              setProfileParaEditar(null);
-              refetch();
-            }}
+          <ModalEditarIntegrante
+            open={!!integranteEditar}
+            onOpenChange={(open) => !open && setIntegranteEditar(null)}
+            integrante={integranteEditar}
+            onSalvar={handleSalvarEdicao}
+            operando={operando}
           />
 
           <ModalInativarIntegrante
