@@ -100,12 +100,15 @@ export function ListaIntegrantes({ userId }: ListaIntegrantesProps) {
             {mostrarFiltroRegional && (
               <div className="space-y-1.5">
                 <Label className="text-xs">Regional</Label>
-                <Select value={filtroRegional} onValueChange={setFiltroRegional}>
+                <Select 
+                  value={filtroRegional || "__all__"} 
+                  onValueChange={(val) => setFiltroRegional(val === "__all__" ? "" : val)}
+                >
                   <SelectTrigger className="h-9">
                     <SelectValue placeholder="Todas as regionais" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas as regionais</SelectItem>
+                    <SelectItem value="__all__">Todas as regionais</SelectItem>
                     {regionaisDisponiveis.map((r) => (
                       <SelectItem key={r.id} value={r.id}>
                         {r.nome}
@@ -121,15 +124,15 @@ export function ListaIntegrantes({ userId }: ListaIntegrantesProps) {
               <div className="space-y-1.5">
                 <Label className="text-xs">Divisão</Label>
                 <Select
-                  value={filtroDivisao}
-                  onValueChange={setFiltroDivisao}
+                  value={filtroDivisao || "__all__"}
+                  onValueChange={(val) => setFiltroDivisao(val === "__all__" ? "" : val)}
                   disabled={mostrarFiltroRegional && !filtroRegional}
                 >
                   <SelectTrigger className="h-9">
                     <SelectValue placeholder="Todas as divisões" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas as divisões</SelectItem>
+                    <SelectItem value="__all__">Todas as divisões</SelectItem>
                     {divisoesDisponiveis.map((d) => (
                       <SelectItem key={d.id} value={d.id}>
                         {d.nome}
