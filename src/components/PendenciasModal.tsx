@@ -20,7 +20,7 @@ import {
   AlertTriangle,
   ArrowRight
 } from "lucide-react";
-import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes } from "@/hooks/usePendencias";
+import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, AjusteRolesDetalhes } from "@/hooks/usePendencias";
 
 interface PendenciasModalProps {
   pendencias: Pendencia[];
@@ -548,6 +548,78 @@ const TreinamentoIntegranteDetalhesCard = ({ detalhes }: { detalhes: Treinamento
   );
 };
 
+// Card para Pendência de Ajuste de Roles
+const AjusteRolesDetalhesCard = ({ detalhes }: { detalhes: AjusteRolesDetalhes }) => {
+  const navigate = useNavigate();
+  const formatarData = (data: string) => 
+    format(new Date(data), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+
+  return (
+    <Card className="bg-card border-emerald-500/50">
+      <CardContent className="p-4 space-y-3">
+        {/* Título */}
+        <div className="flex items-center gap-2 p-3 bg-emerald-950/30 rounded border border-emerald-700/50">
+          <span className="text-2xl">🔐</span>
+          <div className="flex-1">
+            <p className="font-semibold text-emerald-400">
+              Ajuste de Permissões Necessário
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Cargo alterado - permissões precisam ser atualizadas
+            </p>
+          </div>
+        </div>
+
+        {/* Alteração de Cargo */}
+        <div className="p-3 bg-muted rounded border">
+          <p className="text-xs font-semibold mb-2 text-muted-foreground">Alteração de Cargo:</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge variant="outline" className="text-xs">
+              {detalhes.cargo_anterior || 'N/A'} (Grau {detalhes.grau_anterior || '-'})
+            </Badge>
+            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            <Badge variant="default" className="text-xs bg-emerald-600">
+              {detalhes.cargo_novo} (Grau {detalhes.grau_novo || '-'})
+            </Badge>
+          </div>
+        </div>
+
+        {/* Detalhes */}
+        <div className="space-y-2 text-sm">
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Alterado por:</span>
+            <span className="font-medium text-foreground">{detalhes.alterado_por_nome}</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Data:</span>
+            <span className="font-medium text-foreground">{formatarData(detalhes.created_at)}</span>
+          </div>
+        </div>
+
+        {/* Justificativa */}
+        <div className="pt-2 border-t">
+          <p className="text-xs font-semibold mb-1">Justificativa:</p>
+          <p className="text-xs text-muted-foreground italic">{detalhes.justificativa}</p>
+        </div>
+
+        {/* Botão de Ação */}
+        <Button 
+          size="sm" 
+          variant="default"
+          className="w-full bg-emerald-600 hover:bg-emerald-700"
+          onClick={() => navigate('/admin/integrantes')}
+        >
+          <ArrowRight className="h-4 w-4 mr-2" />
+          Ajustar Permissões
+        </Button>
+      </CardContent>
+    </Card>
+  );
+};
+
 interface PendenciaItemProps {
   pendencia: Pendencia;
   itemId: string;
@@ -563,6 +635,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
   const isEventoCancelado = pendencia.tipo === 'evento_cancelado';
   const isTreinamentoAprovador = pendencia.tipo === 'treinamento_aprovador';
   const isTreinamentoIntegrante = pendencia.tipo === 'treinamento_integrante';
+  const isAjusteRoles = pendencia.tipo === 'ajuste_roles';
   const detalhes = pendencia.detalhes_completos;
   
   // LOG DE DEBUG TEMPORÁRIO
@@ -582,6 +655,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
   const isCritico = isMensalidade && maiorAtrasoMensalidade >= 80;
   
   const getBorderColor = () => {
+    if (isAjusteRoles) return 'border-emerald-500';
     if (isMensalidade && isCritico) return 'border-red-700';
     if (isMensalidade) return 'border-red-500';
     if (isAfastamento) return 'border-orange-500';
@@ -598,6 +672,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
   };
   
   const getIcon = () => {
+    if (isAjusteRoles) return '🔐';
     if (isMensalidade) return '💰';
     if (isAfastamento) return '🏥';
     if (isTreinamentoAprovador || isTreinamentoIntegrante) return '🎓';
@@ -621,6 +696,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
   };
   
   const getLabel = () => {
+    if (isAjusteRoles) return 'Ajuste Permissões';
     if (isMensalidade) return 'Mensalidade';
     if (isAfastamento) return 'Afastamento';
     if (isEventoCancelado) return 'Evento Cancelado';
@@ -733,6 +809,9 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
             {/* Cards de Treinamento */}
             {isTreinamentoAprovador && detalhes && <TreinamentoAprovadorDetalhesCard detalhes={detalhes as TreinamentoAprovadorDetalhes} />}
             {isTreinamentoIntegrante && detalhes && <TreinamentoIntegranteDetalhesCard detalhes={detalhes as TreinamentoIntegranteDetalhes} />}
+            
+            {/* Card de Ajuste de Roles */}
+            {isAjusteRoles && detalhes && <AjusteRolesDetalhesCard detalhes={detalhes as AjusteRolesDetalhes} />}
             
             {/* Botão Resolver para Anomalias */}
             {isDelta && (

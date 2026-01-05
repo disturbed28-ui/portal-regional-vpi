@@ -66,17 +66,29 @@ interface TreinamentoIntegranteDetalhes {
   created_at: string;
 }
 
+interface AjusteRolesDetalhes {
+  id: string;
+  integrante_id: string;
+  cargo_anterior: string | null;
+  cargo_novo: string;
+  grau_anterior: string | null;
+  grau_novo: string | null;
+  alterado_por_nome: string;
+  justificativa: string;
+  created_at: string;
+}
+
 interface Pendencia {
   nome_colete: string;
   divisao_texto: string;
-  tipo: 'mensalidade' | 'afastamento' | 'delta' | 'evento_cancelado' | 'treinamento_aprovador' | 'treinamento_integrante';
+  tipo: 'mensalidade' | 'afastamento' | 'delta' | 'evento_cancelado' | 'treinamento_aprovador' | 'treinamento_integrante' | 'ajuste_roles';
   detalhe: string;
   data_ref: string;
   registro_id: number;
-  detalhes_completos: MensalidadeDetalhes | AfastamentoDetalhes | DeltaDetalhes | EventoCanceladoDetalhes | TreinamentoAprovadorDetalhes | TreinamentoIntegranteDetalhes;
+  detalhes_completos: MensalidadeDetalhes | AfastamentoDetalhes | DeltaDetalhes | EventoCanceladoDetalhes | TreinamentoAprovadorDetalhes | TreinamentoIntegranteDetalhes | AjusteRolesDetalhes;
 }
 
-export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes };
+export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, AjusteRolesDetalhes };
 
 export const usePendencias = (
   userId: string | undefined,
@@ -684,9 +696,66 @@ export const usePendencias = (
           todasPendencias.filter(p => p.tipo === 'treinamento_aprovador' || p.tipo === 'treinamento_integrante').length);
       }
 
-      // Ordenar: deltas críticos primeiro, depois eventos cancelados, depois por data
+      // 6. Pendências de Ajuste de Roles (apenas para admin)
+      if (userRole === 'admin') {
+        console.log('[usePendencias] Buscando pendências de ajuste de roles...');
+        
+        const { data: pendenciasRoles, error: errorRoles } = await supabase
+          .from('pendencias_ajuste_roles')
+          .select('*')
+          .eq('status', 'pendente')
+          .order('created_at', { ascending: false });
+
+        if (!errorRoles && pendenciasRoles) {
+          // Buscar nomes dos usuários que fizeram as alterações
+          const alteradoPorIds = [...new Set(pendenciasRoles.map(p => p.alterado_por))];
+          const nomesMap = new Map<string, string>();
+          
+          if (alteradoPorIds.length > 0) {
+            const { data: profiles } = await supabase
+              .from('profiles')
+              .select('id, nome_colete, name')
+              .in('id', alteradoPorIds);
+            
+            profiles?.forEach(p => {
+              nomesMap.set(p.id, p.nome_colete || p.name || 'Desconhecido');
+            });
+          }
+
+          for (const pendencia of pendenciasRoles) {
+            todasPendencias.push({
+              registro_id: pendencia.integrante_registro_id,
+              nome_colete: pendencia.integrante_nome_colete,
+              divisao_texto: pendencia.integrante_divisao_texto,
+              tipo: 'ajuste_roles',
+              detalhe: `${pendencia.cargo_anterior || 'N/A'} → ${pendencia.cargo_novo}`,
+              data_ref: pendencia.created_at,
+              detalhes_completos: {
+                id: pendencia.id,
+                integrante_id: pendencia.integrante_id,
+                cargo_anterior: pendencia.cargo_anterior,
+                cargo_novo: pendencia.cargo_novo,
+                grau_anterior: pendencia.grau_anterior,
+                grau_novo: pendencia.grau_novo,
+                alterado_por_nome: nomesMap.get(pendencia.alterado_por) || 'Desconhecido',
+                justificativa: pendencia.justificativa,
+                created_at: pendencia.created_at
+              }
+            });
+          }
+        }
+
+        console.log('[usePendencias] Pendências de ajuste de roles encontradas:', 
+          todasPendencias.filter(p => p.tipo === 'ajuste_roles').length);
+      }
+
+      // Ordenar: ajuste_roles primeiro (admin), depois deltas críticos, depois eventos cancelados, depois por data
       todasPendencias.sort((a, b) => {
-        // Eventos cancelados têm prioridade alta (mas menor que deltas críticos)
+        // Pendências de ajuste de roles têm prioridade máxima
+        if (a.tipo === 'ajuste_roles' && b.tipo !== 'ajuste_roles') return -1;
+        if (b.tipo === 'ajuste_roles' && a.tipo !== 'ajuste_roles') return 1;
+        
+        // Eventos cancelados têm prioridade alta (mas menor que ajuste_roles)
         if (a.tipo === 'evento_cancelado' && b.tipo !== 'evento_cancelado') return -1;
         if (b.tipo === 'evento_cancelado' && a.tipo !== 'evento_cancelado') return 1;
         
