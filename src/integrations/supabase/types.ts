@@ -2559,6 +2559,8 @@ export type Database = {
         | "app.authenticated"
         | "presence.view_division"
         | "presence.view_region"
+        | "social_divisao"
+        | "adm_divisao"
       motivo_inativacao:
         | "transferido"
         | "falecido"
@@ -2704,6 +2706,8 @@ export const Constants = {
         "app.authenticated",
         "presence.view_division",
         "presence.view_region",
+        "social_divisao",
+        "adm_divisao",
       ],
       motivo_inativacao: [
         "transferido",
