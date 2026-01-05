@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useScreenAccess } from "@/hooks/useScreenAccess";
@@ -18,8 +18,13 @@ import { EncerramentoTreinamento } from "@/components/admin/treinamento/Encerram
 
 const GestaoADM = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { hasAccess, loading } = useScreenAccess('/gestao-adm', user?.id);
+  
+  // Ler parâmetros da URL para navegação direta
+  const initialMainTab = searchParams.get('mainTab') || 'integrantes';
+  const initialSubTab = searchParams.get('subTab') || 'solicitacao';
 
   useEffect(() => {
     if (!loading && !hasAccess) {
@@ -82,7 +87,7 @@ const GestaoADM = () => {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 py-4">
-        <Tabs defaultValue="integrantes" className="w-full">
+        <Tabs defaultValue={initialMainTab} className="w-full">
           <TabsList className="w-full h-auto flex overflow-x-auto no-scrollbar bg-muted/50 p-1 gap-1">
             {tabs.map((tab) => (
               <TabsTrigger
@@ -113,7 +118,7 @@ const GestaoADM = () => {
             </TabsContent>
 
             <TabsContent value="treinamento" className="m-0">
-              <Tabs defaultValue="solicitacao" className="w-full">
+              <Tabs defaultValue={initialSubTab} className="w-full">
                 <TabsList className="w-full h-auto grid grid-cols-4 bg-muted/30 p-1 gap-1 mb-4">
                   <TabsTrigger
                     value="solicitacao"

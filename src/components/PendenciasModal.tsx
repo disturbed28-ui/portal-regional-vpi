@@ -436,13 +436,13 @@ const TreinamentoAprovadorDetalhesCard = ({ detalhes }: { detalhes: TreinamentoA
     format(new Date(data), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
 
   return (
-    <Card className="bg-background/50 border-purple-500">
+    <Card className="bg-card border-purple-500/50">
       <CardContent className="p-4 space-y-3">
         {/* Título */}
-        <div className="flex items-center gap-2 p-3 bg-purple-50 dark:bg-purple-950/20 rounded border border-purple-200 dark:border-purple-800">
+        <div className="flex items-center gap-2 p-3 bg-purple-950/30 rounded border border-purple-700/50">
           <span className="text-2xl">🎓</span>
           <div className="flex-1">
-            <p className="font-semibold text-purple-700 dark:text-purple-400">
+            <p className="font-semibold text-purple-400">
               Pendência de Aprovação de Treinamento
             </p>
             <p className="text-xs text-muted-foreground">Aguardando aprovações</p>
@@ -454,29 +454,29 @@ const TreinamentoAprovadorDetalhesCard = ({ detalhes }: { detalhes: TreinamentoA
           <div className="flex items-center gap-2">
             <User className="h-4 w-4 text-muted-foreground" />
             <span className="text-muted-foreground">Integrante:</span>
-            <span className="font-medium">{detalhes.integrante_nome_colete}</span>
+            <span className="font-medium text-foreground">{detalhes.integrante_nome_colete}</span>
           </div>
           
           <div className="flex items-center gap-2">
             <FileText className="h-4 w-4 text-muted-foreground" />
             <span className="text-muted-foreground">Cargo Treinamento:</span>
-            <span className="font-medium">{detalhes.cargo_treinamento}</span>
+            <span className="font-medium text-foreground">{detalhes.cargo_treinamento}</span>
           </div>
           
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
             <span className="text-muted-foreground">Divisão / Regional:</span>
-            <span className="font-medium">{detalhes.divisao_texto}</span>
+            <span className="font-medium text-foreground">{detalhes.divisao_texto}</span>
           </div>
         </div>
 
         {/* Aprovadores Pendentes */}
         {detalhes.aprovadores_pendentes.length > 0 && (
-          <div className="p-2 bg-amber-50 dark:bg-amber-950/20 rounded border border-amber-200 dark:border-amber-800">
-            <p className="text-xs font-semibold mb-1">Aprovações Pendentes:</p>
+          <div className="p-2 bg-amber-950/30 rounded border border-amber-700/50">
+            <p className="text-xs font-semibold mb-1 text-amber-400">Aprovações Pendentes:</p>
             <div className="flex flex-wrap gap-1">
               {detalhes.aprovadores_pendentes.map((nome, idx) => (
-                <Badge key={idx} variant="outline" className="text-xs">
+                <Badge key={idx} variant="outline" className="text-xs border-amber-700/50 text-amber-300">
                   {nome}
                 </Badge>
               ))}
@@ -489,7 +489,7 @@ const TreinamentoAprovadorDetalhesCard = ({ detalhes }: { detalhes: TreinamentoA
           size="sm" 
           variant="outline"
           className="w-full"
-          onClick={() => navigate('/gestao-adm?tab=pendentes')}
+          onClick={() => navigate('/gestao-adm?mainTab=treinamento&subTab=pendentes')}
         >
           <ArrowRight className="h-4 w-4 mr-2" />
           Ir para Aprovações Pendentes
@@ -502,13 +502,13 @@ const TreinamentoAprovadorDetalhesCard = ({ detalhes }: { detalhes: TreinamentoA
 // Card para Pendência de Treinamento - Integrante
 const TreinamentoIntegranteDetalhesCard = ({ detalhes }: { detalhes: TreinamentoIntegranteDetalhes }) => {
   return (
-    <Card className="bg-background/50 border-blue-500">
+    <Card className="bg-card border-blue-500/50">
       <CardContent className="p-4 space-y-3">
         {/* Título */}
-        <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded border border-blue-200 dark:border-blue-800">
+        <div className="flex items-center gap-2 p-3 bg-blue-950/30 rounded border border-blue-700/50">
           <span className="text-2xl">🎓</span>
           <div className="flex-1">
-            <p className="font-semibold text-blue-700 dark:text-blue-400">
+            <p className="font-semibold text-blue-400">
               Treinamento aguardando aprovação
             </p>
             <p className="text-xs text-muted-foreground">
@@ -522,24 +522,24 @@ const TreinamentoIntegranteDetalhesCard = ({ detalhes }: { detalhes: Treinamento
           <div className="flex items-center gap-2">
             <FileText className="h-4 w-4 text-muted-foreground" />
             <span className="text-muted-foreground">Cargo em Treinamento:</span>
-            <span className="font-medium">{detalhes.cargo_treinamento}</span>
+            <span className="font-medium text-foreground">{detalhes.cargo_treinamento}</span>
           </div>
           
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
             <span className="text-muted-foreground">Divisão:</span>
-            <span className="font-medium">{detalhes.divisao_texto}</span>
+            <span className="font-medium text-foreground">{detalhes.divisao_texto}</span>
           </div>
         </div>
 
         {/* Orientação */}
-        <div className="p-3 bg-amber-50 dark:bg-amber-950/20 rounded border border-amber-200 dark:border-amber-800">
-          <p className="text-xs text-amber-800 dark:text-amber-300">
+        <div className="p-3 bg-amber-950/30 rounded border border-amber-700/50">
+          <p className="text-xs text-amber-300">
             <strong>Orientação:</strong> Acione seu Diretor de Divisão para acompanhamento.
           </p>
           <div className="mt-2 flex items-center gap-2">
-            <User className="h-4 w-4 text-amber-600" />
-            <span className="text-sm font-medium">{detalhes.diretor_divisao_nome}</span>
+            <User className="h-4 w-4 text-amber-400" />
+            <span className="text-sm font-medium text-foreground">{detalhes.diretor_divisao_nome}</span>
             <span className="text-xs text-muted-foreground">({detalhes.diretor_divisao_cargo})</span>
           </div>
         </div>
