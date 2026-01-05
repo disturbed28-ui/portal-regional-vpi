@@ -11,8 +11,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Save } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Loader2, Save, GraduationCap, Briefcase } from "lucide-react";
 import { IntegrantePortal } from "@/hooks/useIntegrantes";
+import { useCargos } from "@/hooks/useCargos";
 
 interface ModalEditarIntegranteProps {
   open: boolean;
@@ -29,13 +38,13 @@ export function ModalEditarIntegrante({
   onSalvar,
   operando,
 }: ModalEditarIntegranteProps) {
+  const { cargos, loading: loadingCargos } = useCargos();
   const [observacao, setObservacao] = useState("");
   const [dados, setDados] = useState({
     nome_colete: "",
     cargo_nome: "",
     cargo_grau_texto: "",
-    cargo_estagio: "",
-    data_entrada: "",
+    grau: "",
     tem_moto: false,
     tem_carro: false,
     sgt_armas: false,
@@ -47,14 +56,20 @@ export function ModalEditarIntegrante({
     combate_insano: false,
   });
 
+  // Dados somente leitura
+  const [dadosReadOnly, setDadosReadOnly] = useState({
+    cargo_estagio: "",
+    cargo_treinamento_nome: "",
+    data_entrada: "",
+  });
+
   useEffect(() => {
     if (integrante) {
       setDados({
         nome_colete: integrante.nome_colete || "",
         cargo_nome: integrante.cargo_nome || "",
         cargo_grau_texto: integrante.cargo_grau_texto || "",
-        cargo_estagio: integrante.cargo_estagio || "",
-        data_entrada: integrante.data_entrada || "",
+        grau: integrante.grau || "",
         tem_moto: integrante.tem_moto || false,
         tem_carro: integrante.tem_carro || false,
         sgt_armas: integrante.sgt_armas || false,
@@ -65,9 +80,35 @@ export function ModalEditarIntegrante({
         lobo: integrante.lobo || false,
         combate_insano: integrante.combate_insano || false,
       });
+      
+      // Buscar nome do cargo de treinamento se existir
+      const cargoTreinamento = cargos.find(c => c.id === integrante.cargo_treinamento_id);
+      
+      setDadosReadOnly({
+        cargo_estagio: integrante.cargo_estagio || "",
+        cargo_treinamento_nome: cargoTreinamento?.nome || "",
+        data_entrada: integrante.data_entrada || "",
+      });
+      
       setObservacao("");
     }
-  }, [integrante]);
+  }, [integrante, cargos]);
+
+  // Handler para mudança de cargo
+  const handleCargoChange = (cargoNome: string) => {
+    const cargoSelecionado = cargos.find(c => c.nome === cargoNome);
+    if (cargoSelecionado) {
+      setDados(prev => ({
+        ...prev,
+        cargo_nome: cargoNome,
+        cargo_grau_texto: `${cargoSelecionado.nome} (Grau ${cargoSelecionado.grau})`,
+        grau: cargoSelecionado.grau,
+      }));
+    }
+  };
+
+  // Verificar se cargo foi alterado (requer justificativa mais detalhada)
+  const cargoFoiAlterado = integrante && dados.cargo_nome !== (integrante.cargo_nome || "");
 
   const observacaoValida = observacao.trim().length >= 10;
 
@@ -77,10 +118,11 @@ export function ModalEditarIntegrante({
     
     if (integrante) {
       if (dados.nome_colete !== integrante.nome_colete) dadosNovos.nome_colete = dados.nome_colete;
-      if (dados.cargo_nome !== (integrante.cargo_nome || "")) dadosNovos.cargo_nome = dados.cargo_nome;
-      if (dados.cargo_grau_texto !== integrante.cargo_grau_texto) dadosNovos.cargo_grau_texto = dados.cargo_grau_texto;
-      if (dados.cargo_estagio !== (integrante.cargo_estagio || "")) dadosNovos.cargo_estagio = dados.cargo_estagio;
-      if (dados.data_entrada !== (integrante.data_entrada || "")) dadosNovos.data_entrada = dados.data_entrada || null;
+      if (dados.cargo_nome !== (integrante.cargo_nome || "")) {
+        dadosNovos.cargo_nome = dados.cargo_nome;
+        dadosNovos.cargo_grau_texto = dados.cargo_grau_texto;
+        dadosNovos.grau = dados.grau;
+      }
       if (dados.tem_moto !== integrante.tem_moto) dadosNovos.tem_moto = dados.tem_moto;
       if (dados.tem_carro !== integrante.tem_carro) dadosNovos.tem_carro = dados.tem_carro;
       if (dados.sgt_armas !== integrante.sgt_armas) dadosNovos.sgt_armas = dados.sgt_armas;
@@ -96,6 +138,12 @@ export function ModalEditarIntegrante({
     if (success) {
       onOpenChange(false);
     }
+  };
+
+  const formatarData = (data: string) => {
+    if (!data) return "Não informado";
+    const [ano, mes, dia] = data.split('-');
+    return `${dia}/${mes}/${ano}`;
   };
 
   if (!integrante) return null;
@@ -134,45 +182,78 @@ export function ModalEditarIntegrante({
             />
           </div>
 
-          {/* Cargo */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="cargo_nome">Cargo</Label>
-              <Input
-                id="cargo_nome"
-                value={dados.cargo_nome}
-                onChange={(e) => setDados(prev => ({ ...prev, cargo_nome: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="cargo_grau_texto">Grau/Texto</Label>
-              <Input
-                id="cargo_grau_texto"
-                value={dados.cargo_grau_texto}
-                onChange={(e) => setDados(prev => ({ ...prev, cargo_grau_texto: e.target.value }))}
-              />
+          {/* Cargo - Select */}
+          <div className="space-y-2">
+            <Label htmlFor="cargo_nome">Cargo</Label>
+            <Select
+              value={dados.cargo_nome}
+              onValueChange={handleCargoChange}
+              disabled={loadingCargos}
+            >
+              <SelectTrigger id="cargo_nome" className="bg-background">
+                <SelectValue placeholder="Selecione o cargo" />
+              </SelectTrigger>
+              <SelectContent className="bg-background z-50">
+                {cargos.map(cargo => (
+                  <SelectItem key={cargo.id} value={cargo.nome}>
+                    {cargo.nome} (Grau {cargo.grau})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {cargoFoiAlterado && (
+              <p className="text-xs text-amber-600 flex items-center gap-1">
+                ⚠️ Alteração de cargo gera pendência para ajuste de permissões
+              </p>
+            )}
+          </div>
+
+          {/* Grau - Auto preenchido (read-only) */}
+          <div className="space-y-2">
+            <Label className="text-muted-foreground">Grau/Texto (automático)</Label>
+            <div className="p-2 bg-muted rounded-md text-sm">
+              {dados.cargo_grau_texto || "Será preenchido ao selecionar o cargo"}
             </div>
           </div>
 
-          {/* Estágio e Data de Entrada */}
+          {/* Campos somente leitura */}
           <div className="grid grid-cols-2 gap-3">
+            {/* Estágio - Read Only */}
             <div className="space-y-2">
-              <Label htmlFor="cargo_estagio">Estágio</Label>
-              <Input
-                id="cargo_estagio"
-                value={dados.cargo_estagio}
-                onChange={(e) => setDados(prev => ({ ...prev, cargo_estagio: e.target.value }))}
-                placeholder="Ex: 1º estágio"
-              />
+              <Label className="text-muted-foreground flex items-center gap-1">
+                <Briefcase className="h-3 w-3" />
+                Estágio
+              </Label>
+              <div className="p-2 bg-muted rounded-md text-sm min-h-[36px] flex items-center">
+                {dadosReadOnly.cargo_estagio ? (
+                  <Badge variant="outline">{dadosReadOnly.cargo_estagio}</Badge>
+                ) : (
+                  <span className="text-muted-foreground text-xs">Não definido</span>
+                )}
+              </div>
             </div>
+
+            {/* Treinamento - Read Only */}
             <div className="space-y-2">
-              <Label htmlFor="data_entrada">Data de Entrada</Label>
-              <Input
-                id="data_entrada"
-                type="date"
-                value={dados.data_entrada}
-                onChange={(e) => setDados(prev => ({ ...prev, data_entrada: e.target.value }))}
-              />
+              <Label className="text-muted-foreground flex items-center gap-1">
+                <GraduationCap className="h-3 w-3" />
+                Treinamento
+              </Label>
+              <div className="p-2 bg-muted rounded-md text-sm min-h-[36px] flex items-center">
+                {dadosReadOnly.cargo_treinamento_nome ? (
+                  <Badge variant="secondary">{dadosReadOnly.cargo_treinamento_nome}</Badge>
+                ) : (
+                  <span className="text-muted-foreground text-xs">Sem treinamento ativo</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Data de Entrada - Read Only */}
+          <div className="space-y-2">
+            <Label className="text-muted-foreground">Data de Entrada</Label>
+            <div className="p-2 bg-muted rounded-md text-sm">
+              {formatarData(dadosReadOnly.data_entrada)}
             </div>
           </div>
 

@@ -116,6 +116,34 @@ export const useGerenciarIntegrante = (): UseGerenciarIntegranteReturn => {
         // Não falhar a operação por erro no histórico, apenas logar
       }
 
+      // Se cargo foi alterado, criar pendência para ajuste de roles
+      if (dadosNovos.cargo_nome && dadosNovos.cargo_nome !== integrante.cargo_nome) {
+        const { error: pendenciaError } = await supabase
+          .from('pendencias_ajuste_roles')
+          .insert([{
+            integrante_id: integrante.id,
+            integrante_nome_colete: integrante.nome_colete,
+            integrante_divisao_texto: integrante.divisao_texto,
+            integrante_registro_id: integrante.registro_id,
+            cargo_anterior: integrante.cargo_nome,
+            cargo_novo: dadosNovos.cargo_nome,
+            grau_anterior: integrante.grau,
+            grau_novo: dadosNovos.grau,
+            alterado_por: userId,
+            justificativa: observacao.trim(),
+          }]);
+
+        if (pendenciaError) {
+          console.error('Erro ao criar pendência de ajuste de roles:', pendenciaError);
+          // Não falhar a operação principal por erro na pendência
+        } else {
+          toast({
+            title: "Pendência de permissões criada",
+            description: "Um administrador precisará ajustar as permissões do integrante.",
+          });
+        }
+      }
+
       toast({
         title: "Integrante atualizado",
         description: `${integrante.nome_colete} foi atualizado com sucesso.`,

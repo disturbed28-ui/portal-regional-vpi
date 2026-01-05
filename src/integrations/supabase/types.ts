@@ -1479,6 +1479,68 @@ export type Database = {
           },
         ]
       }
+      pendencias_ajuste_roles: {
+        Row: {
+          alterado_por: string
+          cargo_anterior: string | null
+          cargo_novo: string
+          created_at: string | null
+          grau_anterior: string | null
+          grau_novo: string | null
+          id: string
+          integrante_divisao_texto: string
+          integrante_id: string
+          integrante_nome_colete: string
+          integrante_registro_id: number
+          justificativa: string
+          resolvido_em: string | null
+          resolvido_por: string | null
+          status: string
+        }
+        Insert: {
+          alterado_por: string
+          cargo_anterior?: string | null
+          cargo_novo: string
+          created_at?: string | null
+          grau_anterior?: string | null
+          grau_novo?: string | null
+          id?: string
+          integrante_divisao_texto: string
+          integrante_id: string
+          integrante_nome_colete: string
+          integrante_registro_id: number
+          justificativa: string
+          resolvido_em?: string | null
+          resolvido_por?: string | null
+          status?: string
+        }
+        Update: {
+          alterado_por?: string
+          cargo_anterior?: string | null
+          cargo_novo?: string
+          created_at?: string | null
+          grau_anterior?: string | null
+          grau_novo?: string | null
+          id?: string
+          integrante_divisao_texto?: string
+          integrante_id?: string
+          integrante_nome_colete?: string
+          integrante_registro_id?: number
+          justificativa?: string
+          resolvido_em?: string | null
+          resolvido_por?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pendencias_ajuste_roles_integrante_id_fkey"
+            columns: ["integrante_id"]
+            isOneToOne: false
+            referencedRelation: "integrantes_portal"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       presencas: {
         Row: {
           confirmado_em: string | null
