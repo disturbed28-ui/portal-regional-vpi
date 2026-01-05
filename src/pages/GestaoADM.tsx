@@ -1,5 +1,5 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useScreenAccess } from "@/hooks/useScreenAccess";
 import { Button } from "@/components/ui/button";
@@ -22,11 +22,82 @@ const GestaoADM = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  
+  // Acesso à página principal
   const { hasAccess, loading } = useScreenAccess('/gestao-adm', user?.id);
   
-  // Ler parâmetros da URL para navegação direta
-  const initialMainTab = searchParams.get('mainTab') || 'integrantes';
-  const initialSubTab = searchParams.get('subTab') || 'solicitacao';
+  // Acesso às abas principais
+  const { hasAccess: hasIntegrantesAccess, loading: loadingIntegrantes } = useScreenAccess('/gestao-adm-integrantes', user?.id);
+  const { hasAccess: hasInadimplenciaAccess, loading: loadingInadimplencia } = useScreenAccess('/gestao-adm-inadimplencia', user?.id);
+  const { hasAccess: hasTreinamentoAccess, loading: loadingTreinamento } = useScreenAccess('/gestao-adm-treinamento', user?.id);
+  const { hasAccess: hasAniversariantesAccess, loading: loadingAniversariantes } = useScreenAccess('/gestao-adm-aniversariantes', user?.id);
+  
+  // Acesso às sub-abas de Integrantes
+  const { hasAccess: hasListaAccess, loading: loadingLista } = useScreenAccess('/gestao-adm-integrantes-lista', user?.id);
+  const { hasAccess: hasHistoricoIntegrantesAccess, loading: loadingHistoricoIntegrantes } = useScreenAccess('/gestao-adm-integrantes-historico', user?.id);
+  
+  // Acesso às sub-abas de Treinamento
+  const { hasAccess: hasSolicitacaoAccess, loading: loadingSolicitacao } = useScreenAccess('/gestao-adm-treinamento-solicitacao', user?.id);
+  const { hasAccess: hasAprovacaoAccess, loading: loadingAprovacao } = useScreenAccess('/gestao-adm-treinamento-aprovacao', user?.id);
+  const { hasAccess: hasEncerramentoAccess, loading: loadingEncerramento } = useScreenAccess('/gestao-adm-treinamento-encerramento', user?.id);
+  const { hasAccess: hasHistoricoTreinamentoAccess, loading: loadingHistoricoTreinamento } = useScreenAccess('/gestao-adm-treinamento-historico', user?.id);
+
+  // Verificar se ainda está carregando
+  const isLoading = loading || loadingIntegrantes || loadingInadimplencia || loadingTreinamento || 
+                    loadingAniversariantes || loadingLista || loadingHistoricoIntegrantes || 
+                    loadingSolicitacao || loadingAprovacao || loadingEncerramento || loadingHistoricoTreinamento;
+
+  // Montar lista de abas visíveis
+  const visibleTabs = useMemo(() => {
+    const allTabs = [
+      { value: "integrantes", label: "Integrantes", icon: Users, hasAccess: hasIntegrantesAccess },
+      { value: "inadimplencia", label: "Inadimplência", icon: DollarSign, hasAccess: hasInadimplenciaAccess },
+      { value: "treinamento", label: "Treinamento", icon: GraduationCap, hasAccess: hasTreinamentoAccess },
+      { value: "aniversariantes", label: "Aniversários", icon: Cake, hasAccess: hasAniversariantesAccess },
+    ];
+    return allTabs.filter(tab => tab.hasAccess);
+  }, [hasIntegrantesAccess, hasInadimplenciaAccess, hasTreinamentoAccess, hasAniversariantesAccess]);
+
+  // Montar lista de sub-abas de Integrantes visíveis
+  const visibleIntegrantesSubTabs = useMemo(() => {
+    const allSubTabs = [
+      { value: "lista", label: "Lista", shortLabel: "Lista", icon: List, hasAccess: hasListaAccess },
+      { value: "historico", label: "Histórico", shortLabel: "Hist.", icon: History, hasAccess: hasHistoricoIntegrantesAccess },
+    ];
+    return allSubTabs.filter(tab => tab.hasAccess);
+  }, [hasListaAccess, hasHistoricoIntegrantesAccess]);
+
+  // Montar lista de sub-abas de Treinamento visíveis
+  const visibleTreinamentoSubTabs = useMemo(() => {
+    const allSubTabs = [
+      { value: "solicitacao", label: "Solicitação", shortLabel: "Solic.", icon: FileEdit, hasAccess: hasSolicitacaoAccess },
+      { value: "pendentes", label: "Aprovação Pendente", shortLabel: "Aprov.", icon: ClipboardCheck, hasAccess: hasAprovacaoAccess },
+      { value: "encerramento", label: "Encerramento", shortLabel: "Enc.", icon: XCircle, hasAccess: hasEncerramentoAccess },
+      { value: "historico", label: "Histórico", shortLabel: "Hist.", icon: History, hasAccess: hasHistoricoTreinamentoAccess },
+    ];
+    return allSubTabs.filter(tab => tab.hasAccess);
+  }, [hasSolicitacaoAccess, hasAprovacaoAccess, hasEncerramentoAccess, hasHistoricoTreinamentoAccess]);
+
+  // Determinar aba inicial baseado no que o usuário tem acesso
+  const initialMainTab = useMemo(() => {
+    const urlTab = searchParams.get('mainTab');
+    if (urlTab && visibleTabs.some(t => t.value === urlTab)) {
+      return urlTab;
+    }
+    return visibleTabs[0]?.value || 'integrantes';
+  }, [searchParams, visibleTabs]);
+
+  const initialIntegrantesSubTab = useMemo(() => {
+    return visibleIntegrantesSubTabs[0]?.value || 'lista';
+  }, [visibleIntegrantesSubTabs]);
+
+  const initialTreinamentoSubTab = useMemo(() => {
+    const urlSubTab = searchParams.get('subTab');
+    if (urlSubTab && visibleTreinamentoSubTabs.some(t => t.value === urlSubTab)) {
+      return urlSubTab;
+    }
+    return visibleTreinamentoSubTabs[0]?.value || 'solicitacao';
+  }, [searchParams, visibleTreinamentoSubTabs]);
 
   useEffect(() => {
     if (!loading && !hasAccess) {
@@ -39,7 +110,7 @@ const GestaoADM = () => {
     }
   }, [loading, hasAccess, navigate]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -51,24 +122,37 @@ const GestaoADM = () => {
     return null;
   }
 
-  const tabs = [
-    { value: "integrantes", label: "Integrantes", icon: Users },
-    { value: "inadimplencia", label: "Inadimplência", icon: DollarSign },
-    { value: "treinamento", label: "Treinamento", icon: GraduationCap },
-    { value: "aniversariantes", label: "Aniversários", icon: Cake },
-  ];
-
-  const PlaceholderContent = ({ title }: { title: string }) => (
-    <Card className="border-border/50">
-      <CardContent className="flex flex-col items-center justify-center py-12 px-4 text-center">
-        <Clock className="h-12 w-12 text-muted-foreground/50 mb-4" />
-        <h3 className="text-lg font-medium text-foreground mb-2">Em breve</h3>
-        <p className="text-sm text-muted-foreground max-w-xs">
-          A funcionalidade de {title} está em desenvolvimento e estará disponível em breve.
-        </p>
-      </CardContent>
-    </Card>
-  );
+  // Se não tiver acesso a nenhuma aba, mostrar mensagem
+  if (visibleTabs.length === 0) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
+          <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/")}
+              className="shrink-0"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-lg font-semibold text-foreground">Gestão ADM</h1>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <Card className="border-border/50">
+            <CardContent className="flex flex-col items-center justify-center py-12 px-4 text-center">
+              <Clock className="h-12 w-12 text-muted-foreground/50 mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">Sem permissões</h3>
+              <p className="text-sm text-muted-foreground max-w-xs">
+                Você não tem permissão para acessar nenhuma funcionalidade desta página.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -91,7 +175,7 @@ const GestaoADM = () => {
       <div className="max-w-7xl mx-auto px-4 py-4">
         <Tabs defaultValue={initialMainTab} className="w-full">
           <TabsList className="w-full h-auto flex overflow-x-auto no-scrollbar bg-muted/50 p-1 gap-1">
-            {tabs.map((tab) => (
+            {visibleTabs.map((tab) => (
               <TabsTrigger
                 key={tab.value}
                 value={tab.value}
@@ -105,108 +189,123 @@ const GestaoADM = () => {
           </TabsList>
 
           <div className="mt-4">
-            <TabsContent value="integrantes" className="m-0">
-              <Tabs defaultValue="lista" className="w-full">
-                <TabsList className="w-full h-auto grid grid-cols-2 bg-muted/30 p-1 gap-1 mb-4">
-                  <TabsTrigger
-                    value="lista"
-                    className="flex items-center gap-1.5 px-2 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                  >
-                    <List className="h-3.5 w-3.5 shrink-0" />
-                    <span className="hidden sm:inline">Lista</span>
-                    <span className="sm:hidden">Lista</span>
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="historico"
-                    className="flex items-center gap-1.5 px-2 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                  >
-                    <History className="h-3.5 w-3.5 shrink-0" />
-                    <span className="hidden sm:inline">Histórico</span>
-                    <span className="sm:hidden">Hist.</span>
-                  </TabsTrigger>
-                </TabsList>
+            {hasIntegrantesAccess && (
+              <TabsContent value="integrantes" className="m-0">
+                {visibleIntegrantesSubTabs.length > 0 ? (
+                  <Tabs defaultValue={initialIntegrantesSubTab} className="w-full">
+                    <TabsList className={`w-full h-auto grid bg-muted/30 p-1 gap-1 mb-4`} style={{ gridTemplateColumns: `repeat(${visibleIntegrantesSubTabs.length}, 1fr)` }}>
+                      {visibleIntegrantesSubTabs.map((subTab) => (
+                        <TabsTrigger
+                          key={subTab.value}
+                          value={subTab.value}
+                          className="flex items-center gap-1.5 px-2 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                        >
+                          <subTab.icon className="h-3.5 w-3.5 shrink-0" />
+                          <span className="hidden sm:inline">{subTab.label}</span>
+                          <span className="sm:hidden">{subTab.shortLabel}</span>
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
 
-                <TabsContent value="lista" className="m-0">
-                  <ListaIntegrantes userId={user?.id} />
-                </TabsContent>
+                    {hasListaAccess && (
+                      <TabsContent value="lista" className="m-0">
+                        <ListaIntegrantes userId={user?.id} />
+                      </TabsContent>
+                    )}
 
-                <TabsContent value="historico" className="m-0">
-                  <HistoricoAlteracoes />
-                </TabsContent>
-              </Tabs>
-            </TabsContent>
+                    {hasHistoricoIntegrantesAccess && (
+                      <TabsContent value="historico" className="m-0">
+                        <HistoricoAlteracoes />
+                      </TabsContent>
+                    )}
+                  </Tabs>
+                ) : (
+                  <Card className="border-border/50">
+                    <CardContent className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                      <Clock className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                      <h3 className="text-lg font-medium text-foreground mb-2">Sem permissões</h3>
+                      <p className="text-sm text-muted-foreground max-w-xs">
+                        Você não tem permissão para acessar nenhuma sub-aba de Integrantes.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+            )}
 
-            <TabsContent value="inadimplencia" className="m-0">
-              <div className="space-y-4">
-                {/* Bloco 1: Upload de Mensalidades */}
-                <MensalidadesUploadCard />
-                
-                {/* Bloco 2: Visualização de Inadimplência */}
-                <DashboardInadimplencia userId={user?.id} />
-              </div>
-            </TabsContent>
+            {hasInadimplenciaAccess && (
+              <TabsContent value="inadimplencia" className="m-0">
+                <div className="space-y-4">
+                  <MensalidadesUploadCard />
+                  <DashboardInadimplencia userId={user?.id} />
+                </div>
+              </TabsContent>
+            )}
 
-            <TabsContent value="treinamento" className="m-0">
-              <Tabs defaultValue={initialSubTab} className="w-full">
-                <TabsList className="w-full h-auto grid grid-cols-4 bg-muted/30 p-1 gap-1 mb-4">
-                  <TabsTrigger
-                    value="solicitacao"
-                    className="flex items-center gap-1.5 px-2 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                  >
-                    <FileEdit className="h-3.5 w-3.5 shrink-0" />
-                    <span className="hidden sm:inline">Solicitação</span>
-                    <span className="sm:hidden">Solic.</span>
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="pendentes"
-                    className="flex items-center gap-1.5 px-2 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                  >
-                    <ClipboardCheck className="h-3.5 w-3.5 shrink-0" />
-                    <span className="hidden sm:inline">Aprovação Pendente</span>
-                    <span className="sm:hidden">Aprov.</span>
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="encerramento"
-                    className="flex items-center gap-1.5 px-2 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                  >
-                    <XCircle className="h-3.5 w-3.5 shrink-0" />
-                    <span className="hidden sm:inline">Encerramento</span>
-                    <span className="sm:hidden">Enc.</span>
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="historico"
-                    className="flex items-center gap-1.5 px-2 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                  >
-                    <History className="h-3.5 w-3.5 shrink-0" />
-                    <span className="hidden sm:inline">Histórico</span>
-                    <span className="sm:hidden">Hist.</span>
-                  </TabsTrigger>
-                </TabsList>
+            {hasTreinamentoAccess && (
+              <TabsContent value="treinamento" className="m-0">
+                {visibleTreinamentoSubTabs.length > 0 ? (
+                  <Tabs defaultValue={initialTreinamentoSubTab} className="w-full">
+                    <TabsList className={`w-full h-auto grid bg-muted/30 p-1 gap-1 mb-4`} style={{ gridTemplateColumns: `repeat(${visibleTreinamentoSubTabs.length}, 1fr)` }}>
+                      {visibleTreinamentoSubTabs.map((subTab) => (
+                        <TabsTrigger
+                          key={subTab.value}
+                          value={subTab.value}
+                          className="flex items-center gap-1.5 px-2 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                        >
+                          <subTab.icon className="h-3.5 w-3.5 shrink-0" />
+                          <span className="hidden sm:inline">{subTab.label}</span>
+                          <span className="sm:hidden">{subTab.shortLabel}</span>
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
 
-                <TabsContent value="solicitacao" className="m-0">
-                  <SolicitacaoTreinamento userId={user?.id} />
-                </TabsContent>
+                    {hasSolicitacaoAccess && (
+                      <TabsContent value="solicitacao" className="m-0">
+                        <SolicitacaoTreinamento userId={user?.id} />
+                      </TabsContent>
+                    )}
 
-                <TabsContent value="pendentes" className="m-0">
-                  <AprovacoesPendentes userId={user?.id} />
-                </TabsContent>
+                    {hasAprovacaoAccess && (
+                      <TabsContent value="pendentes" className="m-0">
+                        <AprovacoesPendentes userId={user?.id} />
+                      </TabsContent>
+                    )}
 
-                <TabsContent value="encerramento" className="m-0">
-                  <EncerramentoTreinamento userId={user?.id} />
-                </TabsContent>
+                    {hasEncerramentoAccess && (
+                      <TabsContent value="encerramento" className="m-0">
+                        <EncerramentoTreinamento userId={user?.id} />
+                      </TabsContent>
+                    )}
 
-                <TabsContent value="historico" className="m-0">
-                  <HistoricoTreinamento userId={user?.id} />
-                </TabsContent>
-              </Tabs>
-            </TabsContent>
+                    {hasHistoricoTreinamentoAccess && (
+                      <TabsContent value="historico" className="m-0">
+                        <HistoricoTreinamento userId={user?.id} />
+                      </TabsContent>
+                    )}
+                  </Tabs>
+                ) : (
+                  <Card className="border-border/50">
+                    <CardContent className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                      <Clock className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                      <h3 className="text-lg font-medium text-foreground mb-2">Sem permissões</h3>
+                      <p className="text-sm text-muted-foreground max-w-xs">
+                        Você não tem permissão para acessar nenhuma sub-aba de Treinamento.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+            )}
 
-            <TabsContent value="aniversariantes" className="m-0">
-              <div className="space-y-4">
-                <AniversariantesUploadCard />
-                <AniversariantesLista userId={user?.id} />
-              </div>
-            </TabsContent>
+            {hasAniversariantesAccess && (
+              <TabsContent value="aniversariantes" className="m-0">
+                <div className="space-y-4">
+                  <AniversariantesUploadCard />
+                  <AniversariantesLista userId={user?.id} />
+                </div>
+              </TabsContent>
+            )}
           </div>
         </Tabs>
       </div>
