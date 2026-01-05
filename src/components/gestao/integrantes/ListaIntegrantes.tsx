@@ -180,7 +180,7 @@ export function ListaIntegrantes({ userId }: ListaIntegrantesProps) {
           </CardContent>
         </Card>
       ) : (
-        <Accordion type="multiple" defaultValue={integrantesPorDivisao.map(g => g.divisaoId || 'sem-divisao')} className="space-y-2">
+        <Accordion type="multiple" defaultValue={[]} className="space-y-2">
           {integrantesPorDivisao.map((grupo) => (
             <AccordionItem
               key={grupo.divisaoId || 'sem-divisao'}
