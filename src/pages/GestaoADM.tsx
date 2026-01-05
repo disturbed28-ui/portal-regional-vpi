@@ -5,7 +5,7 @@ import { useScreenAccess } from "@/hooks/useScreenAccess";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Users, DollarSign, GraduationCap, Cake, Clock, FileEdit, History, ClipboardCheck, XCircle } from "lucide-react";
+import { ArrowLeft, Users, DollarSign, GraduationCap, Cake, Clock, FileEdit, History, ClipboardCheck, XCircle, List } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { MensalidadesUploadCard } from "@/components/admin/MensalidadesUploadCard";
 import { DashboardInadimplencia } from "@/components/relatorios/DashboardInadimplencia";
@@ -15,6 +15,8 @@ import { SolicitacaoTreinamento } from "@/components/admin/treinamento/Solicitac
 import { HistoricoTreinamento } from "@/components/admin/treinamento/HistoricoTreinamento";
 import { AprovacoesPendentes } from "@/components/admin/treinamento/AprovacoesPendentes";
 import { EncerramentoTreinamento } from "@/components/admin/treinamento/EncerramentoTreinamento";
+import { ListaIntegrantes } from "@/components/gestao/integrantes/ListaIntegrantes";
+import { HistoricoAlteracoes } from "@/components/gestao/integrantes/HistoricoAlteracoes";
 
 const GestaoADM = () => {
   const navigate = useNavigate();
@@ -104,7 +106,34 @@ const GestaoADM = () => {
 
           <div className="mt-4">
             <TabsContent value="integrantes" className="m-0">
-              <PlaceholderContent title="Integrantes" />
+              <Tabs defaultValue="lista" className="w-full">
+                <TabsList className="w-full h-auto grid grid-cols-2 bg-muted/30 p-1 gap-1 mb-4">
+                  <TabsTrigger
+                    value="lista"
+                    className="flex items-center gap-1.5 px-2 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                  >
+                    <List className="h-3.5 w-3.5 shrink-0" />
+                    <span className="hidden sm:inline">Lista</span>
+                    <span className="sm:hidden">Lista</span>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="historico"
+                    className="flex items-center gap-1.5 px-2 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                  >
+                    <History className="h-3.5 w-3.5 shrink-0" />
+                    <span className="hidden sm:inline">Histórico</span>
+                    <span className="sm:hidden">Hist.</span>
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="lista" className="m-0">
+                  <ListaIntegrantes userId={user?.id} />
+                </TabsContent>
+
+                <TabsContent value="historico" className="m-0">
+                  <HistoricoAlteracoes />
+                </TabsContent>
+              </Tabs>
             </TabsContent>
 
             <TabsContent value="inadimplencia" className="m-0">
