@@ -1,8 +1,7 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useScreenAccess } from "@/hooks/useScreenAccess";
-import { useTabAccessLevel } from "@/hooks/useTabAccessLevel";
+import { useScreenPermissionsBatch, getDefaultPermission } from "@/hooks/useScreenPermissionsBatch";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -26,104 +25,126 @@ import { EstagioGrauV } from "@/components/admin/estagio/flyers/EstagioGrauV";
 import { EstagioGrauVI } from "@/components/admin/estagio/flyers/EstagioGrauVI";
 import { FilaProducao } from "@/components/admin/estagio/flyers/FilaProducao";
 
+// Todas as rotas que precisamos verificar permissões
+const ALL_ROUTES = [
+  '/gestao-adm',
+  '/gestao-adm-integrantes',
+  '/gestao-adm-integrantes-lista',
+  '/gestao-adm-integrantes-historico',
+  '/gestao-adm-inadimplencia',
+  '/gestao-adm-treinamento',
+  '/gestao-adm-treinamento-solicitacao',
+  '/gestao-adm-treinamento-aprovacao',
+  '/gestao-adm-treinamento-encerramento',
+  '/gestao-adm-treinamento-historico',
+  '/gestao-adm-estagio',
+  '/gestao-adm-estagio-solicitacao',
+  '/gestao-adm-estagio-aprovacao',
+  '/gestao-adm-estagio-encerramento',
+  '/gestao-adm-estagio-historico',
+  '/gestao-adm-estagio-flyers',
+  '/gestao-adm-estagio-flyers-grau5',
+  '/gestao-adm-estagio-flyers-grau6',
+  '/gestao-adm-estagio-flyers-fila',
+  '/gestao-adm-aniversariantes',
+];
+
 const GestaoADM = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   
-  // Acesso à página principal
-  const { hasAccess, loading } = useScreenAccess('/gestao-adm', user?.id);
-  
-  // Acesso às abas principais (com nível de acesso)
-  const { hasAnyAccess: hasIntegrantesAccess, isReadOnly: integrantesReadOnly, loading: loadingIntegrantes } = useTabAccessLevel('/gestao-adm-integrantes', user?.id);
-  const { hasAnyAccess: hasInadimplenciaAccess, isReadOnly: inadimplenciaReadOnly, loading: loadingInadimplencia } = useTabAccessLevel('/gestao-adm-inadimplencia', user?.id);
-  const { hasAnyAccess: hasTreinamentoAccess, isReadOnly: treinamentoReadOnly, loading: loadingTreinamento } = useTabAccessLevel('/gestao-adm-treinamento', user?.id);
-  const { hasAnyAccess: hasEstagioAccess, isReadOnly: estagioReadOnly, loading: loadingEstagio } = useTabAccessLevel('/gestao-adm-estagio', user?.id);
-  const { hasAnyAccess: hasAniversariantesAccess, isReadOnly: aniversariantesReadOnly, loading: loadingAniversariantes } = useTabAccessLevel('/gestao-adm-aniversariantes', user?.id);
-  
-  // Acesso às sub-abas de Integrantes
-  const { hasAnyAccess: hasListaAccess, isReadOnly: listaReadOnly, loading: loadingLista } = useTabAccessLevel('/gestao-adm-integrantes-lista', user?.id);
-  const { hasAnyAccess: hasHistoricoIntegrantesAccess, isReadOnly: historicoIntegrantesReadOnly, loading: loadingHistoricoIntegrantes } = useTabAccessLevel('/gestao-adm-integrantes-historico', user?.id);
-  
-  // Acesso às sub-abas de Treinamento
-  const { hasAnyAccess: hasSolicitacaoAccess, isReadOnly: solicitacaoReadOnly, loading: loadingSolicitacao } = useTabAccessLevel('/gestao-adm-treinamento-solicitacao', user?.id);
-  const { hasAnyAccess: hasAprovacaoAccess, isReadOnly: aprovacaoReadOnly, loading: loadingAprovacao } = useTabAccessLevel('/gestao-adm-treinamento-aprovacao', user?.id);
-  const { hasAnyAccess: hasEncerramentoAccess, isReadOnly: encerramentoReadOnly, loading: loadingEncerramento } = useTabAccessLevel('/gestao-adm-treinamento-encerramento', user?.id);
-  const { hasAnyAccess: hasHistoricoTreinamentoAccess, isReadOnly: historicoTreinamentoReadOnly, loading: loadingHistoricoTreinamento } = useTabAccessLevel('/gestao-adm-treinamento-historico', user?.id);
+  // Buscar todas as permissões em lote (2-3 queries em vez de 72+)
+  const { permissions, loading } = useScreenPermissionsBatch(ALL_ROUTES, '/gestao-adm', user?.id);
 
-  // Acesso às sub-abas de Estágio
-  const { hasAnyAccess: hasSolicitacaoEstagioAccess, isReadOnly: solicitacaoEstagioReadOnly, loading: loadingSolicitacaoEstagio } = useTabAccessLevel('/gestao-adm-estagio-solicitacao', user?.id);
-  const { hasAnyAccess: hasAprovacaoEstagioAccess, isReadOnly: aprovacaoEstagioReadOnly, loading: loadingAprovacaoEstagio } = useTabAccessLevel('/gestao-adm-estagio-aprovacao', user?.id);
-  const { hasAnyAccess: hasEncerramentoEstagioAccess, isReadOnly: encerramentoEstagioReadOnly, loading: loadingEncerramentoEstagio } = useTabAccessLevel('/gestao-adm-estagio-encerramento', user?.id);
-  const { hasAnyAccess: hasHistoricoEstagioAccess, isReadOnly: historicoEstagioReadOnly, loading: loadingHistoricoEstagio } = useTabAccessLevel('/gestao-adm-estagio-historico', user?.id);
-  const { hasAnyAccess: hasFlyersAccess, isReadOnly: flyersReadOnly, loading: loadingFlyers } = useTabAccessLevel('/gestao-adm-estagio-flyers', user?.id);
+  // Helper para obter permissão de uma rota
+  const getPerm = (route: string) => permissions[route] || getDefaultPermission();
 
-  // Acesso às sub-sub-abas de Flyers
-  const { hasAnyAccess: hasGrau5Access, isReadOnly: grau5ReadOnly, loading: loadingGrau5 } = useTabAccessLevel('/gestao-adm-estagio-flyers-grau5', user?.id);
-  const { hasAnyAccess: hasGrau6Access, isReadOnly: grau6ReadOnly, loading: loadingGrau6 } = useTabAccessLevel('/gestao-adm-estagio-flyers-grau6', user?.id);
-  const { hasAnyAccess: hasFilaAccess, isReadOnly: filaReadOnly, loading: loadingFila } = useTabAccessLevel('/gestao-adm-estagio-flyers-fila', user?.id);
+  // Permissões da página principal
+  const hasAccess = getPerm('/gestao-adm').hasAnyAccess;
 
-  // Verificar se ainda está carregando
-  const isLoading = loading || loadingIntegrantes || loadingInadimplencia || loadingTreinamento || 
-                    loadingAniversariantes || loadingLista || loadingHistoricoIntegrantes || 
-                    loadingSolicitacao || loadingAprovacao || loadingEncerramento || loadingHistoricoTreinamento ||
-                    loadingEstagio || loadingSolicitacaoEstagio || loadingAprovacaoEstagio || 
-                    loadingEncerramentoEstagio || loadingHistoricoEstagio || loadingFlyers ||
-                    loadingGrau5 || loadingGrau6 || loadingFila;
+  // Permissões das abas principais
+  const integrantesP = getPerm('/gestao-adm-integrantes');
+  const inadimplenciaP = getPerm('/gestao-adm-inadimplencia');
+  const treinamentoP = getPerm('/gestao-adm-treinamento');
+  const estagioP = getPerm('/gestao-adm-estagio');
+  const aniversariantesP = getPerm('/gestao-adm-aniversariantes');
+
+  // Permissões das sub-abas de Integrantes
+  const listaP = getPerm('/gestao-adm-integrantes-lista');
+  const historicoIntegrantesP = getPerm('/gestao-adm-integrantes-historico');
+
+  // Permissões das sub-abas de Treinamento
+  const solicitacaoP = getPerm('/gestao-adm-treinamento-solicitacao');
+  const aprovacaoP = getPerm('/gestao-adm-treinamento-aprovacao');
+  const encerramentoP = getPerm('/gestao-adm-treinamento-encerramento');
+  const historicoTreinamentoP = getPerm('/gestao-adm-treinamento-historico');
+
+  // Permissões das sub-abas de Estágio
+  const solicitacaoEstagioP = getPerm('/gestao-adm-estagio-solicitacao');
+  const aprovacaoEstagioP = getPerm('/gestao-adm-estagio-aprovacao');
+  const encerramentoEstagioP = getPerm('/gestao-adm-estagio-encerramento');
+  const historicoEstagioP = getPerm('/gestao-adm-estagio-historico');
+  const flyersP = getPerm('/gestao-adm-estagio-flyers');
+
+  // Permissões das sub-sub-abas de Flyers
+  const grau5P = getPerm('/gestao-adm-estagio-flyers-grau5');
+  const grau6P = getPerm('/gestao-adm-estagio-flyers-grau6');
+  const filaP = getPerm('/gestao-adm-estagio-flyers-fila');
 
   // Montar lista de abas visíveis
   const visibleTabs = useMemo(() => {
     const allTabs = [
-      { value: "integrantes", label: "Integrantes", icon: Users, hasAccess: hasIntegrantesAccess },
-      { value: "inadimplencia", label: "Inadimplência", icon: DollarSign, hasAccess: hasInadimplenciaAccess },
-      { value: "treinamento", label: "Treinamento", icon: GraduationCap, hasAccess: hasTreinamentoAccess },
-      { value: "estagio", label: "Estágio", icon: Award, hasAccess: hasEstagioAccess },
-      { value: "aniversariantes", label: "Aniversários", icon: Cake, hasAccess: hasAniversariantesAccess },
+      { value: "integrantes", label: "Integrantes", icon: Users, hasAccess: integrantesP.hasAnyAccess },
+      { value: "inadimplencia", label: "Inadimplência", icon: DollarSign, hasAccess: inadimplenciaP.hasAnyAccess },
+      { value: "treinamento", label: "Treinamento", icon: GraduationCap, hasAccess: treinamentoP.hasAnyAccess },
+      { value: "estagio", label: "Estágio", icon: Award, hasAccess: estagioP.hasAnyAccess },
+      { value: "aniversariantes", label: "Aniversários", icon: Cake, hasAccess: aniversariantesP.hasAnyAccess },
     ];
     return allTabs.filter(tab => tab.hasAccess);
-  }, [hasIntegrantesAccess, hasInadimplenciaAccess, hasTreinamentoAccess, hasEstagioAccess, hasAniversariantesAccess]);
+  }, [integrantesP.hasAnyAccess, inadimplenciaP.hasAnyAccess, treinamentoP.hasAnyAccess, estagioP.hasAnyAccess, aniversariantesP.hasAnyAccess]);
 
   // Montar lista de sub-abas de Integrantes visíveis
   const visibleIntegrantesSubTabs = useMemo(() => {
     const allSubTabs = [
-      { value: "lista", label: "Lista", shortLabel: "Lista", icon: List, hasAccess: hasListaAccess },
-      { value: "historico", label: "Histórico", shortLabel: "Hist.", icon: History, hasAccess: hasHistoricoIntegrantesAccess },
+      { value: "lista", label: "Lista", shortLabel: "Lista", icon: List, hasAccess: listaP.hasAnyAccess },
+      { value: "historico", label: "Histórico", shortLabel: "Hist.", icon: History, hasAccess: historicoIntegrantesP.hasAnyAccess },
     ];
     return allSubTabs.filter(tab => tab.hasAccess);
-  }, [hasListaAccess, hasHistoricoIntegrantesAccess]);
+  }, [listaP.hasAnyAccess, historicoIntegrantesP.hasAnyAccess]);
 
   // Montar lista de sub-abas de Treinamento visíveis
   const visibleTreinamentoSubTabs = useMemo(() => {
     const allSubTabs = [
-      { value: "solicitacao", label: "Solicitação", shortLabel: "Solic.", icon: FileEdit, hasAccess: hasSolicitacaoAccess },
-      { value: "pendentes", label: "Aprovação Pendente", shortLabel: "Aprov.", icon: ClipboardCheck, hasAccess: hasAprovacaoAccess },
-      { value: "encerramento", label: "Encerramento", shortLabel: "Enc.", icon: XCircle, hasAccess: hasEncerramentoAccess },
-      { value: "historico", label: "Histórico", shortLabel: "Hist.", icon: History, hasAccess: hasHistoricoTreinamentoAccess },
+      { value: "solicitacao", label: "Solicitação", shortLabel: "Solic.", icon: FileEdit, hasAccess: solicitacaoP.hasAnyAccess },
+      { value: "pendentes", label: "Aprovação Pendente", shortLabel: "Aprov.", icon: ClipboardCheck, hasAccess: aprovacaoP.hasAnyAccess },
+      { value: "encerramento", label: "Encerramento", shortLabel: "Enc.", icon: XCircle, hasAccess: encerramentoP.hasAnyAccess },
+      { value: "historico", label: "Histórico", shortLabel: "Hist.", icon: History, hasAccess: historicoTreinamentoP.hasAnyAccess },
     ];
     return allSubTabs.filter(tab => tab.hasAccess);
-  }, [hasSolicitacaoAccess, hasAprovacaoAccess, hasEncerramentoAccess, hasHistoricoTreinamentoAccess]);
+  }, [solicitacaoP.hasAnyAccess, aprovacaoP.hasAnyAccess, encerramentoP.hasAnyAccess, historicoTreinamentoP.hasAnyAccess]);
 
   // Montar lista de sub-abas de Estágio visíveis
   const visibleEstagioSubTabs = useMemo(() => {
     const allSubTabs = [
-      { value: "solicitacao", label: "Solicitação", shortLabel: "Solic.", icon: FileEdit, hasAccess: hasSolicitacaoEstagioAccess },
-      { value: "pendentes", label: "Aprovação Pendente", shortLabel: "Aprov.", icon: ClipboardCheck, hasAccess: hasAprovacaoEstagioAccess },
-      { value: "encerramento", label: "Encerramento", shortLabel: "Enc.", icon: XCircle, hasAccess: hasEncerramentoEstagioAccess },
-      { value: "historico", label: "Histórico", shortLabel: "Hist.", icon: History, hasAccess: hasHistoricoEstagioAccess },
-      { value: "flyers", label: "Flyers", shortLabel: "Flyers", icon: Image, hasAccess: hasFlyersAccess },
+      { value: "solicitacao", label: "Solicitação", shortLabel: "Solic.", icon: FileEdit, hasAccess: solicitacaoEstagioP.hasAnyAccess },
+      { value: "pendentes", label: "Aprovação Pendente", shortLabel: "Aprov.", icon: ClipboardCheck, hasAccess: aprovacaoEstagioP.hasAnyAccess },
+      { value: "encerramento", label: "Encerramento", shortLabel: "Enc.", icon: XCircle, hasAccess: encerramentoEstagioP.hasAnyAccess },
+      { value: "historico", label: "Histórico", shortLabel: "Hist.", icon: History, hasAccess: historicoEstagioP.hasAnyAccess },
+      { value: "flyers", label: "Flyers", shortLabel: "Flyers", icon: Image, hasAccess: flyersP.hasAnyAccess },
     ];
     return allSubTabs.filter(tab => tab.hasAccess);
-  }, [hasSolicitacaoEstagioAccess, hasAprovacaoEstagioAccess, hasEncerramentoEstagioAccess, hasHistoricoEstagioAccess, hasFlyersAccess]);
+  }, [solicitacaoEstagioP.hasAnyAccess, aprovacaoEstagioP.hasAnyAccess, encerramentoEstagioP.hasAnyAccess, historicoEstagioP.hasAnyAccess, flyersP.hasAnyAccess]);
 
   // Montar lista de sub-sub-abas de Flyers visíveis
   const visibleFlyersSubTabs = useMemo(() => {
     const allSubTabs = [
-      { value: "grau5", label: "Estágio Grau V", shortLabel: "Grau V", hasAccess: hasGrau5Access },
-      { value: "grau6", label: "Estágio Grau VI", shortLabel: "Grau VI", hasAccess: hasGrau6Access },
-      { value: "fila", label: "Fila de Produção", shortLabel: "Fila", hasAccess: hasFilaAccess },
+      { value: "grau5", label: "Estágio Grau V", shortLabel: "Grau V", hasAccess: grau5P.hasAnyAccess },
+      { value: "grau6", label: "Estágio Grau VI", shortLabel: "Grau VI", hasAccess: grau6P.hasAnyAccess },
+      { value: "fila", label: "Fila de Produção", shortLabel: "Fila", hasAccess: filaP.hasAnyAccess },
     ];
     return allSubTabs.filter(tab => tab.hasAccess);
-  }, [hasGrau5Access, hasGrau6Access, hasFilaAccess]);
+  }, [grau5P.hasAnyAccess, grau6P.hasAnyAccess, filaP.hasAnyAccess]);
 
   // Determinar aba inicial baseado no que o usuário tem acesso
   const initialMainTab = useMemo(() => {
@@ -165,7 +186,7 @@ const GestaoADM = () => {
     }
   }, [loading, hasAccess, navigate]);
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -244,7 +265,7 @@ const GestaoADM = () => {
           </TabsList>
 
           <div className="mt-4">
-            {hasIntegrantesAccess && (
+            {integrantesP.hasAnyAccess && (
               <TabsContent value="integrantes" className="m-0">
                 {visibleIntegrantesSubTabs.length > 0 ? (
                   <Tabs defaultValue={initialIntegrantesSubTab} className="w-full">
@@ -262,13 +283,13 @@ const GestaoADM = () => {
                       ))}
                     </TabsList>
 
-                    {hasListaAccess && (
+                    {listaP.hasAnyAccess && (
                       <TabsContent value="lista" className="m-0">
-                        <ListaIntegrantes userId={user?.id} readOnly={listaReadOnly || integrantesReadOnly} />
+                        <ListaIntegrantes userId={user?.id} readOnly={listaP.isReadOnly || integrantesP.isReadOnly} />
                       </TabsContent>
                     )}
 
-                    {hasHistoricoIntegrantesAccess && (
+                    {historicoIntegrantesP.hasAnyAccess && (
                       <TabsContent value="historico" className="m-0">
                         <HistoricoAlteracoes />
                       </TabsContent>
@@ -288,16 +309,16 @@ const GestaoADM = () => {
               </TabsContent>
             )}
 
-            {hasInadimplenciaAccess && (
+            {inadimplenciaP.hasAnyAccess && (
               <TabsContent value="inadimplencia" className="m-0">
                 <div className="space-y-4">
-                  <MensalidadesUploadCard readOnly={inadimplenciaReadOnly} />
-                  <DashboardInadimplencia userId={user?.id} readOnly={inadimplenciaReadOnly} />
+                  <MensalidadesUploadCard readOnly={inadimplenciaP.isReadOnly} />
+                  <DashboardInadimplencia userId={user?.id} readOnly={inadimplenciaP.isReadOnly} />
                 </div>
               </TabsContent>
             )}
 
-            {hasTreinamentoAccess && (
+            {treinamentoP.hasAnyAccess && (
               <TabsContent value="treinamento" className="m-0">
                 {visibleTreinamentoSubTabs.length > 0 ? (
                   <Tabs defaultValue={initialTreinamentoSubTab} className="w-full">
@@ -315,27 +336,27 @@ const GestaoADM = () => {
                       ))}
                     </TabsList>
 
-                    {hasSolicitacaoAccess && (
+                    {solicitacaoP.hasAnyAccess && (
                       <TabsContent value="solicitacao" className="m-0">
-                        <SolicitacaoTreinamento userId={user?.id} readOnly={solicitacaoReadOnly || treinamentoReadOnly} />
+                        <SolicitacaoTreinamento userId={user?.id} readOnly={solicitacaoP.isReadOnly || treinamentoP.isReadOnly} />
                       </TabsContent>
                     )}
 
-                    {hasAprovacaoAccess && (
+                    {aprovacaoP.hasAnyAccess && (
                       <TabsContent value="pendentes" className="m-0">
-                        <AprovacoesPendentes userId={user?.id} readOnly={aprovacaoReadOnly || treinamentoReadOnly} />
+                        <AprovacoesPendentes userId={user?.id} readOnly={aprovacaoP.isReadOnly || treinamentoP.isReadOnly} />
                       </TabsContent>
                     )}
 
-                    {hasEncerramentoAccess && (
+                    {encerramentoP.hasAnyAccess && (
                       <TabsContent value="encerramento" className="m-0">
-                        <EncerramentoTreinamento userId={user?.id} readOnly={encerramentoReadOnly || treinamentoReadOnly} />
+                        <EncerramentoTreinamento userId={user?.id} readOnly={encerramentoP.isReadOnly || treinamentoP.isReadOnly} />
                       </TabsContent>
                     )}
 
-                    {hasHistoricoTreinamentoAccess && (
+                    {historicoTreinamentoP.hasAnyAccess && (
                       <TabsContent value="historico" className="m-0">
-                        <HistoricoTreinamento userId={user?.id} readOnly={historicoTreinamentoReadOnly || treinamentoReadOnly} />
+                        <HistoricoTreinamento userId={user?.id} readOnly={historicoTreinamentoP.isReadOnly || treinamentoP.isReadOnly} />
                       </TabsContent>
                     )}
                   </Tabs>
@@ -353,7 +374,7 @@ const GestaoADM = () => {
               </TabsContent>
             )}
 
-            {hasEstagioAccess && (
+            {estagioP.hasAnyAccess && (
               <TabsContent value="estagio" className="m-0">
                 {visibleEstagioSubTabs.length > 0 ? (
                   <Tabs defaultValue={initialEstagioSubTab} className="w-full">
@@ -371,31 +392,31 @@ const GestaoADM = () => {
                       ))}
                     </TabsList>
 
-                    {hasSolicitacaoEstagioAccess && (
+                    {solicitacaoEstagioP.hasAnyAccess && (
                       <TabsContent value="solicitacao" className="m-0">
-                        <SolicitacaoEstagio userId={user?.id} readOnly={solicitacaoEstagioReadOnly || estagioReadOnly} />
+                        <SolicitacaoEstagio userId={user?.id} readOnly={solicitacaoEstagioP.isReadOnly || estagioP.isReadOnly} />
                       </TabsContent>
                     )}
 
-                    {hasAprovacaoEstagioAccess && (
+                    {aprovacaoEstagioP.hasAnyAccess && (
                       <TabsContent value="pendentes" className="m-0">
-                        <AprovacaoPendenteEstagio userId={user?.id} readOnly={aprovacaoEstagioReadOnly || estagioReadOnly} />
+                        <AprovacaoPendenteEstagio userId={user?.id} readOnly={aprovacaoEstagioP.isReadOnly || estagioP.isReadOnly} />
                       </TabsContent>
                     )}
 
-                    {hasEncerramentoEstagioAccess && (
+                    {encerramentoEstagioP.hasAnyAccess && (
                       <TabsContent value="encerramento" className="m-0">
-                        <EncerramentoEstagio userId={user?.id} readOnly={encerramentoEstagioReadOnly || estagioReadOnly} />
+                        <EncerramentoEstagio userId={user?.id} readOnly={encerramentoEstagioP.isReadOnly || estagioP.isReadOnly} />
                       </TabsContent>
                     )}
 
-                    {hasHistoricoEstagioAccess && (
+                    {historicoEstagioP.hasAnyAccess && (
                       <TabsContent value="historico" className="m-0">
-                        <HistoricoEstagio userId={user?.id} readOnly={historicoEstagioReadOnly || estagioReadOnly} />
+                        <HistoricoEstagio userId={user?.id} readOnly={historicoEstagioP.isReadOnly || estagioP.isReadOnly} />
                       </TabsContent>
                     )}
 
-                    {hasFlyersAccess && (
+                    {flyersP.hasAnyAccess && (
                       <TabsContent value="flyers" className="m-0">
                         {visibleFlyersSubTabs.length > 0 ? (
                           <Tabs defaultValue={initialFlyersSubTab} className="w-full">
@@ -412,21 +433,21 @@ const GestaoADM = () => {
                               ))}
                             </TabsList>
 
-                            {hasGrau5Access && (
+                            {grau5P.hasAnyAccess && (
                               <TabsContent value="grau5" className="m-0">
-                                <EstagioGrauV readOnly={grau5ReadOnly || flyersReadOnly || estagioReadOnly} />
+                                <EstagioGrauV readOnly={grau5P.isReadOnly || flyersP.isReadOnly || estagioP.isReadOnly} />
                               </TabsContent>
                             )}
 
-                            {hasGrau6Access && (
+                            {grau6P.hasAnyAccess && (
                               <TabsContent value="grau6" className="m-0">
-                                <EstagioGrauVI readOnly={grau6ReadOnly || flyersReadOnly || estagioReadOnly} />
+                                <EstagioGrauVI readOnly={grau6P.isReadOnly || flyersP.isReadOnly || estagioP.isReadOnly} />
                               </TabsContent>
                             )}
 
-                            {hasFilaAccess && (
+                            {filaP.hasAnyAccess && (
                               <TabsContent value="fila" className="m-0">
-                                <FilaProducao readOnly={filaReadOnly || flyersReadOnly || estagioReadOnly} />
+                                <FilaProducao readOnly={filaP.isReadOnly || flyersP.isReadOnly || estagioP.isReadOnly} />
                               </TabsContent>
                             )}
                           </Tabs>
@@ -458,10 +479,10 @@ const GestaoADM = () => {
               </TabsContent>
             )}
 
-            {hasAniversariantesAccess && (
+            {aniversariantesP.hasAnyAccess && (
               <TabsContent value="aniversariantes" className="m-0">
                 <div className="space-y-4">
-                  <AniversariantesUploadCard readOnly={aniversariantesReadOnly} />
+                  <AniversariantesUploadCard readOnly={aniversariantesP.isReadOnly} />
                   <AniversariantesLista userId={user?.id} />
                 </div>
               </TabsContent>
