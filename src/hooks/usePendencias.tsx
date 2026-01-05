@@ -46,17 +46,37 @@ interface EventoCanceladoDetalhes {
   total_presencas: number;
 }
 
+interface TreinamentoAprovadorDetalhes {
+  solicitacao_id: string;
+  integrante_nome_colete: string;
+  integrante_cargo_atual: string;
+  cargo_treinamento: string;
+  divisao_texto: string;
+  regional_texto: string;
+  created_at: string;
+  aprovadores_pendentes: string[];
+}
+
+interface TreinamentoIntegranteDetalhes {
+  solicitacao_id: string;
+  cargo_treinamento: string;
+  divisao_texto: string;
+  diretor_divisao_nome: string;
+  diretor_divisao_cargo: string;
+  created_at: string;
+}
+
 interface Pendencia {
   nome_colete: string;
   divisao_texto: string;
-  tipo: 'mensalidade' | 'afastamento' | 'delta' | 'evento_cancelado';
+  tipo: 'mensalidade' | 'afastamento' | 'delta' | 'evento_cancelado' | 'treinamento_aprovador' | 'treinamento_integrante';
   detalhe: string;
   data_ref: string;
   registro_id: number;
-  detalhes_completos: MensalidadeDetalhes | AfastamentoDetalhes | DeltaDetalhes | EventoCanceladoDetalhes;
+  detalhes_completos: MensalidadeDetalhes | AfastamentoDetalhes | DeltaDetalhes | EventoCanceladoDetalhes | TreinamentoAprovadorDetalhes | TreinamentoIntegranteDetalhes;
 }
 
-export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes };
+export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes };
 
 export const usePendencias = (
   userId: string | undefined,
@@ -564,6 +584,104 @@ export const usePendencias = (
 
         console.log('[usePendencias] Eventos cancelados/removidos encontrados:', 
           todasPendencias.filter(p => p.tipo === 'evento_cancelado').length);
+      }
+
+      // 5. Pendências de Aprovação de Treinamento
+      console.log('[usePendencias] Buscando pendências de treinamento...');
+
+      // Buscar integrante_id do usuário logado
+      const { data: meuIntegrante } = await supabase
+        .from('integrantes_portal')
+        .select('id')
+        .eq('profile_id', userId)
+        .single();
+
+      const meuIntegranteId = meuIntegrante?.id;
+
+      if (meuIntegranteId) {
+        // Buscar solicitações em aprovação
+        const { data: solicitacoes } = await supabase
+          .from('solicitacoes_treinamento')
+          .select(`
+            id, created_at,
+            integrante:integrantes_portal!solicitacoes_treinamento_integrante_id_fkey(
+              id, nome_colete, divisao_texto, regional_texto, cargo_grau_texto
+            ),
+            cargo_treinamento:cargos!solicitacoes_treinamento_cargo_treinamento_id_fkey(nome)
+          `)
+          .eq('status', 'Em Aprovacao');
+
+        // Buscar aprovações dessas solicitações
+        const solicitacaoIds = solicitacoes?.map(s => s.id) || [];
+        
+        if (solicitacaoIds.length > 0) {
+          const { data: aprovacoes } = await supabase
+            .from('aprovacoes_treinamento')
+            .select('*')
+            .in('solicitacao_id', solicitacaoIds);
+
+          for (const sol of solicitacoes || []) {
+            const integrante = sol.integrante as any;
+            const cargoTreinamento = sol.cargo_treinamento as any;
+            const aprovacoesDoSol = aprovacoes?.filter(a => a.solicitacao_id === sol.id) || [];
+            
+            // Verificar se o usuário é o integrante em treinamento
+            if (integrante?.id === meuIntegranteId) {
+              // Buscar Diretor da Divisão do integrante
+              const diretorDivisao = aprovacoesDoSol.find(a => a.nivel === 1);
+              
+              todasPendencias.push({
+                registro_id: 0,
+                nome_colete: 'Treinamento aguardando aprovação',
+                divisao_texto: integrante?.divisao_texto || '',
+                tipo: 'treinamento_integrante',
+                detalhe: 'Seu treinamento ainda não foi iniciado',
+                data_ref: sol.created_at,
+                detalhes_completos: {
+                  solicitacao_id: sol.id,
+                  cargo_treinamento: cargoTreinamento?.nome || 'N/A',
+                  divisao_texto: integrante?.divisao_texto || 'N/A',
+                  diretor_divisao_nome: diretorDivisao?.aprovador_nome_colete || 'N/A',
+                  diretor_divisao_cargo: diretorDivisao?.aprovador_cargo || 'N/A',
+                  created_at: sol.created_at
+                }
+              });
+            }
+            
+            // Verificar se o usuário é um dos aprovadores
+            const souAprovador = aprovacoesDoSol.some(
+              a => a.aprovador_integrante_id === meuIntegranteId
+            );
+            
+            if (souAprovador) {
+              const aprovadoresPendentes = aprovacoesDoSol
+                .filter(a => a.status === 'pendente')
+                .map(a => a.aprovador_nome_colete || 'N/A');
+              
+              todasPendencias.push({
+                registro_id: 0,
+                nome_colete: 'Pendência de Aprovação de Treinamento',
+                divisao_texto: integrante?.divisao_texto || '',
+                tipo: 'treinamento_aprovador',
+                detalhe: 'Aguardando aprovações',
+                data_ref: sol.created_at,
+                detalhes_completos: {
+                  solicitacao_id: sol.id,
+                  integrante_nome_colete: integrante?.nome_colete || 'N/A',
+                  integrante_cargo_atual: integrante?.cargo_grau_texto || 'N/A',
+                  cargo_treinamento: cargoTreinamento?.nome || 'N/A',
+                  divisao_texto: integrante?.divisao_texto || 'N/A',
+                  regional_texto: integrante?.regional_texto || 'N/A',
+                  created_at: sol.created_at,
+                  aprovadores_pendentes: aprovadoresPendentes
+                }
+              });
+            }
+          }
+        }
+        
+        console.log('[usePendencias] Pendências de treinamento encontradas:', 
+          todasPendencias.filter(p => p.tipo === 'treinamento_aprovador' || p.tipo === 'treinamento_integrante').length);
       }
 
       // Ordenar: deltas críticos primeiro, depois eventos cancelados, depois por data

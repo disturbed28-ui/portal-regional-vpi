@@ -20,7 +20,7 @@ import {
   AlertTriangle,
   ArrowRight
 } from "lucide-react";
-import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes } from "@/hooks/usePendencias";
+import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes } from "@/hooks/usePendencias";
 
 interface PendenciasModalProps {
   pendencias: Pendencia[];
@@ -429,6 +429,125 @@ const EventoCanceladoDetalhesCard = ({ detalhes }: { detalhes: EventoCanceladoDe
   );
 };
 
+// Card para Pendência de Treinamento - Aprovadores
+const TreinamentoAprovadorDetalhesCard = ({ detalhes }: { detalhes: TreinamentoAprovadorDetalhes }) => {
+  const navigate = useNavigate();
+  const formatarData = (data: string) => 
+    format(new Date(data), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+
+  return (
+    <Card className="bg-background/50 border-purple-500">
+      <CardContent className="p-4 space-y-3">
+        {/* Título */}
+        <div className="flex items-center gap-2 p-3 bg-purple-50 dark:bg-purple-950/20 rounded border border-purple-200 dark:border-purple-800">
+          <span className="text-2xl">🎓</span>
+          <div className="flex-1">
+            <p className="font-semibold text-purple-700 dark:text-purple-400">
+              Pendência de Aprovação de Treinamento
+            </p>
+            <p className="text-xs text-muted-foreground">Aguardando aprovações</p>
+          </div>
+        </div>
+
+        {/* Dados do Integrante */}
+        <div className="space-y-2 text-sm">
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Integrante:</span>
+            <span className="font-medium">{detalhes.integrante_nome_colete}</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Cargo Treinamento:</span>
+            <span className="font-medium">{detalhes.cargo_treinamento}</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Divisão / Regional:</span>
+            <span className="font-medium">{detalhes.divisao_texto}</span>
+          </div>
+        </div>
+
+        {/* Aprovadores Pendentes */}
+        {detalhes.aprovadores_pendentes.length > 0 && (
+          <div className="p-2 bg-amber-50 dark:bg-amber-950/20 rounded border border-amber-200 dark:border-amber-800">
+            <p className="text-xs font-semibold mb-1">Aprovações Pendentes:</p>
+            <div className="flex flex-wrap gap-1">
+              {detalhes.aprovadores_pendentes.map((nome, idx) => (
+                <Badge key={idx} variant="outline" className="text-xs">
+                  {nome}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Botão de Ação */}
+        <Button 
+          size="sm" 
+          variant="outline"
+          className="w-full"
+          onClick={() => navigate('/gestao-adm?tab=pendentes')}
+        >
+          <ArrowRight className="h-4 w-4 mr-2" />
+          Ir para Aprovações Pendentes
+        </Button>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Card para Pendência de Treinamento - Integrante
+const TreinamentoIntegranteDetalhesCard = ({ detalhes }: { detalhes: TreinamentoIntegranteDetalhes }) => {
+  return (
+    <Card className="bg-background/50 border-blue-500">
+      <CardContent className="p-4 space-y-3">
+        {/* Título */}
+        <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-950/20 rounded border border-blue-200 dark:border-blue-800">
+          <span className="text-2xl">🎓</span>
+          <div className="flex-1">
+            <p className="font-semibold text-blue-700 dark:text-blue-400">
+              Treinamento aguardando aprovação
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Seu treinamento ainda não foi aprovado e ainda não foi iniciado.
+            </p>
+          </div>
+        </div>
+
+        {/* Dados do Treinamento */}
+        <div className="space-y-2 text-sm">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Cargo em Treinamento:</span>
+            <span className="font-medium">{detalhes.cargo_treinamento}</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Divisão:</span>
+            <span className="font-medium">{detalhes.divisao_texto}</span>
+          </div>
+        </div>
+
+        {/* Orientação */}
+        <div className="p-3 bg-amber-50 dark:bg-amber-950/20 rounded border border-amber-200 dark:border-amber-800">
+          <p className="text-xs text-amber-800 dark:text-amber-300">
+            <strong>Orientação:</strong> Acione seu Diretor de Divisão para acompanhamento.
+          </p>
+          <div className="mt-2 flex items-center gap-2">
+            <User className="h-4 w-4 text-amber-600" />
+            <span className="text-sm font-medium">{detalhes.diretor_divisao_nome}</span>
+            <span className="text-xs text-muted-foreground">({detalhes.diretor_divisao_cargo})</span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 interface PendenciaItemProps {
   pendencia: Pendencia;
   itemId: string;
@@ -442,6 +561,8 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
   const isAfastamento = pendencia.tipo === 'afastamento';
   const isDelta = pendencia.tipo === 'delta';
   const isEventoCancelado = pendencia.tipo === 'evento_cancelado';
+  const isTreinamentoAprovador = pendencia.tipo === 'treinamento_aprovador';
+  const isTreinamentoIntegrante = pendencia.tipo === 'treinamento_integrante';
   const detalhes = pendencia.detalhes_completos;
   
   // LOG DE DEBUG TEMPORÁRIO
@@ -465,6 +586,8 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
     if (isMensalidade) return 'border-red-500';
     if (isAfastamento) return 'border-orange-500';
     if (isEventoCancelado) return 'border-amber-500';
+    if (isTreinamentoAprovador) return 'border-purple-500';
+    if (isTreinamentoIntegrante) return 'border-blue-500';
     if (isDelta) {
       const deltaDetalhes = detalhes as DeltaDetalhes | null;
       if (!deltaDetalhes) return 'border-gray-500';
@@ -477,6 +600,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
   const getIcon = () => {
     if (isMensalidade) return '💰';
     if (isAfastamento) return '🏥';
+    if (isTreinamentoAprovador || isTreinamentoIntegrante) return '🎓';
     if (isEventoCancelado) {
       const eventDetalhes = detalhes as EventoCanceladoDetalhes;
       return eventDetalhes?.status === 'cancelled' ? '📅' : '❌';
@@ -500,6 +624,8 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
     if (isMensalidade) return 'Mensalidade';
     if (isAfastamento) return 'Afastamento';
     if (isEventoCancelado) return 'Evento Cancelado';
+    if (isTreinamentoAprovador) return 'Aprovação Treinamento';
+    if (isTreinamentoIntegrante) return 'Treinamento';
     if (isDelta) return 'Anomalia';
     return 'Pendência';
   };
@@ -603,6 +729,10 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
                 </CardContent>
               </Card>
             )}
+            
+            {/* Cards de Treinamento */}
+            {isTreinamentoAprovador && detalhes && <TreinamentoAprovadorDetalhesCard detalhes={detalhes as TreinamentoAprovadorDetalhes} />}
+            {isTreinamentoIntegrante && detalhes && <TreinamentoIntegranteDetalhesCard detalhes={detalhes as TreinamentoIntegranteDetalhes} />}
             
             {/* Botão Resolver para Anomalias */}
             {isDelta && (
