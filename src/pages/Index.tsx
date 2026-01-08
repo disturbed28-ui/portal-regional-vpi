@@ -14,7 +14,7 @@ import { useLinksUteis } from "@/hooks/useLinksUteis";
 import { removeAccents } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { QRCodeSVG } from "qrcode.react";
-import { QrCode, X } from "lucide-react";
+import { QrCode, X, Smartphone } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAdminCalendarSync } from "@/hooks/useAdminCalendarSync";
 
@@ -360,6 +360,16 @@ const Index = () => {
               </Button>
             )}
           </div>
+
+          {/* Botão Instalar App */}
+          <Button
+            onClick={() => navigate("/instalar")}
+            variant="outline"
+            className="w-full h-10 text-sm rounded-xl border-primary/50 text-primary hover:bg-primary/10"
+          >
+            <Smartphone className="w-4 h-4 mr-2" />
+            Instalar no Celular
+          </Button>
 
           {/* Footer - dentro do card, no bottom */}
           <div className="mt-auto pt-4 border-t border-border">
