@@ -5,7 +5,7 @@ import { useScreenPermissionsBatch, getDefaultPermission } from "@/hooks/useScre
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Users, DollarSign, GraduationCap, Cake, Clock, FileEdit, History, ClipboardCheck, XCircle, List, Award, Image } from "lucide-react";
+import { ArrowLeft, Users, DollarSign, GraduationCap, Cake, Clock, FileEdit, History, ClipboardCheck, XCircle, List, Award, Image, RefreshCw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { MensalidadesUploadCard } from "@/components/admin/MensalidadesUploadCard";
 import { DashboardInadimplencia } from "@/components/relatorios/DashboardInadimplencia";
@@ -17,6 +17,7 @@ import { AprovacoesPendentes } from "@/components/admin/treinamento/AprovacoesPe
 import { EncerramentoTreinamento } from "@/components/admin/treinamento/EncerramentoTreinamento";
 import { ListaIntegrantes } from "@/components/gestao/integrantes/ListaIntegrantes";
 import { HistoricoAlteracoes } from "@/components/gestao/integrantes/HistoricoAlteracoes";
+import { AtualizacaoIntegrantes } from "@/components/gestao/integrantes/AtualizacaoIntegrantes";
 import { SolicitacaoEstagio } from "@/components/admin/estagio/SolicitacaoEstagio";
 import { AprovacaoPendenteEstagio } from "@/components/admin/estagio/AprovacaoPendenteEstagio";
 import { EncerramentoEstagio } from "@/components/admin/estagio/EncerramentoEstagio";
@@ -74,6 +75,7 @@ const GestaoADM = () => {
   // Permissões das sub-abas de Integrantes
   const listaP = getPerm('/gestao-adm-integrantes-lista');
   const historicoIntegrantesP = getPerm('/gestao-adm-integrantes-historico');
+  const atualizacaoP = getPerm('/gestao-adm-integrantes-atualizacao');
 
   // Permissões das sub-abas de Treinamento
   const solicitacaoP = getPerm('/gestao-adm-treinamento-solicitacao');
@@ -110,9 +112,10 @@ const GestaoADM = () => {
     const allSubTabs = [
       { value: "lista", label: "Lista", shortLabel: "Lista", icon: List, hasAccess: listaP.hasAnyAccess },
       { value: "historico", label: "Histórico", shortLabel: "Hist.", icon: History, hasAccess: historicoIntegrantesP.hasAnyAccess },
+      { value: "atualizacao", label: "Atualização", shortLabel: "Atual.", icon: RefreshCw, hasAccess: atualizacaoP.hasAnyAccess },
     ];
     return allSubTabs.filter(tab => tab.hasAccess);
-  }, [listaP.hasAnyAccess, historicoIntegrantesP.hasAnyAccess]);
+  }, [listaP.hasAnyAccess, historicoIntegrantesP.hasAnyAccess, atualizacaoP.hasAnyAccess]);
 
   // Montar lista de sub-abas de Treinamento visíveis
   const visibleTreinamentoSubTabs = useMemo(() => {
@@ -293,6 +296,12 @@ const GestaoADM = () => {
                     {historicoIntegrantesP.hasAnyAccess && (
                       <TabsContent value="historico" className="m-0">
                         <HistoricoAlteracoes />
+                      </TabsContent>
+                    )}
+
+                    {atualizacaoP.hasAnyAccess && (
+                      <TabsContent value="atualizacao" className="m-0">
+                        <AtualizacaoIntegrantes userId={user?.id} readOnly={atualizacaoP.isReadOnly || integrantesP.isReadOnly} />
                       </TabsContent>
                     )}
                   </Tabs>
