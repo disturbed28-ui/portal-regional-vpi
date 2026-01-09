@@ -402,7 +402,7 @@ export function useConsolidacaoIntegrantes(userId?: string) {
   }, [lote, userId, motivosRemovidos]);
 
   /**
-   * Obter dados para exportação
+   * Obter dados para exportação (itens SELECIONADOS para importação)
    */
   const obterDadosExportacao = useCallback(() => {
     if (!lote.delta || !lote.consolidacao) return [];
@@ -473,6 +473,36 @@ export function useConsolidacaoIntegrantes(userId?: string) {
     return dados;
   }, [lote, motivosRemovidos]);
 
+  /**
+   * Exportar dados da CONSOLIDAÇÃO BRUTA (Arquivo A + B antes do delta)
+   * Permite verificar a tratativa feita entre os arquivos
+   */
+  const exportarConsolidacao = useCallback(() => {
+    if (!lote.consolidacao) return [];
+    
+    return lote.consolidacao.registros.map((r, idx) => ({
+      linha: idx + 1,
+      status: r.encontrado ? 'ENCONTRADO' : 'NAO_ENCONTRADO',
+      id_integrante: r.id_integrante || '',
+      nome_colete: r.nome_colete,
+      comando: r.comando,
+      regional: r.regional,
+      divisao: r.divisao,
+      cargo_grau: r.cargo_grau,
+      cargo_estagio: r.cargo_estagio || '',
+      data_entrada: r.data_entrada || '',
+      sgt_armas: r.sgt_armas ? 'S' : 'N',
+      caveira: r.caveira ? 'S' : 'N',
+      caveira_suplente: r.caveira_suplente ? 'S' : 'N',
+      batedor: r.batedor ? 'S' : 'N',
+      ursinho: r.ursinho ? 'S' : 'N',
+      lobo: r.lobo ? 'S' : 'N',
+      tem_moto: r.tem_moto ? 'S' : 'N',
+      tem_carro: r.tem_carro ? 'S' : 'N',
+      origem: r.origem_id
+    }));
+  }, [lote.consolidacao]);
+
   return {
     lote,
     loading,
@@ -484,6 +514,7 @@ export function useConsolidacaoIntegrantes(userId?: string) {
     definirMotivoRemovido,
     executarImportacao,
     obterDadosExportacao,
+    exportarConsolidacao,
     resetar
   };
 }

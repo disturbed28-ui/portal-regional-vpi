@@ -8,9 +8,10 @@ interface ExportarDadosProcessadosProps {
   lote: LoteProcessamento;
   dados: any[];
   disabled?: boolean;
+  label?: string;
 }
 
-export function ExportarDadosProcessados({ lote, dados, disabled = false }: ExportarDadosProcessadosProps) {
+export function ExportarDadosProcessados({ lote, dados, disabled = false, label }: ExportarDadosProcessadosProps) {
   const handleExportar = () => {
     try {
       if (dados.length === 0) {
@@ -83,7 +84,7 @@ export function ExportarDadosProcessados({ lote, dados, disabled = false }: Expo
       disabled={disabled || dados.length === 0}
     >
       <Download className="h-4 w-4 mr-2" />
-      Exportar Dados Processados ({dados.length})
+      {label || `Exportar Dados Processados (${dados.length})`}
     </Button>
   );
 }
