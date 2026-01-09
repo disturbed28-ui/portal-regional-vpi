@@ -27,6 +27,7 @@ export const useScreenPermissions = () => {
   const [permissions, setPermissions] = useState<ScreenPermission[]>([]);
   const [loading, setLoading] = useState(true);
   const [operationLoading, setOperationLoading] = useState<string | null>(null);
+  const [hasUnsyncedChanges, setHasUnsyncedChanges] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -163,7 +164,7 @@ export const useScreenPermissions = () => {
           title: "Permissão removida",
           description: `${screenName} - ${role}`,
         });
-        fetchData();
+        setHasUnsyncedChanges(true);
       }
     } else {
       // Atualização otimista - adiciona na UI primeiro
@@ -212,7 +213,7 @@ export const useScreenPermissions = () => {
           title: "Permissão adicionada",
           description: `${screenName} - ${role}`,
         });
-        fetchData();
+        setHasUnsyncedChanges(true);
       }
     }
 
@@ -228,14 +229,20 @@ export const useScreenPermissions = () => {
     return operationLoading === `${screenId}-${role}`;
   };
 
+  const handleRefetch = async () => {
+    await fetchData();
+    setHasUnsyncedChanges(false);
+  };
+
   return {
     screens,
     permissions,
     loading,
     operationLoading,
+    hasUnsyncedChanges,
     togglePermission,
     hasPermission,
     isOperationLoading,
-    refetch: fetchData,
+    refetch: handleRefetch,
   };
 };

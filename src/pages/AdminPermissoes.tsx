@@ -11,7 +11,7 @@ import {
   Shield, Loader2, RefreshCw, ArrowLeft, 
   Settings, FileText, Users, Calendar, Heart, 
   Link2, ClipboardList, LayoutDashboard, GraduationCap,
-  UserCog, Briefcase, ChevronRight
+  UserCog, Briefcase, ChevronRight, AlertTriangle
 } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
@@ -240,7 +240,7 @@ export default function AdminPermissoes() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { hasAccess, loading: loadingAccess } = useAdminAccess();
-  const { screens, loading, togglePermission, hasPermission, isOperationLoading, refetch } = useScreenPermissions();
+  const { screens, loading, togglePermission, hasPermission, isOperationLoading, refetch, hasUnsyncedChanges } = useScreenPermissions();
   const [refreshing, setRefreshing] = useState(false);
 
   // Agrupar telas por bloco
@@ -301,6 +301,26 @@ export default function AdminPermissoes() {
           <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
         </Button>
       </div>
+
+      {hasUnsyncedChanges && (
+        <div className="bg-destructive text-destructive-foreground px-4 py-3 rounded-lg flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5" />
+            <span className="font-medium">
+              Há alterações pendentes. Clique em "Sincronizar" para atualizar.
+            </span>
+          </div>
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            onClick={handleRefresh}
+            disabled={refreshing}
+          >
+            <RefreshCw className={`h-4 w-4 mr-1 ${refreshing ? 'animate-spin' : ''}`} />
+            Sincronizar
+          </Button>
+        </div>
+      )}
 
       <Card>
         <CardHeader>
