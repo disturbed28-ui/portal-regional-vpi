@@ -49,23 +49,27 @@ function normalizeColumnName(name: string): string {
 
 /**
  * Busca valor em objeto com variações de nome de coluna
+ * Tenta busca exata primeiro, depois normalizada
  */
 function findColumnValue(row: any, ...variations: string[]): any {
   // Busca exata primeiro
   for (const variation of variations) {
-    if (row[variation] !== undefined) {
+    if (row[variation] !== undefined && row[variation] !== '') {
       return row[variation];
     }
   }
   
-  // Busca normalizada
+  // Busca normalizada (sem underscores, espaços, case-insensitive)
   const rowKeys = Object.keys(row);
   const normalizedVariations = variations.map(v => normalizeColumnName(v));
   
   for (const key of rowKeys) {
     const normalizedKey = normalizeColumnName(key);
     if (normalizedVariations.includes(normalizedKey)) {
-      return row[key];
+      const value = row[key];
+      if (value !== undefined && value !== '') {
+        return value;
+      }
     }
   }
   
@@ -96,9 +100,26 @@ export function gerarLoteId(): string {
 }
 
 /**
- * Parseia Arquivo B (dados completos sem IDs)
+ * Colunas esperadas do Arquivo B (dados completos)
+ * O Arquivo B é exportado do sistema e contém todas as colunas de dados
  */
-async function parseArquivoB(file: File): Promise<{ registros: any[]; colunas: string[] }> {
+const COLUNAS_ARQUIVO_B = [
+  'NomeColete', 'Nome_Colete', 'nome_colete',
+  'cargo_grau', 'Cargo_Grau', 'CargoGrau',
+  'SgtArmas', 'sgt_armas',
+  'Caveira', 'caveira',
+  'Batedor', 'batedor',
+  'Divisão', 'Divisao', 'divisao'
+];
+
+/**
+ * Parseia Arquivo B (dados completos)
+ * Arquivo B tem formato tabular com cabeçalho na primeira linha
+ * 
+ * Colunas esperadas: NomeColete, cargo_grau, Estagio, SgtArmas, Caveira, 
+ * CaveiraSuplente, Batedor, Ursinho, Lobo, TemMoto, TemCarro, Comando, Regional, Divisão
+ */
+async function parseArquivoB(file: File): Promise<{ registros: any[]; colunas: string[]; valido: boolean; erroValidacao?: string }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
@@ -108,16 +129,55 @@ async function parseArquivoB(file: File): Promise<{ registros: any[]; colunas: s
         const workbook = XLSX.read(data, { type: 'binary' });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(sheet);
+        
+        // Converter para JSON com cabeçalho automático
+        const jsonData = XLSX.utils.sheet_to_json(sheet, { 
+          defval: '',  // Valor padrão para células vazias
+          raw: false   // Converter números para string
+        });
         
         const colunas = jsonData.length > 0 ? Object.keys(jsonData[0] as any) : [];
         
+        console.log('[parseArquivoB] Nome do arquivo:', file.name);
         console.log('[parseArquivoB] Total registros:', jsonData.length);
-        console.log('[parseArquivoB] Colunas:', colunas);
+        console.log('[parseArquivoB] Colunas detectadas:', colunas);
+        
+        // DEBUG: Mostrar primeira linha para verificar dados
+        if (jsonData.length > 0) {
+          console.log('[parseArquivoB] Primeira linha (amostra):', jsonData[0]);
+        }
+        
+        // Validar se o arquivo parece ser o Arquivo B (tem colunas esperadas)
+        const temColunasB = colunas.some(col => 
+          COLUNAS_ARQUIVO_B.some(esperada => 
+            normalizeColumnName(col) === normalizeColumnName(esperada)
+          )
+        );
+        
+        // Verificar se parece mais com Arquivo A (hierárquico)
+        const pareceArquivoA = colunas.length <= 3 || 
+          colunas.some(col => col.toLowerCase().includes('hierarquia')) ||
+          (jsonData.length > 0 && typeof (jsonData[0] as any)[colunas[0]] === 'string' && 
+           (jsonData[0] as any)[colunas[0]].includes('REGIONAL'));
+        
+        if (!temColunasB || pareceArquivoA) {
+          console.warn('[parseArquivoB] AVISO: Arquivo pode não ser o Arquivo B correto!');
+          console.warn('[parseArquivoB] Colunas esperadas incluem: NomeColete, cargo_grau, SgtArmas, Divisão');
+          console.warn('[parseArquivoB] Colunas recebidas:', colunas);
+          
+          resolve({
+            registros: jsonData as any[],
+            colunas,
+            valido: false,
+            erroValidacao: `Arquivo B inválido. Colunas esperadas: NomeColete, cargo_grau, Divisão. Colunas recebidas: ${colunas.join(', ')}`
+          });
+          return;
+        }
         
         resolve({
           registros: jsonData as any[],
-          colunas
+          colunas,
+          valido: true
         });
         
       } catch (error) {
@@ -139,15 +199,30 @@ export async function consolidarArquivos(
   arquivoA: File,
   arquivoB: File
 ): Promise<ConsolidacaoResult> {
+  console.log('[consolidarArquivos] ========================================');
   console.log('[consolidarArquivos] Iniciando consolidação...');
+  console.log('[consolidarArquivos] Arquivo A:', arquivoA.name, `(${(arquivoA.size / 1024).toFixed(1)} KB)`);
+  console.log('[consolidarArquivos] Arquivo B:', arquivoB.name, `(${(arquivoB.size / 1024).toFixed(1)} KB)`);
   
   // 1. Parsear Arquivo A (hierarquia com IDs)
   const resultadoA = await parseArquivoA(arquivoA);
   console.log('[consolidarArquivos] Arquivo A parseado:', resultadoA.estatisticas);
+  console.log('[consolidarArquivos] Dicionário criado com', resultadoA.dicionario.size, 'entradas');
+  
+  // DEBUG: Mostrar algumas chaves do dicionário
+  const chavesExemplo = Array.from(resultadoA.dicionario.keys()).slice(0, 3);
+  console.log('[consolidarArquivos] Exemplos de chaves no dicionário:', chavesExemplo);
   
   // 2. Parsear Arquivo B (dados completos)
   const resultadoB = await parseArquivoB(arquivoB);
   console.log('[consolidarArquivos] Arquivo B parseado:', resultadoB.registros.length, 'registros');
+  console.log('[consolidarArquivos] Arquivo B válido:', resultadoB.valido);
+  
+  if (!resultadoB.valido) {
+    console.error('[consolidarArquivos] ERRO: Arquivo B não é válido!');
+    console.error('[consolidarArquivos]', resultadoB.erroValidacao);
+    throw new Error(resultadoB.erroValidacao || 'Arquivo B inválido');
+  }
   
   // >>> CORREÇÃO VBA: Regional PADRÃO vem do Arquivo A <<<
   // A macro VBA extrai a regional do Arquivo A (hierarquia) e usa como padrão
@@ -167,20 +242,43 @@ export async function consolidarArquivos(
   for (let i = 0; i < resultadoB.registros.length; i++) {
     const row = resultadoB.registros[i];
     
-    // Extrair campos do Arquivo B
-    const comando = findColumnValue(row, 'comando', 'Comando', 'COMANDO') || '';
-    const regionalArquivoB = findColumnValue(row, 'regional', 'Regional', 'REGIONAL') || '';
-    const divisaoArquivoB = findColumnValue(row, 'divisao', 'Divisao', 'Divisão', 'DIVISAO') || '';
-    const nomeColete = findColumnValue(row, 'nome_colete', 'Nome_Colete', 'NomeColete', 'Nome Colete', 'nome', 'Nome') || '';
+    // DEBUG: Mostrar primeiras linhas para verificar extração
+    if (i < 3) {
+      console.log(`[consolidarArquivos] Linha ${i + 1} - Raw:`, row);
+    }
     
-    // Cargo pode vir como "Cargo" ou "cargo_grau" - renomear conforme macro
-    const cargoGrau = findColumnValue(row, 'cargo_grau', 'Cargo_Grau', 'CargoGrau', 'cargo', 'Cargo', 'CARGO') || '';
+    // Extrair campos do Arquivo B (múltiplas variações de nomes de colunas)
+    const comando = findColumnValue(row, 'Comando', 'comando', 'COMANDO') || '';
+    const regionalArquivoB = findColumnValue(row, 'Regional', 'regional', 'REGIONAL') || '';
+    const divisaoArquivoB = findColumnValue(row, 'Divisão', 'Divisao', 'divisao', 'DIVISAO') || '';
+    const nomeColete = findColumnValue(row, 'NomeColete', 'Nome_Colete', 'nome_colete', 'Nome Colete', 'Nome', 'nome') || '';
     
-    // Estágio pode vir como "CargoEstagio" ou "Estagio"
-    const cargoEstagio = findColumnValue(row, 'cargo_estagio', 'Cargo_Estagio', 'CargoEstagio', 'Estagio', 'estagio') || '';
+    // Cargo pode vir como "cargo_grau" ou "Cargo"
+    const cargoGrau = findColumnValue(row, 'cargo_grau', 'Cargo_Grau', 'CargoGrau', 'Cargo', 'cargo', 'CARGO') || '';
+    
+    // Estágio pode vir como "Estagio" ou "CargoEstagio"
+    const cargoEstagio = findColumnValue(row, 'Estagio', 'estagio', 'cargo_estagio', 'Cargo_Estagio', 'CargoEstagio') || '';
+    
+    // DEBUG: Mostrar valores extraídos das primeiras linhas
+    if (i < 3) {
+      console.log(`[consolidarArquivos] Linha ${i + 1} - Extraído:`, {
+        nomeColete, divisaoArquivoB, regionalArquivoB, cargoGrau
+      });
+    }
+    
+    // Pular linhas sem nome (podem ser cabeçalhos ou linhas vazias)
+    if (!nomeColete || nomeColete.toLowerCase() === 'nomecolete' || nomeColete.toLowerCase() === 'nome_colete') {
+      console.log(`[consolidarArquivos] Linha ${i + 1} ignorada (sem nome ou é cabeçalho)`);
+      continue;
+    }
     
     // 4. Buscar no dicionário do Arquivo A pelo nome + divisão
     const encontrado = buscarNoDicionario(resultadoA.dicionario, nomeColete, divisaoArquivoB);
+    
+    // DEBUG: Mostrar resultado da busca para primeiras linhas
+    if (i < 3) {
+      console.log(`[consolidarArquivos] Linha ${i + 1} - Busca no dicionário:`, encontrado ? 'ENCONTRADO' : 'NÃO ENCONTRADO');
+    }
     
     // >>> CORREÇÃO VBA: Regional usa Arquivo B OU fallback do Arquivo A <<<
     // A macro VBA prioriza a regional já existente, senão usa a do Arquivo A
@@ -196,16 +294,27 @@ export async function consolidarArquivos(
       regionaisSet.add(regionalFinal);
     }
     
-    // 5. Montar registro consolidado
+    // 5. Verificar se Arquivo B já tem id_integrante e data_entrada (arquivo já processado/COMPLETO)
+    // Isso acontece quando o usuário usa um arquivo que já foi consolidado anteriormente
+    const idArquivoB = findColumnValue(row, 'id_integrante', 'Id_Integrante', 'ID_Integrante', 'ID');
+    const dataArquivoB = findColumnValue(row, 'data_entrada', 'Data_Entrada', 'DataEntrada');
+    
+    // Determinar ID final: prioriza Arquivo A, mas usa B se existir
+    const idFinal = encontrado?.id || (idArquivoB ? parseInt(String(idArquivoB)) : 0);
+    
+    // Determinar data final: prioriza Arquivo A, mas usa B se existir
+    const dataFinal = encontrado?.data || dataArquivoB || undefined;
+    
+    // 6. Montar registro consolidado
     const registro: RegistroConsolidado = {
       comando: String(comando).trim(),
       regional: regionalFinal,  // Usa fallback do Arquivo A
       divisao: divisaoFinal,    // Usa divisão completa do Arquivo A
-      id_integrante: encontrado?.id || 0,
+      id_integrante: idFinal,
       nome_colete: String(nomeColete).trim(),
       cargo_grau: String(cargoGrau).trim(),
       cargo_estagio: cargoEstagio ? String(cargoEstagio).trim() : undefined,
-      data_entrada: encontrado?.data || undefined,
+      data_entrada: dataFinal,
       sgt_armas: converterBool(findColumnValue(row, 'SgtArmas', 'sgt_armas', 'Sgt_Armas')),
       caveira: converterBool(findColumnValue(row, 'Caveira', 'caveira')),
       caveira_suplente: converterBool(findColumnValue(row, 'CaveiraSuplente', 'caveira_suplente', 'Caveira_Suplente')),
@@ -214,8 +323,8 @@ export async function consolidarArquivos(
       lobo: converterBool(findColumnValue(row, 'Lobo', 'lobo')),
       tem_moto: converterBool(findColumnValue(row, 'TemMoto', 'tem_moto', 'Tem_Moto')),
       tem_carro: converterBool(findColumnValue(row, 'TemCarro', 'tem_carro', 'Tem_Carro')),
-      encontrado: !!encontrado,
-      origem_id: encontrado ? 'arquivo_a' : 'nao_encontrado'
+      encontrado: !!encontrado || !!idArquivoB,  // Considera encontrado se tem ID do B
+      origem_id: encontrado ? 'arquivo_a' : (idArquivoB ? 'arquivo_a' : 'nao_encontrado')
     };
     
     registros.push(registro);
