@@ -31,6 +31,7 @@ const ALL_ROUTES = [
   '/gestao-adm-integrantes',
   '/gestao-adm-integrantes-lista',
   '/gestao-adm-integrantes-historico',
+  '/gestao-adm-integrantes-atualizacao',
   '/gestao-adm-inadimplencia',
   '/gestao-adm-treinamento',
   '/gestao-adm-treinamento-solicitacao',
