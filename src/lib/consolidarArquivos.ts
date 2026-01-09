@@ -149,18 +149,28 @@ export async function consolidarArquivos(
   const resultadoB = await parseArquivoB(arquivoB);
   console.log('[consolidarArquivos] Arquivo B parseado:', resultadoB.registros.length, 'registros');
   
+  // >>> CORREÇÃO VBA: Regional PADRÃO vem do Arquivo A <<<
+  // A macro VBA extrai a regional do Arquivo A (hierarquia) e usa como padrão
+  const regionalPadrao = resultadoA.estatisticas.regionais[0] || '';
+  console.log('[consolidarArquivos] Regional padrão do Arquivo A:', regionalPadrao);
+  
   // 3. Consolidar
   const registros: RegistroConsolidado[] = [];
   const naoEncontrados: NaoEncontrado[] = [];
   const regionaisSet = new Set<string>();
+  
+  // Adicionar regional do Arquivo A às estatísticas
+  if (regionalPadrao) {
+    regionaisSet.add(regionalPadrao);
+  }
   
   for (let i = 0; i < resultadoB.registros.length; i++) {
     const row = resultadoB.registros[i];
     
     // Extrair campos do Arquivo B
     const comando = findColumnValue(row, 'comando', 'Comando', 'COMANDO') || '';
-    const regional = findColumnValue(row, 'regional', 'Regional', 'REGIONAL') || '';
-    const divisao = findColumnValue(row, 'divisao', 'Divisao', 'Divisão', 'DIVISAO') || '';
+    const regionalArquivoB = findColumnValue(row, 'regional', 'Regional', 'REGIONAL') || '';
+    const divisaoArquivoB = findColumnValue(row, 'divisao', 'Divisao', 'Divisão', 'DIVISAO') || '';
     const nomeColete = findColumnValue(row, 'nome_colete', 'Nome_Colete', 'NomeColete', 'Nome Colete', 'nome', 'Nome') || '';
     
     // Cargo pode vir como "Cargo" ou "cargo_grau" - renomear conforme macro
@@ -169,18 +179,28 @@ export async function consolidarArquivos(
     // Estágio pode vir como "CargoEstagio" ou "Estagio"
     const cargoEstagio = findColumnValue(row, 'cargo_estagio', 'Cargo_Estagio', 'CargoEstagio', 'Estagio', 'estagio') || '';
     
-    if (regional) {
-      regionaisSet.add(regional);
-    }
+    // 4. Buscar no dicionário do Arquivo A pelo nome + divisão
+    const encontrado = buscarNoDicionario(resultadoA.dicionario, nomeColete, divisaoArquivoB);
     
-    // 4. Buscar no dicionário do Arquivo A
-    const encontrado = buscarNoDicionario(resultadoA.dicionario, nomeColete, divisao);
+    // >>> CORREÇÃO VBA: Regional usa Arquivo B OU fallback do Arquivo A <<<
+    // A macro VBA prioriza a regional já existente, senão usa a do Arquivo A
+    const regionalFinal = String(regionalArquivoB || regionalPadrao).trim();
+    
+    // >>> CORREÇÃO VBA: Divisão usa a COMPLETA do Arquivo A se encontrou <<<
+    // A macro VBA sobrescreve a divisão do Arquivo B pela completa do Arquivo A
+    const divisaoFinal = encontrado?.divisaoCompleta 
+      ? String(encontrado.divisaoCompleta).trim() 
+      : String(divisaoArquivoB).trim();
+    
+    if (regionalFinal) {
+      regionaisSet.add(regionalFinal);
+    }
     
     // 5. Montar registro consolidado
     const registro: RegistroConsolidado = {
       comando: String(comando).trim(),
-      regional: String(regional).trim(),
-      divisao: String(divisao).trim(),
+      regional: regionalFinal,  // Usa fallback do Arquivo A
+      divisao: divisaoFinal,    // Usa divisão completa do Arquivo A
       id_integrante: encontrado?.id || 0,
       nome_colete: String(nomeColete).trim(),
       cargo_grau: String(cargoGrau).trim(),
@@ -204,7 +224,7 @@ export async function consolidarArquivos(
     if (!encontrado) {
       naoEncontrados.push({
         nome_colete: String(nomeColete).trim(),
-        divisao: String(divisao).trim(),
+        divisao: String(divisaoArquivoB).trim(),
         cargo_grau: String(cargoGrau).trim(),
         linha_original: i + 2 // +2 porque i começa em 0 e tem cabeçalho
       });

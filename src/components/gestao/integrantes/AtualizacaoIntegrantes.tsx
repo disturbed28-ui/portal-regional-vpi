@@ -40,6 +40,7 @@ export function AtualizacaoIntegrantes({ userId, readOnly = false }: Atualizacao
     definirMotivoRemovido,
     executarImportacao,
     obterDadosExportacao,
+    exportarConsolidacao,
     resetar
   } = useConsolidacaoIntegrantes(userId);
 
@@ -83,6 +84,7 @@ export function AtualizacaoIntegrantes({ userId, readOnly = false }: Atualizacao
         onDefinirMotivoRemovido={definirMotivoRemovido}
         onExecutarImportacao={executarImportacao}
         onObterDadosExportacao={obterDadosExportacao}
+        onExportarConsolidacao={exportarConsolidacao}
         onNovaImportacao={handleNovaImportacao}
         readOnly={readOnly}
       />

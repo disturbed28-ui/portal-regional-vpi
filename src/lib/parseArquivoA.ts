@@ -48,33 +48,49 @@ function limparNome(nome: string | null | undefined): string {
 
 /**
  * Normaliza divisão para criar chave de busca
- * Replica NormalizaDivisao da macro VBA
+ * Replica EXATAMENTE a lógica NormalizaDivisao da macro VBA
  */
 export function normalizarDivisaoParaBusca(divisao: string): string {
   if (!divisao) return '';
   
+  // 1. Trim, uppercase, remove acentos (como a macro VBA)
   let normalizado = removerAcentos(divisao)
     .toUpperCase()
     .trim();
   
-  // Remover prefixos
+  // 2. Substituir "DIVISÃO" por "DIVISAO" (macro VBA: Replace sDivisao, "DIVISÃO", "DIVISAO")
+  normalizado = normalizado.replace(/DIVISÃO/g, 'DIVISAO');
+  
+  // 3. Remover espaços duplos (macro VBA: loop Replace "  " -> " ")
+  while (normalizado.includes('  ')) {
+    normalizado = normalizado.replace(/  /g, ' ');
+  }
+  
+  // 4. Remover sufixos conhecidos (macro VBA: múltiplos Replace)
   normalizado = normalizado
-    .replace(/^DIVISAO\s*/i, '')
-    .replace(/^REGIONAL\s*/i, '');
+    .replace(/ - SP$/i, '')
+    .replace(/ -SP$/i, '')
+    .replace(/-SP$/i, '')
+    .replace(/ - S$/i, '')
+    .replace(/ -S$/i, '')
+    .replace(/-S$/i, '')
+    .replace(/–SP$/i, '')  // travessão
+    .replace(/– SP$/i, ''); // travessão com espaço
   
-  // Remover sufixos de estado
-  normalizado = normalizado
-    .replace(/\s*-\s*SP\s*$/i, '')
-    .replace(/\s*-SP\s*$/i, '')
-    .replace(/\s*SP\s*$/i, '');
+  // 5. Loop para remover caracteres finais (macro VBA: Do While loop)
+  // Remove espaços, hífens, "S", "P" do final
+  normalizado = normalizado.trim();
+  while (normalizado.length > 0) {
+    const ultimoChar = normalizado.charAt(normalizado.length - 1);
+    if ([' ', '-', 'S', 'P'].includes(ultimoChar)) {
+      normalizado = normalizado.slice(0, -1);
+    } else {
+      break;
+    }
+  }
   
-  // Padronizar espaços
-  normalizado = normalizado.replace(/\s+/g, ' ').trim();
-  
-  // Adicionar sufixo padronizado
-  normalizado = normalizado + ' - SP';
-  
-  return normalizado;
+  // 6. Adicionar sufixo padronizado " - SP" (macro VBA: sDivisaoNorm = sDivisaoNorm & " - SP")
+  return normalizado.trim() + ' - SP';
 }
 
 /**

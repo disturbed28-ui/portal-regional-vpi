@@ -36,6 +36,7 @@ interface TelaConferenciaImportProps {
   onDefinirMotivoRemovido: (motivo: MotivoRemovido) => void;
   onExecutarImportacao: () => Promise<boolean>;
   onObterDadosExportacao: () => any[];
+  onExportarConsolidacao: () => any[];
   onNovaImportacao: () => void;
   readOnly?: boolean;
 }
@@ -50,6 +51,7 @@ export function TelaConferenciaImport({
   onDefinirMotivoRemovido,
   onExecutarImportacao,
   onObterDadosExportacao,
+  onExportarConsolidacao,
   onNovaImportacao,
   readOnly = false
 }: TelaConferenciaImportProps) {
@@ -472,10 +474,20 @@ export function TelaConferenciaImport({
 
       {/* Ações */}
       <div className="space-y-2">
+        {/* Botão para exportar consolidação bruta (A + B) */}
+        <ExportarDadosProcessados
+          lote={lote}
+          dados={onExportarConsolidacao()}
+          disabled={loading || !lote.consolidacao}
+          label="Exportar Consolidação (A+B)"
+        />
+        
+        {/* Botão para exportar dados selecionados para importação */}
         <ExportarDadosProcessados
           lote={lote}
           dados={onObterDadosExportacao()}
           disabled={loading}
+          label="Exportar Selecionados"
         />
         
         {lote.etapa === 'concluido' ? (
