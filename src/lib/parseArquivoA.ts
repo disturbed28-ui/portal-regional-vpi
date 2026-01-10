@@ -175,16 +175,23 @@ export async function parseArquivoA(file: File): Promise<ParseArquivoAResult> {
         let regionalAtual = '';
         let divisaoAtual = '';
         
+        // Palavras que NÃO devem ser consideradas como divisão
+        // São cabeçalhos ou totalizadores do relatório
+        const palavrasIgnorar = ['numero', 'total', 'total:', 'integrantes', 'id', 'nome', 'data'];
+        
         for (let i = 0; i < jsonData.length; i++) {
           const linha = jsonData[i];
           if (!linha || linha.length === 0) continue;
           
           const primeiraColuna = String(linha[0] || '').trim();
+          const primeiraColunaLower = primeiraColuna.toLowerCase();
           
           // Detectar regional (linha contém "REGIONAL")
           if (primeiraColuna.toUpperCase().includes('REGIONAL')) {
             regionalAtual = primeiraColuna;
             regionaisSet.add(regionalAtual);
+            // Resetar divisão ao mudar de regional - integrantes do comando usarão a regional
+            divisaoAtual = '';
             console.log(`[parseArquivoA] Regional detectada: ${regionalAtual}`);
             continue;
           }
@@ -198,29 +205,47 @@ export async function parseArquivoA(file: File): Promise<ParseArquivoAResult> {
             const dataAdmissao = formatarData(linha[2]);
             
             if (nome) {
+              // Determinar qual divisão usar para a chave de busca
+              // Se não tem divisão válida (está no Comando Regional), usar a regional
+              const divisaoParaChave = divisaoAtual || regionalAtual;
+              
               const integrante: ArquivoAIntegrante = {
                 id_integrante: numeroId,
                 nome_colete: nome,
                 data_admissao: dataAdmissao,
-                divisao_original: divisaoAtual,
+                divisao_original: divisaoAtual || regionalAtual, // Guardar regional se não tem divisão
                 regional_original: regionalAtual
               };
               
               integrantes.push(integrante);
               
-              // Adicionar ao dicionário
-              const chave = criarChaveBusca(nome, divisaoAtual);
-              dicionario.set(chave, {
+              // Adicionar ao dicionário com chave principal
+              const chave = criarChaveBusca(nome, divisaoParaChave);
+              const dadosIntegrante = {
                 id: numeroId,
                 data: dataAdmissao,
-                divisaoCompleta: divisaoAtual
-              });
+                divisaoCompleta: divisaoParaChave
+              };
+              dicionario.set(chave, dadosIntegrante);
+              
+              // Se integrante está em uma divisão, adicionar chave alternativa com regional
+              // Isso permite matching quando o Arquivo B usa regional como divisão
+              if (divisaoAtual && divisaoAtual !== regionalAtual) {
+                const chaveAlternativa = criarChaveBusca(nome, regionalAtual);
+                if (!dicionario.has(chaveAlternativa)) {
+                  dicionario.set(chaveAlternativa, dadosIntegrante);
+                }
+              }
             }
-          } else if (primeiraColuna && !primeiraColuna.toUpperCase().startsWith('ID') && primeiraColuna.length > 2) {
-            // É uma linha de divisão (não é cabeçalho "ID" e tem conteúdo significativo)
-            // Verificar se parece um nome de divisão
+          } else if (primeiraColuna && primeiraColuna.length > 2) {
+            // Potencial linha de divisão
+            // Verificar se NÃO é uma palavra a ignorar (cabeçalhos, totalizadores)
             const semNumeros = !/^\d+$/.test(primeiraColuna);
-            if (semNumeros) {
+            const ehPalavraIgnorar = palavrasIgnorar.some(p => 
+              primeiraColunaLower === p || primeiraColunaLower.startsWith(p + ':')
+            );
+            
+            if (semNumeros && !ehPalavraIgnorar) {
               divisaoAtual = primeiraColuna;
               divisoesSet.add(divisaoAtual);
               console.log(`[parseArquivoA] Divisão detectada: ${divisaoAtual}`);
