@@ -130,7 +130,45 @@ async function parseArquivoB(file: File): Promise<{ registros: any[]; colunas: s
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         
-        // Converter para JSON com cabeçalho automático
+        // Obter o range atual do sheet
+        const originalRef = sheet['!ref'] || 'A1';
+        const range = XLSX.utils.decode_range(originalRef);
+        
+        console.log('[parseArquivoB] Nome do arquivo:', file.name);
+        console.log('[parseArquivoB] Range original:', originalRef);
+        
+        // Detectar onde está o cabeçalho real
+        // Estratégia: procurar a linha que contém "NomeColete", "Cargo" ou colunas esperadas
+        let headerRow = 0;
+        
+        for (let row = range.s.r; row <= Math.min(range.e.r, 15); row++) {
+          // Verificar células nas primeiras colunas
+          for (let col = 0; col <= Math.min(range.e.c, 5); col++) {
+            const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
+            const cell = sheet[cellAddress];
+            const valor = cell?.v?.toString().toLowerCase() || '';
+            
+            // Se encontrou linha com colunas esperadas, é o cabeçalho
+            if (valor.includes('nomecolete') || valor.includes('nome_colete') || 
+                valor === 'cargo' || valor === 'nome' ||
+                valor.includes('cargo_grau') || valor.includes('cargograu')) {
+              headerRow = row;
+              console.log('[parseArquivoB] Cabeçalho detectado na linha:', row + 1, '(valor encontrado:', valor, ')');
+              break;
+            }
+          }
+          if (headerRow > 0) break;
+        }
+        
+        // Ajustar range para começar no cabeçalho detectado
+        if (headerRow > 0) {
+          console.log('[parseArquivoB] Pulando', headerRow, 'linhas de título');
+          range.s.r = headerRow;
+          sheet['!ref'] = XLSX.utils.encode_range(range);
+          console.log('[parseArquivoB] Novo range:', sheet['!ref']);
+        }
+        
+        // Converter para JSON (primeira linha do novo range será o cabeçalho)
         const jsonData = XLSX.utils.sheet_to_json(sheet, { 
           defval: '',  // Valor padrão para células vazias
           raw: false   // Converter números para string
@@ -138,7 +176,6 @@ async function parseArquivoB(file: File): Promise<{ registros: any[]; colunas: s
         
         const colunas = jsonData.length > 0 ? Object.keys(jsonData[0] as any) : [];
         
-        console.log('[parseArquivoB] Nome do arquivo:', file.name);
         console.log('[parseArquivoB] Total registros:', jsonData.length);
         console.log('[parseArquivoB] Colunas detectadas:', colunas);
         
