@@ -35,8 +35,9 @@ import { IntegrantePortal } from "@/hooks/useIntegrantes";
 import { parseCargoGrau } from "@/lib/excelParser";
 import { matchIntegranteToStructure } from "@/lib/integranteMatching";
 import { supabase } from "@/integrations/supabase/client";
-import { Download, CheckCircle } from "lucide-react";
+import { Download, CheckCircle, UserPlus } from "lucide-react";
 import { RoleManager } from "./RoleManager";
+import { CriarIntegranteModal } from "./CriarIntegranteModal";
 
 interface Profile {
   id: string;
@@ -108,6 +109,7 @@ export function ProfileDetailDialog({
   const [selectedRegionalId, setSelectedRegionalId] = useState<string>('');
   const [selectedGrau, setSelectedGrau] = useState<string>('');
   const [integranteParaVincular, setIntegranteParaVincular] = useState<string | null>(null);
+  const [showCriarIntegranteModal, setShowCriarIntegranteModal] = useState(false);
 
   // Hooks com filtros
   const { comandos } = useComandos();
@@ -462,15 +464,30 @@ export function ProfileDetailDialog({
               </div>
               
               {!showIntegranteLookup && !integranteSelecionado && !integranteAtualmenteVinculado && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowIntegranteLookup(true)}
-                  className="w-full"
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Buscar e Importar Dados
-                </Button>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowIntegranteLookup(true)}
+                    className="w-full"
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Buscar e Importar Dados
+                  </Button>
+                  
+                  {/* Botão para criar integrante - só aparece se tem dados mínimos */}
+                  {formData.nome_colete && formData.grau && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => setShowCriarIntegranteModal(true)}
+                      className="w-full"
+                    >
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Criar na Base de Integrantes
+                    </Button>
+                  )}
+                </div>
               )}
 
               {showIntegranteLookup && (
@@ -828,6 +845,32 @@ export function ProfileDetailDialog({
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {/* Modal para criar integrante */}
+      <CriarIntegranteModal
+        open={showCriarIntegranteModal}
+        onOpenChange={setShowCriarIntegranteModal}
+        profile={{
+          id: profile.id,
+          nome_colete: formData.nome_colete || null,
+          grau: formData.grau || null,
+          comando_id: formData.comando_id || null,
+          regional_id: formData.regional_id || null,
+          divisao_id: formData.divisao_id || null,
+          cargo_id: formData.cargo_id || null,
+          data_entrada: formData.data_entrada || null,
+        }}
+        comandoNome={comandos.find(c => c.id === formData.comando_id)?.nome}
+        regionalNome={regionais.find(r => r.id === formData.regional_id)?.nome}
+        divisaoNome={divisoes.find(d => d.id === formData.divisao_id)?.nome}
+        cargoNome={cargosFiltrados.find(c => c.id === formData.cargo_id)?.nome}
+        userId={user?.id || ''}
+        isAdmin={true}
+        onSuccess={() => {
+          fetchIntegranteVinculado(profile.id);
+          onSuccess();
+        }}
+      />
     </Dialog>
   );
 }

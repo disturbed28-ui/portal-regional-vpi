@@ -1555,6 +1555,7 @@ export type Database = {
           cargo_anterior: string | null
           cargo_novo: string
           created_at: string | null
+          dados_adicionais: Json | null
           grau_anterior: string | null
           grau_novo: string | null
           id: string
@@ -1563,15 +1564,18 @@ export type Database = {
           integrante_nome_colete: string
           integrante_registro_id: number
           justificativa: string
+          profile_id: string | null
           resolvido_em: string | null
           resolvido_por: string | null
           status: string
+          tipo_pendencia: string | null
         }
         Insert: {
           alterado_por: string
           cargo_anterior?: string | null
           cargo_novo: string
           created_at?: string | null
+          dados_adicionais?: Json | null
           grau_anterior?: string | null
           grau_novo?: string | null
           id?: string
@@ -1580,15 +1584,18 @@ export type Database = {
           integrante_nome_colete: string
           integrante_registro_id: number
           justificativa: string
+          profile_id?: string | null
           resolvido_em?: string | null
           resolvido_por?: string | null
           status?: string
+          tipo_pendencia?: string | null
         }
         Update: {
           alterado_por?: string
           cargo_anterior?: string | null
           cargo_novo?: string
           created_at?: string | null
+          dados_adicionais?: Json | null
           grau_anterior?: string | null
           grau_novo?: string | null
           id?: string
@@ -1597,9 +1604,11 @@ export type Database = {
           integrante_nome_colete?: string
           integrante_registro_id?: number
           justificativa?: string
+          profile_id?: string | null
           resolvido_em?: string | null
           resolvido_por?: string | null
           status?: string
+          tipo_pendencia?: string | null
         }
         Relationships: [
           {
