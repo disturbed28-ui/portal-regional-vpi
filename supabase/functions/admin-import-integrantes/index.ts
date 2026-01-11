@@ -305,10 +305,26 @@ Deno.serve(async (req) => {
         nome_colete: z.string(),
         motivo_inativacao: z.enum(['transferido', 'falecido', 'desligado', 'expulso', 'afastado', 'promovido', 'outro']),
         observacao_inativacao: z.string().optional()
+      })).optional(),
+      promovidos: z.array(z.object({
+        integrante_id: z.string().uuid(),
+        registro_id: z.number(),
+        nome_colete: z.string(),
+        novo_cargo_id: z.string().optional(),
+        novo_cargo_nome: z.string().optional(),
+        nova_regional: z.string().optional(),
+        nova_regional_id: z.string().optional(),
+        observacao: z.string().optional()
+      })).optional(),
+      afastados_ignorados: z.array(z.object({
+        integrante_id: z.string().uuid(),
+        registro_id: z.number(),
+        nome_colete: z.string(),
+        observacao: z.string().optional()
       })).optional()
     });
 
-    const { admin_user_id, novos, atualizados, removidos } = requestSchema.parse(await req.json());
+    const { admin_user_id, novos, atualizados, removidos, promovidos, afastados_ignorados } = requestSchema.parse(await req.json());
 
     console.log('[admin-import-integrantes] Validating admin:', admin_user_id);
     console.log('[admin-import-integrantes] Novos:', novos?.length || 0);
@@ -542,7 +558,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Process removals (inactivations)
+    // Process removals (inactivations) - ONLY for motivos that should inactivate
     if (removidos && removidos.length > 0) {
       for (const removido of removidos) {
         const { error: inactivateError } = await supabase
@@ -576,7 +592,125 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log('[admin-import-integrantes] Success - Inserted:', insertedCount, 'Updated:', updatedCount, 'Inativados:', inativadosCount);
+    // Process PROMOTIONS (Grau IV) - Update integrante, DON'T inactivate
+    let promovidosCount = 0;
+    if (promovidos && promovidos.length > 0) {
+      console.log(`[admin-import-integrantes] Processando ${promovidos.length} promoções para Grau IV...`);
+      
+      for (const promovido of promovidos) {
+        // Buscar dados atuais para histórico
+        const { data: dadosAtuais } = await supabase
+          .from('integrantes_portal')
+          .select('*')
+          .eq('id', promovido.integrante_id)
+          .single();
+        
+        // Determinar nova regional_id
+        let novaRegionalId = promovido.nova_regional_id;
+        
+        // Se for "comando_nacional", precisa encontrar ou criar a estrutura
+        if (promovido.nova_regional_id === 'comando_nacional') {
+          // Buscar regional "COMANDO NACIONAL" ou similar
+          const { data: comandoNacional } = await supabase
+            .from('regionais')
+            .select('id')
+            .ilike('nome', '%COMANDO%NACIONAL%')
+            .maybeSingle();
+          
+          novaRegionalId = comandoNacional?.id || null;
+        }
+        
+        // Atualizar integrante para Grau IV
+        const { error: updateError } = await supabase
+          .from('integrantes_portal')
+          .update({
+            grau: 'IV',
+            cargo_nome: promovido.novo_cargo_nome,
+            cargo_grau_texto: `${promovido.novo_cargo_nome} (Grau IV)`,
+            regional_texto: promovido.nova_regional || 'COMANDO NACIONAL',
+            regional_id: novaRegionalId,
+            divisao_texto: 'COMANDO',
+            divisao_id: null,
+            // NÃO mudar ativo - permanece true
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', promovido.integrante_id);
+        
+        if (updateError) {
+          console.error('[admin-import-integrantes] Error promoting:', updateError);
+        } else {
+          promovidosCount++;
+          
+          // Log to history
+          await supabase.from('integrantes_historico').insert({
+            integrante_id: promovido.integrante_id,
+            acao: 'promocao_grau4',
+            dados_anteriores: dadosAtuais ? {
+              cargo_grau_texto: dadosAtuais.cargo_grau_texto,
+              grau: dadosAtuais.grau,
+              regional_texto: dadosAtuais.regional_texto,
+              divisao_texto: dadosAtuais.divisao_texto
+            } : null,
+            dados_novos: {
+              cargo_nome: promovido.novo_cargo_nome,
+              grau: 'IV',
+              regional_texto: promovido.nova_regional,
+              divisao_texto: 'COMANDO'
+            },
+            observacao: promovido.observacao || 'Promoção para Grau IV via carga',
+            alterado_por: admin_user_id
+          });
+          
+          // Criar pendência para ajuste de roles (se houver profile vinculado)
+          if (dadosAtuais?.profile_id) {
+            await supabase.from('pendencias_ajuste_roles').insert({
+              integrante_id: promovido.integrante_id,
+              integrante_nome_colete: promovido.nome_colete,
+              integrante_registro_id: promovido.registro_id,
+              integrante_divisao_texto: dadosAtuais.divisao_texto,
+              profile_id: dadosAtuais.profile_id,
+              cargo_anterior: dadosAtuais.cargo_grau_texto,
+              cargo_novo: promovido.novo_cargo_nome,
+              grau_anterior: dadosAtuais.grau,
+              grau_novo: 'IV',
+              justificativa: `Promoção para ${promovido.novo_cargo_nome} (Grau IV)`,
+              alterado_por: admin_user_id,
+              status: 'pendente',
+              tipo_pendencia: 'promocao_grau4',
+              dados_adicionais: {
+                nova_regional: promovido.nova_regional,
+                via_carga: true
+              }
+            });
+            
+            console.log(`[admin-import-integrantes] Pendência de role criada para promoção: ${promovido.nome_colete}`);
+          }
+        }
+      }
+    }
+
+    // Process AFASTADOS (ignored) - Just log, DON'T inactivate
+    let afastadosIgnoradosCount = 0;
+    if (afastados_ignorados && afastados_ignorados.length > 0) {
+      console.log(`[admin-import-integrantes] Processando ${afastados_ignorados.length} afastados (serão mantidos ativos)...`);
+      
+      for (const afastado of afastados_ignorados) {
+        // Log to history
+        await supabase.from('integrantes_historico').insert({
+          integrante_id: afastado.integrante_id,
+          acao: 'ignorado_carga_afastado',
+          dados_anteriores: null,
+          dados_novos: { mantido_ativo: true },
+          observacao: afastado.observacao || 'Integrante afastado - mantido ativo na carga',
+          alterado_por: admin_user_id
+        });
+        
+        afastadosIgnoradosCount++;
+        console.log(`[admin-import-integrantes] Afastado ignorado (mantido ativo): ${afastado.nome_colete}`);
+      }
+    }
+
+    console.log('[admin-import-integrantes] Success - Inserted:', insertedCount, 'Updated:', updatedCount, 'Inativados:', inativadosCount, 'Promovidos:', promovidosCount, 'Afastados ignorados:', afastadosIgnoradosCount);
 
     // Atribuir roles automaticamente aos integrantes novos e atualizados
     const integrantesParaAtribuirRoles = [
@@ -817,7 +951,10 @@ Deno.serve(async (req) => {
         success: true, 
         insertedCount, 
         updatedCount,
-        message: `${insertedCount} novos, ${updatedCount} atualizados`,
+        inativadosCount,
+        promovidosCount,
+        afastadosIgnoradosCount,
+        message: `${insertedCount} novos, ${updatedCount} atualizados, ${inativadosCount} inativados, ${promovidosCount} promovidos, ${afastadosIgnoradosCount} afastados mantidos`,
         carga: {
           id: cargaData.id,
           data_carga: cargaData.data_carga,
