@@ -6,7 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertTriangle, CheckCircle2, Clock, Info, UserX } from 'lucide-react';
 import { ResolverDeltaDialog } from './ResolverDeltaDialog';
-import { useResolverDelta } from '@/hooks/useResolverDelta';
+import { useResolverDelta, type DadosPromocaoGrau4 } from '@/hooks/useResolverDelta';
 import { useTiposDelta } from '@/hooks/useTiposDelta';
 import type { Pendencia, DeltaDetalhes } from '@/hooks/usePendencias';
 
@@ -15,9 +15,16 @@ interface DeltasPendentesProps {
   loading: boolean;
   userId?: string;
   isAdmin: boolean;
+  isSystemAdmin?: boolean; // true = admin do sistema (não gera pendência)
 }
 
-export const DeltasPendentes = ({ pendencias, loading, userId, isAdmin }: DeltasPendentesProps) => {
+export const DeltasPendentes = ({ 
+  pendencias, 
+  loading, 
+  userId, 
+  isAdmin,
+  isSystemAdmin = true // default true para manter compatibilidade
+}: DeltasPendentesProps) => {
   const { resolverDelta } = useResolverDelta();
   const { getTipoByCode } = useTiposDelta();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -91,11 +98,19 @@ export const DeltasPendentes = ({ pendencias, loading, userId, isAdmin }: Deltas
     setDialogOpen(true);
   };
 
-  const handleResolve = async (observacao: string, acao: string) => {
+  const handleResolve = async (observacao: string, acao: string, dadosPromocao?: DadosPromocaoGrau4) => {
     if (!userId || !selectedDelta) return;
 
-    // Passar acao para o hook salvar em dados_adicionais
-    const success = await resolverDelta(selectedDelta.id, observacao, userId, acao);
+    // Passar acao e dados de promoção para o hook
+    // isSystemAdmin controla se gera pendência ou não
+    const success = await resolverDelta(
+      selectedDelta.id, 
+      observacao, 
+      userId, 
+      acao, 
+      dadosPromocao,
+      isSystemAdmin
+    );
     
     if (success) {
       window.location.reload();

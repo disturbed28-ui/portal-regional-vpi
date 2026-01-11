@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -12,8 +12,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useTiposDelta } from '@/hooks/useTiposDelta';
 import { useAcoesResolucaoDelta } from '@/hooks/useAcoesResolucaoDelta';
+import { useCargosGrau4 } from '@/hooks/useCargosGrau4';
+import { useRegionais } from '@/hooks/useRegionais';
+import { Card } from '@/components/ui/card';
+import { ArrowUp } from 'lucide-react';
+import type { DadosPromocaoGrau4 } from '@/hooks/useResolverDelta';
 
 interface ResolverDeltaDialogProps {
   open: boolean;
@@ -28,7 +34,7 @@ interface ResolverDeltaDialogProps {
     dados_adicionais?: any;
     created_at: string;
   } | null;
-  onResolve: (observacao: string, acao: string) => Promise<void>;
+  onResolve: (observacao: string, acao: string, dadosPromocao?: DadosPromocaoGrau4) => Promise<void>;
 }
 
 export const ResolverDeltaDialog = ({
@@ -40,8 +46,25 @@ export const ResolverDeltaDialog = ({
   const [observacao, setObservacao] = useState('');
   const [acaoSelecionada, setAcaoSelecionada] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // Estados para promoção Grau IV
+  const [novoCargoId, setNovoCargoId] = useState('');
+  const [novaRegionalId, setNovaRegionalId] = useState('');
+  
   const { getTipoByCode } = useTiposDelta();
   const { acoes } = useAcoesResolucaoDelta(delta?.tipo_delta);
+  const { cargosGrau4 } = useCargosGrau4();
+  const { regionais } = useRegionais();
+
+  // Reset campos quando dialog abre/fecha
+  useEffect(() => {
+    if (!open) {
+      setObservacao('');
+      setAcaoSelecionada('');
+      setNovoCargoId('');
+      setNovaRegionalId('');
+    }
+  }, [open]);
 
   // ✅ Guard crítico: se não houver delta, não renderiza nada
   if (!delta) {
@@ -59,20 +82,40 @@ export const ResolverDeltaDialog = ({
     );
   };
 
-  const handleResolver = async () => {
-    if (!observacao.trim()) {
-      return;
-    }
+  const isPromocaoGrau4 = acaoSelecionada === 'promovido_grau4';
+  
+  // Validação: se for promoção, precisa dos campos extras
+  const canSubmit = observacao.trim() && acaoSelecionada && 
+    (!isPromocaoGrau4 || (novoCargoId && novaRegionalId));
 
-    if (!acaoSelecionada) {
-      return;
-    }
+  const handleResolver = async () => {
+    if (!canSubmit) return;
 
     setLoading(true);
-    await onResolve(observacao, acaoSelecionada);
+    
+    let dadosPromocao: DadosPromocaoGrau4 | undefined;
+    
+    if (isPromocaoGrau4) {
+      const cargoSelecionado = cargosGrau4.find(c => c.id === novoCargoId);
+      
+      // Tratar "COMANDO NACIONAL" como caso especial
+      const isComandoNacional = novaRegionalId === 'COMANDO_NACIONAL';
+      const regionalSelecionada = isComandoNacional ? null : regionais.find(r => r.id === novaRegionalId);
+      
+      dadosPromocao = {
+        novoCargoId: novoCargoId,
+        novoCargoNome: cargoSelecionado?.nome || '',
+        novaRegional: isComandoNacional ? 'COMANDO NACIONAL' : (regionalSelecionada?.nome || ''),
+        novaRegionalId: isComandoNacional ? undefined : novaRegionalId
+      };
+    }
+    
+    await onResolve(observacao, acaoSelecionada, dadosPromocao);
     setLoading(false);
     setObservacao('');
     setAcaoSelecionada('');
+    setNovoCargoId('');
+    setNovaRegionalId('');
     onOpenChange(false);
   };
 
@@ -88,7 +131,7 @@ export const ResolverDeltaDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Resolver Delta de Integrante</DialogTitle>
           <DialogDescription>
@@ -152,6 +195,55 @@ export const ResolverDeltaDialog = ({
             </RadioGroup>
           </div>
 
+          {/* Campos extras para Promoção Grau IV */}
+          {isPromocaoGrau4 && (
+            <Card className="p-4 border-primary/30 bg-primary/5 space-y-4">
+              <div className="flex items-center gap-2 text-primary">
+                <ArrowUp className="h-4 w-4" />
+                <span className="font-medium">Dados da Promoção para Grau IV</span>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="novo-cargo">Novo Cargo (Grau IV) *</Label>
+                <Select value={novoCargoId} onValueChange={setNovoCargoId}>
+                  <SelectTrigger id="novo-cargo">
+                    <SelectValue placeholder="Selecione o cargo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cargosGrau4.map((cargo) => (
+                      <SelectItem key={cargo.id} value={cargo.id}>
+                        {cargo.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="nova-regional">Nova Regional/Comando *</Label>
+                <Select value={novaRegionalId} onValueChange={setNovaRegionalId}>
+                  <SelectTrigger id="nova-regional">
+                    <SelectValue placeholder="Selecione a regional..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="COMANDO_NACIONAL">
+                      🏛️ COMANDO NACIONAL
+                    </SelectItem>
+                    {regionais.map((regional) => (
+                      <SelectItem key={regional.id} value={regional.id}>
+                        {regional.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <p className="text-xs text-muted-foreground">
+                O integrante será atualizado para Grau IV, com divisão definida como "COMANDO".
+              </p>
+            </Card>
+          )}
+
           {/* Observação */}
           <div className="space-y-2">
             <Label htmlFor="observacao">
@@ -178,7 +270,7 @@ export const ResolverDeltaDialog = ({
           </Button>
           <Button
             onClick={handleResolver}
-            disabled={!observacao.trim() || !acaoSelecionada || loading}
+            disabled={!canSubmit || loading}
           >
             {loading ? 'Resolvendo...' : 'Resolver Delta'}
           </Button>
