@@ -366,8 +366,9 @@ export async function consolidarArquivos(
     
     registros.push(registro);
     
-    // Registrar não encontrados
-    if (!encontrado) {
+    // Registrar não encontrados (apenas se não tem ID do arquivo B)
+    if (!encontrado && !idArquivoB) {
+      console.warn(`[consolidarArquivos] NAO_ENCONTRADO: "${nomeColete}" | Divisão Arquivo B: "${divisaoArquivoB}" | Cargo: "${cargoGrau}"`);
       naoEncontrados.push({
         nome_colete: String(nomeColete).trim(),
         divisao: String(divisaoArquivoB).trim(),
