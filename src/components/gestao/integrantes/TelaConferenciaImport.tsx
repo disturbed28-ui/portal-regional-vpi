@@ -376,6 +376,22 @@ export function TelaConferenciaImport({
                     const motivoDefinido = motivosRemovidos.get(removido.id);
                     const selecionado = lote.selecao.removidos.has(removido.id);
                     
+                    // Determinar o tipo de tratamento e cor do badge
+                    const getTratamentoBadge = () => {
+                      if (!motivoDefinido) return null;
+                      
+                      switch (motivoDefinido.motivo_inativacao) {
+                        case 'afastado':
+                          return { label: 'Manter ativo', variant: 'secondary' as const, icon: '⏸️' };
+                        case 'promovido':
+                          return { label: `→ ${motivoDefinido.novo_cargo_nome || 'Grau IV'}`, variant: 'default' as const, icon: '⬆️' };
+                        default:
+                          return { label: 'Inativar', variant: 'destructive' as const, icon: '❌' };
+                      }
+                    };
+                    
+                    const tratamento = getTratamentoBadge();
+                    
                     return (
                       <div
                         key={removido.id}
@@ -392,11 +408,18 @@ export function TelaConferenciaImport({
                             {removido.divisao_texto} • {removido.cargo_grau_texto}
                           </p>
                           {selecionado && (
-                            <div className="mt-1">
+                            <div className="mt-1 flex items-center gap-2">
                               {motivoDefinido ? (
-                                <Badge variant="secondary" className="text-[10px]">
-                                  {motivoDefinido.motivo_inativacao}
-                                </Badge>
+                                <>
+                                  <Badge variant="outline" className="text-[10px]">
+                                    {motivoDefinido.motivo_inativacao}
+                                  </Badge>
+                                  {tratamento && (
+                                    <Badge variant={tratamento.variant} className="text-[10px]">
+                                      {tratamento.icon} {tratamento.label}
+                                    </Badge>
+                                  )}
+                                </>
                               ) : (
                                 <Button
                                   variant="outline"

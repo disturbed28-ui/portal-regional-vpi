@@ -32,6 +32,11 @@ export interface MotivoRemovido {
   nome_colete: string;
   motivo_inativacao: 'transferido' | 'falecido' | 'desligado' | 'expulso' | 'afastado' | 'promovido' | 'outro';
   observacao_inativacao?: string;
+  // Campos extras para promoção Grau IV
+  novo_cargo_id?: string;
+  novo_cargo_nome?: string;
+  nova_regional?: string;
+  nova_regional_id?: string;
 }
 
 /**
@@ -291,21 +296,12 @@ export function useConsolidacaoIntegrantes(userId?: string) {
       // Filtrar apenas itens selecionados
       const novosParaImportar = lote.delta.novos.filter(n => lote.selecao.novos.has(n.id_integrante));
       const atualizadosParaImportar = lote.delta.atualizados.filter(a => lote.selecao.atualizados.has(a.antigo.id));
-      const removidosParaImportar = lote.delta.removidos
-        .filter(r => lote.selecao.removidos.has(r.id))
-        .map(r => {
-          const motivo = motivosRemovidos.get(r.id);
-          return {
-            integrante_id: r.id,
-            registro_id: r.registro_id,
-            nome_colete: r.nome_colete,
-            motivo_inativacao: motivo?.motivo_inativacao || 'outro',
-            observacao_inativacao: motivo?.observacao_inativacao || `Lote ${lote.id}`
-          };
-        });
+      
+      // Separar removidos por tipo de tratamento
+      const removidosSelecionados = lote.delta.removidos.filter(r => lote.selecao.removidos.has(r.id));
       
       // Verificar se todos os removidos têm motivo
-      const removidosSemMotivo = removidosParaImportar.filter(r => !motivosRemovidos.has(r.integrante_id));
+      const removidosSemMotivo = removidosSelecionados.filter(r => !motivosRemovidos.has(r.id));
       if (removidosSemMotivo.length > 0) {
         toast({
           title: "Motivos pendentes",
@@ -314,6 +310,59 @@ export function useConsolidacaoIntegrantes(userId?: string) {
         });
         return false;
       }
+      
+      // Grupo 1: Removidos para INATIVAR (transferido, desligado, expulso, falecido, outro)
+      const removidosParaInativar = removidosSelecionados
+        .filter(r => {
+          const motivo = motivosRemovidos.get(r.id);
+          return motivo && !['afastado', 'promovido'].includes(motivo.motivo_inativacao);
+        })
+        .map(r => {
+          const motivo = motivosRemovidos.get(r.id)!;
+          return {
+            integrante_id: r.id,
+            registro_id: r.registro_id,
+            nome_colete: r.nome_colete,
+            motivo_inativacao: motivo.motivo_inativacao,
+            observacao_inativacao: motivo.observacao_inativacao || `Lote ${lote.id}`
+          };
+        });
+      
+      // Grupo 2: Removidos para PROMOVER (promovido para Grau IV)
+      const removidosParaPromover = removidosSelecionados
+        .filter(r => {
+          const motivo = motivosRemovidos.get(r.id);
+          return motivo && motivo.motivo_inativacao === 'promovido';
+        })
+        .map(r => {
+          const motivo = motivosRemovidos.get(r.id)!;
+          return {
+            integrante_id: r.id,
+            registro_id: r.registro_id,
+            nome_colete: r.nome_colete,
+            novo_cargo_id: motivo.novo_cargo_id,
+            novo_cargo_nome: motivo.novo_cargo_nome,
+            nova_regional: motivo.nova_regional,
+            nova_regional_id: motivo.nova_regional_id,
+            observacao: motivo.observacao_inativacao
+          };
+        });
+      
+      // Grupo 3: Removidos para IGNORAR (afastados - mantém ativo)
+      const removidosAfastados = removidosSelecionados
+        .filter(r => {
+          const motivo = motivosRemovidos.get(r.id);
+          return motivo && motivo.motivo_inativacao === 'afastado';
+        })
+        .map(r => {
+          const motivo = motivosRemovidos.get(r.id)!;
+          return {
+            integrante_id: r.id,
+            registro_id: r.registro_id,
+            nome_colete: r.nome_colete,
+            observacao: motivo.observacao_inativacao || 'Afastamento detectado na carga'
+          };
+        });
       
       // Formatar atualizados para a edge function
       const atualizadosFormatados = atualizadosParaImportar.map(a => ({
@@ -360,7 +409,9 @@ export function useConsolidacaoIntegrantes(userId?: string) {
       console.log('[useConsolidacaoIntegrantes] Enviando para edge function:', {
         novos: novosFormatados.length,
         atualizados: atualizadosFormatados.length,
-        removidos: removidosParaImportar.length,
+        removidos: removidosParaInativar.length,
+        promovidos: removidosParaPromover.length,
+        afastados: removidosAfastados.length,
         loteId: lote.id
       });
       
@@ -370,7 +421,9 @@ export function useConsolidacaoIntegrantes(userId?: string) {
           admin_user_id: userId,
           novos: novosFormatados,
           atualizados: atualizadosFormatados,
-          removidos: removidosParaImportar,
+          removidos: removidosParaInativar,
+          promovidos: removidosParaPromover,
+          afastados_ignorados: removidosAfastados,
           lote_id: lote.id
         }
       });
