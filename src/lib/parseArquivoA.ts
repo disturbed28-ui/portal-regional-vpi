@@ -282,12 +282,54 @@ export async function parseArquivoA(file: File): Promise<ParseArquivoAResult> {
 
 /**
  * Busca integrante no dicionário usando nome e divisão
+ * Implementa busca exata + fallback parcial para divisões truncadas
  */
 export function buscarNoDicionario(
   dicionario: Map<string, { id: number; data: string | null; divisaoCompleta: string }>,
   nome: string,
   divisao: string
 ): { id: number; data: string | null; divisaoCompleta: string } | null {
+  // 1. Busca exata (mais rápida)
   const chave = criarChaveBusca(nome, divisao);
-  return dicionario.get(chave) || null;
+  const resultadoExato = dicionario.get(chave);
+  if (resultadoExato) {
+    return resultadoExato;
+  }
+  
+  // 2. Busca com fallback parcial para divisões truncadas
+  // Cenário: Arquivo B tem "Divisão São José dos Campos Extremo"
+  //          Arquivo A tem "DIVISAO SAO JOSE DOS CAMPOS EXTREMO LESTE - SP"
+  const nomeNormalizado = limparNome(nome);
+  const divisaoNormalizada = normalizarDivisaoParaBusca(divisao);
+  
+  // Remover sufixo " - SP" para comparação parcial
+  const divisaoSemSufixo = divisaoNormalizada.replace(/ - SP$/, '').trim();
+  
+  // Se a divisão está vazia ou muito curta, não faz busca parcial
+  if (divisaoSemSufixo.length < 5) {
+    return null;
+  }
+  
+  for (const [key, valor] of dicionario.entries()) {
+    const partes = key.split('|');
+    if (partes.length !== 2) continue;
+    
+    const [nomeChave, divisaoChave] = partes;
+    
+    // Se o nome NÃO bate, pular
+    if (nomeChave !== nomeNormalizado) continue;
+    
+    // Remover sufixo da divisão do dicionário também
+    const divisaoChaveSemSufixo = divisaoChave.replace(/ - SP$/, '').trim();
+    
+    // Verificar se a divisão do dicionário CONTÉM a divisão buscada (truncada)
+    // Ou se começa com ela (ex: "EXTREMO" contido em "EXTREMO LESTE")
+    if (divisaoChaveSemSufixo.startsWith(divisaoSemSufixo) || 
+        divisaoChaveSemSufixo.includes(divisaoSemSufixo)) {
+      console.log(`[buscarNoDicionario] Fallback parcial: "${nome}" com divisão "${divisao}" → encontrado em "${valor.divisaoCompleta}"`);
+      return valor;
+    }
+  }
+  
+  return null;
 }
