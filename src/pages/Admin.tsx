@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronDown, ArrowLeft, Building2, Database, Users, ShieldCheck, Bell, Link as LinkIcon, FileCheck, TriangleAlert, Settings, Activity, Heart, Calendar, History } from "lucide-react";
+import { ChevronDown, ArrowLeft, Building2, Database, Users, ShieldCheck, Bell, Link as LinkIcon, FileCheck, Settings, Activity, Heart, Calendar, History } from "lucide-react";
+import { LimparRolesIncorretas } from "@/components/admin/LimparRolesIncorretas";
 import {
   Select,
   SelectContent,
@@ -673,7 +674,10 @@ const Admin = () => {
 </div>
 
 
-        <div className="space-y-4">
+        {/* Correção de Roles Incorretas */}
+        <LimparRolesIncorretas />
+
+        <div className="space-y-4 mt-6">
           {/* Filtros */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
