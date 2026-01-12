@@ -238,7 +238,7 @@ export function useAprovacoesPendentes(userId: string | undefined) {
 
         if (solicitacao) {
           // 4. Atualizar status da solicitação para "Em Treinamento"
-          await supabase
+          const { error: updateSolError } = await supabase
             .from('solicitacoes_treinamento')
             .update({
               status: 'Em Treinamento',
@@ -246,11 +246,27 @@ export function useAprovacoesPendentes(userId: string | undefined) {
             })
             .eq('id', solicitacaoId);
 
+          if (updateSolError) {
+            console.error('Erro ao atualizar solicitação:', updateSolError);
+            toast({
+              title: 'Erro parcial',
+              description: 'Aprovação registrada, mas não foi possível atualizar o status da solicitação. Contate um administrador.',
+              variant: 'destructive'
+            });
+            await fetchSolicitacoes();
+            return true;
+          }
+
           // 5. Atualizar cargo_treinamento_id do integrante
-          await supabase
+          const { error: updateIntError } = await supabase
             .from('integrantes_portal')
             .update({ cargo_treinamento_id: solicitacao.cargo_treinamento_id })
             .eq('id', solicitacao.integrante_id);
+
+          if (updateIntError) {
+            console.error('Erro ao atualizar integrante:', updateIntError);
+            // Log mas não interrompe - status da solicitação já foi atualizado
+          }
 
           toast({
             title: 'Treinamento Aprovado',
@@ -387,7 +403,7 @@ export function useAprovacoesPendentes(userId: string | undefined) {
 
         if (solicitacao) {
           // 4. Atualizar status da solicitação para "Em Treinamento"
-          await supabase
+          const { error: updateSolError } = await supabase
             .from('solicitacoes_treinamento')
             .update({
               status: 'Em Treinamento',
@@ -395,11 +411,27 @@ export function useAprovacoesPendentes(userId: string | undefined) {
             })
             .eq('id', solicitacaoId);
 
+          if (updateSolError) {
+            console.error('Erro ao atualizar solicitação:', updateSolError);
+            toast({
+              title: 'Erro parcial',
+              description: 'Aprovação registrada, mas não foi possível atualizar o status da solicitação. Contate um administrador.',
+              variant: 'destructive'
+            });
+            await fetchSolicitacoes();
+            return true;
+          }
+
           // 5. Atualizar cargo_treinamento_id do integrante
-          await supabase
+          const { error: updateIntError } = await supabase
             .from('integrantes_portal')
             .update({ cargo_treinamento_id: solicitacao.cargo_treinamento_id })
             .eq('id', solicitacao.integrante_id);
+
+          if (updateIntError) {
+            console.error('Erro ao atualizar integrante:', updateIntError);
+            // Log mas não interrompe - status da solicitação já foi atualizado
+          }
 
           toast({
             title: 'Treinamento Aprovado por Escalação',
