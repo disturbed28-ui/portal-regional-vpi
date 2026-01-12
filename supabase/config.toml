@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.archive-cancelled-event]
 verify_jwt = false
+
+[functions.limpar-roles-incorretas]
+verify_jwt = false

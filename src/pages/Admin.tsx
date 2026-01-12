@@ -76,7 +76,7 @@ const Admin = () => {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [detailProfile, setDetailProfile] = useState<Profile | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<ProfileStatus>('Analise');
-  const [selectedRole, setSelectedRole] = useState<'all' | 'admin' | 'moderator' | 'user'>('all');
+  const [selectedRole, setSelectedRole] = useState<'all' | 'admin' | 'diretor_regional' | 'regional' | 'diretor_divisao' | 'social_divisao' | 'adm_divisao' | 'moderator' | 'user'>('all');
   const [activeDivisionKey, setActiveDivisionKey] = useState<string | null>(null);
 
   // Função para buscar perfis
@@ -711,9 +711,13 @@ const Admin = () => {
                 <SelectContent>
                   <SelectItem value="all">Todos os Perfis</SelectItem>
                   <SelectItem value="admin">Administradores</SelectItem>
+                  <SelectItem value="diretor_regional">Diretores Regionais (Grau V)</SelectItem>
+                  <SelectItem value="regional">Regionais (Grau V)</SelectItem>
+                  <SelectItem value="diretor_divisao">Diretores/Subdiretores de Divisão (Grau VI)</SelectItem>
+                  <SelectItem value="social_divisao">Social de Divisão (Grau VI)</SelectItem>
+                  <SelectItem value="adm_divisao">ADM de Divisão (Grau VI)</SelectItem>
                   <SelectItem value="moderator">Moderadores</SelectItem>
-                  <SelectItem value="diretor_divisao">Diretores / Subdiretores de Divisao</SelectItem>
-                  <SelectItem value="user">Usuarios Comuns</SelectItem>
+                  <SelectItem value="user">Usuários Comuns</SelectItem>
                 </SelectContent>
               </Select>
             </div>
