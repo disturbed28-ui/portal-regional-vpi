@@ -28,6 +28,8 @@ interface Aprovacao {
   status: string;
   data_hora_acao: string | null;
   justificativa_rejeicao: string | null;
+  aprovado_por_escalacao?: boolean;
+  justificativa_escalacao?: string | null;
 }
 
 interface SolicitacaoAprovacao {
@@ -36,6 +38,7 @@ interface SolicitacaoAprovacao {
   integrante_nome_colete: string;
   integrante_divisao_texto: string;
   integrante_regional_texto: string;
+  integrante_regional_id?: string | null;
   integrante_cargo_atual: string;
   cargo_treinamento_nome: string;
   cargo_treinamento_id: string;
@@ -49,12 +52,14 @@ interface SolicitacaoAprovacao {
   aprovacoes: Aprovacao[];
   aprovacaoAtual: Aprovacao | null;
   isAprovadorDaVez: boolean;
+  podeDRescalar?: boolean;
 }
 
 interface CardAprovacaoTreinamentoProps {
   solicitacao: SolicitacaoAprovacao;
   onAprovar?: (aprovacaoId: string, solicitacaoId: string) => void;
   onRejeitar?: (aprovacaoId: string, solicitacaoId: string) => void;
+  onAprovarPorEscalacao?: (aprovacaoId: string, solicitacaoId: string, aprovadorNome: string | null, tipoAprovador: string) => void;
   operando: boolean;
   readOnly?: boolean;
 }
@@ -69,6 +74,7 @@ export function CardAprovacaoTreinamento({
   solicitacao, 
   onAprovar, 
   onRejeitar,
+  onAprovarPorEscalacao,
   operando,
   readOnly = false
 }: CardAprovacaoTreinamentoProps) {
@@ -241,6 +247,13 @@ export function CardAprovacaoTreinamento({
             {solicitacao.aprovacoes.map((aprovacao) => {
               const isAtual = aprovacao.id === solicitacao.aprovacaoAtual?.id;
               const showButtons = !readOnly && isAtual && solicitacao.isAprovadorDaVez && aprovacao.status === 'pendente' && onAprovar && onRejeitar;
+              
+              // DR pode escalar aprovações pendentes que não são dele
+              const showEscalacao = !readOnly && 
+                solicitacao.podeDRescalar && 
+                aprovacao.status === 'pendente' && 
+                !solicitacao.isAprovadorDaVez &&
+                onAprovarPorEscalacao;
 
               return (
                 <div 
@@ -275,6 +288,12 @@ export function CardAprovacaoTreinamento({
                     </div>
                   )}
 
+                  {aprovacao.aprovado_por_escalacao && aprovacao.justificativa_escalacao && (
+                    <div className="mt-2 p-2 bg-blue-500/10 rounded text-xs text-blue-600">
+                      <strong>Aprovado por escalação:</strong> {aprovacao.justificativa_escalacao}
+                    </div>
+                  )}
+
                   {showButtons && (
                     <div className="flex gap-2 mt-3">
                       <Button
@@ -302,6 +321,32 @@ export function CardAprovacaoTreinamento({
                       >
                         <XCircle className="h-4 w-4 mr-1" />
                         Rejeitar
+                      </Button>
+                    </div>
+                  )}
+
+                  {showEscalacao && (
+                    <div className="mt-3">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full bg-blue-500/10 text-blue-600 border-blue-500/30 hover:bg-blue-500/20"
+                        onClick={() => onAprovarPorEscalacao(
+                          aprovacao.id, 
+                          solicitacao.id,
+                          aprovacao.aprovador_nome_colete,
+                          tipoAprovadorLabel[aprovacao.tipo_aprovador] || aprovacao.tipo_aprovador
+                        )}
+                        disabled={operando}
+                      >
+                        {operando ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            <CheckCircle2 className="h-4 w-4 mr-1" />
+                            Aprovar por Escalação
+                          </>
+                        )}
                       </Button>
                     </div>
                   )}

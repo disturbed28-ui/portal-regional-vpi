@@ -4,6 +4,7 @@ import { Loader2, ClipboardCheck, Inbox } from 'lucide-react';
 import { useAprovacoesPendentes } from '@/hooks/useAprovacoesPendentes';
 import { CardAprovacaoTreinamento } from './CardAprovacaoTreinamento';
 import { ModalRejeicaoTreinamento } from './ModalRejeicaoTreinamento';
+import { ModalJustificativaEscalacao } from './ModalJustificativaEscalacao';
 import { ReadOnlyBanner } from '@/components/ui/read-only-banner';
 
 interface AprovacoesPendentesProps {
@@ -12,12 +13,20 @@ interface AprovacoesPendentesProps {
 }
 
 export function AprovacoesPendentes({ userId, readOnly = false }: AprovacoesPendentesProps) {
-  const { solicitacoes, loading, operando, aprovar, rejeitar } = useAprovacoesPendentes(userId);
+  const { solicitacoes, loading, operando, aprovar, rejeitar, aprovarPorEscalacao } = useAprovacoesPendentes(userId);
   const [rejeicaoModal, setRejeicaoModal] = useState<{
     open: boolean;
     aprovacaoId: string;
     solicitacaoId: string;
   }>({ open: false, aprovacaoId: '', solicitacaoId: '' });
+
+  const [escalacaoModal, setEscalacaoModal] = useState<{
+    open: boolean;
+    aprovacaoId: string;
+    solicitacaoId: string;
+    aprovadorNome: string | null;
+    tipoAprovador: string;
+  }>({ open: false, aprovacaoId: '', solicitacaoId: '', aprovadorNome: null, tipoAprovador: '' });
 
   async function handleAprovar(aprovacaoId: string, solicitacaoId: string) {
     if (readOnly) return;
@@ -37,6 +46,22 @@ export function AprovacoesPendentes({ userId, readOnly = false }: AprovacoesPend
     );
     if (success) {
       setRejeicaoModal({ open: false, aprovacaoId: '', solicitacaoId: '' });
+    }
+  }
+
+  function handleAbrirEscalacao(aprovacaoId: string, solicitacaoId: string, aprovadorNome: string | null, tipoAprovador: string) {
+    if (readOnly) return;
+    setEscalacaoModal({ open: true, aprovacaoId, solicitacaoId, aprovadorNome, tipoAprovador });
+  }
+
+  async function handleConfirmEscalacao(justificativa: string) {
+    const success = await aprovarPorEscalacao(
+      escalacaoModal.aprovacaoId,
+      escalacaoModal.solicitacaoId,
+      justificativa
+    );
+    if (success) {
+      setEscalacaoModal({ open: false, aprovacaoId: '', solicitacaoId: '', aprovadorNome: null, tipoAprovador: '' });
     }
   }
 
@@ -87,6 +112,7 @@ export function AprovacoesPendentes({ userId, readOnly = false }: AprovacoesPend
               solicitacao={solicitacao}
               onAprovar={readOnly ? undefined : handleAprovar}
               onRejeitar={readOnly ? undefined : handleRejeitar}
+              onAprovarPorEscalacao={readOnly ? undefined : handleAbrirEscalacao}
               operando={operando}
               readOnly={readOnly}
             />
@@ -95,12 +121,22 @@ export function AprovacoesPendentes({ userId, readOnly = false }: AprovacoesPend
       </div>
 
       {!readOnly && (
-        <ModalRejeicaoTreinamento
-          open={rejeicaoModal.open}
-          onOpenChange={(open) => setRejeicaoModal(prev => ({ ...prev, open }))}
-          onConfirm={handleConfirmRejeicao}
-          loading={operando}
-        />
+        <>
+          <ModalRejeicaoTreinamento
+            open={rejeicaoModal.open}
+            onOpenChange={(open) => setRejeicaoModal(prev => ({ ...prev, open }))}
+            onConfirm={handleConfirmRejeicao}
+            loading={operando}
+          />
+          <ModalJustificativaEscalacao
+            open={escalacaoModal.open}
+            onOpenChange={(open) => setEscalacaoModal(prev => ({ ...prev, open }))}
+            aprovadorNome={escalacaoModal.aprovadorNome || undefined}
+            tipoAprovador={escalacaoModal.tipoAprovador}
+            onConfirm={handleConfirmEscalacao}
+            loading={operando}
+          />
+        </>
       )}
     </>
   );

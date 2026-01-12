@@ -1,9 +1,14 @@
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { useInadimplenciaFiltrada } from '@/hooks/useInadimplenciaFiltrada';
-import { AlertTriangle, Users, DollarSign, ChevronDown } from 'lucide-react';
+import { AlertTriangle, Users, DollarSign, ChevronDown, CheckCircle, Loader2 } from 'lucide-react';
 import { ReadOnlyBanner } from '@/components/ui/read-only-banner';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface DashboardInadimplenciaProps {
   userId: string | undefined;
@@ -12,11 +17,48 @@ interface DashboardInadimplenciaProps {
 
 export const DashboardInadimplencia = ({ userId, readOnly = false }: DashboardInadimplenciaProps) => {
   const { ultimaCargaInfo, devedoresAtivos, devedoresCronicos } = useInadimplenciaFiltrada(userId);
+  const [liquidando, setLiquidando] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   // Calcular totais a partir da view vw_devedores_ativos
   const totalDevedores = devedoresAtivos.length;
   const totalDebito = devedoresAtivos.reduce((sum, d) => sum + (d.total_devido || 0), 0);
   const totalCronicos = devedoresCronicos.length;
+
+  const handleLiquidarManual = async (registroId: number, nomeColete: string) => {
+    if (readOnly) return;
+    setLiquidando(String(registroId));
+    try {
+      // Buscar e atualizar todos os registros deste devedor pelo registro_id
+      const { error } = await supabase
+        .from('mensalidades_atraso')
+        .update({ 
+          ativo: false, 
+          liquidado: true, 
+          data_liquidacao: new Date().toISOString() 
+        })
+        .eq('registro_id', registroId)
+        .eq('ativo', true);
+      
+      if (error) throw error;
+      
+      toast({ 
+        title: "Baixa realizada", 
+        description: `${nomeColete} marcado como liquidado` 
+      });
+      queryClient.invalidateQueries({ queryKey: ['mensalidades-devedores-ativos'] });
+      queryClient.invalidateQueries({ queryKey: ['mensalidades-devedores-cronicos'] });
+    } catch (error) {
+      console.error('Erro ao dar baixa:', error);
+      toast({ 
+        title: "Erro", 
+        description: "Falha ao dar baixa. Verifique suas permissões.", 
+        variant: "destructive" 
+      });
+    } finally {
+      setLiquidando(null);
+    }
+  };
 
   return (
     <div className="space-y-3 sm:space-y-6">
@@ -147,7 +189,7 @@ export const DashboardInadimplencia = ({ userId, readOnly = false }: DashboardIn
                           {devedores.map((devedor) => (
                             <div 
                               key={devedor.registro_id} 
-                              className="flex items-center justify-between p-2 bg-background rounded border"
+                              className="flex items-center justify-between p-2 bg-background rounded border gap-2"
                             >
                               <div className="flex flex-col min-w-0 flex-1">
                                 <span className="font-medium text-xs sm:text-sm text-foreground truncate">{devedor.nome_colete}</span>
@@ -155,13 +197,33 @@ export const DashboardInadimplencia = ({ userId, readOnly = false }: DashboardIn
                                   ID: {devedor.registro_id}
                                 </span>
                               </div>
-                              <div className="text-right flex-shrink-0">
-                                <div className="text-xs sm:text-sm font-semibold text-red-600">
-                                  R$ {devedor.total_devido?.toFixed(2)}
+                              <div className="flex items-center gap-2">
+                                <div className="text-right flex-shrink-0">
+                                  <div className="text-xs sm:text-sm font-semibold text-red-600">
+                                    R$ {devedor.total_devido?.toFixed(2)}
+                                  </div>
+                                  <div className="text-[10px] sm:text-xs font-medium text-foreground/70">
+                                    {devedor.meses_devendo}m
+                                  </div>
                                 </div>
-                                <div className="text-[10px] sm:text-xs font-medium text-foreground/70">
-                                  {devedor.meses_devendo}m
-                                </div>
+                                {!readOnly && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleLiquidarManual(devedor.registro_id, devedor.nome_colete)}
+                                    disabled={liquidando === String(devedor.registro_id)}
+                                    className="h-7 px-2 text-xs flex-shrink-0"
+                                  >
+                                    {liquidando === String(devedor.registro_id) ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <>
+                                        <CheckCircle className="h-3 w-3 mr-1" />
+                                        Baixa
+                                      </>
+                                    )}
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           ))}

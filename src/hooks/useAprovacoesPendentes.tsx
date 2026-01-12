@@ -12,6 +12,8 @@ interface Aprovacao {
   status: string;
   data_hora_acao: string | null;
   justificativa_rejeicao: string | null;
+  aprovado_por_escalacao?: boolean;
+  justificativa_escalacao?: string | null;
 }
 
 interface SolicitacaoAprovacao {
@@ -20,6 +22,7 @@ interface SolicitacaoAprovacao {
   integrante_nome_colete: string;
   integrante_divisao_texto: string;
   integrante_regional_texto: string;
+  integrante_regional_id: string | null;
   integrante_cargo_atual: string;
   cargo_treinamento_nome: string;
   cargo_treinamento_id: string;
@@ -33,6 +36,7 @@ interface SolicitacaoAprovacao {
   aprovacoes: Aprovacao[];
   aprovacaoAtual: Aprovacao | null;
   isAprovadorDaVez: boolean;
+  podeDRescalar: boolean;
 }
 
 export function useAprovacoesPendentes(userId: string | undefined) {
@@ -40,20 +44,29 @@ export function useAprovacoesPendentes(userId: string | undefined) {
   const [loading, setLoading] = useState(true);
   const [operando, setOperando] = useState(false);
   const [meuIntegranteId, setMeuIntegranteId] = useState<string | null>(null);
+  const [meuIntegranteNome, setMeuIntegranteNome] = useState<string | null>(null);
+  const [minhaRegionalId, setMinhaRegionalId] = useState<string | null>(null);
+  const [soDiretorRegional, setSouDiretorRegional] = useState(false);
 
-  // Buscar integrante_id do usuário logado
+  // Buscar integrante_id e dados do usuário logado
   useEffect(() => {
     async function fetchMeuIntegrante() {
       if (!userId) return;
 
       const { data } = await supabase
         .from('integrantes_portal')
-        .select('id')
+        .select('id, nome_colete, regional_id, cargo_grau_texto')
         .eq('profile_id', userId)
         .single();
 
       if (data) {
         setMeuIntegranteId(data.id);
+        setMeuIntegranteNome(data.nome_colete);
+        setMinhaRegionalId(data.regional_id);
+        // Verificar se é Diretor Regional
+        const cargoNormalizado = (data.cargo_grau_texto || '').toLowerCase();
+        const ehDR = cargoNormalizado.includes('diretor') && cargoNormalizado.includes('regional');
+        setSouDiretorRegional(ehDR);
       }
     }
 
@@ -83,6 +96,7 @@ export function useAprovacoesPendentes(userId: string | undefined) {
             nome_colete,
             divisao_texto,
             regional_texto,
+            regional_id,
             cargo_grau_texto
           ),
           cargo_treinamento:cargos!solicitacoes_treinamento_cargo_treinamento_id_fkey(nome),
@@ -118,7 +132,7 @@ export function useAprovacoesPendentes(userId: string | undefined) {
 
       // Montar o resultado
       const resultado: SolicitacaoAprovacao[] = solicitacoesData.map(sol => {
-        const integrante = sol.integrante as { nome_colete: string; divisao_texto: string; regional_texto: string; cargo_grau_texto: string } | null;
+        const integrante = sol.integrante as { nome_colete: string; divisao_texto: string; regional_texto: string; regional_id: string | null; cargo_grau_texto: string } | null;
         const cargoTreinamento = sol.cargo_treinamento as { nome: string } | null;
         const solicitanteCargo = sol.solicitante_cargo as { nome: string } | null;
         const solicitanteDivisao = sol.solicitante_divisao as { nome: string } | null;
@@ -131,12 +145,20 @@ export function useAprovacoesPendentes(userId: string | undefined) {
         // Verificar se o usuário logado é o aprovador da vez
         const isAprovadorDaVez = aprovacaoAtual?.aprovador_integrante_id === meuIntegranteId;
 
+        // Verificar se o DR pode escalar (aprovar fora da vez)
+        // Condições: é DR, é da mesma regional, há aprovação pendente, e não é seu turno normal
+        const integranteRegionalId = integrante?.regional_id;
+        const temAprovacaoPendente = aprovacoesDoSol.some(a => a.status === 'pendente');
+        const mesmRegional = integranteRegionalId && minhaRegionalId && integranteRegionalId === minhaRegionalId;
+        const podeDRescalar = soDiretorRegional && mesmRegional && temAprovacaoPendente && !isAprovadorDaVez;
+
         return {
           id: sol.id,
           integrante_id: sol.integrante_id,
           integrante_nome_colete: integrante?.nome_colete || 'N/A',
           integrante_divisao_texto: integrante?.divisao_texto || 'N/A',
           integrante_regional_texto: integrante?.regional_texto || 'N/A',
+          integrante_regional_id: integrante?.regional_id || null,
           integrante_cargo_atual: integrante?.cargo_grau_texto || 'N/A',
           cargo_treinamento_nome: cargoTreinamento?.nome || 'N/A',
           cargo_treinamento_id: sol.cargo_treinamento_id,
@@ -156,10 +178,13 @@ export function useAprovacoesPendentes(userId: string | undefined) {
             aprovador_cargo: a.aprovador_cargo,
             status: a.status,
             data_hora_acao: a.data_hora_acao,
-            justificativa_rejeicao: a.justificativa_rejeicao
+            justificativa_rejeicao: a.justificativa_rejeicao,
+            aprovado_por_escalacao: a.aprovado_por_escalacao,
+            justificativa_escalacao: a.justificativa_escalacao
           })),
           aprovacaoAtual,
-          isAprovadorDaVez
+          isAprovadorDaVez,
+          podeDRescalar
         };
       });
 
@@ -167,7 +192,7 @@ export function useAprovacoesPendentes(userId: string | undefined) {
     } finally {
       setLoading(false);
     }
-  }, [userId, meuIntegranteId]);
+  }, [userId, meuIntegranteId, minhaRegionalId, soDiretorRegional]);
 
   useEffect(() => {
     fetchSolicitacoes();
@@ -314,12 +339,101 @@ export function useAprovacoesPendentes(userId: string | undefined) {
     }
   }
 
+  async function aprovarPorEscalacao(
+    aprovacaoId: string, 
+    solicitacaoId: string,
+    justificativa: string
+  ): Promise<boolean> {
+    setOperando(true);
+
+    try {
+      // 1. Atualizar a aprovação para "aprovado" com dados de escalação
+      const { error: updateError } = await supabase
+        .from('aprovacoes_treinamento')
+        .update({
+          status: 'aprovado',
+          data_hora_acao: new Date().toISOString(),
+          aprovado_por_escalacao: true,
+          aprovador_escalacao_id: meuIntegranteId,
+          aprovador_escalacao_nome: meuIntegranteNome,
+          justificativa_escalacao: justificativa
+        })
+        .eq('id', aprovacaoId);
+
+      if (updateError) {
+        console.error('Erro ao aprovar por escalação:', updateError);
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível registrar a aprovação por escalação.',
+          variant: 'destructive'
+        });
+        return false;
+      }
+
+      // 2. Verificar se todas as aprovações estão concluídas
+      const { data: todasAprovacoes, error: fetchError } = await supabase
+        .from('aprovacoes_treinamento')
+        .select('status')
+        .eq('solicitacao_id', solicitacaoId);
+
+      if (fetchError) {
+        console.error('Erro ao verificar aprovações:', fetchError);
+        await fetchSolicitacoes();
+        return true;
+      }
+
+      const todasAprovadas = todasAprovacoes?.every(a => a.status === 'aprovado');
+
+      if (todasAprovadas) {
+        // 3. Buscar dados da solicitação para finalizar
+        const { data: solicitacao } = await supabase
+          .from('solicitacoes_treinamento')
+          .select('integrante_id, cargo_treinamento_id')
+          .eq('id', solicitacaoId)
+          .single();
+
+        if (solicitacao) {
+          // 4. Atualizar status da solicitação para "Em Treinamento"
+          await supabase
+            .from('solicitacoes_treinamento')
+            .update({
+              status: 'Em Treinamento',
+              data_aprovacao: new Date().toISOString()
+            })
+            .eq('id', solicitacaoId);
+
+          // 5. Atualizar cargo_treinamento_id do integrante
+          await supabase
+            .from('integrantes_portal')
+            .update({ cargo_treinamento_id: solicitacao.cargo_treinamento_id })
+            .eq('id', solicitacao.integrante_id);
+
+          toast({
+            title: 'Treinamento Aprovado por Escalação',
+            description: 'Todas as aprovações foram concluídas. O treinamento está ativo.',
+          });
+        }
+      } else {
+        toast({
+          title: 'Aprovação por Escalação Registrada',
+          description: 'Etapa aprovada com justificativa. Aguardando próximos aprovadores.',
+        });
+      }
+
+      await fetchSolicitacoes();
+      return true;
+    } finally {
+      setOperando(false);
+    }
+  }
+
   return {
     solicitacoes,
     loading,
     operando,
     aprovar,
     rejeitar,
+    aprovarPorEscalacao,
     refetch: fetchSolicitacoes
   };
 }
