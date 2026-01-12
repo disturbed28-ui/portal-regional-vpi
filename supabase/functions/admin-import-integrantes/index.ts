@@ -658,6 +658,13 @@ Deno.serve(async (req) => {
           novaRegionalId = comandoNacional?.id || null;
         }
         
+        // Determinar se é comando nacional (usar "CMD" para ambos)
+        const isComandoNacional = promovido.nova_regional_id === 'comando_nacional' 
+          || promovido.nova_regional === 'CMD';
+        
+        const regionalTexto = isComandoNacional ? 'CMD' : (promovido.nova_regional || 'COMANDO');
+        const divisaoTexto = isComandoNacional ? 'CMD' : 'COMANDO';
+        
         // Atualizar integrante para Grau IV
         const { error: updateError } = await supabase
           .from('integrantes_portal')
@@ -665,9 +672,9 @@ Deno.serve(async (req) => {
             grau: 'IV',
             cargo_nome: promovido.novo_cargo_nome,
             cargo_grau_texto: `${promovido.novo_cargo_nome} (Grau IV)`,
-            regional_texto: promovido.nova_regional || 'COMANDO NACIONAL',
+            regional_texto: regionalTexto,
             regional_id: novaRegionalId,
-            divisao_texto: 'COMANDO',
+            divisao_texto: divisaoTexto,
             divisao_id: null,
             // NÃO mudar ativo - permanece true
             updated_at: new Date().toISOString()
@@ -692,8 +699,8 @@ Deno.serve(async (req) => {
             dados_novos: {
               cargo_nome: promovido.novo_cargo_nome,
               grau: 'IV',
-              regional_texto: promovido.nova_regional,
-              divisao_texto: 'COMANDO'
+              regional_texto: regionalTexto,
+              divisao_texto: divisaoTexto
             },
             observacao: promovido.observacao || 'Promoção para Grau IV via carga',
             alterado_por: admin_user_id

@@ -66,6 +66,9 @@ export function ModalMotivoRemovido({
     const cargoSelecionado = cargosGrau4.find(c => c.id === novoCargoId);
     const regionalSelecionada = regionais.find(r => r.id === novaRegionalId);
     
+    // Se for comando_nacional, usar "CMD" para regional
+    const isComandoNacional = novaRegionalId === 'comando_nacional';
+    
     onConfirmar({
       integrante_id: integrante.id,
       registro_id: integrante.registro_id,
@@ -75,7 +78,7 @@ export function ModalMotivoRemovido({
       // Dados de promoção
       novo_cargo_id: novoCargoId || undefined,
       novo_cargo_nome: cargoSelecionado?.nome || undefined,
-      nova_regional: regionalSelecionada?.nome || undefined,
+      nova_regional: isComandoNacional ? 'CMD' : regionalSelecionada?.nome,
       nova_regional_id: novaRegionalId || undefined
     });
   };
