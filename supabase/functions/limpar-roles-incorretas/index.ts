@@ -25,11 +25,11 @@ interface RelatorioItem {
   acao: string;
 }
 
-// Roles que podem ser gerenciadas automaticamente
-const ROLES_GERENCIADAS = ['regional', 'diretor_regional', 'diretor_divisao', 'social_divisao', 'adm_divisao', 'moderator'];
+// Roles que podem ser gerenciadas automaticamente (inclui 'user' como base)
+const ROLES_GERENCIADAS = ['user', 'regional', 'diretor_regional', 'diretor_divisao', 'social_divisao', 'adm_divisao', 'moderator'];
 
 function determinarRolesCorretas(grau: string | null, cargoNome: string | null): string[] | null {
-  if (!grau) return [];
+  if (!grau) return ['user']; // Base para todos
   
   const grauUpper = grau.toUpperCase().trim();
   const cargoLower = (cargoNome || '').toLowerCase();
@@ -40,36 +40,36 @@ function determinarRolesCorretas(grau: string | null, cargoNome: string | null):
     return null; // null = não mexer
   }
   
-  // Grau V - Regional
+  // Grau V - Regional + user
   if (grauUpper === 'V') {
     if (cargoLower.includes('diretor')) {
-      return ['diretor_regional'];
+      return ['user', 'diretor_regional'];
     }
-    return ['regional'];
+    return ['user', 'regional'];
   }
   
-  // Grau VI - Divisão
+  // Grau VI - Divisão + user
   if (grauUpper === 'VI') {
     if (cargoLower.includes('diretor') || cargoLower.includes('sub diretor') || 
         cargoLower.includes('sub-diretor') || cargoLower.includes('subdiretor')) {
-      return ['diretor_divisao'];
+      return ['user', 'diretor_divisao'];
     }
     if (cargoLower.includes('social')) {
-      return ['social_divisao'];
+      return ['user', 'social_divisao'];
     }
     if (cargoLower.includes('adm')) {
-      return ['adm_divisao'];
+      return ['user', 'adm_divisao'];
     }
     // Fallback para Grau VI sem cargo específico
-    return ['moderator'];
+    return ['user', 'moderator'];
   }
   
-  // Graus VII, VIII, IX, X - Remover roles especiais
+  // Graus VII, VIII, IX, X - Apenas role user (base)
   if (['VII', 'VIII', 'IX', 'X'].includes(grauUpper)) {
-    return []; // Array vazio = remover roles especiais
+    return ['user']; // Todos têm pelo menos role user
   }
   
-  return [];
+  return ['user']; // Default: role user
 }
 
 Deno.serve(async (req) => {
