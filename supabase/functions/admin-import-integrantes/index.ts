@@ -763,53 +763,93 @@ Deno.serve(async (req) => {
       ...(atualizados || []).map(a => ({ registro_id: a.registro_id, cargo_grau_texto: a.cargo_grau_texto }))
     ];
 
+    // Função auxiliar para determinar roles baseado no grau e cargo
+    function determinarRolesDoIntegrante(cargoGrauTexto: string): string[] | null {
+      if (!cargoGrauTexto) return [];
+      
+      const texto = cargoGrauTexto.toLowerCase();
+      
+      // Graus I, II, III, IV (Comando) - NÃO ALTERAR ROLES
+      if (texto.includes('grau i ') || texto.includes('grau ii') || 
+          texto.includes('grau iii') || texto.includes('grau iv') ||
+          texto.match(/grau\s+i[^vx]/i) || texto.endsWith('grau i')) {
+        return null; // null = não mexer nas roles
+      }
+      
+      // Grau V - Regional
+      if (texto.includes('grau v') && !texto.includes('grau vi')) {
+        if (texto.includes('diretor')) {
+          return ['diretor_regional'];
+        }
+        return ['regional'];
+      }
+      
+      // Grau VI - Divisão
+      if (texto.includes('grau vi') && !texto.includes('grau vii')) {
+        if (texto.includes('diretor') || texto.includes('sub diretor') || texto.includes('sub-diretor') || texto.includes('subdiretor')) {
+          return ['diretor_divisao'];
+        }
+        if (texto.includes('social')) {
+          return ['social_divisao'];
+        }
+        if (texto.includes('adm')) {
+          return ['adm_divisao'];
+        }
+        // Fallback para Grau VI sem cargo específico
+        return ['moderator'];
+      }
+      
+      // Graus VII, VIII, IX, X - Remover roles especiais
+      if (texto.includes('grau vii') || texto.includes('grau viii') || 
+          texto.includes('grau ix') || texto.includes('grau x')) {
+        return []; // Array vazio = remover roles especiais
+      }
+      
+      return [];
+    }
+
+    // Roles que podem ser gerenciadas automaticamente (não mexer em admin, user, app.authenticated, etc)
+    const rolesGerenciadas = ['regional', 'diretor_regional', 'diretor_divisao', 'social_divisao', 'adm_divisao', 'moderator'];
+
     for (const integrante of integrantesParaAtribuirRoles) {
       try {
-        // Buscar profile_id pelo registro_id
+        // Buscar profile_id e cargo pelo registro_id
         const { data: integranteData } = await supabase
           .from('integrantes_portal')
-          .select('profile_id, cargo_grau_texto')
+          .select('profile_id, cargo_grau_texto, grau, cargo_nome')
           .eq('registro_id', integrante.registro_id)
           .single();
         
-        if (integranteData?.profile_id) {
-          const cargoGrauTexto = integranteData.cargo_grau_texto;
-          
-          // Remover roles antigas (exceto admin)
+        if (!integranteData?.profile_id) continue;
+        
+        const rolesCorretas = determinarRolesDoIntegrante(integranteData.cargo_grau_texto);
+        
+        // null = Comando (I-IV), não mexer nas roles
+        if (rolesCorretas === null) {
+          console.log(`[admin-import-integrantes] Role: ${integrante.registro_id} - Grau ${integranteData.grau || 'CMD'} - mantendo roles atuais`);
+          continue;
+        }
+        
+        // Remover apenas roles gerenciadas (mantendo admin, user, app.authenticated, presence.*)
+        await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', integranteData.profile_id)
+          .in('role', rolesGerenciadas);
+        
+        // Adicionar novas roles
+        for (const role of rolesCorretas) {
           await supabase
             .from('user_roles')
-            .delete()
-            .eq('user_id', integranteData.profile_id)
-            .neq('role', 'admin');
-
-          let novaRole: string | null = null;
-
-          // Prioridade 1: Diretor/Subdiretor
-          if (cargoGrauTexto.includes('Diretor') || cargoGrauTexto.includes('Sub Diretor') || cargoGrauTexto.includes('Sub-Diretor')) {
-            novaRole = 'diretor_divisao';
-          }
-          // Prioridade 2: Grau V (Regional)
-          else if (cargoGrauTexto.includes('Grau V')) {
-            novaRole = 'regional';
-          }
-          // Prioridade 3: Grau VI (Moderador)
-          else if (cargoGrauTexto.includes('Grau VI')) {
-            novaRole = 'moderator';
-          }
-
-          if (novaRole) {
-            await supabase
-              .from('user_roles')
-              .upsert({ 
-                user_id: integranteData.profile_id, 
-                role: novaRole 
-              }, { 
-                onConflict: 'user_id,role' 
-              });
-            
-            console.log(`[admin-import-integrantes] Role ${novaRole} atribuída a ${integranteData.profile_id}`);
-          }
+            .upsert({ 
+              user_id: integranteData.profile_id, 
+              role: role 
+            }, { 
+              onConflict: 'user_id,role' 
+            });
         }
+        
+        console.log(`[admin-import-integrantes] Role: ${integrante.registro_id} - ${integranteData.cargo_grau_texto} -> ${rolesCorretas.length > 0 ? rolesCorretas.join(', ') : 'sem roles especiais'}`);
       } catch (roleError) {
         console.error('[admin-import-integrantes] Erro ao atribuir role:', roleError);
         // Não bloquear a importação por erro de role
