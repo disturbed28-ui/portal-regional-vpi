@@ -551,8 +551,45 @@ const TreinamentoIntegranteDetalhesCard = ({ detalhes }: { detalhes: Treinamento
 // Card para Pendência de Ajuste de Roles
 const AjusteRolesDetalhesCard = ({ detalhes }: { detalhes: AjusteRolesDetalhes }) => {
   const navigate = useNavigate();
+  const [resolvendo, setResolvendo] = useState(false);
   const formatarData = (data: string) => 
     format(new Date(data), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+
+  const handleMarcarResolvido = async () => {
+    setResolvendo(true);
+    try {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      const { error } = await supabase
+        .from('pendencias_ajuste_roles')
+        .update({
+          status: 'concluido',
+          resolvido_por: user.id,
+          resolvido_em: new Date().toISOString()
+        })
+        .eq('id', detalhes.id)
+        .eq('status', 'pendente');
+
+      if (error) throw error;
+
+      // Limpar cache de pendências e recarregar
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('pendencias_')) {
+          localStorage.removeItem(key);
+        }
+      });
+      window.location.reload();
+    } catch (error) {
+      console.error('Erro ao marcar como resolvido:', error);
+    } finally {
+      setResolvendo(false);
+    }
+  };
 
   return (
     <Card className="bg-card border-emerald-500/50">
@@ -605,16 +642,28 @@ const AjusteRolesDetalhesCard = ({ detalhes }: { detalhes: AjusteRolesDetalhes }
           <p className="text-xs text-muted-foreground italic">{detalhes.justificativa}</p>
         </div>
 
-        {/* Botão de Ação */}
-        <Button 
-          size="sm" 
-          variant="default"
-          className="w-full bg-emerald-600 hover:bg-emerald-700"
-          onClick={() => navigate('/admin/integrantes')}
-        >
-          <ArrowRight className="h-4 w-4 mr-2" />
-          Ajustar Permissões
-        </Button>
+        {/* Botões de Ação */}
+        <div className="flex flex-col gap-2">
+          <Button 
+            size="sm" 
+            variant="default"
+            className="w-full bg-emerald-600 hover:bg-emerald-700"
+            onClick={() => navigate('/admin/integrantes')}
+          >
+            <ArrowRight className="h-4 w-4 mr-2" />
+            Ajustar Permissões
+          </Button>
+          
+          <Button 
+            size="sm" 
+            variant="outline"
+            className="w-full"
+            onClick={handleMarcarResolvido}
+            disabled={resolvendo}
+          >
+            {resolvendo ? 'Resolvendo...' : '✓ Marcar como Resolvido'}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
