@@ -59,19 +59,39 @@ Deno.serve(async (req) => {
     const roles = userRoles?.map(r => r.role) || [];
     console.log('[manage-presenca] Roles do usuário:', roles);
 
-    const isAuthorized = 
+    // Buscar divisão do usuário (para validação adicional)
+    const { data: userIntegrante } = await supabaseAdmin
+      .from('integrantes_portal')
+      .select('divisao_id, divisao_texto')
+      .eq('profile_id', user_id)
+      .eq('ativo', true)
+      .maybeSingle();
+
+    console.log('[manage-presenca] Integrante do usuário:', userIntegrante);
+
+    // Verificar autorização
+    const isRoleAuthorized = 
       roles.includes('admin') || 
       roles.includes('moderator') || 
       roles.includes('regional') ||
       roles.includes('diretor_regional') ||
       roles.includes('diretor_divisao');
 
-    if (!isAuthorized) {
-      console.log('[manage-presenca] Usuário não autorizado');
+    // Para ação initialize, permitir se usuário pertence à mesma divisão
+    const isDivisaoAuthorized = (action === 'initialize' || action === 'initialize_divisao_cmd') && 
+      divisao_id && 
+      userIntegrante?.divisao_id === divisao_id;
+
+    if (!isRoleAuthorized && !isDivisaoAuthorized) {
+      console.log('[manage-presenca] Usuário não autorizado. Roles:', roles, 'isDivisaoAuthorized:', isDivisaoAuthorized);
       return new Response(
         JSON.stringify({ error: 'Sem permissão para gerenciar presenças' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    if (isDivisaoAuthorized && !isRoleAuthorized) {
+      console.log('[manage-presenca] Usuário autorizado por pertencer à mesma divisão');
     }
 
     // Buscar nome do colete do usuário que está confirmando

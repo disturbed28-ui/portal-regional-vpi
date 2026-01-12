@@ -141,6 +141,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
   // Estados para carregar divisão (CMD e Regional)
   const [showCarregarDivisaoDialog, setShowCarregarDivisaoDialog] = useState(false);
   const [loadingDivisao, setLoadingDivisao] = useState(false);
+  const [carregandoDivisaoManual, setCarregandoDivisaoManual] = useState(false);
   
   // Estado para filtro por divisão
   const [filtroDivisao, setFiltroDivisao] = useState<string>("todas");
@@ -253,7 +254,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
       
       // EVENTO DE DIVISÃO: Inicializar automaticamente se vazio
       if (tipoEvento === 'divisao' && count === 0 && existingEvento.divisao_id) {
-        console.log('[initializeEvento] Evento de divisão sem presenças, inicializando...');
+        console.log('[initializeEvento] Evento de divisão sem presenças, inicializando automaticamente...');
         try {
           const { data, error } = await supabase.functions.invoke('manage-presenca', {
             body: {
@@ -266,28 +267,75 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
           
           if (error) {
             console.error('[initializeEvento] Erro ao inicializar:', error);
-            toast({
-              title: "Erro ao inicializar lista",
-              description: error.message || "Não foi possível criar a lista de presença",
-              variant: "destructive",
-            });
+            // Não exibir toast de erro aqui - deixar o botão manual aparecer
+            console.log('[initializeEvento] Carga automática falhou, botão manual será exibido');
           } else {
-            console.log(`[initializeEvento] ${data.count} integrantes registrados`);
+            console.log(`[initializeEvento] ${data.count} integrantes registrados automaticamente`);
             refetch();
             toast({
-              title: "Lista criada",
+              title: "Lista criada automaticamente",
               description: `${data.count} integrantes registrados como ausentes`,
             });
           }
-        } catch (error) {
-          console.error('[initializeEvento] Erro:', error);
+        } catch (error: any) {
+          console.error('[initializeEvento] Erro ao inicializar:', error);
+          // Não exibir toast de erro - deixar o botão manual aparecer
         }
       }
       
       // EVENTO REGIONAL ou CMD: Exibir diálogo para carregar divisão
+      // O divisao_id está no profile (profile.divisao_id)
       if ((tipoEvento === 'regional' || tipoEvento === 'cmd') && userProfile?.divisao_id) {
         setShowCarregarDivisaoDialog(true);
       }
+    }
+  };
+
+  // Função para carga manual de divisão (quando automática falha)
+  const handleCarregarDivisaoManual = async () => {
+    if (!evento?.divisao_id || !user) {
+      toast({
+        title: "Erro",
+        description: "Evento não possui divisão configurada",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCarregandoDivisaoManual(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-presenca', {
+        body: {
+          action: 'initialize',
+          user_id: user.id,
+          evento_agenda_id: evento.id,
+          divisao_id: evento.divisao_id,
+        }
+      });
+
+      if (error) {
+        console.error('[handleCarregarDivisaoManual] Erro:', error);
+        toast({
+          title: "Erro ao carregar lista",
+          description: error.message || "Verifique suas permissões ou tente novamente",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Lista criada",
+          description: `${data.count} integrantes registrados como ausentes`,
+        });
+        refetch();
+      }
+    } catch (error: any) {
+      console.error('[handleCarregarDivisaoManual] Erro:', error);
+      toast({
+        title: "Erro ao carregar lista",
+        description: error?.message || "Erro inesperado. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setCarregandoDivisaoManual(false);
     }
   };
 
@@ -329,6 +377,9 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
 
   const handleLoadDivisao = async () => {
     if (!evento || !user || !userProfile?.divisao_id) {
+      console.log('[handleLoadDivisao] Sem divisao_id disponível:', { 
+        profileDivisaoId: userProfile?.divisao_id 
+      });
       setShowCarregarDivisaoDialog(false);
       return;
     }
@@ -780,6 +831,32 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                 <div className="text-xs sm:text-sm font-medium text-foreground/70">Total</div>
               </div>
             </div>
+
+            {/* Botão Manual para Carregar Divisão (quando evento de divisão tem lista vazia) */}
+            {tipoEvento === 'divisao' && presencas.length === 0 && evento?.divisao_id && canManage && !loading && (
+              <div className="text-center py-6 px-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                <p className="text-muted-foreground mb-3 text-sm">
+                  A lista de presença está vazia. Clique no botão abaixo para carregar os integrantes da divisão.
+                </p>
+                <Button 
+                  onClick={handleCarregarDivisaoManual} 
+                  disabled={carregandoDivisaoManual}
+                  className="w-full sm:w-auto"
+                >
+                  {carregandoDivisaoManual ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Carregando...
+                    </>
+                  ) : (
+                    <>
+                      <Users className="mr-2 h-4 w-4" />
+                      Carregar Integrantes da Divisão
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
 
             {/* Filtro por Divisão (apenas para Regional/CMD) */}
             {(isRegional || isCMD) && divisoesUnicas.length > 1 && (
