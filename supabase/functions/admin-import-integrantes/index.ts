@@ -316,15 +316,25 @@ Deno.serve(async (req) => {
         nova_regional_id: z.string().optional(),
         observacao: z.string().optional()
       })).optional(),
-      afastados_ignorados: z.array(z.object({
+afastados_ignorados: z.array(z.object({
         integrante_id: z.string().uuid(),
         registro_id: z.number(),
         nome_colete: z.string(),
         observacao: z.string().optional()
+      })).optional(),
+      transferencias_internas: z.array(z.object({
+        integrante_id: z.string().uuid(),
+        registro_id: z.number(),
+        nome_colete: z.string(),
+        nova_regional_id: z.string().uuid().optional(),
+        nova_regional_texto: z.string().optional(),
+        nova_divisao_id: z.string().uuid().optional(),
+        nova_divisao_texto: z.string().optional(),
+        observacao: z.string().optional()
       })).optional()
     });
 
-    const { admin_user_id, novos, atualizados, removidos, promovidos, afastados_ignorados } = requestSchema.parse(await req.json());
+    const { admin_user_id, novos, atualizados, removidos, promovidos, afastados_ignorados, transferencias_internas } = requestSchema.parse(await req.json());
 
     console.log('[admin-import-integrantes] Validating admin:', admin_user_id);
     console.log('[admin-import-integrantes] Novos:', novos?.length || 0);
@@ -755,7 +765,73 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log('[admin-import-integrantes] Success - Inserted:', insertedCount, 'Updated:', updatedCount, 'Inativados:', inativadosCount, 'Promovidos:', promovidosCount, 'Afastados ignorados:', afastadosIgnoradosCount);
+    // Process TRANSFERENCIAS INTERNAS - Update regional/divisao, DON'T inactivate
+    let transferenciasInternasCount = 0;
+    if (transferencias_internas && transferencias_internas.length > 0) {
+      console.log(`[admin-import-integrantes] Processando ${transferencias_internas.length} transferências internas...`);
+      
+      for (const transferencia of transferencias_internas) {
+        // Buscar dados atuais
+        const { data: dadosAtuais } = await supabase
+          .from('integrantes_portal')
+          .select('*')
+          .eq('id', transferencia.integrante_id)
+          .single();
+        
+        // Atualizar regional e divisão
+        const updateData: any = {
+          updated_at: new Date().toISOString()
+        };
+        
+        if (transferencia.nova_regional_id) {
+          updateData.regional_id = transferencia.nova_regional_id;
+        }
+        if (transferencia.nova_regional_texto) {
+          updateData.regional_texto = normalizarRegionalParaSalvar(transferencia.nova_regional_texto);
+        }
+        if (transferencia.nova_divisao_id) {
+          updateData.divisao_id = transferencia.nova_divisao_id;
+        }
+        if (transferencia.nova_divisao_texto) {
+          updateData.divisao_texto = normalizarDivisaoParaSalvar(transferencia.nova_divisao_texto);
+        }
+        
+        const { error: updateError } = await supabase
+          .from('integrantes_portal')
+          .update(updateData)
+          .eq('id', transferencia.integrante_id);
+        
+        if (updateError) {
+          console.error('[admin-import-integrantes] Error updating transfer:', updateError);
+        } else {
+          transferenciasInternasCount++;
+          
+          // Log to history
+          await supabase.from('integrantes_historico').insert({
+            integrante_id: transferencia.integrante_id,
+            acao: 'transferencia_interna',
+            dados_anteriores: dadosAtuais ? {
+              regional_id: dadosAtuais.regional_id,
+              regional_texto: dadosAtuais.regional_texto,
+              divisao_id: dadosAtuais.divisao_id,
+              divisao_texto: dadosAtuais.divisao_texto
+            } : null,
+            dados_novos: {
+              regional_id: transferencia.nova_regional_id,
+              regional_texto: transferencia.nova_regional_texto,
+              divisao_id: transferencia.nova_divisao_id,
+              divisao_texto: transferencia.nova_divisao_texto
+            },
+            observacao: transferencia.observacao || 'Transferência interna efetivada via carga',
+            alterado_por: admin_user_id
+          });
+          
+          console.log(`[admin-import-integrantes] Transferência interna: ${transferencia.nome_colete} -> ${transferencia.nova_divisao_texto || transferencia.nova_regional_texto}`);
+        }
+      }
+    }
+
+    console.log('[admin-import-integrantes] Success - Inserted:', insertedCount, 'Updated:', updatedCount, 'Inativados:', inativadosCount, 'Promovidos:', promovidosCount, 'Afastados ignorados:', afastadosIgnoradosCount, 'Transferências:', transferenciasInternasCount);
 
     // Atribuir roles automaticamente aos integrantes novos e atualizados
     const integrantesParaAtribuirRoles = [
@@ -1036,10 +1112,11 @@ Deno.serve(async (req) => {
         success: true, 
         insertedCount, 
         updatedCount,
-        inativadosCount,
+inativadosCount,
         promovidosCount,
         afastadosIgnoradosCount,
-        message: `${insertedCount} novos, ${updatedCount} atualizados, ${inativadosCount} inativados, ${promovidosCount} promovidos, ${afastadosIgnoradosCount} afastados mantidos`,
+        transferenciasInternasCount,
+        message: `${insertedCount} novos, ${updatedCount} atualizados, ${inativadosCount} inativados, ${promovidosCount} promovidos, ${afastadosIgnoradosCount} afastados mantidos, ${transferenciasInternasCount} transferências`,
         carga: {
           id: cargaData.id,
           data_carga: cargaData.data_carga,
