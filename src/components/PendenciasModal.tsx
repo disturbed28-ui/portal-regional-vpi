@@ -865,7 +865,13 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
             {/* Botão Resolver para Anomalias */}
             {isDelta && (
               <Button 
-                onClick={() => navigate('/admin/integrantes')}
+                onClick={() => {
+                  const deltaDetalhes = detalhes as DeltaDetalhes | null;
+                  const isAfastadoDelta = deltaDetalhes?.tipo_delta === 'SUMIU_AFASTADOS' || 
+                                          deltaDetalhes?.tipo_delta === 'NOVO_AFASTADOS';
+                  // Para deltas de afastados, ir para Relatórios; caso contrário, ir para Admin
+                  navigate(isAfastadoDelta ? '/relatorios' : '/admin/integrantes');
+                }}
                 className="w-full"
                 variant="default"
               >

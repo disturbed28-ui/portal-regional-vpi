@@ -337,7 +337,7 @@ const Relatorios = () => {
                                         )}
                                       </td>
                                       <td className="p-3">
-                                        {hasRole('admin') && (
+                                        {(hasRole('admin') || hasRole('diretor_regional')) && (
                                           <Button
                                             size="sm"
                                             onClick={() => handleRegistrarRetorno(afastado.id, afastado.nome_colete)}

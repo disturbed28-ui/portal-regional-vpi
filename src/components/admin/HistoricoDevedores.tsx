@@ -1,20 +1,24 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertTriangle, CheckCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
 import { formatRef } from '@/lib/mensalidadesParser';
 import { formatarDataBrasil } from '@/lib/timezone';
 import { containsNormalized } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
 
 export const HistoricoDevedores = () => {
   const [filtroNome, setFiltroNome] = useState('');
   const [filtroDivisao, setFiltroDivisao] = useState<string>('todos');
   const [filtroStatus, setFiltroStatus] = useState<string>('todos');
+  const [liquidando, setLiquidando] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   // Buscar histórico completo
   const { data: historicoCompleto = [], isLoading } = useQuery({
@@ -43,6 +47,39 @@ export const HistoricoDevedores = () => {
 
   // Buscar divisões únicas para filtro
   const divisoesUnicas = Array.from(new Set(historicoCompleto.map(h => h.divisao_texto))).sort();
+
+  // Função para dar baixa manual
+  const handleLiquidarManual = async (id: string, nomeColete: string) => {
+    setLiquidando(id);
+    try {
+      const { error } = await supabase
+        .from('mensalidades_atraso')
+        .update({ 
+          ativo: false, 
+          liquidado: true, 
+          data_liquidacao: new Date().toISOString() 
+        })
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      toast({ 
+        title: "Baixa realizada", 
+        description: `${nomeColete} marcado como liquidado` 
+      });
+      queryClient.invalidateQueries({ queryKey: ['historico-mensalidades'] });
+      queryClient.invalidateQueries({ queryKey: ['mensalidades-devedores-ativos'] });
+    } catch (error) {
+      console.error('Erro ao dar baixa:', error);
+      toast({ 
+        title: "Erro", 
+        description: "Falha ao dar baixa na mensalidade", 
+        variant: "destructive" 
+      });
+    } finally {
+      setLiquidando(null);
+    }
+  };
 
   // Aplicar filtros
   const historicoFiltrado = historicoCompleto.filter(item => {
@@ -111,12 +148,13 @@ export const HistoricoDevedores = () => {
                 <TableHead className="text-right">Valor</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Data Liquidação</TableHead>
+                <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {historicoFiltrado.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground">
                     Nenhum registro encontrado
                   </TableCell>
                 </TableRow>
@@ -166,6 +204,26 @@ export const HistoricoDevedores = () => {
                           ? formatarDataBrasil(item.data_liquidacao)
                           : '-'
                         }
+                      </TableCell>
+                      <TableCell>
+                        {item.ativo && !item.liquidado && (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleLiquidarManual(item.id, item.nome_colete)}
+                            disabled={liquidando === item.id}
+                            className="h-7 text-xs"
+                          >
+                            {liquidando === item.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <>
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Dar Baixa
+                              </>
+                            )}
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   );
