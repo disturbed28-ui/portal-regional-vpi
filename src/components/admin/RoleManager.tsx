@@ -120,6 +120,21 @@ export function RoleManager({ profileId }: RoleManagerProps) {
         }
         
         setRoles([...roles, role]);
+        
+        // Dar baixa automática em pendências de ajuste de roles para este profile
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase
+            .from('pendencias_ajuste_roles')
+            .update({
+              status: 'concluido',
+              resolvido_por: user.id,
+              resolvido_em: new Date().toISOString()
+            })
+            .eq('profile_id', profileId)
+            .eq('status', 'pendente');
+        }
+        
         toast({
           title: "Permissão adicionada",
           description: `${ROLES_CONFIG[role].label} atribuído com sucesso`,
