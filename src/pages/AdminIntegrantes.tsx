@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +15,7 @@ import { useAdminAccess } from "@/hooks/useAdminAccess";
 import { supabase } from "@/integrations/supabase/client";
 import { parseExcelFile, processDelta, parseCargoGrau, TransferenciaDetectada } from "@/lib/excelParser";
 import { parseMensalidadesExcel, formatRef, ParseResult } from "@/lib/mensalidadesParser";
-import { Upload, ArrowLeft, Users, UserCheck, UserX, AlertCircle, FileSpreadsheet, History, Info, RefreshCw, XCircle, Eye, ArrowRightLeft } from "lucide-react";
+import { Upload, ArrowLeft, Users, UserCheck, UserX, AlertCircle, FileSpreadsheet, History, Info, RefreshCw, XCircle, Eye, ArrowRightLeft, CheckCircle2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { HistoricoDevedores } from "@/components/admin/HistoricoDevedores";
@@ -30,6 +30,8 @@ import { usePendencias } from "@/hooks/usePendencias";
 import { LimparDeltasFalsos } from "@/components/admin/LimparDeltasFalsos";
 import { ProfileDetailDialog } from "@/components/admin/ProfileDetailDialog";
 import { containsNormalized } from "@/lib/utils";
+import { useRegionais } from "@/hooks/useRegionais";
+import { useCargosGrau4 } from "@/hooks/useCargosGrau4";
 
 const AdminIntegrantes = () => {
   const navigate = useNavigate();
@@ -56,19 +58,34 @@ const AdminIntegrantes = () => {
   } | null>(null);
   const [showAtualizadosDialog, setShowAtualizadosDialog] = useState(false);
   const [showRemovidosDialog, setShowRemovidosDialog] = useState(false);
-  const [removidosConfirmados, setRemovidosConfirmados] = useState<Array<{
+const [removidosConfirmados, setRemovidosConfirmados] = useState<Array<{
     integrante_id: string;
     registro_id: number;
     nome_colete: string;
     divisao_texto: string;
     motivo_inativacao: string;
     observacao_inativacao: string;
+    // Campos para promoção (Grau IV)
+    novo_cargo_id?: string;
+    novo_cargo_nome?: string;
+    nova_regional_id?: string;
+    nova_regional_texto?: string;
+    // Campos para transferência interna
+    destino_regional_id?: string;
+    destino_regional_texto?: string;
+    destino_divisao_id?: string;
+    destino_divisao_texto?: string;
+    // Estado de verificação de transferência
+    verificando_transferencia?: boolean;
+    encontrado_em_outra_regional?: boolean;
   }>>([]);
   const [transferidosDetectados, setTransferidosDetectados] = useState<TransferenciaDetectada[]>([]);
   const [regionalDaCarga, setRegionalDaCarga] = useState<string>('');
   
-  const { ultimaCargaInfo, devedoresAtivos } = useMensalidades();
+const { ultimaCargaInfo, devedoresAtivos } = useMensalidades();
   const { hasRole } = useUserRole(user?.id);
+  const { regionais } = useRegionais();
+  const { cargosGrau4 } = useCargosGrau4();
   
   // Hook para deltas de afastados (admin vê todos)
   const { pendencias, loading: pendenciasLoading } = usePendencias(
@@ -359,9 +376,18 @@ const AdminIntegrantes = () => {
         formato_data_entrada_atualizados: atualizadosData.filter((item: any) => item.data_entrada).slice(0, 3).map((item: any) => ({ id: item.registro_id, data: item.data_entrada }))
       });
 
-      // Preparar removidos confirmados
-      const removidosData = removidosConfirmados
-        .filter(r => r.motivo_inativacao && r.motivo_inativacao.trim() !== '')
+// Separar removidos em 4 grupos baseado no motivo
+      
+      // Grupo 1: Para INATIVAR (desligado, expulso, falecido, outro, transferido SEM destino interno)
+      const removidosParaInativar = removidosConfirmados
+        .filter(r => {
+          if (!r.motivo_inativacao) return false;
+          // Afastado e promovido nunca inativam
+          if (['afastado', 'promovido'].includes(r.motivo_inativacao)) return false;
+          // Transferido com destino interno não inativa
+          if (r.motivo_inativacao === 'transferido' && r.destino_regional_id) return false;
+          return true;
+        })
         .map(r => ({
           integrante_id: r.integrante_id,
           registro_id: r.registro_id,
@@ -369,14 +395,62 @@ const AdminIntegrantes = () => {
           motivo_inativacao: r.motivo_inativacao,
           observacao_inativacao: r.observacao_inativacao || ''
         }));
+      
+      // Grupo 2: Para PROMOVER (Grau IV)
+      const removidosParaPromover = removidosConfirmados
+        .filter(r => r.motivo_inativacao === 'promovido')
+        .map(r => ({
+          integrante_id: r.integrante_id,
+          registro_id: r.registro_id,
+          nome_colete: r.nome_colete,
+          novo_cargo_id: r.novo_cargo_id,
+          novo_cargo_nome: r.novo_cargo_nome,
+          nova_regional: r.nova_regional_texto,
+          nova_regional_id: r.nova_regional_id,
+          observacao: r.observacao_inativacao
+        }));
+      
+      // Grupo 3: AFASTADOS (apenas registrar no histórico, não inativar)
+      const removidosAfastados = removidosConfirmados
+        .filter(r => r.motivo_inativacao === 'afastado')
+        .map(r => ({
+          integrante_id: r.integrante_id,
+          registro_id: r.registro_id,
+          nome_colete: r.nome_colete,
+          observacao: r.observacao_inativacao || 'Afastamento temporário detectado na carga'
+        }));
+      
+      // Grupo 4: TRANSFERÊNCIAS INTERNAS (efetivar transferência, não inativar)
+      const transferenciasInternas = removidosConfirmados
+        .filter(r => r.motivo_inativacao === 'transferido' && r.destino_regional_id)
+        .map(r => ({
+          integrante_id: r.integrante_id,
+          registro_id: r.registro_id,
+          nome_colete: r.nome_colete,
+          nova_regional_id: r.destino_regional_id,
+          nova_regional_texto: r.destino_regional_texto,
+          nova_divisao_id: r.destino_divisao_id,
+          nova_divisao_texto: r.destino_divisao_texto,
+          observacao: r.observacao_inativacao
+        }));
+      
+      console.log('[AdminIntegrantes] 📤 Grupos de removidos:', {
+        para_inativar: removidosParaInativar.length,
+        para_promover: removidosParaPromover.length,
+        afastados: removidosAfastados.length,
+        transferencias_internas: transferenciasInternas.length
+      });
 
-      // Chamar edge function
+      // Chamar edge function com os 4 grupos
       const { data, error } = await supabase.functions.invoke('admin-import-integrantes', {
         body: {
           admin_user_id: user.id,
           novos: novosData,
           atualizados: atualizadosData,
-          removidos: removidosData.length > 0 ? removidosData : undefined,
+          removidos: removidosParaInativar.length > 0 ? removidosParaInativar : undefined,
+          promovidos: removidosParaPromover.length > 0 ? removidosParaPromover : undefined,
+          afastados_ignorados: removidosAfastados.length > 0 ? removidosAfastados : undefined,
+          transferencias_internas: transferenciasInternas.length > 0 ? transferenciasInternas : undefined,
         },
       });
 
@@ -1011,24 +1085,96 @@ const AdminIntegrantes = () => {
             </DialogHeader>
 
             <div className="space-y-4 max-h-[50vh] overflow-y-auto">
-              {removidosConfirmados.map((removido, index) => (
-                <Card key={removido.integrante_id} className="p-4 border-orange-200">
+{removidosConfirmados.map((removido, index) => (
+                <Card key={removido.integrante_id} className={`p-4 ${
+                  removido.motivo_inativacao === 'afastado' ? 'border-blue-300 bg-blue-50/50' :
+                  removido.motivo_inativacao === 'promovido' ? 'border-green-300 bg-green-50/50' :
+                  removido.motivo_inativacao === 'transferido' && removido.destino_regional_id ? 'border-emerald-300 bg-emerald-50/50' :
+                  'border-orange-200'
+                }`}>
                   <div className="space-y-3">
-                    <div>
-                      <p className="font-bold">{removido.nome_colete}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Registro: {removido.registro_id} • {removido.divisao_texto}
-                      </p>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-bold">{removido.nome_colete}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Registro: {removido.registro_id} • {removido.divisao_texto}
+                        </p>
+                      </div>
+                      {/* Badge de status */}
+                      {removido.motivo_inativacao === 'afastado' && (
+                        <Badge className="bg-blue-100 text-blue-800 border-blue-300">
+                          <Info className="h-3 w-3 mr-1" />
+                          Mantém ativo
+                        </Badge>
+                      )}
+                      {removido.motivo_inativacao === 'promovido' && (
+                        <Badge className="bg-green-100 text-green-800 border-green-300">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Promoção
+                        </Badge>
+                      )}
+                      {removido.motivo_inativacao === 'transferido' && removido.destino_regional_id && (
+                        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300">
+                          <ArrowRightLeft className="h-3 w-3 mr-1" />
+                          Transferência
+                        </Badge>
+                      )}
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Motivo da Inativação *</label>
+                      <label className="text-sm font-medium">Motivo *</label>
                       <Select
                         value={removido.motivo_inativacao}
-                        onValueChange={(value) => {
+                        onValueChange={async (value) => {
                           const updated = [...removidosConfirmados];
                           updated[index].motivo_inativacao = value;
-                          setRemovidosConfirmados(updated);
+                          // Limpar campos ao trocar motivo
+                          updated[index].novo_cargo_id = undefined;
+                          updated[index].novo_cargo_nome = undefined;
+                          updated[index].nova_regional_id = undefined;
+                          updated[index].nova_regional_texto = undefined;
+                          updated[index].destino_regional_id = undefined;
+                          updated[index].destino_regional_texto = undefined;
+                          updated[index].destino_divisao_id = undefined;
+                          updated[index].destino_divisao_texto = undefined;
+                          updated[index].encontrado_em_outra_regional = undefined;
+                          
+                          // Se for transferido, verificar se existe em outra regional
+                          if (value === 'transferido') {
+                            updated[index].verificando_transferencia = true;
+                            setRemovidosConfirmados(updated);
+                            
+                            try {
+                              const { data: integranteDestino } = await supabase
+                                .from('integrantes_portal')
+                                .select('id, regional_id, regional_texto, divisao_id, divisao_texto')
+                                .eq('registro_id', removido.registro_id)
+                                .eq('ativo', true)
+                                .neq('divisao_texto', removido.divisao_texto)
+                                .maybeSingle();
+                              
+                              const finalUpdated = [...removidosConfirmados];
+                              finalUpdated[index].verificando_transferencia = false;
+                              if (integranteDestino) {
+                                finalUpdated[index].encontrado_em_outra_regional = true;
+                                finalUpdated[index].destino_regional_id = integranteDestino.regional_id;
+                                finalUpdated[index].destino_regional_texto = integranteDestino.regional_texto;
+                                finalUpdated[index].destino_divisao_id = integranteDestino.divisao_id;
+                                finalUpdated[index].destino_divisao_texto = integranteDestino.divisao_texto;
+                              } else {
+                                finalUpdated[index].encontrado_em_outra_regional = false;
+                              }
+                              setRemovidosConfirmados(finalUpdated);
+                            } catch (err) {
+                              console.error('Erro ao verificar transferência:', err);
+                              const finalUpdated = [...removidosConfirmados];
+                              finalUpdated[index].verificando_transferencia = false;
+                              finalUpdated[index].encontrado_em_outra_regional = false;
+                              setRemovidosConfirmados(finalUpdated);
+                            }
+                          } else {
+                            setRemovidosConfirmados(updated);
+                          }
                         }}
                       >
                         <SelectTrigger>
@@ -1039,17 +1185,116 @@ const AdminIntegrantes = () => {
                           <SelectItem value="falecido">Falecido</SelectItem>
                           <SelectItem value="desligado">Desligado</SelectItem>
                           <SelectItem value="expulso">Expulso</SelectItem>
-                          <SelectItem value="afastado">Afastado</SelectItem>
-                          <SelectItem value="promovido">Promovido</SelectItem>
+                          <SelectItem value="afastado">Afastado Temporariamente</SelectItem>
+                          <SelectItem value="promovido">Promovido (Grau IV)</SelectItem>
                           <SelectItem value="outro">Outro</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
+                    {/* AFASTADO: Alerta informativo */}
+                    {removido.motivo_inativacao === 'afastado' && (
+                      <Alert className="border-blue-200 bg-blue-50">
+                        <Info className="h-4 w-4 text-blue-600" />
+                        <AlertDescription className="text-blue-700">
+                          Este integrante será <strong>mantido ativo</strong> no portal. 
+                          Apenas será registrado no histórico como afastamento temporário.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    {/* PROMOVIDO: Campos de promoção */}
+                    {removido.motivo_inativacao === 'promovido' && (
+                      <div className="space-y-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                        <p className="text-sm font-medium text-green-800 flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Promoção para Grau IV
+                        </p>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-green-700">Novo Cargo *</label>
+                            <Select
+                              value={removido.novo_cargo_id || ''}
+                              onValueChange={(value) => {
+                                const cargo = cargosGrau4.find(c => c.id === value);
+                                const updated = [...removidosConfirmados];
+                                updated[index].novo_cargo_id = value;
+                                updated[index].novo_cargo_nome = cargo?.nome || '';
+                                setRemovidosConfirmados(updated);
+                              }}
+                            >
+                              <SelectTrigger className="bg-white">
+                                <SelectValue placeholder="Selecione o cargo..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {cargosGrau4.map(cargo => (
+                                  <SelectItem key={cargo.id} value={cargo.id}>
+                                    {cargo.nome}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-green-700">Nova Regional *</label>
+                            <Select
+                              value={removido.nova_regional_id || ''}
+                              onValueChange={(value) => {
+                                const regional = regionais.find(r => r.id === value);
+                                const updated = [...removidosConfirmados];
+                                updated[index].nova_regional_id = value;
+                                updated[index].nova_regional_texto = regional?.nome || '';
+                                setRemovidosConfirmados(updated);
+                              }}
+                            >
+                              <SelectTrigger className="bg-white">
+                                <SelectValue placeholder="Selecione a regional..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {regionais.map(regional => (
+                                  <SelectItem key={regional.id} value={regional.id}>
+                                    {regional.nome}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* TRANSFERIDO: Verificação de destino */}
+                    {removido.motivo_inativacao === 'transferido' && (
+                      <div className="space-y-2">
+                        {removido.verificando_transferencia ? (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground p-3 bg-muted rounded">
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                            Verificando se existe em outra regional...
+                          </div>
+                        ) : removido.encontrado_em_outra_regional ? (
+                          <Alert className="border-emerald-200 bg-emerald-50">
+                            <ArrowRightLeft className="h-4 w-4 text-emerald-600" />
+                            <AlertDescription className="text-emerald-700">
+                              Encontrado ativo em <strong>{removido.destino_divisao_texto || removido.destino_regional_texto}</strong>.
+                              Será efetivada a transferência (não será inativado).
+                            </AlertDescription>
+                          </Alert>
+                        ) : removido.encontrado_em_outra_regional === false ? (
+                          <Alert className="border-orange-200 bg-orange-50">
+                            <AlertCircle className="h-4 w-4 text-orange-600" />
+                            <AlertDescription className="text-orange-700">
+                              <strong>Não encontrado</strong> em outra regional no sistema.
+                              Este integrante será <strong>inativado</strong>.
+                            </AlertDescription>
+                          </Alert>
+                        ) : null}
+                      </div>
+                    )}
+
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Observação (opcional)</label>
                       <Textarea
-                        placeholder="Adicione detalhes sobre a inativação..."
+                        placeholder="Adicione detalhes..."
                         value={removido.observacao_inativacao}
                         onChange={(e) => {
                           const updated = [...removidosConfirmados];
@@ -1077,8 +1322,9 @@ const AdminIntegrantes = () => {
               >
                 Cancelar
               </Button>
-              <Button
+<Button
                 onClick={() => {
+                  // Validar que todos têm motivo preenchido
                   const todosPreenchidos = removidosConfirmados.every(r => r.motivo_inativacao && r.motivo_inativacao.trim() !== '');
                   if (!todosPreenchidos) {
                     toast({
@@ -1088,10 +1334,41 @@ const AdminIntegrantes = () => {
                     });
                     return;
                   }
+                  
+                  // Validar campos de promoção
+                  const promovidosSemCampos = removidosConfirmados.filter(r => 
+                    r.motivo_inativacao === 'promovido' && (!r.novo_cargo_id || !r.nova_regional_id)
+                  );
+                  if (promovidosSemCampos.length > 0) {
+                    toast({
+                      title: "Campos obrigatórios",
+                      description: `Preencha o novo cargo e regional para: ${promovidosSemCampos.map(p => p.nome_colete).join(', ')}`,
+                      variant: "destructive"
+                    });
+                    return;
+                  }
+                  
+                  // Validar se transferidos terminaram de verificar
+                  const transferidosVerificando = removidosConfirmados.filter(r => 
+                    r.motivo_inativacao === 'transferido' && r.verificando_transferencia
+                  );
+                  if (transferidosVerificando.length > 0) {
+                    toast({
+                      title: "Aguarde",
+                      description: "Ainda verificando transferências internas...",
+                      variant: "default"
+                    });
+                    return;
+                  }
+                  
                   setShowRemovidosDialog(false);
                   setShowUploadDialog(true);
                 }}
-                disabled={!removidosConfirmados.every(r => r.motivo_inativacao && r.motivo_inativacao.trim() !== '')}
+                disabled={
+                  !removidosConfirmados.every(r => r.motivo_inativacao && r.motivo_inativacao.trim() !== '') ||
+                  removidosConfirmados.some(r => r.verificando_transferencia) ||
+                  removidosConfirmados.some(r => r.motivo_inativacao === 'promovido' && (!r.novo_cargo_id || !r.nova_regional_id))
+                }
               >
                 Confirmar e Prosseguir
               </Button>
