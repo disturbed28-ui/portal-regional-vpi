@@ -338,7 +338,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if user has admin role
+    // Buscar roles do usuário
     const { data: roles, error: roleError } = await supabase
       .from('user_roles')
       .select('role')
@@ -352,17 +352,55 @@ Deno.serve(async (req) => {
       );
     }
 
-    const hasAdminRole = roles?.some((r: any) => r.role === 'admin');
+    const userRoles = roles?.map((r: any) => r.role) || [];
+    const isSystemAdmin = userRoles.includes('admin');
+
+    // Validar acesso via matriz de permissões da tela associada
+    const ROTA_OPERACAO = '/gestao-adm-integrantes-atualizacao';
     
-    if (!hasAdminRole) {
-      console.warn('[admin-import-integrantes] User does not have admin role:', admin_user_id);
-      return new Response(
-        JSON.stringify({ error: 'Acesso negado - privilegios de admin necessarios' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    const { data: screen } = await supabase
+      .from('system_screens')
+      .select('id')
+      .eq('rota', ROTA_OPERACAO)
+      .eq('ativo', true)
+      .single();
+
+    if (screen) {
+      // Buscar permissões da tela
+      const { data: permissions } = await supabase
+        .from('screen_permissions')
+        .select('role')
+        .eq('screen_id', screen.id);
+      
+      const allowedRoles = permissions?.map((p: any) => p.role) || [];
+      const hasAccess = userRoles.some((role: string) => allowedRoles.includes(role));
+      
+      if (!hasAccess) {
+        console.warn('[admin-import-integrantes] Acesso negado - usuário sem permissão na tela', {
+          userRoles, allowedRoles, rota: ROTA_OPERACAO
+        });
+        return new Response(
+          JSON.stringify({ error: 'Acesso negado - sem permissão para esta operação' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      console.log('[admin-import-integrantes] Acesso validado via matriz de permissões', {
+        userRoles, allowedRoles, isSystemAdmin
+      });
+    } else {
+      // Tela não cadastrada = fallback para admin only
+      if (!isSystemAdmin) {
+        console.warn('[admin-import-integrantes] Tela não cadastrada e usuário não é admin:', admin_user_id);
+        return new Response(
+          JSON.stringify({ error: 'Acesso negado - tela não configurada' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      console.log('[admin-import-integrantes] Tela não cadastrada, permitindo acesso de admin');
     }
 
-    console.log('[admin-import-integrantes] Admin validated successfully');
+    console.log('[admin-import-integrantes] Usuário validado:', { isSystemAdmin, userRoles });
 
     let insertedCount = 0;
     let updatedCount = 0;
