@@ -45,33 +45,6 @@ export function useAprovacoesPendentes(userId: string | undefined) {
   const [operando, setOperando] = useState(false);
   const [meuIntegranteId, setMeuIntegranteId] = useState<string | null>(null);
   const [meuIntegranteNome, setMeuIntegranteNome] = useState<string | null>(null);
-  const [minhaRegionalId, setMinhaRegionalId] = useState<string | null>(null);
-  const [soDiretorRegional, setSouDiretorRegional] = useState(false);
-
-  // Buscar integrante_id e dados do usuário logado
-  useEffect(() => {
-    async function fetchMeuIntegrante() {
-      if (!userId) return;
-
-      const { data } = await supabase
-        .from('integrantes_portal')
-        .select('id, nome_colete, regional_id, cargo_grau_texto')
-        .eq('profile_id', userId)
-        .single();
-
-      if (data) {
-        setMeuIntegranteId(data.id);
-        setMeuIntegranteNome(data.nome_colete);
-        setMinhaRegionalId(data.regional_id);
-        // Verificar se é Diretor Regional
-        const cargoNormalizado = (data.cargo_grau_texto || '').toLowerCase();
-        const ehDR = cargoNormalizado.includes('diretor') && cargoNormalizado.includes('regional');
-        setSouDiretorRegional(ehDR);
-      }
-    }
-
-    fetchMeuIntegrante();
-  }, [userId]);
 
   const fetchSolicitacoes = useCallback(async () => {
     if (!userId) {
@@ -80,7 +53,26 @@ export function useAprovacoesPendentes(userId: string | undefined) {
     }
 
     try {
-      // Buscar solicitações com status "Em Aprovacao"
+      // 1. PRIMEIRO buscar dados do usuário logado (dentro do fetch para garantir valores atualizados)
+      const { data: meuIntegrante } = await supabase
+        .from('integrantes_portal')
+        .select('id, nome_colete, regional_id, cargo_grau_texto')
+        .eq('profile_id', userId)
+        .single();
+
+      const localIntegranteId = meuIntegrante?.id || null;
+      const localIntegranteNome = meuIntegrante?.nome_colete || null;
+      const localRegionalId = meuIntegrante?.regional_id || null;
+      
+      // Verificar se é Diretor Regional
+      const cargoNormalizado = (meuIntegrante?.cargo_grau_texto || '').toLowerCase();
+      const localEhDR = cargoNormalizado.includes('diretor') && cargoNormalizado.includes('regional');
+
+      // Atualizar estados para uso em outras funções (aprovarPorEscalacao)
+      setMeuIntegranteId(localIntegranteId);
+      setMeuIntegranteNome(localIntegranteNome);
+
+      // 2. Buscar solicitações com status "Em Aprovacao"
       const { data: solicitacoesData, error: solError } = await supabase
         .from('solicitacoes_treinamento')
         .select(`
@@ -118,7 +110,7 @@ export function useAprovacoesPendentes(userId: string | undefined) {
         return;
       }
 
-      // Buscar aprovações para cada solicitação
+      // 3. Buscar aprovações para cada solicitação
       const solicitacaoIds = solicitacoesData.map(s => s.id);
       const { data: aprovacoes, error: apError } = await supabase
         .from('aprovacoes_treinamento')
@@ -130,7 +122,7 @@ export function useAprovacoesPendentes(userId: string | undefined) {
         console.error('Erro ao buscar aprovações:', apError);
       }
 
-      // Montar o resultado
+      // 4. Montar o resultado usando variáveis LOCAIS
       const resultado: SolicitacaoAprovacao[] = solicitacoesData.map(sol => {
         const integrante = sol.integrante as { nome_colete: string; divisao_texto: string; regional_texto: string; regional_id: string | null; cargo_grau_texto: string } | null;
         const cargoTreinamento = sol.cargo_treinamento as { nome: string } | null;
@@ -142,15 +134,16 @@ export function useAprovacoesPendentes(userId: string | undefined) {
         // Encontrar a aprovação atual (primeira pendente na ordem)
         const aprovacaoAtual = aprovacoesDoSol.find(a => a.status === 'pendente') || null;
         
-        // Verificar se o usuário logado é o aprovador da vez
-        const isAprovadorDaVez = aprovacaoAtual?.aprovador_integrante_id === meuIntegranteId;
+        // Verificar se o usuário logado é o aprovador da vez (usando variável LOCAL)
+        const isAprovadorDaVez = aprovacaoAtual?.aprovador_integrante_id === localIntegranteId;
 
         // Verificar se o DR pode escalar (aprovar fora da vez)
         // Condições: é DR, é da mesma regional, há aprovação pendente, e não é seu turno normal
         const integranteRegionalId = integrante?.regional_id;
         const temAprovacaoPendente = aprovacoesDoSol.some(a => a.status === 'pendente');
-        const mesmRegional = integranteRegionalId && minhaRegionalId && integranteRegionalId === minhaRegionalId;
-        const podeDRescalar = soDiretorRegional && mesmRegional && temAprovacaoPendente && !isAprovadorDaVez;
+        const mesmaRegional = integranteRegionalId && localRegionalId && integranteRegionalId === localRegionalId;
+        // Usando variáveis LOCAIS para garantir valores atualizados
+        const podeDRescalar = localEhDR && mesmaRegional && temAprovacaoPendente && !isAprovadorDaVez;
 
         return {
           id: sol.id,
@@ -192,7 +185,7 @@ export function useAprovacoesPendentes(userId: string | undefined) {
     } finally {
       setLoading(false);
     }
-  }, [userId, meuIntegranteId, minhaRegionalId, soDiretorRegional]);
+  }, [userId]);
 
   useEffect(() => {
     fetchSolicitacoes();
