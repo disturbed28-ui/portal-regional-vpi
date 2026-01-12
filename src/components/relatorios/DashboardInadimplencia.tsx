@@ -30,7 +30,7 @@ export const DashboardInadimplencia = ({ userId, readOnly = false }: DashboardIn
     setLiquidando(String(registroId));
     try {
       // Buscar e atualizar todos os registros deste devedor pelo registro_id
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('mensalidades_atraso')
         .update({ 
           ativo: false, 
@@ -38,13 +38,24 @@ export const DashboardInadimplencia = ({ userId, readOnly = false }: DashboardIn
           data_liquidacao: new Date().toISOString() 
         })
         .eq('registro_id', registroId)
-        .eq('ativo', true);
+        .eq('ativo', true)
+        .select();
       
       if (error) throw error;
       
+      // Verificar se realmente atualizou algo
+      if (!data || data.length === 0) {
+        toast({ 
+          title: "Nenhum registro atualizado", 
+          description: "Verifique suas permissões ou se o registro já foi baixado.", 
+          variant: "destructive" 
+        });
+        return;
+      }
+      
       toast({ 
         title: "Baixa realizada", 
-        description: `${nomeColete} marcado como liquidado` 
+        description: `${nomeColete} marcado como liquidado (${data.length} registro${data.length > 1 ? 's' : ''})` 
       });
       queryClient.invalidateQueries({ queryKey: ['mensalidades-devedores-ativos'] });
       queryClient.invalidateQueries({ queryKey: ['mensalidades-devedores-cronicos'] });
