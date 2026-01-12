@@ -34,7 +34,7 @@ export const normalizarRegional = (texto: string): string => {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "") // Remove acentos
     .replace(/^REGIONAL\s*/i, "")     // Remove prefixo "REGIONAL "
-    .replace(/\s*-\s*SP$/i, "")       // Remove sufixo "- SP"
+    .replace(/(\s*-\s*SP)+$/gi, "")   // Remove MÚLTIPLOS sufixos "- SP"
     .trim();
   
   // Conversão de números romanos para arábicos (mais robusta)
@@ -74,7 +74,7 @@ export const normalizarDivisao = (texto: string): string => {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "") // Remove acentos
     .replace(/^DIVISAO\s*/i, "")      // Remove prefixo "DIVISAO "
-    .replace(/\s*-\s*SP$/i, "")       // Remove sufixo "- SP"
+    .replace(/(\s*-\s*SP)+$/gi, "")   // Remove MÚLTIPLOS sufixos "- SP"
     .replace(/\s+/g, " ")             // Normaliza espaços
     .trim();
 
