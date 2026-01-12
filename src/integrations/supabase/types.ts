@@ -434,12 +434,16 @@ export type Database = {
       }
       aprovacoes_treinamento: {
         Row: {
+          aprovado_por_escalacao: boolean | null
           aprovador_cargo: string | null
+          aprovador_escalacao_id: string | null
+          aprovador_escalacao_nome: string | null
           aprovador_integrante_id: string | null
           aprovador_nome_colete: string | null
           created_at: string
           data_hora_acao: string | null
           id: string
+          justificativa_escalacao: string | null
           justificativa_rejeicao: string | null
           nivel: number
           solicitacao_id: string
@@ -448,12 +452,16 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          aprovado_por_escalacao?: boolean | null
           aprovador_cargo?: string | null
+          aprovador_escalacao_id?: string | null
+          aprovador_escalacao_nome?: string | null
           aprovador_integrante_id?: string | null
           aprovador_nome_colete?: string | null
           created_at?: string
           data_hora_acao?: string | null
           id?: string
+          justificativa_escalacao?: string | null
           justificativa_rejeicao?: string | null
           nivel: number
           solicitacao_id: string
@@ -462,12 +470,16 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          aprovado_por_escalacao?: boolean | null
           aprovador_cargo?: string | null
+          aprovador_escalacao_id?: string | null
+          aprovador_escalacao_nome?: string | null
           aprovador_integrante_id?: string | null
           aprovador_nome_colete?: string | null
           created_at?: string
           data_hora_acao?: string | null
           id?: string
+          justificativa_escalacao?: string | null
           justificativa_rejeicao?: string | null
           nivel?: number
           solicitacao_id?: string
