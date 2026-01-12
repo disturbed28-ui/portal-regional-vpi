@@ -18,7 +18,8 @@ import { IntegrantesTab } from '@/components/relatorios/IntegrantesTab';
 import { HistoricoMovimentacoes } from '@/components/relatorios/HistoricoMovimentacoes';
 import { formatarDataBrasil } from '@/lib/timezone';
 import { toast } from '@/hooks/use-toast';
-import { useAfastadosAtivos, useAfastadosHistorico, useRetornosProximos, useRegistrarRetorno } from '@/hooks/useAfastados';
+import { useAfastadosAtivos, useAfastadosHistorico, useRetornosProximos, useRegistrarRetorno, type IntegranteAfastado } from '@/hooks/useAfastados';
+import { ModalBaixaAfastado, type MotivoBaixa } from '@/components/admin/ModalBaixaAfastado';
 import { format, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar, Users, AlertCircle, ArrowRightLeft } from 'lucide-react';
@@ -108,14 +109,34 @@ const Relatorios = () => {
     }
   }, [user, profileLoading, profile, navigate]);
 
+  // Estado para modal de baixa de afastado
+  const [modalBaixaOpen, setModalBaixaOpen] = useState(false);
+  const [afastadoSelecionado, setAfastadoSelecionado] = useState<IntegranteAfastado | null>(null);
+
   // Funções auxiliares para afastamentos
-  const handleRegistrarRetorno = async (afastadoId: string, nomeColete: string) => {
+  const handleAbrirModalBaixa = (afastado: IntegranteAfastado) => {
+    setAfastadoSelecionado(afastado);
+    setModalBaixaOpen(true);
+  };
+
+  const handleConfirmarBaixa = async (motivo: MotivoBaixa, observacao?: string) => {
+    if (!afastadoSelecionado) return;
+    
     try {
-      await registrarRetorno(afastadoId);
-      sonnerToast.success(`Retorno de ${nomeColete} registrado com sucesso!`);
+      await registrarRetorno(afastadoSelecionado.id, { motivo, observacoes: observacao });
+      
+      const mensagens = {
+        retornou: 'Retorno registrado com sucesso!',
+        desligamento: 'Desligamento registrado com sucesso!',
+        outro: 'Baixa registrada com sucesso!'
+      };
+      
+      sonnerToast.success(mensagens[motivo]);
       refetchAtivos();
+      setModalBaixaOpen(false);
+      setAfastadoSelecionado(null);
     } catch (error) {
-      sonnerToast.error('Erro ao registrar retorno');
+      sonnerToast.error('Erro ao registrar baixa. Verifique suas permissões.');
     }
   };
 
@@ -340,9 +361,9 @@ const Relatorios = () => {
                                         {(hasRole('admin') || hasRole('diretor_regional')) && (
                                           <Button
                                             size="sm"
-                                            onClick={() => handleRegistrarRetorno(afastado.id, afastado.nome_colete)}
+                                            onClick={() => handleAbrirModalBaixa(afastado)}
                                           >
-                                            Registrar Retorno
+                                            Registrar Saída
                                           </Button>
                                         )}
                                       </td>
@@ -587,6 +608,14 @@ const Relatorios = () => {
           </Card>
         )}
       </div>
+
+      {/* Modal de Baixa de Afastado */}
+      <ModalBaixaAfastado
+        open={modalBaixaOpen}
+        onOpenChange={setModalBaixaOpen}
+        afastado={afastadoSelecionado}
+        onConfirm={handleConfirmarBaixa}
+      />
     </div>
   );
 };

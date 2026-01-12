@@ -125,8 +125,15 @@ export const useRetornosProximos = (dias: number = 30) => {
   return { afastados, loading, refetch: fetchRetornos };
 };
 
+export type MotivoBaixa = 'retornou' | 'desligamento' | 'outro';
+
+export interface DadosBaixa {
+  motivo: MotivoBaixa;
+  observacoes?: string;
+}
+
 export const useRegistrarRetorno = () => {
-  const registrarRetorno = async (afastadoId: string) => {
+  const registrarRetorno = async (afastadoId: string, dadosBaixa?: DadosBaixa) => {
     const hoje = new Date().toISOString().split('T')[0];
     
     const { error } = await supabase
@@ -134,6 +141,8 @@ export const useRegistrarRetorno = () => {
       .update({
         data_retorno_efetivo: hoje,
         ativo: false,
+        motivo_baixa: dadosBaixa?.motivo || 'retornou',
+        observacoes_baixa: dadosBaixa?.observacoes || null,
       })
       .eq('id', afastadoId);
 

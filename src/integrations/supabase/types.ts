@@ -1088,8 +1088,10 @@ export type Database = {
           divisao_id: string | null
           divisao_texto: string
           id: string
+          motivo_baixa: string | null
           nome_colete: string
           observacoes: string | null
+          observacoes_baixa: string | null
           registro_id: number
           tipo_afastamento: string
           updated_at: string
@@ -1105,8 +1107,10 @@ export type Database = {
           divisao_id?: string | null
           divisao_texto: string
           id?: string
+          motivo_baixa?: string | null
           nome_colete: string
           observacoes?: string | null
+          observacoes_baixa?: string | null
           registro_id: number
           tipo_afastamento?: string
           updated_at?: string
@@ -1122,8 +1126,10 @@ export type Database = {
           divisao_id?: string | null
           divisao_texto?: string
           id?: string
+          motivo_baixa?: string | null
           nome_colete?: string
           observacoes?: string | null
+          observacoes_baixa?: string | null
           registro_id?: number
           tipo_afastamento?: string
           updated_at?: string
