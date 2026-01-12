@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronDown, ArrowLeft, Building2, Database, Users, ShieldCheck, Bell, Link as LinkIcon, FileCheck, Settings, Activity, Heart, Calendar, History } from "lucide-react";
+import { ChevronDown, ArrowLeft, Building2, Database, Users, ShieldCheck, Bell, Link as LinkIcon, FileCheck, Settings, Activity, Heart, Calendar, History, RefreshCw } from "lucide-react";
 import { LimparRolesIncorretas } from "@/components/admin/LimparRolesIncorretas";
 import {
   Select,
@@ -200,29 +200,10 @@ const Admin = () => {
     }
   }, [user, roles, authLoading, roleLoading, hasRole, navigate, toast]);
 
-  // Buscar perfis quando tiver acesso confirmado
+  // Buscar perfis quando tiver acesso confirmado (sem Realtime para evitar refreshes aleatórios)
   useEffect(() => {
     if (!loadingAccess && hasAccess) {
       fetchProfiles();
-      
-      const channel = supabase
-        .channel('admin-profiles')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'profiles',
-          },
-          () => {
-            fetchProfiles();
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
     }
   }, [loadingAccess, hasAccess]);
 
@@ -543,18 +524,29 @@ const Admin = () => {
     <div className="admin-page min-h-screen bg-background p-4">
       <div className="max-w-4xl mx-auto">
         {/* Header mobile-first com botao de voltar */}
-        <div className="flex items-center gap-3 mb-2">
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/")}
+              className="flex-shrink-0"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-xl font-bold sm:text-2xl">
+              Administração do Sistema
+            </h1>
+          </div>
           <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/")}
-            className="flex-shrink-0"
+            variant="outline"
+            size="sm"
+            onClick={fetchProfiles}
+            disabled={loadingProfiles}
           >
-            <ArrowLeft className="h-5 w-5" />
+            <RefreshCw className={`h-4 w-4 mr-2 ${loadingProfiles ? 'animate-spin' : ''}`} />
+            Atualizar
           </Button>
-          <h1 className="text-xl font-bold sm:text-2xl">
-            Administração do Sistema
-          </h1>
         </div>
         <p className="text-sm text-muted-foreground mb-4 ml-11">
           Gestão de perfis, estrutura organizacional, permissões, dados e configurações do sistema
