@@ -15,7 +15,8 @@ import {
   Loader2,
   UserCheck,
   Send,
-  Award
+  Award,
+  ArrowUpCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -30,6 +31,8 @@ interface AprovacaoEstagio {
   status: string;
   data_hora_acao: string | null;
   justificativa_rejeicao: string | null;
+  aprovado_por_escalacao?: boolean;
+  justificativa_escalacao?: string | null;
 }
 
 interface SolicitacaoAprovacaoEstagio {
@@ -38,6 +41,7 @@ interface SolicitacaoAprovacaoEstagio {
   integrante_nome_colete: string;
   integrante_divisao_texto: string;
   integrante_regional_texto: string;
+  integrante_regional_id: string | null;
   integrante_cargo_atual: string;
   cargo_estagio_nome: string;
   cargo_estagio_id: string;
@@ -52,12 +56,19 @@ interface SolicitacaoAprovacaoEstagio {
   aprovacoes: AprovacaoEstagio[];
   aprovacaoAtual: AprovacaoEstagio | null;
   isAprovadorDaVez: boolean;
+  podeDRescalar: boolean;
 }
 
 interface CardAprovacaoEstagioProps {
   solicitacao: SolicitacaoAprovacaoEstagio;
   onAprovar?: (aprovacaoId: string, solicitacaoId: string) => void;
   onRejeitar?: (aprovacaoId: string, solicitacaoId: string) => void;
+  onAprovarPorEscalacao?: (
+    aprovacaoId: string, 
+    solicitacaoId: string, 
+    aprovadorNome: string | null, 
+    tipoAprovador: string
+  ) => void;
   operando: boolean;
   readOnly?: boolean;
 }
@@ -76,6 +87,7 @@ export function CardAprovacaoEstagio({
   solicitacao,
   onAprovar,
   onRejeitar,
+  onAprovarPorEscalacao,
   operando,
   readOnly = false
 }: CardAprovacaoEstagioProps) {
@@ -98,12 +110,12 @@ export function CardAprovacaoEstagio({
     }
   }
 
-  function getStatusBadge(status: string, isAtual: boolean) {
+  function getStatusBadge(status: string, isAtual: boolean, aprovadoPorEscalacao?: boolean) {
     if (status === 'aprovado') {
       return (
         <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30">
           <CheckCircle2 className="h-3 w-3 mr-1" />
-          Aprovado
+          {aprovadoPorEscalacao ? 'Aprovado (Escalação)' : 'Aprovado'}
         </Badge>
       );
     }
@@ -226,7 +238,7 @@ export function CardAprovacaoEstagio({
                   <span className="text-sm font-medium">
                     {tipoAprovadorLabel[aprovacao.tipo_aprovador] || aprovacao.tipo_aprovador}
                   </span>
-                  {getStatusBadge(aprovacao.status, isAtual)}
+                  {getStatusBadge(aprovacao.status, isAtual, aprovacao.aprovado_por_escalacao)}
                 </div>
 
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -250,7 +262,13 @@ export function CardAprovacaoEstagio({
                   </div>
                 )}
 
-                {/* Botões de ação */}
+                {aprovacao.aprovado_por_escalacao && aprovacao.justificativa_escalacao && (
+                  <div className="mt-2 p-2 bg-amber-500/10 rounded text-sm text-amber-700">
+                    <strong>Escalação:</strong> {aprovacao.justificativa_escalacao}
+                  </div>
+                )}
+
+                {/* Botões de ação - Aprovador da vez */}
                 {isAtual && solicitacao.isAprovadorDaVez && !readOnly && onAprovar && onRejeitar && (
                   <div className="flex gap-2 mt-3">
                     <Button
@@ -277,6 +295,33 @@ export function CardAprovacaoEstagio({
                     >
                       <XCircle className="h-4 w-4 mr-1" />
                       Rejeitar
+                    </Button>
+                  </div>
+                )}
+
+                {/* Botão de Escalação - DR pode aprovar mesmo não sendo a vez dele */}
+                {isAtual && solicitacao.podeDRescalar && !readOnly && onAprovarPorEscalacao && (
+                  <div className="mt-3">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onAprovarPorEscalacao(
+                        aprovacao.id, 
+                        solicitacao.id, 
+                        aprovacao.aprovador_nome_colete,
+                        tipoAprovadorLabel[aprovacao.tipo_aprovador] || aprovacao.tipo_aprovador
+                      )}
+                      disabled={operando}
+                      className="w-full border-amber-500/50 text-amber-600 hover:bg-amber-500/10"
+                    >
+                      {operando ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <ArrowUpCircle className="h-4 w-4 mr-2" />
+                          Aprovar por Escalação Hierárquica
+                        </>
+                      )}
                     </Button>
                   </div>
                 )}
