@@ -81,7 +81,7 @@ export const useHistoricoTreinamento = ({ userId }: UseHistoricoTreinamentoParam
             cargos!solicitacoes_treinamento_cargo_treinamento_id_fkey(nome),
             divisoes!solicitacoes_treinamento_divisao_id_fkey(nome)
           `)
-          .eq("status", "Aprovado");
+          .eq("status", "Em Treinamento");
 
         // Aplicar filtros de visibilidade
         if (nivelAcesso === "regional" && userRegionalId) {
