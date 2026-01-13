@@ -113,7 +113,10 @@ export const useGerenciarIntegrante = (): UseGerenciarIntegranteReturn => {
 
       if (historicoError) {
         console.error('Erro ao registrar histórico:', historicoError);
-        // Não falhar a operação por erro no histórico, apenas logar
+        toast({
+          title: "Aviso",
+          description: "Alteração salva, mas o histórico não foi registrado. Contate um administrador.",
+        });
       }
 
       // Se cargo foi alterado, criar pendência para ajuste de roles
@@ -233,6 +236,10 @@ export const useGerenciarIntegrante = (): UseGerenciarIntegranteReturn => {
 
       if (historicoError) {
         console.error('Erro ao registrar histórico:', historicoError);
+        toast({
+          title: "Aviso",
+          description: "Inativação realizada, mas o histórico não foi registrado. Contate um administrador.",
+        });
       }
 
       toast({
