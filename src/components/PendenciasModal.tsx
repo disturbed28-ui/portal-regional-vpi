@@ -20,7 +20,7 @@ import {
   AlertTriangle,
   ArrowRight
 } from "lucide-react";
-import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, AjusteRolesDetalhes } from "@/hooks/usePendencias";
+import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes } from "@/hooks/usePendencias";
 
 interface PendenciasModalProps {
   pendencias: Pendencia[];
@@ -548,6 +548,127 @@ const TreinamentoIntegranteDetalhesCard = ({ detalhes }: { detalhes: Treinamento
   );
 };
 
+// Card para Pendência de Estágio - Aprovadores
+const EstagioAprovadorDetalhesCard = ({ detalhes }: { detalhes: EstagioAprovadorDetalhes }) => {
+  const navigate = useNavigate();
+  const formatarData = (data: string) => 
+    format(new Date(data), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+
+  return (
+    <Card className="bg-card border-fuchsia-500/50">
+      <CardContent className="p-4 space-y-3">
+        {/* Título */}
+        <div className="flex items-center gap-2 p-3 bg-fuchsia-950/30 rounded border border-fuchsia-700/50">
+          <span className="text-2xl">🎖️</span>
+          <div className="flex-1">
+            <p className="font-semibold text-fuchsia-400">
+              Pendência de Aprovação de Estágio
+            </p>
+            <p className="text-xs text-muted-foreground">Aguardando aprovações</p>
+          </div>
+        </div>
+
+        {/* Dados do Integrante */}
+        <div className="space-y-2 text-sm">
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Integrante:</span>
+            <span className="font-medium text-foreground">{detalhes.integrante_nome_colete}</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Cargo Estágio:</span>
+            <span className="font-medium text-foreground">{detalhes.cargo_estagio}</span>
+            <Badge variant="outline" className="text-xs">{detalhes.grau_estagio}</Badge>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Divisão / Regional:</span>
+            <span className="font-medium text-foreground">{detalhes.divisao_texto}</span>
+          </div>
+        </div>
+
+        {/* Aprovadores Pendentes */}
+        {detalhes.aprovadores_pendentes.length > 0 && (
+          <div className="p-2 bg-amber-950/30 rounded border border-amber-700/50">
+            <p className="text-xs font-semibold mb-1 text-amber-400">Aprovações Pendentes:</p>
+            <div className="flex flex-wrap gap-1">
+              {detalhes.aprovadores_pendentes.map((nome, idx) => (
+                <Badge key={idx} variant="outline" className="text-xs border-amber-700/50 text-amber-300">
+                  {nome}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Botão de Ação */}
+        <Button 
+          size="sm" 
+          variant="outline"
+          className="w-full"
+          onClick={() => navigate('/gestao-adm?mainTab=estagio&subTab=pendentes')}
+        >
+          <ArrowRight className="h-4 w-4 mr-2" />
+          Ir para Aprovações Pendentes
+        </Button>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Card para Pendência de Estágio - Integrante
+const EstagioIntegranteDetalhesCard = ({ detalhes }: { detalhes: EstagioIntegranteDetalhes }) => {
+  return (
+    <Card className="bg-card border-cyan-500/50">
+      <CardContent className="p-4 space-y-3">
+        {/* Título */}
+        <div className="flex items-center gap-2 p-3 bg-cyan-950/30 rounded border border-cyan-700/50">
+          <span className="text-2xl">🎖️</span>
+          <div className="flex-1">
+            <p className="font-semibold text-cyan-400">
+              Estágio aguardando aprovação
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Seu estágio ainda não foi aprovado e ainda não foi iniciado.
+            </p>
+          </div>
+        </div>
+
+        {/* Dados do Estágio */}
+        <div className="space-y-2 text-sm">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Cargo em Estágio:</span>
+            <span className="font-medium text-foreground">{detalhes.cargo_estagio}</span>
+            <Badge variant="outline" className="text-xs">{detalhes.grau_estagio}</Badge>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Divisão:</span>
+            <span className="font-medium text-foreground">{detalhes.divisao_texto}</span>
+          </div>
+        </div>
+
+        {/* Orientação */}
+        <div className="p-3 bg-amber-950/30 rounded border border-amber-700/50">
+          <p className="text-xs text-amber-300">
+            <strong>Orientação:</strong> Acione seu Diretor de Divisão para acompanhamento.
+          </p>
+          <div className="mt-2 flex items-center gap-2">
+            <User className="h-4 w-4 text-amber-400" />
+            <span className="text-sm font-medium text-foreground">{detalhes.diretor_divisao_nome}</span>
+            <span className="text-xs text-muted-foreground">({detalhes.diretor_divisao_cargo})</span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 // Card para Pendência de Ajuste de Roles
 const AjusteRolesDetalhesCard = ({ detalhes }: { detalhes: AjusteRolesDetalhes }) => {
   const navigate = useNavigate();
@@ -684,6 +805,8 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
   const isEventoCancelado = pendencia.tipo === 'evento_cancelado';
   const isTreinamentoAprovador = pendencia.tipo === 'treinamento_aprovador';
   const isTreinamentoIntegrante = pendencia.tipo === 'treinamento_integrante';
+  const isEstagioAprovador = pendencia.tipo === 'estagio_aprovador';
+  const isEstagioIntegrante = pendencia.tipo === 'estagio_integrante';
   const isAjusteRoles = pendencia.tipo === 'ajuste_roles';
   const detalhes = pendencia.detalhes_completos;
   
@@ -711,6 +834,8 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
     if (isEventoCancelado) return 'border-amber-500';
     if (isTreinamentoAprovador) return 'border-purple-500';
     if (isTreinamentoIntegrante) return 'border-blue-500';
+    if (isEstagioAprovador) return 'border-fuchsia-500';
+    if (isEstagioIntegrante) return 'border-cyan-500';
     if (isDelta) {
       const deltaDetalhes = detalhes as DeltaDetalhes | null;
       if (!deltaDetalhes) return 'border-gray-500';
@@ -725,6 +850,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
     if (isMensalidade) return '💰';
     if (isAfastamento) return '🏥';
     if (isTreinamentoAprovador || isTreinamentoIntegrante) return '🎓';
+    if (isEstagioAprovador || isEstagioIntegrante) return '🎖️';
     if (isEventoCancelado) {
       const eventDetalhes = detalhes as EventoCanceladoDetalhes;
       return eventDetalhes?.status === 'cancelled' ? '📅' : '❌';
@@ -751,6 +877,8 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
     if (isEventoCancelado) return 'Evento Cancelado';
     if (isTreinamentoAprovador) return 'Aprovação Treinamento';
     if (isTreinamentoIntegrante) return 'Treinamento';
+    if (isEstagioAprovador) return 'Aprovação Estágio';
+    if (isEstagioIntegrante) return 'Estágio';
     if (isDelta) return 'Anomalia';
     return 'Pendência';
   };
@@ -858,6 +986,10 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
             {/* Cards de Treinamento */}
             {isTreinamentoAprovador && detalhes && <TreinamentoAprovadorDetalhesCard detalhes={detalhes as TreinamentoAprovadorDetalhes} />}
             {isTreinamentoIntegrante && detalhes && <TreinamentoIntegranteDetalhesCard detalhes={detalhes as TreinamentoIntegranteDetalhes} />}
+            
+            {/* Cards de Estágio */}
+            {isEstagioAprovador && detalhes && <EstagioAprovadorDetalhesCard detalhes={detalhes as EstagioAprovadorDetalhes} />}
+            {isEstagioIntegrante && detalhes && <EstagioIntegranteDetalhesCard detalhes={detalhes as EstagioIntegranteDetalhes} />}
             
             {/* Card de Ajuste de Roles */}
             {isAjusteRoles && detalhes && <AjusteRolesDetalhesCard detalhes={detalhes as AjusteRolesDetalhes} />}
