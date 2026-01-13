@@ -66,6 +66,28 @@ interface TreinamentoIntegranteDetalhes {
   created_at: string;
 }
 
+interface EstagioAprovadorDetalhes {
+  solicitacao_id: string;
+  integrante_nome_colete: string;
+  integrante_cargo_atual: string;
+  cargo_estagio: string;
+  grau_estagio: string;
+  divisao_texto: string;
+  regional_texto: string;
+  created_at: string;
+  aprovadores_pendentes: string[];
+}
+
+interface EstagioIntegranteDetalhes {
+  solicitacao_id: string;
+  cargo_estagio: string;
+  grau_estagio: string;
+  divisao_texto: string;
+  diretor_divisao_nome: string;
+  diretor_divisao_cargo: string;
+  created_at: string;
+}
+
 interface AjusteRolesDetalhes {
   id: string;
   integrante_id: string;
@@ -81,14 +103,14 @@ interface AjusteRolesDetalhes {
 interface Pendencia {
   nome_colete: string;
   divisao_texto: string;
-  tipo: 'mensalidade' | 'afastamento' | 'delta' | 'evento_cancelado' | 'treinamento_aprovador' | 'treinamento_integrante' | 'ajuste_roles';
+  tipo: 'mensalidade' | 'afastamento' | 'delta' | 'evento_cancelado' | 'treinamento_aprovador' | 'treinamento_integrante' | 'estagio_aprovador' | 'estagio_integrante' | 'ajuste_roles';
   detalhe: string;
   data_ref: string;
   registro_id: number;
-  detalhes_completos: MensalidadeDetalhes | AfastamentoDetalhes | DeltaDetalhes | EventoCanceladoDetalhes | TreinamentoAprovadorDetalhes | TreinamentoIntegranteDetalhes | AjusteRolesDetalhes;
+  detalhes_completos: MensalidadeDetalhes | AfastamentoDetalhes | DeltaDetalhes | EventoCanceladoDetalhes | TreinamentoAprovadorDetalhes | TreinamentoIntegranteDetalhes | EstagioAprovadorDetalhes | EstagioIntegranteDetalhes | AjusteRolesDetalhes;
 }
 
-export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, AjusteRolesDetalhes };
+export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes };
 
 export const usePendencias = (
   userId: string | undefined,
@@ -694,6 +716,95 @@ export const usePendencias = (
         
         console.log('[usePendencias] Pendências de treinamento encontradas:', 
           todasPendencias.filter(p => p.tipo === 'treinamento_aprovador' || p.tipo === 'treinamento_integrante').length);
+
+        // 5.1 Pendências de Aprovação de Estágio (usando o mesmo meuIntegranteId)
+        console.log('[usePendencias] Buscando pendências de estágio...');
+
+        // Buscar solicitações de estágio em aprovação
+        const { data: solicitacoesEstagio } = await supabase
+          .from('solicitacoes_estagio')
+          .select(`
+            id, created_at,
+            integrante:integrantes_portal!solicitacoes_estagio_integrante_id_fkey(
+              id, nome_colete, divisao_texto, regional_texto, cargo_grau_texto
+            ),
+            cargo_estagio:cargos!solicitacoes_estagio_cargo_estagio_id_fkey(nome, grau)
+          `)
+          .eq('status', 'Em Aprovacao');
+
+        // Buscar aprovações dessas solicitações de estágio
+        const solicitacaoEstagioIds = solicitacoesEstagio?.map(s => s.id) || [];
+        
+        if (solicitacaoEstagioIds.length > 0) {
+          const { data: aprovacoesEstagio } = await supabase
+            .from('aprovacoes_estagio')
+            .select('*')
+            .in('solicitacao_id', solicitacaoEstagioIds);
+
+          for (const sol of solicitacoesEstagio || []) {
+            const integrante = sol.integrante as any;
+            const cargoEstagio = sol.cargo_estagio as any;
+            const aprovacoesDoSol = aprovacoesEstagio?.filter(a => a.solicitacao_id === sol.id) || [];
+            
+            // Verificar se o usuário é o integrante em estágio
+            if (integrante?.id === meuIntegranteId) {
+              // Buscar Diretor da Divisão do integrante
+              const diretorDivisao = aprovacoesDoSol.find(a => a.nivel === 1);
+              
+              todasPendencias.push({
+                registro_id: 0,
+                nome_colete: 'Estágio aguardando aprovação',
+                divisao_texto: integrante?.divisao_texto || '',
+                tipo: 'estagio_integrante',
+                detalhe: 'Seu estágio ainda não foi aprovado',
+                data_ref: sol.created_at,
+                detalhes_completos: {
+                  solicitacao_id: sol.id,
+                  cargo_estagio: cargoEstagio?.nome || 'N/A',
+                  grau_estagio: cargoEstagio?.grau || 'N/A',
+                  divisao_texto: integrante?.divisao_texto || 'N/A',
+                  diretor_divisao_nome: diretorDivisao?.aprovador_nome_colete || 'N/A',
+                  diretor_divisao_cargo: diretorDivisao?.aprovador_cargo || 'N/A',
+                  created_at: sol.created_at
+                }
+              });
+            }
+            
+            // Verificar se o usuário é um dos aprovadores
+            const souAprovadorEstagio = aprovacoesDoSol.some(
+              a => a.aprovador_integrante_id === meuIntegranteId
+            );
+            
+            if (souAprovadorEstagio) {
+              const aprovadoresPendentesEstagio = aprovacoesDoSol
+                .filter(a => a.status === 'pendente')
+                .map(a => a.aprovador_nome_colete || 'N/A');
+              
+              todasPendencias.push({
+                registro_id: 0,
+                nome_colete: 'Pendência de Aprovação de Estágio',
+                divisao_texto: integrante?.divisao_texto || '',
+                tipo: 'estagio_aprovador',
+                detalhe: 'Aguardando aprovações',
+                data_ref: sol.created_at,
+                detalhes_completos: {
+                  solicitacao_id: sol.id,
+                  integrante_nome_colete: integrante?.nome_colete || 'N/A',
+                  integrante_cargo_atual: integrante?.cargo_grau_texto || 'N/A',
+                  cargo_estagio: cargoEstagio?.nome || 'N/A',
+                  grau_estagio: cargoEstagio?.grau || 'N/A',
+                  divisao_texto: integrante?.divisao_texto || 'N/A',
+                  regional_texto: integrante?.regional_texto || 'N/A',
+                  created_at: sol.created_at,
+                  aprovadores_pendentes: aprovadoresPendentesEstagio
+                }
+              });
+            }
+          }
+        }
+        
+        console.log('[usePendencias] Pendências de estágio encontradas:', 
+          todasPendencias.filter(p => p.tipo === 'estagio_aprovador' || p.tipo === 'estagio_integrante').length);
       }
 
       // 6. Pendências de Ajuste de Roles (apenas para admin)
