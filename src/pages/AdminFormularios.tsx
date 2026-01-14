@@ -82,10 +82,17 @@ const AdminFormularios = () => {
   };
 
   const handleSubmit = () => {
+    // Garantir que apenas o campo correto está preenchido baseado no tipo
+    const dadosLimpos = {
+      ...formData,
+      link_interno: formData.tipo === 'link_interno' ? formData.link_interno : null,
+      url_externa: formData.tipo === 'url_externa' ? formData.url_externa : null,
+    };
+
     if (isEditing && editingId) {
-      update({ id: editingId, ...formData });
+      update({ id: editingId, ...dadosLimpos });
     } else {
-      create(formData);
+      create(dadosLimpos);
     }
     resetForm();
   };
@@ -201,7 +208,19 @@ const AdminFormularios = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Tipo *</Label>
-                <Select value={formData.tipo} onValueChange={(v: any) => setFormData({ ...formData, tipo: v })}>
+                <Select 
+                  value={formData.tipo} 
+                  onValueChange={(v: 'builder' | 'link_interno' | 'url_externa') => {
+                    // Limpar campos de URL ao mudar tipo para evitar dados órfãos
+                    if (v === 'link_interno') {
+                      setFormData({ ...formData, tipo: v, url_externa: '' });
+                    } else if (v === 'url_externa') {
+                      setFormData({ ...formData, tipo: v, link_interno: '' });
+                    } else {
+                      setFormData({ ...formData, tipo: v, link_interno: '', url_externa: '' });
+                    }
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
