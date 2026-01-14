@@ -172,8 +172,13 @@ const GestaoADM = () => {
   }, [searchParams, visibleTreinamentoSubTabs]);
 
   const initialEstagioSubTab = useMemo(() => {
+    const urlMainTab = searchParams.get('mainTab');
+    const urlSubTab = searchParams.get('subTab');
+    if (urlMainTab === 'estagio' && urlSubTab && visibleEstagioSubTabs.some(t => t.value === urlSubTab)) {
+      return urlSubTab;
+    }
     return visibleEstagioSubTabs[0]?.value || 'solicitacao';
-  }, [visibleEstagioSubTabs]);
+  }, [searchParams, visibleEstagioSubTabs]);
 
   const initialFlyersSubTab = useMemo(() => {
     return visibleFlyersSubTabs[0]?.value || 'grau5';
