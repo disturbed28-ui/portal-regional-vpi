@@ -891,6 +891,113 @@ export type Database = {
         }
         Relationships: []
       }
+      estagios_historico: {
+        Row: {
+          cargo_estagio_id: string | null
+          created_at: string
+          data_encerramento: string
+          data_inicio: string | null
+          divisao_id: string | null
+          encerrado_por: string | null
+          encerrado_por_cargo: string | null
+          encerrado_por_divisao: string | null
+          encerrado_por_nome_colete: string | null
+          grau_estagio: string
+          id: string
+          integrante_id: string
+          observacoes: string | null
+          regional_id: string | null
+          solicitacao_id: string | null
+          tipo_encerramento: string
+        }
+        Insert: {
+          cargo_estagio_id?: string | null
+          created_at?: string
+          data_encerramento?: string
+          data_inicio?: string | null
+          divisao_id?: string | null
+          encerrado_por?: string | null
+          encerrado_por_cargo?: string | null
+          encerrado_por_divisao?: string | null
+          encerrado_por_nome_colete?: string | null
+          grau_estagio: string
+          id?: string
+          integrante_id: string
+          observacoes?: string | null
+          regional_id?: string | null
+          solicitacao_id?: string | null
+          tipo_encerramento: string
+        }
+        Update: {
+          cargo_estagio_id?: string | null
+          created_at?: string
+          data_encerramento?: string
+          data_inicio?: string | null
+          divisao_id?: string | null
+          encerrado_por?: string | null
+          encerrado_por_cargo?: string | null
+          encerrado_por_divisao?: string | null
+          encerrado_por_nome_colete?: string | null
+          grau_estagio?: string
+          id?: string
+          integrante_id?: string
+          observacoes?: string | null
+          regional_id?: string | null
+          solicitacao_id?: string | null
+          tipo_encerramento?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "estagios_historico_cargo_estagio_id_fkey"
+            columns: ["cargo_estagio_id"]
+            isOneToOne: false
+            referencedRelation: "cargos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estagios_historico_divisao_id_fkey"
+            columns: ["divisao_id"]
+            isOneToOne: false
+            referencedRelation: "divisoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estagios_historico_divisao_id_fkey"
+            columns: ["divisao_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["divisao_id"]
+          },
+          {
+            foreignKeyName: "estagios_historico_integrante_id_fkey"
+            columns: ["integrante_id"]
+            isOneToOne: false
+            referencedRelation: "integrantes_portal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estagios_historico_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "regionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estagios_historico_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["regional_id"]
+          },
+          {
+            foreignKeyName: "estagios_historico_solicitacao_id_fkey"
+            columns: ["solicitacao_id"]
+            isOneToOne: false
+            referencedRelation: "solicitacoes_estagio"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       eventos_agenda: {
         Row: {
           created_at: string | null
