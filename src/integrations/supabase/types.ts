@@ -1126,6 +1126,7 @@ export type Database = {
           created_at: string | null
           descricao: string | null
           dias_semana: number[] | null
+          global: boolean
           id: string
           limite_respostas: string
           link_interno: string | null
@@ -1142,6 +1143,7 @@ export type Database = {
           created_at?: string | null
           descricao?: string | null
           dias_semana?: number[] | null
+          global?: boolean
           id?: string
           limite_respostas?: string
           link_interno?: string | null
@@ -1158,6 +1160,7 @@ export type Database = {
           created_at?: string | null
           descricao?: string | null
           dias_semana?: number[] | null
+          global?: boolean
           id?: string
           limite_respostas?: string
           link_interno?: string | null

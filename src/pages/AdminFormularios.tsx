@@ -59,7 +59,8 @@ const AdminFormularios = () => {
     dias_semana: [] as number[],
     limite_respostas: "multipla" as "unica" | "multipla",
     ativo: true,
-    roles_permitidas: null as string[] | null
+    roles_permitidas: null as string[] | null,
+    global: false
   });
 
   useEffect(() => {
@@ -86,8 +87,9 @@ const AdminFormularios = () => {
       periodicidade: formulario.periodicidade,
       dias_semana: formulario.dias_semana || [],
       limite_respostas: formulario.limite_respostas,
-      ativo: formulario.ativo,
-      roles_permitidas: formulario.roles_permitidas
+      ativo: formulario.ativo ?? true,
+      roles_permitidas: formulario.roles_permitidas,
+      global: formulario.global ?? false
     });
   };
 
@@ -121,7 +123,8 @@ const AdminFormularios = () => {
       dias_semana: [],
       limite_respostas: "multipla",
       ativo: true,
-      roles_permitidas: null
+      roles_permitidas: null,
+      global: false
     });
   };
 
@@ -368,6 +371,24 @@ const AdminFormularios = () => {
               )}
             </div>
 
+            {/* Switch Global */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Switch 
+                  checked={formData.global} 
+                  onCheckedChange={(v) => setFormData({ ...formData, global: v })} 
+                />
+                <Label>Formulário Global (todas as regionais)</Label>
+              </div>
+              
+              {formData.global && (
+                <div className="p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800 dark:bg-blue-950 dark:border-blue-800 dark:text-blue-200">
+                  🌐 Este formulário aparecerá para todas as regionais que tenham usuários com as roles permitidas.
+                  A regional selecionada indica apenas quem administra o formulário.
+                </div>
+              )}
+            </div>
+
             <div className="flex items-center gap-2">
               <Switch checked={formData.ativo} onCheckedChange={(v) => setFormData({ ...formData, ativo: v })} />
               <Label>Ativo</Label>
@@ -397,8 +418,13 @@ const AdminFormularios = () => {
               {formularios?.map((form) => (
                 <div key={form.id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-semibold">{form.titulo}</h3>
+                      {form.global && (
+                        <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-950 dark:text-blue-200 dark:border-blue-700">
+                          🌐 Global
+                        </Badge>
+                      )}
                       <Badge variant={form.ativo ? "default" : "secondary"}>
                         {form.ativo ? "Ativo" : "Inativo"}
                       </Badge>
