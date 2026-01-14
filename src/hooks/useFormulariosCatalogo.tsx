@@ -136,3 +136,53 @@ export const useFormularioCRUD = () => {
     isLoading: createMutation.isPending || updateMutation.isPending || toggleAtivoMutation.isPending
   };
 };
+
+// Hook para duplicar formulário para outra regional
+export const useFormularioDuplicar = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const duplicateMutation = useMutation({
+    mutationFn: async ({ formulario, novaRegionalId }: { 
+      formulario: FormularioCatalogo; 
+      novaRegionalId: string 
+    }) => {
+      const { data, error } = await supabase
+        .from('formularios_catalogo')
+        .insert([{
+          titulo: formulario.titulo,
+          descricao: formulario.descricao,
+          tipo: formulario.tipo,
+          link_interno: formulario.link_interno,
+          url_externa: formulario.url_externa,
+          regional_id: novaRegionalId,
+          periodicidade: formulario.periodicidade,
+          dias_semana: formulario.dias_semana,
+          limite_respostas: formulario.limite_respostas,
+          ativo: true,
+          roles_permitidas: formulario.roles_permitidas
+        }])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['formularios-admin'] });
+      toast({ title: "Formulário duplicado com sucesso!" });
+    },
+    onError: (error) => {
+      toast({ 
+        title: "Erro ao duplicar formulário", 
+        description: error.message,
+        variant: "destructive" 
+      });
+    }
+  });
+
+  return {
+    duplicate: duplicateMutation.mutate,
+    isLoading: duplicateMutation.isPending
+  };
+};

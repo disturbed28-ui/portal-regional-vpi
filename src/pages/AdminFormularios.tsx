@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Edit, Power } from "lucide-react";
+import { ArrowLeft, Plus, Edit, Power, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { useFormulariosAdmin, useFormularioCRUD, FormularioCatalogo } from "@/hooks/useFormulariosCatalogo";
+import { useFormulariosAdmin, useFormularioCRUD, useFormularioDuplicar, FormularioCatalogo } from "@/hooks/useFormulariosCatalogo";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useRegionais } from "@/hooks/useRegionais";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -21,8 +22,10 @@ const ROLES_DISPONIVEIS = [
   { id: "admin", label: "Admin", color: "bg-red-500" },
   { id: "moderator", label: "Moderador", color: "bg-blue-500" },
   { id: "diretor_regional", label: "Diretor Regional", color: "bg-green-500" },
+  { id: "regional", label: "Regional (Grau V)", color: "bg-teal-500" },
   { id: "diretor_divisao", label: "Diretor / Subdiretor de Divisão", color: "bg-purple-500" },
-  { id: "regional", label: "Regional", color: "bg-teal-500" },
+  { id: "social_divisao", label: "Social de Divisão", color: "bg-pink-500" },
+  { id: "adm_divisao", label: "ADM de Divisão", color: "bg-orange-500" },
   { id: "user", label: "Usuário", color: "bg-gray-500" }
 ];
 
@@ -35,9 +38,16 @@ const AdminFormularios = () => {
   const { data: formularios, isLoading } = useFormulariosAdmin();
   const { regionais } = useRegionais();
   const { create, update, toggleAtivo, isLoading: isSaving } = useFormularioCRUD();
+  const { duplicate, isLoading: isDuplicating } = useFormularioDuplicar();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  
+  // Estado para modal de duplicação
+  const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
+  const [formularioToDuplicate, setFormularioToDuplicate] = useState<FormularioCatalogo | null>(null);
+  const [novaRegionalId, setNovaRegionalId] = useState<string>("");
+
   const [formData, setFormData] = useState({
     titulo: "",
     descricao: "",
@@ -134,6 +144,22 @@ const AdminFormularios = () => {
         };
       }
     });
+  };
+
+  // Funções para duplicação
+  const handleOpenDuplicateModal = (form: FormularioCatalogo) => {
+    setFormularioToDuplicate(form);
+    setNovaRegionalId("");
+    setDuplicateModalOpen(true);
+  };
+
+  const handleDuplicate = () => {
+    if (formularioToDuplicate && novaRegionalId) {
+      duplicate({ formulario: formularioToDuplicate, novaRegionalId });
+      setDuplicateModalOpen(false);
+      setFormularioToDuplicate(null);
+      setNovaRegionalId("");
+    }
   };
 
   if (loadingAccess || isLoading) {
@@ -413,6 +439,14 @@ const AdminFormularios = () => {
                     )}
                   </div>
                   <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleOpenDuplicateModal(form)}
+                      title="Duplicar para outra regional"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => handleEdit(form)}>
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -429,6 +463,43 @@ const AdminFormularios = () => {
             </div>
           )}
         </Card>
+
+        {/* Modal de Duplicação */}
+        <Dialog open={duplicateModalOpen} onOpenChange={setDuplicateModalOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Duplicar Formulário</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <p className="text-sm text-muted-foreground">
+                Duplicando: <strong>{formularioToDuplicate?.titulo}</strong>
+              </p>
+              <div className="space-y-2">
+                <Label>Selecione a nova regional *</Label>
+                <Select value={novaRegionalId} onValueChange={setNovaRegionalId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a regional de destino" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {regionais
+                      ?.filter(r => r.id !== formularioToDuplicate?.regional_id)
+                      .map((r) => (
+                        <SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDuplicateModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleDuplicate} disabled={!novaRegionalId || isDuplicating}>
+                {isDuplicating ? "Duplicando..." : "Duplicar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
