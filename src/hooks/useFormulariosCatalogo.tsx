@@ -15,6 +15,7 @@ export interface FormularioCatalogo {
   limite_respostas: 'unica' | 'multipla';
   ativo: boolean;
   roles_permitidas: string[] | null;
+  global: boolean;
   created_at: string;
   updated_at: string;
   regionais?: { nome: string };
@@ -43,11 +44,12 @@ export const useFormulariosUsuario = (regionalId: string | null) => {
     queryFn: async () => {
       if (!regionalId) return [];
       
+      // Buscar formulários da regional do usuário OU formulários globais
       const { data, error } = await supabase
         .from('formularios_catalogo')
         .select('*, regionais(nome)')
         .eq('ativo', true)
-        .eq('regional_id', regionalId)
+        .or(`regional_id.eq.${regionalId},global.eq.true`)
         .order('titulo');
       
       if (error) throw error;
