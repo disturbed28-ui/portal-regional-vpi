@@ -863,22 +863,19 @@ const { ultimaCargaInfo, devedoresAtivos } = useMensalidades();
 
         {/* Lista de Integrantes */}
         <Tabs defaultValue="todos">
-          <TabsList className="grid w-full grid-cols-3 gap-1 sm:gap-2">
-            <TabsTrigger value="todos" className="text-xs sm:text-sm px-2">
-              Todos 
-              <span className="hidden sm:inline ml-1">({stats.total})</span>
-            </TabsTrigger>
-            <TabsTrigger value="vinculados" className="text-xs sm:text-sm px-2">
-              <span className="hidden sm:inline">Vinculados</span>
-              <span className="sm:hidden">✓</span>
-              <span className="hidden sm:inline ml-1">({stats.vinculados})</span>
-            </TabsTrigger>
-            <TabsTrigger value="nao-vinculados" className="text-xs sm:text-sm px-2">
-              <span className="hidden sm:inline">Não Vinculados</span>
-              <span className="sm:hidden">✗</span>
-              <span className="hidden sm:inline ml-1">({stats.naoVinculados})</span>
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-4 px-4 pb-2">
+            <TabsList className="inline-flex w-max min-w-full h-auto p-1 gap-1">
+              <TabsTrigger value="todos" className="flex-shrink-0 text-xs sm:text-sm px-3 py-1.5 whitespace-nowrap">
+                Todos ({stats.total})
+              </TabsTrigger>
+              <TabsTrigger value="vinculados" className="flex-shrink-0 text-xs sm:text-sm px-3 py-1.5 whitespace-nowrap">
+                Vinculados ({stats.vinculados})
+              </TabsTrigger>
+              <TabsTrigger value="nao-vinculados" className="flex-shrink-0 text-xs sm:text-sm px-3 py-1.5 whitespace-nowrap">
+                Não Vinculados ({stats.naoVinculados})
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="todos" className="space-y-4">
             {loading ? (
