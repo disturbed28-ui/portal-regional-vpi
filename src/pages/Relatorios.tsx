@@ -295,12 +295,14 @@ const Relatorios = () => {
               {/* Nova aba Afastamentos */}
               <TabsContent value="afastamentos">
                 <Tabs defaultValue="ativos" className="w-full">
-                  <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="ativos">Ativos</TabsTrigger>
-                    <TabsTrigger value="historico">Histórico</TabsTrigger>
-                    <TabsTrigger value="retornos">Retornos Próximos</TabsTrigger>
-                    <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-                  </TabsList>
+                  <div className="overflow-x-auto -mx-4 px-4 pb-2">
+                    <TabsList className="inline-flex w-max min-w-full h-auto p-1 gap-1">
+                      <TabsTrigger value="ativos" className="flex-shrink-0 px-3 py-1.5 text-xs sm:text-sm whitespace-nowrap">Ativos</TabsTrigger>
+                      <TabsTrigger value="historico" className="flex-shrink-0 px-3 py-1.5 text-xs sm:text-sm whitespace-nowrap">Histórico</TabsTrigger>
+                      <TabsTrigger value="retornos" className="flex-shrink-0 px-3 py-1.5 text-xs sm:text-sm whitespace-nowrap">Retornos Próximos</TabsTrigger>
+                      <TabsTrigger value="dashboard" className="flex-shrink-0 px-3 py-1.5 text-xs sm:text-sm whitespace-nowrap">Dashboard</TabsTrigger>
+                    </TabsList>
+                  </div>
 
                   {/* Sub-aba Ativos */}
                   <TabsContent value="ativos">

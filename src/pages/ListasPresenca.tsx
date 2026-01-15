@@ -100,28 +100,26 @@ const ListasPresenca = () => {
 
         {/* Tabs de Navegação */}
         <Tabs defaultValue="consulta" className="w-full">
-          <TabsList className="grid w-full max-w-3xl grid-cols-4 h-auto">
-            <TabsTrigger value="consulta" className="flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 sm:px-3">
-              <Calendar className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline text-xs sm:text-sm">Consultar Listas</span>
-              <span className="sm:hidden text-xs">Listas</span>
-            </TabsTrigger>
-            <TabsTrigger value="dashboard" className="flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 sm:px-3">
-              <BarChart3 className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline text-xs sm:text-sm">Dashboard</span>
-              <span className="sm:hidden text-xs">Dash</span>
-            </TabsTrigger>
-            <TabsTrigger value="individual" className="flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 sm:px-3">
-              <User className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline text-xs sm:text-sm">Frequência Individual</span>
-              <span className="sm:hidden text-xs">Freq.</span>
-            </TabsTrigger>
-            <TabsTrigger value="config" className="flex items-center justify-center gap-1 sm:gap-2 px-2 py-2 sm:px-3">
-              <Settings className="h-4 w-4 shrink-0" />
-              <span className="hidden sm:inline text-xs sm:text-sm">Configurações</span>
-              <span className="sm:hidden text-xs">Config</span>
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-4 px-4 pb-2">
+            <TabsList className="inline-flex w-max min-w-full h-auto p-1 gap-1">
+              <TabsTrigger value="consulta" className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm whitespace-nowrap">
+                <Calendar className="h-4 w-4 shrink-0" />
+                <span>Consultar Listas</span>
+              </TabsTrigger>
+              <TabsTrigger value="dashboard" className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm whitespace-nowrap">
+                <BarChart3 className="h-4 w-4 shrink-0" />
+                <span>Dashboard</span>
+              </TabsTrigger>
+              <TabsTrigger value="individual" className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm whitespace-nowrap">
+                <User className="h-4 w-4 shrink-0" />
+                <span>Frequência Individual</span>
+              </TabsTrigger>
+              <TabsTrigger value="config" className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm whitespace-nowrap">
+                <Settings className="h-4 w-4 shrink-0" />
+                <span>Configurações</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="consulta" className="mt-6">
             <ListasConsulta 
