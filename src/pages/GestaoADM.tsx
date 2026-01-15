@@ -259,40 +259,38 @@ const GestaoADM = () => {
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 py-4">
         <Tabs defaultValue={initialMainTab} className="w-full">
-          <div className="overflow-x-auto -mx-4 px-4 pb-2">
-            <TabsList className="w-max min-w-full h-auto flex bg-muted/50 p-1 gap-1">
-              {visibleTabs.map((tab) => (
-                <TabsTrigger
-                  key={tab.value}
-                  value={tab.value}
-                  className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap"
-                >
-                  <tab.icon className="h-4 w-4 shrink-0" />
-                  <span>{tab.label}</span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
+          <TabsList className="w-full h-auto flex overflow-x-auto no-scrollbar bg-muted/50 p-1 gap-1">
+            {visibleTabs.map((tab) => (
+              <TabsTrigger
+                key={tab.value}
+                value={tab.value}
+                className="flex-1 min-w-fit flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              >
+                <tab.icon className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="sm:hidden">{tab.label.split(" ")[0]}</span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
           <div className="mt-4">
             {integrantesP.hasAnyAccess && (
               <TabsContent value="integrantes" className="m-0">
                 {visibleIntegrantesSubTabs.length > 0 ? (
                   <Tabs defaultValue={initialIntegrantesSubTab} className="w-full">
-                    <div className="overflow-x-auto -mx-4 px-4 pb-2 mb-4">
-                      <TabsList className="w-max min-w-full h-auto flex bg-muted/30 p-1 gap-1">
-                        {visibleIntegrantesSubTabs.map((subTab) => (
-                          <TabsTrigger
-                            key={subTab.value}
-                            value={subTab.value}
-                            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap"
-                          >
-                            <subTab.icon className="h-3.5 w-3.5 shrink-0" />
-                            <span>{subTab.label}</span>
-                          </TabsTrigger>
-                        ))}
-                      </TabsList>
-                    </div>
+                    <TabsList className={`w-full h-auto grid bg-muted/30 p-1 gap-1 mb-4`} style={{ gridTemplateColumns: `repeat(${visibleIntegrantesSubTabs.length}, 1fr)` }}>
+                      {visibleIntegrantesSubTabs.map((subTab) => (
+                        <TabsTrigger
+                          key={subTab.value}
+                          value={subTab.value}
+                          className="flex items-center gap-1.5 px-2 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                        >
+                          <subTab.icon className="h-3.5 w-3.5 shrink-0" />
+                          <span className="hidden sm:inline">{subTab.label}</span>
+                          <span className="sm:hidden">{subTab.shortLabel}</span>
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
 
                     {listaP.hasAnyAccess && (
                       <TabsContent value="lista" className="m-0">
@@ -339,20 +337,19 @@ const GestaoADM = () => {
               <TabsContent value="treinamento" className="m-0">
                 {visibleTreinamentoSubTabs.length > 0 ? (
                   <Tabs defaultValue={initialTreinamentoSubTab} className="w-full">
-                    <div className="overflow-x-auto -mx-4 px-4 pb-2 mb-4">
-                      <TabsList className="w-max min-w-full h-auto flex bg-muted/30 p-1 gap-1">
-                        {visibleTreinamentoSubTabs.map((subTab) => (
-                          <TabsTrigger
-                            key={subTab.value}
-                            value={subTab.value}
-                            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap"
-                          >
-                            <subTab.icon className="h-3.5 w-3.5 shrink-0" />
-                            <span>{subTab.label}</span>
-                          </TabsTrigger>
-                        ))}
-                      </TabsList>
-                    </div>
+                    <TabsList className={`w-full h-auto grid bg-muted/30 p-1 gap-1 mb-4`} style={{ gridTemplateColumns: `repeat(${visibleTreinamentoSubTabs.length}, 1fr)` }}>
+                      {visibleTreinamentoSubTabs.map((subTab) => (
+                        <TabsTrigger
+                          key={subTab.value}
+                          value={subTab.value}
+                          className="flex items-center gap-1.5 px-2 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                        >
+                          <subTab.icon className="h-3.5 w-3.5 shrink-0" />
+                          <span className="hidden sm:inline">{subTab.label}</span>
+                          <span className="sm:hidden">{subTab.shortLabel}</span>
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
 
                     {solicitacaoP.hasAnyAccess && (
                       <TabsContent value="solicitacao" className="m-0">
@@ -396,20 +393,19 @@ const GestaoADM = () => {
               <TabsContent value="estagio" className="m-0">
                 {visibleEstagioSubTabs.length > 0 ? (
                   <Tabs defaultValue={initialEstagioSubTab} className="w-full">
-                    <div className="overflow-x-auto -mx-4 px-4 pb-2 mb-4">
-                      <TabsList className="w-max min-w-full h-auto flex bg-muted/30 p-1 gap-1">
-                        {visibleEstagioSubTabs.map((subTab) => (
-                          <TabsTrigger
-                            key={subTab.value}
-                            value={subTab.value}
-                            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap"
-                          >
-                            <subTab.icon className="h-3.5 w-3.5 shrink-0" />
-                            <span>{subTab.label}</span>
-                          </TabsTrigger>
-                        ))}
-                      </TabsList>
-                    </div>
+                    <TabsList className={`w-full h-auto grid bg-muted/30 p-1 gap-1 mb-4`} style={{ gridTemplateColumns: `repeat(${visibleEstagioSubTabs.length}, 1fr)` }}>
+                      {visibleEstagioSubTabs.map((subTab) => (
+                        <TabsTrigger
+                          key={subTab.value}
+                          value={subTab.value}
+                          className="flex items-center gap-1.5 px-2 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                        >
+                          <subTab.icon className="h-3.5 w-3.5 shrink-0" />
+                          <span className="hidden sm:inline">{subTab.label}</span>
+                          <span className="sm:hidden">{subTab.shortLabel}</span>
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
 
                     {solicitacaoEstagioP.hasAnyAccess && (
                       <TabsContent value="solicitacao" className="m-0">
@@ -439,19 +435,18 @@ const GestaoADM = () => {
                       <TabsContent value="flyers" className="m-0">
                         {visibleFlyersSubTabs.length > 0 ? (
                           <Tabs defaultValue={initialFlyersSubTab} className="w-full">
-                            <div className="overflow-x-auto -mx-4 px-4 pb-2 mb-4">
-                              <TabsList className="w-max min-w-full h-auto flex bg-muted/20 p-1 gap-1">
-                                {visibleFlyersSubTabs.map((subTab) => (
-                                  <TabsTrigger
-                                    key={subTab.value}
-                                    value={subTab.value}
-                                    className="flex-shrink-0 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap"
-                                  >
-                                    <span>{subTab.label}</span>
-                                  </TabsTrigger>
-                                ))}
-                              </TabsList>
-                            </div>
+                            <TabsList className={`w-full h-auto grid bg-muted/20 p-1 gap-1 mb-4`} style={{ gridTemplateColumns: `repeat(${visibleFlyersSubTabs.length}, 1fr)` }}>
+                              {visibleFlyersSubTabs.map((subTab) => (
+                                <TabsTrigger
+                                  key={subTab.value}
+                                  value={subTab.value}
+                                  className="flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                                >
+                                  <span className="hidden sm:inline">{subTab.label}</span>
+                                  <span className="sm:hidden">{subTab.shortLabel}</span>
+                                </TabsTrigger>
+                              ))}
+                            </TabsList>
 
                             {grau5P.hasAnyAccess && (
                               <TabsContent value="grau5" className="m-0">
