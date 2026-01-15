@@ -33,6 +33,9 @@ export interface IntegrantePortal {
   tem_carro: boolean;
   data_entrada: string | null;
   combate_insano: boolean;
+  // Dados de contato (vindos do profile vinculado)
+  email?: string | null;
+  telefone?: string | null;
 }
 
 interface UseIntegrantesOptions {
@@ -100,7 +103,13 @@ export const useIntegrantes = (options?: UseIntegrantesOptions) => {
     
     let query = supabase
       .from('integrantes_portal')
-      .select('*')
+      .select(`
+        *,
+        profiles:profile_id (
+          email,
+          telefone
+        )
+      `)
       .order('nome_colete');
 
     if (options?.vinculado !== undefined) {
@@ -121,13 +130,20 @@ export const useIntegrantes = (options?: UseIntegrantesOptions) => {
     if (error) {
       console.error('Error fetching integrantes:', error);
     } else {
-      setIntegrantes(data || []);
+      // Mapear dados de contato do profile para campos de primeiro nível
+      const integrantesComContato = (data || []).map((integrante: any) => ({
+        ...integrante,
+        email: integrante.profiles?.email || null,
+        telefone: integrante.profiles?.telefone || null,
+      }));
+      
+      setIntegrantes(integrantesComContato);
       
       // Calcular estatisticas
-      const total = data?.length || 0;
-      const vinculados = data?.filter(i => i.vinculado).length || 0;
-      const naoVinculados = data?.filter(i => !i.vinculado).length || 0;
-      const inativos = data?.filter(i => !i.ativo).length || 0;
+      const total = integrantesComContato.length;
+      const vinculados = integrantesComContato.filter((i: any) => i.vinculado).length;
+      const naoVinculados = integrantesComContato.filter((i: any) => !i.vinculado).length;
+      const inativos = integrantesComContato.filter((i: any) => !i.ativo).length;
       
       setStats({ total, vinculados, naoVinculados, inativos });
     }

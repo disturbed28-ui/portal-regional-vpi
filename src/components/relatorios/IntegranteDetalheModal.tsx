@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Check, X } from 'lucide-react';
+import { Check, X, Mail, Phone } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -33,6 +33,9 @@ interface IntegranteDetalheModalProps {
     tem_carro: boolean | null;
     tem_moto: boolean | null;
     observacoes: string | null;
+    // Dados de contato (vindos do profile vinculado)
+    email?: string | null;
+    telefone?: string | null;
   } | null;
 }
 
@@ -152,6 +155,46 @@ export const IntegranteDetalheModal = ({ open, onOpenChange, integrante }: Integ
               </div>
             </div>
           </section>
+
+          {/* Contato - Apenas se vinculado e tiver dados */}
+          {integrante.vinculado && (integrante.email || integrante.telefone) && (
+            <>
+              <Separator />
+              <section>
+                <h3 className="text-sm font-semibold mb-2 text-muted-foreground">Contato</h3>
+                <div className="space-y-1.5 text-sm">
+                  {integrante.email && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground flex items-center gap-1">
+                        <Mail className="h-3 w-3" />
+                        E-mail:
+                      </span>
+                      <a 
+                        href={`mailto:${integrante.email}`} 
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {integrante.email}
+                      </a>
+                    </div>
+                  )}
+                  {integrante.telefone && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground flex items-center gap-1">
+                        <Phone className="h-3 w-3" />
+                        Telefone:
+                      </span>
+                      <a 
+                        href={`tel:${integrante.telefone}`} 
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {integrante.telefone}
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </section>
+            </>
+          )}
 
           {/* Badges Especiais */}
           {badges.length > 0 && (

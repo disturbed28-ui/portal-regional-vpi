@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Save, GraduationCap, Briefcase } from "lucide-react";
+import { Loader2, Save, GraduationCap, Briefcase, Mail, Phone } from "lucide-react";
 import { IntegrantePortal } from "@/hooks/useIntegrantes";
 import { useCargos } from "@/hooks/useCargos";
 
@@ -171,6 +171,33 @@ export function ModalEditarIntegrante({
               <span className="font-medium">#{integrante.registro_id}</span>
             </p>
           </div>
+
+          {/* Contato - se vinculado */}
+          {integrante.vinculado && (integrante.email || integrante.telefone) && (
+            <div className="p-3 rounded-lg bg-blue-50/50 dark:bg-blue-900/10 space-y-1.5 border border-blue-200/50 dark:border-blue-700/30">
+              <p className="text-xs font-medium text-blue-800 dark:text-blue-300 mb-1 flex items-center gap-1">
+                📧 Dados de Contato (vinculado ao portal)
+              </p>
+              {integrante.email && (
+                <p className="text-sm flex items-center gap-1.5">
+                  <Mail className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-muted-foreground">E-mail:</span>{" "}
+                  <a href={`mailto:${integrante.email}`} className="font-medium text-primary hover:underline">
+                    {integrante.email}
+                  </a>
+                </p>
+              )}
+              {integrante.telefone && (
+                <p className="text-sm flex items-center gap-1.5">
+                  <Phone className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-muted-foreground">Telefone:</span>{" "}
+                  <a href={`tel:${integrante.telefone}`} className="font-medium text-primary hover:underline">
+                    {integrante.telefone}
+                  </a>
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Nome de Colete */}
           <div className="space-y-2">

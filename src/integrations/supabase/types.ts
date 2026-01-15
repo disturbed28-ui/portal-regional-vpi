@@ -1909,6 +1909,7 @@ export type Database = {
           data_entrada: string | null
           divisao: string | null
           divisao_id: string | null
+          email: string | null
           funcao: string | null
           funcao_id: string | null
           grau: string | null
@@ -1933,6 +1934,7 @@ export type Database = {
           data_entrada?: string | null
           divisao?: string | null
           divisao_id?: string | null
+          email?: string | null
           funcao?: string | null
           funcao_id?: string | null
           grau?: string | null
@@ -1957,6 +1959,7 @@ export type Database = {
           data_entrada?: string | null
           divisao?: string | null
           divisao_id?: string | null
+          email?: string | null
           funcao?: string | null
           funcao_id?: string | null
           grau?: string | null

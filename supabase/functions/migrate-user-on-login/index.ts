@@ -60,6 +60,7 @@ Deno.serve(async (req) => {
       .insert({
         id: user_id,
         name: full_name || email.split('@')[0],
+        email: email,
         photo_url: avatar_url || '',
         profile_status: 'Pendente',
         status: 'Online',

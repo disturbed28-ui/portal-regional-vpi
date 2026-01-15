@@ -123,7 +123,13 @@ export const useIntegrantesGestao = (userId: string | undefined): UseIntegrantes
     try {
       let query = supabase
         .from('integrantes_portal')
-        .select('*')
+        .select(`
+          *,
+          profiles:profile_id (
+            email,
+            telefone
+          )
+        `)
         .eq('ativo', true);
       
       // Aplicar filtros de escopo
@@ -163,7 +169,13 @@ export const useIntegrantesGestao = (userId: string | undefined): UseIntegrantes
         console.error('Error fetching integrantes:', error);
         setIntegrantes([]);
       } else {
-        setIntegrantes(data || []);
+        // Mapear dados de contato do profile para campos de primeiro nível
+        const integrantesComContato = (data || []).map((integrante: any) => ({
+          ...integrante,
+          email: integrante.profiles?.email || null,
+          telefone: integrante.profiles?.telefone || null,
+        }));
+        setIntegrantes(integrantesComContato);
       }
     } catch (err) {
       console.error('Error in fetchIntegrantes:', err);
