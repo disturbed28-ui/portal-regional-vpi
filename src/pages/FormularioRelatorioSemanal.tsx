@@ -411,7 +411,7 @@ const SecaoInadimplencia = ({ inadimplencias, setInadimplencias }: any) => {
                       value={inad.acao_cobranca || ""}
                       onChange={(e) => {
                         const novo = [...inadimplencias];
-                        novo[idx].acao_cobranca = normalizeAcaoCobranca(e.target.value);
+                        novo[idx].acao_cobranca = e.target.value;
                         setInadimplencias(novo);
                       }}
                       placeholder="Descreva a ação de cobrança (contato, prazo, tratativa, etc.)..."
@@ -476,7 +476,7 @@ const SecaoInadimplencia = ({ inadimplencias, setInadimplencias }: any) => {
             className={cn("w-full mt-1", !isAcaoCobrancaValida(acaoCobranca) && acaoCobranca.length > 0 && "border border-red-500")}
             rows={2}
             value={acaoCobranca}
-            onChange={(e) => setAcaoCobranca(normalizeAcaoCobranca(e.target.value))}
+            onChange={(e) => setAcaoCobranca(e.target.value)}
             placeholder="Descreva a ação de cobrança..."
           />
         </div>
