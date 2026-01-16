@@ -2,18 +2,21 @@ import { useMemo } from 'react';
 import { useMensalidades } from './useMensalidades';
 import { useProfile } from './useProfile';
 import { useDivisoes } from './useDivisoes';
-import { getNivelAcesso } from '@/lib/grauUtils';
+import { useUserRole } from './useUserRole';
+import { getEscopoVisibilidade, temVisibilidadeTotal } from '@/lib/escopoVisibilidade';
 import { normalizeText } from '@/lib/normalizeText';
 
 export const useInadimplenciaFiltrada = (userId: string | undefined) => {
   const { profile } = useProfile(userId);
+  const { roles } = useUserRole(userId);
   const { ultimaCargaInfo, devedoresAtivos, devedoresCronicos } = useMensalidades();
   const { divisoes } = useDivisoes();
 
-  // Determinar nível de acesso baseado no grau
-  const nivelAcesso = useMemo(() => {
-    return getNivelAcesso(profile?.integrante?.grau || profile?.grau);
-  }, [profile]);
+  // Determinar escopo de visibilidade usando função centralizada
+  const escopo = useMemo(() => {
+    const isAdmin = roles.includes('admin');
+    return getEscopoVisibilidade(profile, roles, isAdmin);
+  }, [profile, roles]);
 
   // Obter a divisão do usuário a partir do divisao_id (mais confiável que texto)
   const userDivisao = useMemo(() => {
@@ -30,67 +33,75 @@ export const useInadimplenciaFiltrada = (userId: string | undefined) => {
     return mapa;
   }, [divisoes]);
 
-  // Filtrar devedores ativos baseado no nível de acesso
+  // Filtrar devedores ativos baseado no escopo de visibilidade
   const devedoresAtivosFiltrados = useMemo(() => {
-    // Grau I-IV (comando): vê tudo sem filtro
-    if (!profile || nivelAcesso === 'comando') {
+    // Comando (Grau I-IV, sem role admin): vê tudo sem filtro
+    if (!profile || temVisibilidadeTotal(escopo)) {
       return devedoresAtivos;
     }
 
-    // Grau V (regional): vê TODAS as divisões da sua regional
-    if (nivelAcesso === 'regional') {
+    // Admin ou Grau V (regional): vê TODAS as divisões da sua regional
+    if (escopo.nivelAcesso === 'regional' && escopo.filtroObrigatorio) {
+      console.log('[useInadimplenciaFiltrada] Filtrando por regional:', escopo.regionalTexto);
       return devedoresAtivos.filter(d => {
         const regionalId = mapaDivisaoRegional[normalizeText(d.divisao_texto || '')];
-        return regionalId === profile.regional_id;
+        return regionalId === escopo.regionalId;
       });
     }
 
     // Grau VI (divisão): vê SOMENTE sua divisão
-    // Usar divisao_id para encontrar o nome correto da divisão
-    const divisaoNome = userDivisao?.nome || profile.divisao;
-    if (!divisaoNome) {
-      console.warn('useInadimplenciaFiltrada: Grau VI sem divisão definida');
-      return [];
+    if (escopo.nivelAcesso === 'divisao' && escopo.filtroObrigatorio) {
+      const divisaoNome = userDivisao?.nome || escopo.divisaoTexto || profile.divisao;
+      if (!divisaoNome) {
+        console.warn('useInadimplenciaFiltrada: Grau VI sem divisão definida');
+        return [];
+      }
+      
+      const divisaoNomeNormalizado = normalizeText(divisaoNome);
+      return devedoresAtivos.filter(d => 
+        normalizeText(d.divisao_texto || '') === divisaoNomeNormalizado
+      );
     }
-    
-    const divisaoNomeNormalizado = normalizeText(divisaoNome);
-    return devedoresAtivos.filter(d => 
-      normalizeText(d.divisao_texto || '') === divisaoNomeNormalizado
-    );
-  }, [devedoresAtivos, profile, nivelAcesso, mapaDivisaoRegional, userDivisao]);
+
+    return devedoresAtivos;
+  }, [devedoresAtivos, profile, escopo, mapaDivisaoRegional, userDivisao]);
 
   // Filtrar devedores crônicos (mesma lógica)
   const devedoresCronicosFiltrados = useMemo(() => {
-    // Grau I-IV (comando): vê tudo sem filtro
-    if (!profile || nivelAcesso === 'comando') {
+    // Comando (Grau I-IV, sem role admin): vê tudo sem filtro
+    if (!profile || temVisibilidadeTotal(escopo)) {
       return devedoresCronicos;
     }
 
-    // Grau V (regional): vê TODAS as divisões da sua regional
-    if (nivelAcesso === 'regional') {
+    // Admin ou Grau V (regional): vê TODAS as divisões da sua regional
+    if (escopo.nivelAcesso === 'regional' && escopo.filtroObrigatorio) {
       return devedoresCronicos.filter(d => {
         const regionalId = mapaDivisaoRegional[normalizeText(d.divisao_texto || '')];
-        return regionalId === profile.regional_id;
+        return regionalId === escopo.regionalId;
       });
     }
 
     // Grau VI (divisão): vê SOMENTE sua divisão
-    const divisaoNome = userDivisao?.nome || profile.divisao;
-    if (!divisaoNome) {
-      return [];
+    if (escopo.nivelAcesso === 'divisao' && escopo.filtroObrigatorio) {
+      const divisaoNome = userDivisao?.nome || escopo.divisaoTexto || profile.divisao;
+      if (!divisaoNome) {
+        return [];
+      }
+      
+      const divisaoNomeNormalizado = normalizeText(divisaoNome);
+      return devedoresCronicos.filter(d => 
+        normalizeText(d.divisao_texto || '') === divisaoNomeNormalizado
+      );
     }
-    
-    const divisaoNomeNormalizado = normalizeText(divisaoNome);
-    return devedoresCronicos.filter(d => 
-      normalizeText(d.divisao_texto || '') === divisaoNomeNormalizado
-    );
-  }, [devedoresCronicos, profile, nivelAcesso, mapaDivisaoRegional, userDivisao]);
+
+    return devedoresCronicos;
+  }, [devedoresCronicos, profile, escopo, mapaDivisaoRegional, userDivisao]);
 
   return {
     ultimaCargaInfo,
     devedoresAtivos: devedoresAtivosFiltrados,
     devedoresCronicos: devedoresCronicosFiltrados,
-    nivelAcesso,
+    nivelAcesso: escopo.nivelAcesso,
     loading: !profile
   };
 };

@@ -26,52 +26,62 @@ import { Calendar, Users, AlertCircle, ArrowRightLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { CardDescription } from '@/components/ui/card';
 import { toast as sonnerToast } from 'sonner';
-import { getNivelAcesso } from '@/lib/grauUtils';
+import { getEscopoVisibilidade, temVisibilidadeTotal } from '@/lib/escopoVisibilidade';
 
 const Relatorios = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { profile, loading: profileLoading } = useProfile(user?.id);
-  const { hasRole, loading: rolesLoading } = useUserRole(user?.id);
+  const { hasRole, roles, loading: rolesLoading } = useUserRole(user?.id);
   const { hasAccess, loading: loadingAccess } = useScreenAccess("/relatorios", user?.id);
   const { hasAccess: hasAccessSemanalAba, loading: loadingAccessSemanalAba } = useScreenAccess('/relatorios/semanal-divisao', user?.id);
   const { hasAccess: hasAccessIntegrantes } = useScreenAccess('/relatorios/integrantes', user?.id);
 
-  // Determinar o filtro de regional baseado em role admin ou grau
+  // Determinar escopo de visibilidade usando função centralizada
   const isAdmin = hasRole('admin');
-  const grau = profile?.integrante?.grau || profile?.grau;
-  const nivel = getNivelAcesso(grau);
+  const escopo = useMemo(() => {
+    if (rolesLoading || profileLoading) return null;
+    return getEscopoVisibilidade(profile, roles, isAdmin);
+  }, [profile, roles, isAdmin, rolesLoading, profileLoading]);
 
-  // REGRA: Admin tem acesso total, independente do grau
+  // REGRA: Filtro de regional baseado no escopo
   const regionalTextoFiltro: string | undefined = useMemo(() => {
-    if (rolesLoading || profileLoading) return undefined; // Aguardar carregamento
+    if (!escopo) return undefined; // Aguardar carregamento
     
-    if (isAdmin) {
-      return undefined; // Admin vê tudo
+    // Comando sem filtro obrigatório vê tudo
+    if (temVisibilidadeTotal(escopo)) {
+      return undefined;
     }
     
-    if (nivel === 'comando') {
-      return undefined; // Graus I-IV veem tudo
-    }
-    
-    // Grau V (regional) e VI+ (divisão) veem apenas sua regional
-    return profile?.integrante?.regional_texto || undefined;
-  }, [isAdmin, nivel, profile?.integrante?.regional_texto, rolesLoading, profileLoading]);
+    // Admin, Grau V e VI veem apenas sua regional
+    return escopo.regionalTexto || undefined;
+  }, [escopo]);
 
   // Determinar regionalId para filtro de histórico (Evolução)
   const regionalIdHistorico = useMemo(() => {
-    if (rolesLoading || profileLoading) return undefined;
-    if (isAdmin || nivel === 'comando') return undefined; // Admin/comando veem tudo
-    return profile?.regional_id || undefined; // Regional/divisão veem apenas sua regional
-  }, [isAdmin, nivel, profile?.regional_id, rolesLoading, profileLoading]);
+    if (!escopo) return undefined;
+    
+    // Comando sem filtro obrigatório vê tudo
+    if (temVisibilidadeTotal(escopo)) {
+      return undefined;
+    }
+    
+    // Admin, Regional e Divisão veem apenas sua regional
+    return escopo.regionalId || undefined;
+  }, [escopo]);
 
   // Texto de escopo para exibição
   const escopoTexto = useMemo(() => {
-    if (isAdmin || nivel === 'comando') {
+    if (!escopo) return '';
+    
+    if (temVisibilidadeTotal(escopo)) {
       return 'Escopo do dashboard: Comando (todas as regionais)';
     }
-    return `Escopo do dashboard: Regional ${profile?.regional || ''}`;
-  }, [isAdmin, nivel, profile?.regional]);
+    
+    // Admin ou Regional/Divisão mostram a regional atual
+    const prefixo = isAdmin ? 'Admin - ' : '';
+    return `Escopo do dashboard: ${prefixo}Regional ${escopo.regionalTexto || ''}`;
+  }, [escopo, isAdmin]);
 
   const { data: relatorioData, isLoading } = useRelatorioData(regionalTextoFiltro);
   const { data: historicoData, isLoading: isLoadingHistorico } = useHistoricoCargas({
@@ -586,9 +596,9 @@ const Relatorios = () => {
               {/* Aba Movimentações */}
               <TabsContent value="movimentacoes">
                 <HistoricoMovimentacoes
-                  nivelAcesso={nivel}
-                  regionalUsuario={profile?.integrante?.regional_texto}
-                  divisaoUsuario={profile?.integrante?.divisao_texto}
+                  nivelAcesso={escopo?.nivelAcesso || 'divisao'}
+                  regionalUsuario={escopo?.regionalTexto || profile?.integrante?.regional_texto}
+                  divisaoUsuario={escopo?.divisaoTexto || profile?.integrante?.divisao_texto}
                 />
               </TabsContent>
 
