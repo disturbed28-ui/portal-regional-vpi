@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
+import { useUserRole } from "@/hooks/useUserRole";
 import { useRegionais, Regional } from "@/hooks/useRegionais";
 import { useDivisoes, Divisao } from "@/hooks/useDivisoes";
-import { getNivelAcesso, NivelAcesso } from "@/lib/grauUtils";
+import { NivelAcesso } from "@/lib/grauUtils";
+import { getEscopoVisibilidade, temVisibilidadeTotal } from "@/lib/escopoVisibilidade";
 import { ordenarIntegrantes } from "@/lib/integranteOrdering";
 import { normalizeSearchTerm } from "@/lib/utils";
 import { IntegrantePortal } from "@/hooks/useIntegrantes";
@@ -13,6 +15,7 @@ export interface EscopoUsuario {
   grau: string | null;
   regionalId: string | null;
   divisaoId: string | null;
+  filtroObrigatorio: boolean;
 }
 
 export interface IntegrantesPorDivisao {
@@ -50,33 +53,37 @@ interface UseIntegrantesGestaoReturn {
 
 export const useIntegrantesGestao = (userId: string | undefined): UseIntegrantesGestaoReturn => {
   const { profile, loading: profileLoading } = useProfile(userId);
+  const { roles } = useUserRole(userId);
   const { regionais: todasRegionais, loading: regionaisLoading } = useRegionais();
   
-  // Determinar escopo do usuário
+  // Determinar escopo do usuário usando função centralizada
   const escopo = useMemo<EscopoUsuario>(() => {
     if (!profile) {
-      return { nivelAcesso: 'divisao', grau: null, regionalId: null, divisaoId: null };
+      return { nivelAcesso: 'divisao', grau: null, regionalId: null, divisaoId: null, filtroObrigatorio: true };
     }
     
+    const isAdmin = roles.includes('admin');
+    const escopoVisibilidade = getEscopoVisibilidade(profile, roles, isAdmin);
     const grau = profile.grau || profile.integrante?.grau || null;
-    const nivelAcesso = getNivelAcesso(grau);
     
     return {
-      nivelAcesso,
+      nivelAcesso: escopoVisibilidade.nivelAcesso,
       grau,
-      regionalId: profile.regional_id,
-      divisaoId: profile.divisao_id,
+      regionalId: escopoVisibilidade.regionalId,
+      divisaoId: escopoVisibilidade.divisaoId,
+      filtroObrigatorio: escopoVisibilidade.filtroObrigatorio,
     };
-  }, [profile]);
+  }, [profile, roles]);
   
   // Regionais disponíveis baseadas no escopo
   const regionaisDisponiveis = useMemo(() => {
-    if (escopo.nivelAcesso === 'comando') {
+    // Comando sem filtro obrigatório pode ver todas as regionais
+    if (escopo.nivelAcesso === 'comando' && !escopo.filtroObrigatorio) {
       return todasRegionais;
     }
-    // Para Grau V e VI, regional já está travada
+    // Admin, Grau V e VI: regional já está travada
     return [];
-  }, [escopo.nivelAcesso, todasRegionais]);
+  }, [escopo.nivelAcesso, escopo.filtroObrigatorio, todasRegionais]);
   
   // Estado dos filtros
   const [filtroRegional, setFiltroRegional] = useState<string>('');
@@ -85,12 +92,13 @@ export const useIntegrantesGestao = (userId: string | undefined): UseIntegrantes
   
   // Determinar regional efetiva para filtro de divisões
   const regionalEfetiva = useMemo(() => {
-    if (escopo.nivelAcesso === 'comando') {
+    // Comando sem filtro obrigatório pode escolher regional
+    if (escopo.nivelAcesso === 'comando' && !escopo.filtroObrigatorio) {
       return filtroRegional || '';
     }
-    // Para Grau V e VI, usar regional do usuário
+    // Admin, Grau V e VI: usar regional do usuário (obrigatório)
     return escopo.regionalId || '';
-  }, [escopo.nivelAcesso, escopo.regionalId, filtroRegional]);
+  }, [escopo.nivelAcesso, escopo.filtroObrigatorio, escopo.regionalId, filtroRegional]);
   
   // Buscar divisões da regional efetiva
   const { divisoes: todasDivisoes, loading: divisoesLoading } = useDivisoes(regionalEfetiva || undefined);
@@ -133,22 +141,23 @@ export const useIntegrantesGestao = (userId: string | undefined): UseIntegrantes
         .eq('ativo', true);
       
       // Aplicar filtros de escopo
-      if (escopo.nivelAcesso === 'divisao') {
+      if (escopo.nivelAcesso === 'divisao' && escopo.filtroObrigatorio) {
         // Grau VI+: apenas sua divisão
         if (escopo.divisaoId) {
           query = query.eq('divisao_id', escopo.divisaoId);
         }
-      } else if (escopo.nivelAcesso === 'regional') {
-        // Grau V: apenas sua regional
+      } else if (escopo.nivelAcesso === 'regional' && escopo.filtroObrigatorio) {
+        // Admin ou Grau V: apenas sua regional (OBRIGATÓRIO)
         if (escopo.regionalId) {
+          console.log('[useIntegrantesGestao] Aplicando filtro obrigatório por regional:', escopo.regionalId);
           query = query.eq('regional_id', escopo.regionalId);
         }
         // Aplicar filtro de divisão se selecionado
         if (filtroDivisao) {
           query = query.eq('divisao_id', filtroDivisao);
         }
-      } else {
-        // Grau I-IV: aplicar filtros manuais
+      } else if (!escopo.filtroObrigatorio) {
+        // Comando sem filtro obrigatório: aplicar filtros manuais
         if (filtroRegional) {
           query = query.eq('regional_id', filtroRegional);
         }
