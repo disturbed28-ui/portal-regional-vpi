@@ -18,7 +18,9 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 const ROLES = [
   { value: 'admin' as const, label: 'Admin', color: 'bg-red-500' },
   { value: 'moderator' as const, label: 'Moderador', color: 'bg-blue-500' },
+  { value: 'comando' as const, label: 'Comando', color: 'bg-indigo-500' },
   { value: 'diretor_regional' as const, label: 'Diretor Regional', color: 'bg-green-500' },
+  { value: 'adm_regional' as const, label: 'ADM Regional', color: 'bg-amber-500' },
   { value: 'regional' as const, label: 'Regional', color: 'bg-teal-500' },
   { value: 'diretor_divisao' as const, label: 'Diretor / Subdiretor de Divisão', color: 'bg-purple-500' },
   { value: 'social_divisao' as const, label: 'Social de Divisão', color: 'bg-pink-500' },
@@ -402,7 +404,9 @@ export default function AdminPermissoes() {
                 <span className="text-sm text-muted-foreground">
                   {role.value === 'admin' && 'Acesso total ao sistema'}
                   {role.value === 'moderator' && 'Gerencia integrantes e eventos'}
+                  {role.value === 'comando' && 'Integrante de comando (Grau I-IV)'}
                   {role.value === 'diretor_regional' && 'Gerencia regional e visualiza relatórios'}
+                  {role.value === 'adm_regional' && 'Acesso administrativo total à regional'}
                   {role.value === 'regional' && 'Gerencia regional (role legada)'}
                   {role.value === 'diretor_divisao' && 'Gerencia divisão e visualiza relatórios'}
                   {role.value === 'social_divisao' && 'Gerencia ações sociais da divisão'}

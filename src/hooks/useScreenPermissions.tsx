@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { logSystemEventFromClient } from "@/lib/logSystemEvent";
 
-type AppRole = 'admin' | 'moderator' | 'user' | 'diretor_divisao' | 'diretor_regional' | 'regional' | 'social_divisao' | 'adm_divisao' | 'app.authenticated' | 'presence.view_division' | 'presence.view_region';
+type AppRole = 'admin' | 'moderator' | 'user' | 'diretor_divisao' | 'diretor_regional' | 'regional' | 'social_divisao' | 'adm_divisao' | 'adm_regional' | 'comando' | 'app.authenticated' | 'presence.view_division' | 'presence.view_region';
 
 interface SystemScreen {
   id: string;

@@ -42,7 +42,9 @@ export const useCanManagePresenca = () => {
         roles.includes('moderator') || 
         roles.includes('regional') ||
         roles.includes('diretor_regional') ||
-        roles.includes('diretor_divisao');
+        roles.includes('diretor_divisao') ||
+        roles.includes('adm_regional') ||
+        roles.includes('comando');
       setCanManage(hasPermission);
       setLoading(false);
     };

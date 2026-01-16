@@ -26,7 +26,7 @@ interface RelatorioItem {
 }
 
 // Roles que podem ser gerenciadas automaticamente (inclui 'user' como base)
-const ROLES_GERENCIADAS = ['user', 'regional', 'diretor_regional', 'diretor_divisao', 'social_divisao', 'adm_divisao', 'moderator'];
+const ROLES_GERENCIADAS = ['user', 'regional', 'diretor_regional', 'diretor_divisao', 'social_divisao', 'adm_divisao', 'moderator', 'adm_regional', 'comando'];
 
 function determinarRolesCorretas(grau: string | null, cargoNome: string | null): string[] | null {
   if (!grau) return ['user']; // Base para todos
@@ -34,16 +34,20 @@ function determinarRolesCorretas(grau: string | null, cargoNome: string | null):
   const grauUpper = grau.toUpperCase().trim();
   const cargoLower = (cargoNome || '').toLowerCase();
   
-  // Graus I, II, III, IV (Comando) - NÃO ALTERAR
+  // Graus I, II, III, IV (Comando) - atribuir role comando + user
   if (['I', 'II', 'III', 'IV'].includes(grauUpper) || 
       grauUpper.match(/^(I|II|III|IV)$/)) {
-    return null; // null = não mexer
+    return ['user', 'comando'];
   }
   
   // Grau V - Regional + user
   if (grauUpper === 'V') {
     if (cargoLower.includes('diretor')) {
       return ['user', 'diretor_regional'];
+    }
+    // ADM Regional
+    if (cargoLower.includes('adm')) {
+      return ['user', 'adm_regional'];
     }
     return ['user', 'regional'];
   }
