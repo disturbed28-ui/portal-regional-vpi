@@ -179,15 +179,22 @@ export async function parseArquivoA(file: File): Promise<ParseArquivoAResult> {
         // São cabeçalhos ou totalizadores do relatório
         const palavrasIgnorar = ['numero', 'total', 'total:', 'integrantes', 'id', 'nome', 'data'];
         
+        // Sub-graus que NÃO são divisões - são categorias dentro de uma divisão
+        const subgrausIgnorar = [
+          'FULL', 'PP', 'MEIO', 'CAMISETA', 'PROSPECT', 
+          'HANG AROUND', 'HANGAROUND', 'HA', 'HANG-AROUND'
+        ];
+        
         for (let i = 0; i < jsonData.length; i++) {
           const linha = jsonData[i];
           if (!linha || linha.length === 0) continue;
           
           const primeiraColuna = String(linha[0] || '').trim();
           const primeiraColunaLower = primeiraColuna.toLowerCase();
+          const primeiraColunaUpper = primeiraColuna.toUpperCase();
           
           // Detectar regional (linha contém "REGIONAL")
-          if (primeiraColuna.toUpperCase().includes('REGIONAL')) {
+          if (primeiraColunaUpper.includes('REGIONAL')) {
             regionalAtual = primeiraColuna;
             regionaisSet.add(regionalAtual);
             // Resetar divisão ao mudar de regional - integrantes do comando usarão a regional
@@ -245,10 +252,21 @@ export async function parseArquivoA(file: File): Promise<ParseArquivoAResult> {
               primeiraColunaLower === p || primeiraColunaLower.startsWith(p + ':')
             );
             
-            if (semNumeros && !ehPalavraIgnorar) {
+            // Verificar se NÃO é um sub-grau (FULL, PP, MEIO, CAMISETA, etc.)
+            const ehSubgrau = subgrausIgnorar.includes(primeiraColunaUpper);
+            
+            // Só considerar como divisão se começa com "DIVISÃO" ou "DIVISAO"
+            const pareceSerDivisao = 
+              primeiraColunaUpper.startsWith('DIVISÃO') ||
+              primeiraColunaUpper.startsWith('DIVISAO') ||
+              primeiraColunaUpper.startsWith('DIVISÂO'); // typo comum
+            
+            if (semNumeros && !ehPalavraIgnorar && !ehSubgrau && pareceSerDivisao) {
               divisaoAtual = primeiraColuna;
               divisoesSet.add(divisaoAtual);
               console.log(`[parseArquivoA] Divisão detectada: ${divisaoAtual}`);
+            } else if (ehSubgrau) {
+              console.log(`[parseArquivoA] Sub-grau ignorado: ${primeiraColuna} (mantendo divisão: ${divisaoAtual || 'N/A'})`);
             }
           }
         }
