@@ -620,6 +620,13 @@ async function syncEventsWithDatabase(events: CalendarEvent[]) {
   try {
     console.log('[syncEventsWithDatabase] Iniciando sincronização de eventos...');
     
+    // Definir janela de busca: apenas eventos dos últimos 30 dias até 6 meses no futuro
+    // são considerados para marcação de "removed"
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    const sixMonthsLater = new Date();
+    sixMonthsLater.setMonth(sixMonthsLater.getMonth() + 6);
+    
     // Buscar todos os eventos que existem no banco (incluindo status)
     const { data: existingEvents, error: fetchError } = await supabase
       .from('eventos_agenda')
@@ -644,21 +651,33 @@ async function syncEventsWithDatabase(events: CalendarEvent[]) {
       
       // CENÁRIO 1: Evento NÃO existe mais no Google (foi deletado)
       if (!calendarEvent && !googleEventIds.has(dbEvent.evento_id)) {
-        // Só marca como removido se ainda estiver como 'active'
+        const eventDate = new Date(dbEvent.data_evento);
+        
+        // Verificar se o evento está DENTRO da janela de busca
+        const withinSearchWindow = eventDate >= oneMonthAgo && eventDate <= sixMonthsLater;
+        
+        // Só marca como removido se:
+        // 1. Ainda estiver como 'active'
+        // 2. A data do evento está dentro da janela de busca (últimos 30 dias até 6 meses futuro)
         if (dbEvent.status === 'active' || !dbEvent.status) {
-          console.log(`[syncEventsWithDatabase] ⚠️ Evento removido do Google: ${dbEvent.titulo}`);
-          const { error: updateError } = await supabase
-            .from('eventos_agenda')
-            .update({ 
-              status: 'removed', 
-              updated_at: new Date().toISOString() 
-            })
-            .eq('id', dbEvent.id);
-          
-          if (updateError) {
-            console.error(`[syncEventsWithDatabase] Erro ao marcar evento como removido:`, updateError);
+          if (withinSearchWindow) {
+            console.log(`[syncEventsWithDatabase] ⚠️ Evento removido do Google: ${dbEvent.titulo}`);
+            const { error: updateError } = await supabase
+              .from('eventos_agenda')
+              .update({ 
+                status: 'removed', 
+                updated_at: new Date().toISOString() 
+              })
+              .eq('id', dbEvent.id);
+            
+            if (updateError) {
+              console.error(`[syncEventsWithDatabase] Erro ao marcar evento como removido:`, updateError);
+            } else {
+              console.log(`[syncEventsWithDatabase] ✅ Evento marcado como REMOVIDO`);
+            }
           } else {
-            console.log(`[syncEventsWithDatabase] ✅ Evento marcado como REMOVIDO`);
+            // Evento está fora da janela de busca - NÃO marcar como removido
+            console.log(`[syncEventsWithDatabase] 📆 Evento fora da janela de busca (${dbEvent.data_evento}), ignorando: ${dbEvent.titulo}`);
           }
         }
         continue;
