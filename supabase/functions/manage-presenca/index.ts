@@ -75,7 +75,9 @@ Deno.serve(async (req) => {
       roles.includes('moderator') || 
       roles.includes('regional') ||
       roles.includes('diretor_regional') ||
-      roles.includes('diretor_divisao');
+      roles.includes('diretor_divisao') ||
+      roles.includes('adm_regional') ||
+      roles.includes('comando');
 
     // Para ação initialize, permitir se usuário pertence à mesma divisão
     const isDivisaoAuthorized = (action === 'initialize' || action === 'initialize_divisao_cmd') && 

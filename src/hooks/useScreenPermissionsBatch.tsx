@@ -11,7 +11,7 @@ interface ScreenPermission {
   hasAnyAccess: boolean;
 }
 
-type AppRole = 'admin' | 'moderator' | 'user' | 'diretor_divisao' | 'diretor_regional' | 'regional' | 'social_divisao' | 'adm_divisao';
+type AppRole = 'admin' | 'moderator' | 'user' | 'diretor_divisao' | 'diretor_regional' | 'regional' | 'social_divisao' | 'adm_divisao' | 'adm_regional' | 'comando';
 
 interface UseScreenPermissionsBatchResult {
   permissions: Record<string, ScreenPermission>;
@@ -21,6 +21,10 @@ interface UseScreenPermissionsBatchResult {
 /**
  * Hook otimizado para buscar permissões de múltiplas telas em lote.
  * Reduz de N*2 queries para apenas 2 queries totais.
+ * 
+ * Regras especiais de acesso automático:
+ * - Role 'adm_regional': Acesso full a todas as rotas /gestao-adm*
+ * - Role 'comando': Acesso full a tudo (como admin)
  * 
  * @param routes - Array de rotas para verificar permissões
  * @param parentRoute - Rota pai para determinar acesso readonly
@@ -62,6 +66,27 @@ export function useScreenPermissionsBatch(
       setLoading(true);
       
       try {
+        // Verificar roles especiais que concedem acesso automático
+        const isAdmRegional = roles.includes('adm_regional');
+        const isComando = roles.includes('comando');
+        const isAdmin = roles.includes('admin');
+        
+        // Se for comando ou admin, acesso total a tudo
+        if (isComando || isAdmin) {
+          const allFull = routes.reduce((acc, route) => ({
+            ...acc,
+            [route]: { 
+              hasAccess: true, 
+              accessLevel: 'full' as AccessLevel, 
+              isReadOnly: false, 
+              hasAnyAccess: true 
+            }
+          }), {} as Record<string, ScreenPermission>);
+          setPermissions(allFull);
+          setLoading(false);
+          return;
+        }
+
         // Incluir parentRoute na busca se não estiver nas routes
         const allRoutes = routes.includes(parentRoute) 
           ? routes 
@@ -133,7 +158,10 @@ export function useScreenPermissionsBatch(
           
           let accessLevel: AccessLevel = 'none';
           
-          if (!screenExists) {
+          // REGRA ESPECIAL: ADM Regional tem acesso full a /gestao-adm*
+          if (isAdmRegional && route.startsWith('/gestao-adm')) {
+            accessLevel = 'full';
+          } else if (!screenExists) {
             // Tela não cadastrada = permitir (backward compatibility)
             accessLevel = 'full';
           } else if (roles.some(r => routePerms.includes(r as AppRole))) {

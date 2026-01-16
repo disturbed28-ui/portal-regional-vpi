@@ -21,7 +21,9 @@ import { format } from "date-fns";
 const ROLES_DISPONIVEIS = [
   { id: "admin", label: "Admin", color: "bg-red-500" },
   { id: "moderator", label: "Moderador", color: "bg-blue-500" },
+  { id: "comando", label: "Comando", color: "bg-indigo-500" },
   { id: "diretor_regional", label: "Diretor Regional", color: "bg-green-500" },
+  { id: "adm_regional", label: "ADM Regional", color: "bg-amber-500" },
   { id: "regional", label: "Regional (Grau V)", color: "bg-teal-500" },
   { id: "diretor_divisao", label: "Diretor / Subdiretor de Divisão", color: "bg-purple-500" },
   { id: "social_divisao", label: "Social de Divisão", color: "bg-pink-500" },

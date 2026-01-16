@@ -2992,6 +2992,8 @@ export type Database = {
         | "presence.view_region"
         | "social_divisao"
         | "adm_divisao"
+        | "adm_regional"
+        | "comando"
       motivo_inativacao:
         | "transferido"
         | "falecido"
@@ -3139,6 +3141,8 @@ export const Constants = {
         "presence.view_region",
         "social_divisao",
         "adm_divisao",
+        "adm_regional",
+        "comando",
       ],
       motivo_inativacao: [
         "transferido",
