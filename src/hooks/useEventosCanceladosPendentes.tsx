@@ -26,7 +26,11 @@ export const useEventosCanceladosPendentes = (userId: string | undefined, isAdmi
     queryFn: async (): Promise<EventoCanceladoPendente[]> => {
       console.log('[useEventosCanceladosPendentes] Buscando eventos...');
       
-      // Buscar eventos cancelados ou removidos
+      // Filtrar apenas eventos dos últimos 30 dias
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      
+      // Buscar eventos cancelados ou removidos (apenas últimos 30 dias)
       const { data: eventos, error } = await supabase
         .from('eventos_agenda')
         .select(`
@@ -43,6 +47,7 @@ export const useEventosCanceladosPendentes = (userId: string | undefined, isAdmi
           regionais:regional_id (nome)
         `)
         .in('status', ['cancelled', 'removed'])
+        .gte('data_evento', oneMonthAgo.toISOString())
         .order('data_evento', { ascending: false });
 
       if (error) {

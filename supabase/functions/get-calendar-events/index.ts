@@ -103,19 +103,19 @@ Deno.serve(async (req) => {
     // ========================================
     // 2. Buscar eventos do Google Calendar
     // ========================================
-    const now = new Date();
-    const threeMonthsBefore = new Date();
-    threeMonthsBefore.setMonth(threeMonthsBefore.getMonth() - 3);
-    const threeMonthsLater = new Date();
-    threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
+    // Janela: 1 mês passado / 6 meses futuro
+    const oneMonthBefore = new Date();
+    oneMonthBefore.setMonth(oneMonthBefore.getMonth() - 1);
+    const sixMonthsLater = new Date();
+    sixMonthsLater.setMonth(sixMonthsLater.getMonth() + 6);
 
-    console.log('[get-calendar-events] Fetching calendar events with pagination');
+    console.log('[get-calendar-events] Fetching calendar events (1 mês passado / 6 meses futuro)');
     
     const allEvents = await fetchAllEvents(
       CALENDAR_ID,
       API_KEY,
-      threeMonthsBefore.toISOString(),
-      threeMonthsLater.toISOString()
+      oneMonthBefore.toISOString(),
+      sixMonthsLater.toISOString()
     );
 
     console.log('[get-calendar-events] Total events fetched:', allEvents.length);
