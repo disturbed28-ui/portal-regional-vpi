@@ -5,7 +5,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useUserRole } from "@/hooks/useUserRole";
 import { format } from "date-fns";
 import { normalizarRegional, normalizarDivisao } from "@/lib/normalizeText";
-import { getEscopoVisibilidade, temVisibilidadeTotal } from "@/lib/escopoVisibilidade";
+import { getNivelAcesso } from "@/lib/grauUtils";
 
 interface FiltrosAcoesSociais {
   dataInicio?: Date;
@@ -24,21 +24,23 @@ export const useAcoesSociaisLista = (filtros?: FiltrosAcoesSociais) => {
       return [];
     }
 
-    // Determinar escopo de visibilidade usando função centralizada
+    // Determinar nível de acesso baseado em role admin ou grau
     const isAdmin = roles.includes('admin');
-    const escopo = getEscopoVisibilidade(profile, roles, isAdmin);
+    const grau = profile?.integrante?.grau || profile?.grau;
+    const nivel = getNivelAcesso(grau);
 
     console.log('[useAcoesSociaisLista] Debug:', { 
       roles, 
       isAdmin,
-      escopo,
+      grau,
+      nivel,
       integranteRegionalTexto: profile?.integrante?.regional_texto,
       integranteDivisaoTexto: profile?.integrante?.divisao_texto
     });
 
-    // REGRA: Comando (Grau I-IV, sem role admin) → Acesso total sem filtro
-    if (temVisibilidadeTotal(escopo)) {
-      console.log('[useAcoesSociaisLista] Acesso total (comando grau I-IV)');
+    // REGRA 1: Admin ou Graus I-IV (comando) → Acesso total
+    if (isAdmin || nivel === 'comando') {
+      console.log('[useAcoesSociaisLista] Acesso total (admin ou comando)');
       
       let query = supabase
         .from('acoes_sociais_registros')
@@ -77,19 +79,19 @@ export const useAcoesSociaisLista = (filtros?: FiltrosAcoesSociais) => {
     let regionalNormalizada: string | null = null;
     let divisaoNormalizada: string | null = null;
 
-    // REGRA: Admin e Grau V → Filtrar por REGIONAL
-    if (escopo.nivelAcesso === 'regional' && escopo.filtroObrigatorio) {
-      const regionalTexto = escopo.regionalTexto || profile?.integrante?.regional_texto;
+    // REGRA 2: Grau V (regional) → Filtrar pela regional
+    if (nivel === 'regional') {
+      const regionalTexto = profile?.integrante?.regional_texto;
       if (!regionalTexto) {
-        console.error('[useAcoesSociaisLista] Nível regional sem regional_texto');
+        console.error('[useAcoesSociaisLista] Grau V sem regional_texto');
         return [];
       }
       regionalNormalizada = normalizarRegional(regionalTexto);
-      console.log('[useAcoesSociaisLista] Filtrando por regional (admin ou grau V):', regionalNormalizada);
+      console.log('[useAcoesSociaisLista] Filtrando por regional:', regionalNormalizada);
     }
-    // REGRA: Grau VI+ → Filtrar por DIVISÃO
-    else if (escopo.nivelAcesso === 'divisao' && escopo.filtroObrigatorio) {
-      const divisaoTexto = escopo.divisaoTexto || profile?.integrante?.divisao_texto;
+    // REGRA 3: Grau VI+ (divisão) → Filtrar pela divisão
+    else if (nivel === 'divisao') {
+      const divisaoTexto = profile?.integrante?.divisao_texto;
       if (!divisaoTexto) {
         console.error('[useAcoesSociaisLista] Grau VI+ sem divisao_texto');
         return [];
@@ -97,9 +99,9 @@ export const useAcoesSociaisLista = (filtros?: FiltrosAcoesSociais) => {
       divisaoNormalizada = normalizarDivisao(divisaoTexto);
       console.log('[useAcoesSociaisLista] Filtrando por divisão:', divisaoNormalizada);
     }
-    // Sem nível identificado com filtro obrigatório
-    else if (escopo.filtroObrigatorio) {
-      console.log('[useAcoesSociaisLista] Filtro obrigatório mas sem escopo definido');
+    // Sem nível identificado
+    else {
+      console.log('[useAcoesSociaisLista] Nível de acesso não identificado, grau:', grau);
       return [];
     }
 

@@ -46,8 +46,6 @@ export const useRelatorioData = (regionalTexto?: string) => {
   return useQuery({
     queryKey: ['relatorio-data', regionalTexto],
     queryFn: async (): Promise<RelatorioData> => {
-      console.log('[useRelatorioData] Buscando dados com filtro regional:', regionalTexto || '(sem filtro)');
-      
       // 1. Buscar última carga histórica
       const { data: ultimaCarga, error: erroUltimaCarga } = await supabase
         .from('cargas_historico')
@@ -71,14 +69,13 @@ export const useRelatorioData = (regionalTexto?: string) => {
         .limit(1)
         .maybeSingle();
 
-      // 3. Buscar integrantes atuais (com filtro de regional se especificado)
+      // 3. Buscar integrantes atuais
       let queryAtual = supabase
         .from('integrantes_portal')
         .select('*')
         .eq('ativo', true);
 
       if (regionalTexto) {
-        console.log('[useRelatorioData] Aplicando filtro por regional_texto:', regionalTexto);
         queryAtual = queryAtual.eq('regional_texto', regionalTexto);
       }
 
