@@ -18,7 +18,8 @@ import { IntegrantesTab } from '@/components/relatorios/IntegrantesTab';
 import { HistoricoMovimentacoes } from '@/components/relatorios/HistoricoMovimentacoes';
 import { formatarDataBrasil } from '@/lib/timezone';
 import { toast } from '@/hooks/use-toast';
-import { useAfastadosAtivos, useAfastadosHistorico, useRetornosProximos, useRegistrarRetorno, type IntegranteAfastado } from '@/hooks/useAfastados';
+import { useAfastadosAtivos, useAfastadosHistorico, useRetornosProximos, useRegistrarRetorno, type IntegranteAfastado, type AfastadosFiltros } from '@/hooks/useAfastados';
+import { useDivisoes } from '@/hooks/useDivisoes';
 import { ModalBaixaAfastado, type MotivoBaixa } from '@/components/admin/ModalBaixaAfastado';
 import { format, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -79,11 +80,39 @@ const Relatorios = () => {
     regionalId: regionalIdHistorico
   });
 
-  // Hooks para afastamentos
-  const { afastados: ativos, loading: loadingAtivos, refetch: refetchAtivos } = useAfastadosAtivos();
-  const { afastados: historico, loading: loadingHistorico } = useAfastadosHistorico();
-  const { afastados: proximos7, loading: loadingProximos7 } = useRetornosProximos(7);
-  const { afastados: proximos30, loading: loadingProximos30 } = useRetornosProximos(30);
+  // Buscar divisões para filtrar afastamentos por regional
+  const { divisoes } = useDivisoes();
+
+  // Calcular filtros de afastados baseado no nível de acesso
+  const afastadosFiltros: AfastadosFiltros | undefined = useMemo(() => {
+    // Comando: vê tudo (sem filtros)
+    if (nivel === 'comando') {
+      return undefined;
+    }
+    
+    // Divisão (Grau VI+): filtra pela sua divisão
+    if (nivel === 'divisao' && profile?.divisao_id) {
+      return { divisaoId: profile.divisao_id };
+    }
+    
+    // Regional (Grau V): filtra pelas divisões da sua regional
+    if (nivel === 'regional' && profile?.regional_id && divisoes && divisoes.length > 0) {
+      const divisoesRegional = divisoes
+        .filter(d => d.regional_id === profile.regional_id)
+        .map(d => d.id);
+      if (divisoesRegional.length > 0) {
+        return { divisaoIds: divisoesRegional };
+      }
+    }
+    
+    return undefined;
+  }, [nivel, profile?.divisao_id, profile?.regional_id, divisoes]);
+
+  // Hooks para afastamentos com filtros aplicados
+  const { afastados: ativos, loading: loadingAtivos, refetch: refetchAtivos } = useAfastadosAtivos(afastadosFiltros);
+  const { afastados: historico, loading: loadingHistorico } = useAfastadosHistorico(afastadosFiltros);
+  const { afastados: proximos7, loading: loadingProximos7 } = useRetornosProximos(7, afastadosFiltros);
+  const { afastados: proximos30, loading: loadingProximos30 } = useRetornosProximos(30, afastadosFiltros);
   const { registrarRetorno } = useRegistrarRetorno();
   
   // Redirecionamento em caso de acesso negado
