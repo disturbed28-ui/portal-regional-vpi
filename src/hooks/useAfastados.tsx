@@ -5,6 +5,7 @@ export interface IntegranteAfastado {
   id: string;
   registro_id: number;
   nome_colete: string;
+  divisao_id: string | null;
   divisao_texto: string;
   cargo_grau_texto: string | null;
   tipo_afastamento: string;
@@ -18,7 +19,12 @@ export interface IntegranteAfastado {
   updated_at: string;
 }
 
-export const useAfastadosAtivos = () => {
+export interface AfastadosFiltros {
+  divisaoId?: string;        // Para Grau VI+ (filtra por divisão específica)
+  divisaoIds?: string[];     // Para Grau V (filtra por divisões da regional)
+}
+
+export const useAfastadosAtivos = (filtros?: AfastadosFiltros) => {
   const [afastados, setAfastados] = useState<IntegranteAfastado[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -43,15 +49,27 @@ export const useAfastadosAtivos = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [filtros?.divisaoId, filtros?.divisaoIds?.join(',')]);
 
   const fetchAfastados = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    
+    let query = supabase
       .from('integrantes_afastados')
       .select('*')
-      .eq('ativo', true)
-      .order('data_retorno_prevista');
+      .eq('ativo', true);
+
+    // Filtro por divisão específica (Grau VI+)
+    if (filtros?.divisaoId) {
+      query = query.eq('divisao_id', filtros.divisaoId);
+    }
+    // Filtro por lista de divisões (Grau V - regional)
+    else if (filtros?.divisaoIds && filtros.divisaoIds.length > 0) {
+      query = query.in('divisao_id', filtros.divisaoIds);
+    }
+    // Sem filtro = comando (vê tudo)
+
+    const { data, error } = await query.order('data_retorno_prevista');
 
     if (error) {
       console.error('Error fetching afastados ativos:', error);
@@ -64,20 +82,32 @@ export const useAfastadosAtivos = () => {
   return { afastados, loading, refetch: fetchAfastados };
 };
 
-export const useAfastadosHistorico = () => {
+export const useAfastadosHistorico = (filtros?: AfastadosFiltros) => {
   const [afastados, setAfastados] = useState<IntegranteAfastado[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchAfastados();
-  }, []);
+  }, [filtros?.divisaoId, filtros?.divisaoIds?.join(',')]);
 
   const fetchAfastados = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    
+    let query = supabase
       .from('integrantes_afastados')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select('*');
+
+    // Filtro por divisão específica (Grau VI+)
+    if (filtros?.divisaoId) {
+      query = query.eq('divisao_id', filtros.divisaoId);
+    }
+    // Filtro por lista de divisões (Grau V - regional)
+    else if (filtros?.divisaoIds && filtros.divisaoIds.length > 0) {
+      query = query.in('divisao_id', filtros.divisaoIds);
+    }
+    // Sem filtro = comando (vê tudo)
+
+    const { data, error } = await query.order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching afastados histórico:', error);
@@ -90,13 +120,13 @@ export const useAfastadosHistorico = () => {
   return { afastados, loading, refetch: fetchAfastados };
 };
 
-export const useRetornosProximos = (dias: number = 30) => {
+export const useRetornosProximos = (dias: number = 30, filtros?: AfastadosFiltros) => {
   const [afastados, setAfastados] = useState<IntegranteAfastado[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchRetornos();
-  }, [dias]);
+  }, [dias, filtros?.divisaoId, filtros?.divisaoIds?.join(',')]);
 
   const fetchRetornos = async () => {
     setLoading(true);
@@ -106,13 +136,24 @@ export const useRetornosProximos = (dias: number = 30) => {
     dataFutura.setDate(dataFutura.getDate() + dias);
     const dataFuturaISO = dataFutura.toISOString().split('T')[0];
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('integrantes_afastados')
       .select('*')
       .eq('ativo', true)
       .gte('data_retorno_prevista', hoje)
-      .lte('data_retorno_prevista', dataFuturaISO)
-      .order('data_retorno_prevista');
+      .lte('data_retorno_prevista', dataFuturaISO);
+
+    // Filtro por divisão específica (Grau VI+)
+    if (filtros?.divisaoId) {
+      query = query.eq('divisao_id', filtros.divisaoId);
+    }
+    // Filtro por lista de divisões (Grau V - regional)
+    else if (filtros?.divisaoIds && filtros.divisaoIds.length > 0) {
+      query = query.in('divisao_id', filtros.divisaoIds);
+    }
+    // Sem filtro = comando (vê tudo)
+
+    const { data, error } = await query.order('data_retorno_prevista');
 
     if (error) {
       console.error('Error fetching retornos próximos:', error);
