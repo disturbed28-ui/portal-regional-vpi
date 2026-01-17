@@ -217,28 +217,28 @@ const Relatorios = () => {
         {/* Conteúdo Principal */}
         {relatorioData && (
         <Tabs defaultValue={hasAccessIntegrantes ? "integrantes" : "evolucao"} className="w-full">
-          <div className="overflow-x-auto -mx-2 px-2 sm:mx-0 sm:px-0">
-            <TabsList className="inline-flex min-w-max gap-0.5 sm:gap-1">
+          <div className="overflow-x-auto -mx-4 px-4 pb-2">
+            <TabsList className="inline-flex w-max min-w-full h-auto bg-muted/50 p-1 gap-1">
               {hasAccessIntegrantes && (
-                <TabsTrigger value="integrantes" className="text-xs sm:text-sm px-2 sm:px-3">
+                <TabsTrigger value="integrantes" className="flex-shrink-0 px-3 py-1.5 text-xs sm:text-sm whitespace-nowrap">
                   Integrantes
                 </TabsTrigger>
               )}
-              <TabsTrigger value="evolucao" className="text-xs sm:text-sm px-2 sm:px-3">
+              <TabsTrigger value="evolucao" className="flex-shrink-0 px-3 py-1.5 text-xs sm:text-sm whitespace-nowrap">
                 Evolução
               </TabsTrigger>
-              <TabsTrigger value="inadimplencia" className="text-xs sm:text-sm px-2 sm:px-3">
+              <TabsTrigger value="inadimplencia" className="flex-shrink-0 px-3 py-1.5 text-xs sm:text-sm whitespace-nowrap">
                 Inadimplência
               </TabsTrigger>
-              <TabsTrigger value="afastamentos" className="text-xs sm:text-sm px-2 sm:px-3">
+              <TabsTrigger value="afastamentos" className="flex-shrink-0 px-3 py-1.5 text-xs sm:text-sm whitespace-nowrap">
                 Afastamentos
               </TabsTrigger>
-              <TabsTrigger value="movimentacoes" className="text-xs sm:text-sm px-2 sm:px-3">
+              <TabsTrigger value="movimentacoes" className="flex-shrink-0 px-3 py-1.5 text-xs sm:text-sm whitespace-nowrap">
                 <ArrowRightLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                 Movimentações
               </TabsTrigger>
               {hasAccessSemanalAba && (
-                <TabsTrigger value="semanal" className="text-xs sm:text-sm px-2 sm:px-3">
+                <TabsTrigger value="semanal" className="flex-shrink-0 px-3 py-1.5 text-xs sm:text-sm whitespace-nowrap">
                   Rel. Semanal
                 </TabsTrigger>
               )}
@@ -296,7 +296,7 @@ const Relatorios = () => {
               <TabsContent value="afastamentos">
                 <Tabs defaultValue="ativos" className="w-full">
                   <div className="overflow-x-auto -mx-4 px-4 pb-2">
-                    <TabsList className="inline-flex w-max min-w-full h-auto p-1 gap-1">
+                    <TabsList className="inline-flex w-max min-w-full h-auto bg-muted/50 p-1 gap-1">
                       <TabsTrigger value="ativos" className="flex-shrink-0 px-3 py-1.5 text-xs sm:text-sm whitespace-nowrap">Ativos</TabsTrigger>
                       <TabsTrigger value="historico" className="flex-shrink-0 px-3 py-1.5 text-xs sm:text-sm whitespace-nowrap">Histórico</TabsTrigger>
                       <TabsTrigger value="retornos" className="flex-shrink-0 px-3 py-1.5 text-xs sm:text-sm whitespace-nowrap">Retornos Próximos</TabsTrigger>
