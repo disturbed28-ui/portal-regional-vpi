@@ -42,36 +42,36 @@ const Relatorios = () => {
   const grau = profile?.integrante?.grau || profile?.grau;
   const nivel = getNivelAcesso(grau);
 
-  // REGRA: Admin tem acesso total, independente do grau
+  // REGRA: Escopo de dados é determinado pela regional do usuário, NÃO pela role admin
+  // Admin dá acesso às telas/funcionalidades, mas não expande escopo de dados
   const regionalTextoFiltro: string | undefined = useMemo(() => {
     if (rolesLoading || profileLoading) return undefined; // Aguardar carregamento
     
-    if (isAdmin) {
-      return undefined; // Admin vê tudo
-    }
-    
+    // Apenas Comando (Grau I-IV) vê todas as regionais
     if (nivel === 'comando') {
-      return undefined; // Graus I-IV veem tudo
+      return undefined;
     }
     
-    // Grau V (regional) e VI+ (divisão) veem apenas sua regional
+    // Todos os demais (incluindo admin) veem apenas sua regional
     return profile?.integrante?.regional_texto || undefined;
-  }, [isAdmin, nivel, profile?.integrante?.regional_texto, rolesLoading, profileLoading]);
+  }, [nivel, profile?.integrante?.regional_texto, rolesLoading, profileLoading]);
 
   // Determinar regionalId para filtro de histórico (Evolução)
   const regionalIdHistorico = useMemo(() => {
     if (rolesLoading || profileLoading) return undefined;
-    if (isAdmin || nivel === 'comando') return undefined; // Admin/comando veem tudo
-    return profile?.regional_id || undefined; // Regional/divisão veem apenas sua regional
-  }, [isAdmin, nivel, profile?.regional_id, rolesLoading, profileLoading]);
+    // Apenas Comando vê todas as regionais
+    if (nivel === 'comando') return undefined;
+    // Todos os demais (incluindo admin) veem apenas sua regional
+    return profile?.regional_id || undefined;
+  }, [nivel, profile?.regional_id, rolesLoading, profileLoading]);
 
   // Texto de escopo para exibição
   const escopoTexto = useMemo(() => {
-    if (isAdmin || nivel === 'comando') {
+    if (nivel === 'comando') {
       return 'Escopo do dashboard: Comando (todas as regionais)';
     }
     return `Escopo do dashboard: Regional ${profile?.regional || ''}`;
-  }, [isAdmin, nivel, profile?.regional]);
+  }, [nivel, profile?.regional]);
 
   const { data: relatorioData, isLoading } = useRelatorioData(regionalTextoFiltro);
   const { data: historicoData, isLoading: isLoadingHistorico } = useHistoricoCargas({
@@ -262,7 +262,7 @@ const Relatorios = () => {
                   <div className="space-y-6">
                     <Card>
                       <CardHeader>
-                        <CardTitle>Evolução do Efetivo - Regional Vale do Paraíba I</CardTitle>
+                        <CardTitle>Evolução do Efetivo {nivel === 'comando' ? '- Todas as Regionais' : `- Regional ${profile?.regional || ''}`}</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <GraficoEvolucao 
