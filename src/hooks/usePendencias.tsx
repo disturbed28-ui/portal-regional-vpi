@@ -746,6 +746,13 @@ export const usePendencias = (
             const cargoEstagio = sol.cargo_estagio as any;
             const aprovacoesDoSol = aprovacoesEstagio?.filter(a => a.solicitacao_id === sol.id) || [];
             
+            // Verificar se realmente há aprovações pendentes antes de criar pendência
+            const temAprovacoesPendentes = aprovacoesDoSol.some(a => a.status === 'pendente');
+            if (!temAprovacoesPendentes) {
+              // Todas as aprovações já foram concluídas, não deve aparecer como pendência
+              continue;
+            }
+            
             // Verificar se o usuário é o integrante em estágio
             if (integrante?.id === meuIntegranteId) {
               // Buscar Diretor da Divisão do integrante
