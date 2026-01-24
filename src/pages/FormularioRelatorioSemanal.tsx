@@ -892,7 +892,7 @@ const FormularioRelatorioSemanal = () => {
         // Buscar ações da SEMANA SELECIONADA (semanaResposta)
         const { data: acoesSemanaAtual, error: errorAtual } = await supabase
           .from("acoes_sociais_registros")
-          .select("id, data_acao, escopo_acao, tipo_acao_nome_snapshot")
+          .select("id, data_acao, escopo_acao, tipo_acao_nome_snapshot, descricao_acao")
           .eq("divisao_relatorio_id", divisaoSelecionada.id)
           .gte("data_acao", formatDateToSQL(semana.periodo_inicio))
           .lte("data_acao", formatDateToSQL(semana.periodo_fim));
@@ -900,7 +900,7 @@ const FormularioRelatorioSemanal = () => {
         // Buscar ações da SEMANA ANTERIOR (à semanaResposta) que NÃO foram reportadas
         const { data: acoesSemanaAnterior, error: errorAnterior } = await supabase
           .from("acoes_sociais_registros")
-          .select("id, data_acao, escopo_acao, tipo_acao_nome_snapshot")
+          .select("id, data_acao, escopo_acao, tipo_acao_nome_snapshot, descricao_acao")
           .eq("divisao_relatorio_id", divisaoSelecionada.id)
           .gte("data_acao", formatDateToSQL(inicioSemanaAnterior))
           .lte("data_acao", formatDateToSQL(fimSemanaAnterior))
@@ -919,6 +919,7 @@ const FormularioRelatorioSemanal = () => {
           titulo: acao.tipo_acao_nome_snapshot
             ? `${acao.tipo_acao_nome_snapshot} - ${acao.escopo_acao}`
             : acao.escopo_acao,
+          descricao: acao.descricao_acao || "",
           status: "Concluída",
           origem: "form_acoes_sociais",
           registro_id: acao.id,
@@ -931,6 +932,7 @@ const FormularioRelatorioSemanal = () => {
           titulo: acao.tipo_acao_nome_snapshot
             ? `${acao.tipo_acao_nome_snapshot} - ${acao.escopo_acao}`
             : acao.escopo_acao,
+          descricao: acao.descricao_acao || "",
           status: "Concluída",
           origem: "form_acoes_sociais",
           registro_id: acao.id,
@@ -1820,6 +1822,21 @@ const FormularioRelatorioSemanal = () => {
                       />
                     </div>
 
+                    <div className="col-span-full">
+                      <label className="text-xs text-muted-foreground">Descrição</label>
+                      <textarea
+                        className="w-full mt-1 p-2 border rounded bg-background min-h-[60px] resize-y"
+                        rows={2}
+                        value={acao.descricao || ""}
+                        onChange={(e) => {
+                          const novo = [...acoesSociais];
+                          novo[idx].descricao = e.target.value;
+                          setAcoesSociais(novo);
+                        }}
+                        placeholder="Descreva a ação social..."
+                      />
+                    </div>
+
                     <div>
                       <label className="text-xs text-muted-foreground">Status</label>
                       <select
@@ -1850,6 +1867,7 @@ const FormularioRelatorioSemanal = () => {
                     {
                       data_acao: "",
                       titulo: "",
+                      descricao: "",
                       status: "",
                     },
                   ])

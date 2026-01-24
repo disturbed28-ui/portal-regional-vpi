@@ -303,6 +303,11 @@ export const RelatorioSemanalDetalheDialog = ({
                                   <Badge variant="outline">{acao.status}</Badge>
                                 )}
                               </div>
+                              {acao.descricao && (
+                                <p className="text-sm text-muted-foreground mb-1 whitespace-pre-wrap">
+                                  {acao.descricao}
+                                </p>
+                              )}
                               <p className="text-sm"><strong>Data:</strong> {formatarData(acao.data_acao)}</p>
                             </div>
                           ))}
