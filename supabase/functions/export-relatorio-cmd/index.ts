@@ -506,7 +506,7 @@ function adicionarBlocoConflitosExternos(wsData: any[][], dados: DadosRelatorio,
 // Bloco 11: Ações Sociais
 function adicionarBlocoAcoesSociais(wsData: any[][], dados: DadosRelatorio, row: number): number {
   wsData[row++] = ['AÇÕES SOCIAIS'];
-  wsData[row++] = ['Divisão', 'Título', 'Data'];
+  wsData[row++] = ['Divisão', 'Título', 'Descrição', 'Data'];
   
   let temAcoes = false;
   
@@ -516,6 +516,7 @@ function adicionarBlocoAcoesSociais(wsData: any[][], dados: DadosRelatorio, row:
       wsData[row++] = [
         div.divisao_nome,
         acao.titulo || '',
+        acao.descricao || '',
         acao.data_acao || ''
       ];
       temAcoes = true;
