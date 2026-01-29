@@ -12,7 +12,7 @@ import { useBuscaIntegrante, useBuscaIntegranteTodos } from "@/hooks/useIntegran
 import { useMovimentacoesConsolidadas } from "@/hooks/useMovimentacoesConsolidadas";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { normalizeText, calcularSemanaOperacional, formatDateToSQL, SemanaOperacional } from "@/lib/normalizeText";
+import { normalizeText, normalizarRegional, calcularSemanaOperacional, formatDateToSQL, SemanaOperacional } from "@/lib/normalizeText";
 import { cn } from "@/lib/utils";
 import { useSubmitRelatorioSemanal, SubmitRelatorioParams } from "@/hooks/useRelatorioSemanal";
 import { useAcoesResolucaoDelta } from "@/hooks/useAcoesResolucaoDelta";
@@ -598,13 +598,13 @@ const FormularioRelatorioSemanal = () => {
 
         if (integranteError) throw integranteError;
 
-        // Buscar regional usando normalização de texto
-        const regionalNormalizado = normalizeText(integrante.regional_texto);
+        // Buscar regional usando normalização robusta de texto (lida com prefixo REGIONAL e múltiplos - SP)
+        const regionalNormalizado = normalizarRegional(integrante.regional_texto);
         const { data: regionais, error: regionaisError } = await supabase.from("regionais").select("*");
 
         if (regionaisError) throw regionaisError;
 
-        const regional = regionais?.find((r) => normalizeText(r.nome) === regionalNormalizado);
+        const regional = regionais?.find((r) => normalizarRegional(r.nome) === regionalNormalizado);
 
         if (!regional) {
           toast({
