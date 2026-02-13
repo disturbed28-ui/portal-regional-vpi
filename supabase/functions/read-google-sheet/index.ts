@@ -5,12 +5,14 @@ interface ReadSheetParams {
   range?: string;
   sheetName?: string;
   includeHeaders?: boolean;
+  allSheets?: boolean;
 }
 
 interface SheetResult {
   success: boolean;
   spreadsheetTitle?: string;
   sheetTitle?: string;
+  sheets?: string[];
   rowCount?: number;
   columnCount?: number;
   data?: Record<string, string>[] | string[][];
@@ -101,17 +103,11 @@ async function getGoogleAccessToken(email: string, privateKey: string): Promise<
   return data.access_token;
 }
 
-// Lê dados de uma planilha
-async function readSpreadsheet(
-  accessToken: string,
-  spreadsheetId: string,
-  range?: string
-): Promise<{
+// Busca metadados da planilha (título e lista de abas)
+async function getSpreadsheetMetadata(accessToken: string, spreadsheetId: string): Promise<{
   spreadsheetTitle: string;
-  sheetTitle: string;
-  values: string[][];
+  sheets: { title: string }[];
 }> {
-  // Primeiro, obter metadados da planilha
   const metaUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=properties.title,sheets.properties`;
   
   console.log('[read-google-sheet] Buscando metadados da planilha...');
@@ -127,16 +123,22 @@ async function readSpreadsheet(
 
   const metadata = await metaResponse.json();
   const spreadsheetTitle = metadata.properties?.title || 'Sem título';
-  const firstSheet = metadata.sheets?.[0]?.properties;
-  const sheetTitle = firstSheet?.title || 'Sheet1';
+  const sheets = (metadata.sheets || []).map((s: any) => ({
+    title: s.properties?.title || 'Sheet'
+  }));
 
-  console.log('[read-google-sheet] Planilha:', spreadsheetTitle, '| Aba:', sheetTitle);
+  return { spreadsheetTitle, sheets };
+}
 
-  // Agora buscar os dados
-  const dataRange = range || `${sheetTitle}!A:ZZ`;
-  const dataUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(dataRange)}`;
+// Lê dados de uma aba específica
+async function readSheetData(
+  accessToken: string,
+  spreadsheetId: string,
+  range: string
+): Promise<string[][]> {
+  const dataUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}`;
 
-  console.log('[read-google-sheet] Buscando dados do range:', dataRange);
+  console.log('[read-google-sheet] Buscando dados do range:', range);
   const dataResponse = await fetch(dataUrl, {
     headers: { 'Authorization': `Bearer ${accessToken}` }
   });
@@ -148,15 +150,83 @@ async function readSpreadsheet(
   }
 
   const sheetData = await dataResponse.json();
-  const values = sheetData.values || [];
+  return sheetData.values || [];
+}
+
+// Lê dados de uma planilha (uma aba)
+async function readSpreadsheet(
+  accessToken: string,
+  spreadsheetId: string,
+  range?: string
+): Promise<{
+  spreadsheetTitle: string;
+  sheetTitle: string;
+  values: string[][];
+}> {
+  const { spreadsheetTitle, sheets } = await getSpreadsheetMetadata(accessToken, spreadsheetId);
+  const sheetTitle = sheets[0]?.title || 'Sheet1';
+
+  console.log('[read-google-sheet] Planilha:', spreadsheetTitle, '| Aba:', sheetTitle);
+
+  const dataRange = range || `${sheetTitle}!A:ZZ`;
+  const values = await readSheetData(accessToken, spreadsheetId, dataRange);
 
   console.log('[read-google-sheet] Linhas encontradas:', values.length);
 
-  return {
-    spreadsheetTitle,
-    sheetTitle,
-    values
-  };
+  return { spreadsheetTitle, sheetTitle, values };
+}
+
+// Lê dados de TODAS as abas e combina
+async function readAllSheets(
+  accessToken: string,
+  spreadsheetId: string,
+  includeHeaders: boolean
+): Promise<{
+  spreadsheetTitle: string;
+  sheetNames: string[];
+  combinedData: Record<string, string>[] | string[][];
+  totalRows: number;
+}> {
+  const { spreadsheetTitle, sheets } = await getSpreadsheetMetadata(accessToken, spreadsheetId);
+  const sheetNames = sheets.map(s => s.title);
+
+  console.log(`[read-google-sheet] Planilha: ${spreadsheetTitle} | ${sheetNames.length} abas: ${sheetNames.join(', ')}`);
+
+  if (includeHeaders) {
+    // Modo objeto: combinar todos os registros de todas as abas
+    const allRecords: Record<string, string>[] = [];
+
+    for (const name of sheetNames) {
+      const values = await readSheetData(accessToken, spreadsheetId, `${name}!A:ZZ`);
+      console.log(`[read-google-sheet] Aba "${name}": ${values.length} linhas`);
+
+      if (values.length < 2) continue; // precisa de header + pelo menos 1 linha
+
+      const headers = values[0];
+      for (let i = 1; i < values.length; i++) {
+        const row = values[i];
+        const obj: Record<string, string> = {};
+        headers.forEach((header, index) => {
+          obj[header] = row[index] || '';
+        });
+        allRecords.push(obj);
+      }
+    }
+
+    console.log(`[read-google-sheet] Total combinado: ${allRecords.length} registros de ${sheetNames.length} abas`);
+    return { spreadsheetTitle, sheetNames, combinedData: allRecords, totalRows: allRecords.length };
+  } else {
+    // Modo array: combinar todas as linhas
+    const allRows: string[][] = [];
+
+    for (const name of sheetNames) {
+      const values = await readSheetData(accessToken, spreadsheetId, `${name}!A:ZZ`);
+      console.log(`[read-google-sheet] Aba "${name}": ${values.length} linhas`);
+      allRows.push(...values);
+    }
+
+    return { spreadsheetTitle, sheetNames, combinedData: allRows, totalRows: allRows.length };
+  }
 }
 
 // Converte array de arrays para objetos usando primeira linha como headers
@@ -182,9 +252,9 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json() as ReadSheetParams;
-    const { spreadsheetId, range, sheetName, includeHeaders = true } = body;
+    const { spreadsheetId, range, sheetName, includeHeaders = true, allSheets = false } = body;
 
-    console.log('[read-google-sheet] Requisição recebida:', { spreadsheetId, range, sheetName, includeHeaders });
+    console.log('[read-google-sheet] Requisição recebida:', { spreadsheetId, range, sheetName, includeHeaders, allSheets });
 
     if (!spreadsheetId) {
       return new Response(
@@ -209,7 +279,32 @@ Deno.serve(async (req) => {
     console.log('[read-google-sheet] Autenticando com Google...');
     const accessToken = await getGoogleAccessToken(serviceAccountEmail, privateKey);
 
-    // Construir range
+    // --- Modo allSheets: ler todas as abas e combinar ---
+    if (allSheets) {
+      const { spreadsheetTitle, sheetNames, combinedData, totalRows } = await readAllSheets(
+        accessToken, spreadsheetId, includeHeaders
+      );
+
+      const result: SheetResult = {
+        success: true,
+        spreadsheetTitle,
+        sheets: sheetNames,
+        rowCount: totalRows,
+        columnCount: includeHeaders && totalRows > 0 
+          ? Object.keys((combinedData as Record<string, string>[])[0] || {}).length 
+          : (combinedData as string[][])[0]?.length || 0,
+        data: combinedData,
+      };
+
+      console.log(`[read-google-sheet] allSheets=true | Sucesso! ${totalRows} linhas de ${sheetNames.length} abas`);
+
+      return new Response(
+        JSON.stringify(result, null, 2),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // --- Modo padrão: ler uma única aba ---
     let effectiveRange = range;
     if (sheetName && !range) {
       effectiveRange = `${sheetName}!A:ZZ`;
@@ -217,18 +312,18 @@ Deno.serve(async (req) => {
       effectiveRange = `${sheetName}!${range}`;
     }
 
-    // Ler planilha
     const { spreadsheetTitle, sheetTitle, values } = await readSpreadsheet(
-      accessToken,
-      spreadsheetId,
-      effectiveRange
+      accessToken, spreadsheetId, effectiveRange
     );
 
-    // Preparar resultado
+    // Buscar lista de abas para incluir no resultado
+    const { sheets: allSheetsInfo } = await getSpreadsheetMetadata(accessToken, spreadsheetId);
+
     const result: SheetResult = {
       success: true,
       spreadsheetTitle,
       sheetTitle,
+      sheets: allSheetsInfo.map(s => s.title),
       rowCount: values.length,
       columnCount: values[0]?.length || 0
     };
@@ -244,10 +339,7 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify(result, null, 2),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {

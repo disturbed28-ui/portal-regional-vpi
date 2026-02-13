@@ -204,7 +204,7 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${supabaseServiceKey}`,
       },
-      body: JSON.stringify({ spreadsheetId, includeHeaders: true }),
+      body: JSON.stringify({ spreadsheetId, includeHeaders: true, allSheets: true }),
     });
 
     if (!sheetResponse.ok) {
