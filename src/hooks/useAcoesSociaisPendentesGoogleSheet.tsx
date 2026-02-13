@@ -231,6 +231,16 @@ const parseExcelDate = (value: any): string | null => {
       return trimmed.substring(0, 10);
     }
     
+    // Formato DD/MM (sem ano) - inferir ano atual
+    const twoPartMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})$/);
+    if (twoPartMatch) {
+      const [, p1, p2] = twoPartMatch;
+      const year = new Date().getFullYear().toString();
+      const day = p1.padStart(2, "0");
+      const month = p2.padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
     // Formato com barras (DD/MM/YYYY ou MM/DD/YYYY)
     const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
     if (slashMatch) {
@@ -242,11 +252,9 @@ const parseExcelDate = (value: any): string | null => {
       let day: string, month: string;
       
       if (part1 > 12) {
-        // Primeiro número > 12, então é DD/MM/YYYY (brasileiro)
         day = p1.padStart(2, "0");
         month = p2.padStart(2, "0");
       } else if (part2 > 12) {
-        // Segundo número > 12, então é MM/DD/YYYY (americano)
         month = p1.padStart(2, "0");
         day = p2.padStart(2, "0");
       } else {
