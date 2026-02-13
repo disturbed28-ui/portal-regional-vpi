@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 // ID padrão da planilha de ações sociais (usado como fallback)
-const DEFAULT_SPREADSHEET_ID = "1Fb1Sby_TmqNjqGmI92RLIxqJsXP3LHPp7tLJbo5olwo";
+const DEFAULT_SPREADSHEET_ID = "1k3GBsA3E8IHTBNByWZz895RLvM0FgyHrgDIKl0szha4";
 
 interface AcaoSocialPendente {
   data_acao: string;
@@ -250,9 +250,9 @@ const parseExcelDate = (value: any): string | null => {
         month = p1.padStart(2, "0");
         day = p2.padStart(2, "0");
       } else {
-        // Ambíguo - assumir DD/MM/YYYY (padrão brasileiro)
-        day = p1.padStart(2, "0");
-        month = p2.padStart(2, "0");
+        // Ambíguo - assumir MM/DD/YYYY (padrão Google Forms americano)
+        month = p1.padStart(2, "0");
+        day = p2.padStart(2, "0");
       }
       
       return `${year}-${month}-${day}`;
