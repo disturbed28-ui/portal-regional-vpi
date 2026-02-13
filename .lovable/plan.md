@@ -1,102 +1,100 @@
 
 
-## Plano: Corrigir Importação de Ações Sociais (Nova Planilha + Formato de Data)
+## Plano: Importação Automática de Ações Sociais no Servidor (sem depender de usuários conectados)
 
-### Problemas Identificados
+### Situação Atual
 
-Existem **3 problemas** que estão causando o retorno de zero ações:
+Hoje, a importação automática roda no **navegador** do usuário (`useAutoImportAcoesSociais`). Isso significa que:
+- So funciona quando alguem esta logado
+- So importa acoes da regional do usuario conectado
+- Se ninguem acessar o sistema por horas, nenhuma acao e importada
+
+### Solucao
+
+Criar uma **funcao no servidor** (backend function) que roda automaticamente a cada 60 minutos, **sem depender de ninguem estar conectado**. Ela vai:
+
+1. Ler a planilha do Google Sheets
+2. Para **cada regional cadastrada** (VP1, VP2, VP3, Litoral Norte), filtrar as acoes
+3. Chamar a funcao de importacao existente para cada regional
+
+### O que sera feito
+
+#### 1. Nova funcao no servidor: `auto-import-acoes-sociais`
+
+Uma nova funcao backend que:
+- Busca o ID da planilha do banco de dados (ou usa o padrao)
+- Le a planilha via `read-google-sheet`
+- Busca todas as regionais cadastradas (exceto CMD, que nao tem divisoes)
+- Para cada regional, chama `import-acoes-sociais` com os dados filtrados
+- Registra o resultado no log do sistema
+
+#### 2. Agendamento automatico (cron job)
+
+Configurar um agendamento no banco de dados para chamar essa funcao a cada 60 minutos, usando `pg_cron` e `pg_net`:
+
+```text
+A cada 60 minutos:
+  Servidor -> auto-import-acoes-sociais -> Le planilha Google
+                                        -> Para cada regional:
+                                             -> Chama import-acoes-sociais
+                                        -> Registra log
+```
+
+#### 3. Manter o hook do frontend como esta
+
+O hook `useAutoImportAcoesSociais` continuara funcionando normalmente como uma camada extra (redundancia), mas a importacao principal sera pelo servidor.
 
 ---
 
-### Problema 1: Inconsistência no parsing de datas ambíguas
+### Detalhes Tecnicos
 
-Quando a data é ambígua (ex: `2/5/2026` - ambos os números menores que 12), cada parte do sistema trata de forma diferente:
+#### Nova Edge Function: `supabase/functions/auto-import-acoes-sociais/index.ts`
 
-| Local | Caso ambíguo | Resultado para `2/5/2026` |
-|-------|-------------|---------------------------|
-| **Frontend** (`useAcoesSociaisPendentesGoogleSheet.tsx`) | Assume **DD/MM/YYYY** (brasileiro) | `2026-05-02` |
-| **Frontend** (`useAutoImportAcoesSociais.tsx`) | Assume **DD/MM/YYYY** (brasileiro) | `2026-05-02` |
-| **Backend** (`import-acoes-sociais/index.ts`) | Assume **MM/DD/YYYY** (americano) | `2026-02-05` |
+- Usa `SUPABASE_SERVICE_ROLE_KEY` (nao depende de usuario autenticado)
+- Busca `google_sheets_acoes_sociais_id` da tabela `system_settings` (fallback para ID padrao)
+- Chama `read-google-sheet` internamente via fetch direto (mesma logica de autenticacao Google)
+- Busca todas as regionais da tabela `regionais` (excluindo "CMD")
+- Para cada regional, mapeia as colunas da planilha e chama `import-acoes-sociais` via `fetch` interno
+- Inclui toda a logica de parsing de data (MM/DD/YYYY para ambiguos), normalizacao de headers, etc.
+- Registra resultado via `log-system-event`
 
-Essa diferença faz com que o hash gerado no frontend seja diferente do hash gerado no backend, quebrando a deduplicação e potencialmente impedindo a importação correta.
+#### Configuracao no `supabase/config.toml`
 
-**Se a planilha nova está com formato americano**, a data `1/15/2026` seria parseada corretamente (pois 15 > 12), mas datas como `2/5/2026` seriam interpretadas como dia 2, mês 5 no frontend - gerando uma data **errada**.
+```toml
+[functions.auto-import-acoes-sociais]
+verify_jwt = false
+```
+
+#### Cron Job (SQL)
+
+Usar `pg_cron` + `pg_net` para agendar a chamada a cada 60 minutos:
+
+```sql
+SELECT cron.schedule(
+  'auto-import-acoes-sociais-hourly',
+  '0 * * * *',  -- a cada hora, no minuto 0
+  $$ SELECT net.http_post(...) $$
+);
+```
 
 ---
 
-### Problema 2: `useAutoImportAcoesSociais` usa ID de planilha antigo (hardcoded)
+### Regionais que serao processadas
 
-O hook de auto-importação (que roda a cada 60 minutos para todos os usuários) tem o ID da planilha **antiga** fixo no código:
-
-```
-const DEFAULT_SPREADSHEET_ID = "1Fb1Sby_TmqNjqGmI92RLIxqJsXP3LHPp7tLJbo5olwo";
-```
-
-Ele **não lê** a configuração `google_sheets_acoes_sociais_id` do banco de dados. Então mesmo que o admin atualize o ID na tela de Admin, o auto-import continua lendo a planilha antiga.
-
----
-
-### Problema 3: O `DEFAULT_SPREADSHEET_ID` no hook manual também está desatualizado
-
-O hook `useAcoesSociaisPendentesGoogleSheet.tsx` também tem o ID antigo como fallback (linha 6). Embora ele aceite o ID via parâmetro, o fallback pode causar confusão.
-
----
-
-### Solução Proposta
-
-#### Alteracao 1: Unificar parsing de data (priorizar formato americano para Google Forms)
-
-Em **todos os 3 locais** (`useAcoesSociaisPendentesGoogleSheet.tsx`, `useAutoImportAcoesSociais.tsx`, `import-acoes-sociais/index.ts`), padronizar o caso ambiguo para **MM/DD/YYYY** (formato americano), que e o padrao do Google Forms:
-
-```typescript
-} else {
-  // Ambiguo - assumir MM/DD/YYYY (padrao Google Forms americano)
-  month = p1.padStart(2, "0");
-  day = p2.padStart(2, "0");
-}
-```
-
-**Arquivos afetados:**
-- `src/hooks/useAcoesSociaisPendentesGoogleSheet.tsx` (linha 253)
-- `src/hooks/useAutoImportAcoesSociais.tsx` (linha 103)
-- O backend (`import-acoes-sociais/index.ts`) ja esta correto (linha 99)
-
-#### Alteracao 2: `useAutoImportAcoesSociais` deve ler o ID da planilha do banco
-
-Modificar o hook para buscar a configuracao `google_sheets_acoes_sociais_id` da tabela `system_settings` antes de chamar a planilha, usando o `DEFAULT_SPREADSHEET_ID` apenas como fallback.
-
-**Arquivo afetado:**
-- `src/hooks/useAutoImportAcoesSociais.tsx`
-
-#### Alteracao 3: Atualizar o `DEFAULT_SPREADSHEET_ID` em ambos os hooks
-
-Trocar o ID antigo pelo novo ID da planilha informado pelo usuario:
-
-```
-// Antigo: "1Fb1Sby_TmqNjqGmI92RLIxqJsXP3LHPp7tLJbo5olwo"
-// Novo:   "1k3GBsA3E8IHTBNByWZz895RLvM0FgyHrgDIKl0szha4"
-```
-
-**Arquivos afetados:**
-- `src/hooks/useAutoImportAcoesSociais.tsx` (linha 10)
-- `src/hooks/useAcoesSociaisPendentesGoogleSheet.tsx` (linha 6)
-
----
-
-### Resumo das Alteracoes
-
-| Arquivo | Alteracao |
-|---------|-----------|
-| `useAcoesSociaisPendentesGoogleSheet.tsx` | Corrigir caso ambiguo para MM/DD/YYYY; atualizar DEFAULT_SPREADSHEET_ID |
-| `useAutoImportAcoesSociais.tsx` | Corrigir caso ambiguo para MM/DD/YYYY; atualizar DEFAULT_SPREADSHEET_ID; buscar ID da planilha do banco |
-| `import-acoes-sociais/index.ts` | Nenhuma alteracao necessaria (ja usa MM/DD/YYYY no caso ambiguo) |
+| Regional | Sigla | Sera importada |
+|----------|-------|----------------|
+| VALE DO PARAIBA I - SP | VP1 | Sim |
+| VALE DO PARAIBA II - SP | VP2 | Sim |
+| VALE DO PARAIBA III - SP | VP3 | Sim |
+| LITORAL NORTE - SP | LN | Sim |
+| CMD | CMD | Nao (nao tem divisoes/acoes) |
 
 ---
 
 ### Resultado Esperado
 
-1. As datas em formato americano serao corretamente interpretadas
-2. O auto-import passara a usar a planilha nova automaticamente
-3. Os hashes gerados no frontend e backend serao consistentes, permitindo a deduplicacao correta
-4. Novas acoes da planilha serao detectadas e importadas
+1. A cada 60 minutos, o servidor automaticamente importa novas acoes sociais de **todas** as regionais
+2. Nao depende de nenhum usuario estar conectado
+3. O hook do frontend continua como camada redundante
+4. Resultados de cada execucao ficam registrados nos logs do sistema
 
