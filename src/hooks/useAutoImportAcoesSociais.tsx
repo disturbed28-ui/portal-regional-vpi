@@ -7,7 +7,7 @@ import { useProfile } from '@/hooks/useProfile';
 const IMPORT_INTERVAL = 60 * 60 * 1000;
 
 // ID padrão da planilha de ações sociais
-const DEFAULT_SPREADSHEET_ID = "1Fb1Sby_TmqNjqGmI92RLIxqJsXP3LHPp7tLJbo5olwo";
+const DEFAULT_SPREADSHEET_ID = "1k3GBsA3E8IHTBNByWZz895RLvM0FgyHrgDIKl0szha4";
 
 // Funções de normalização (mesma lógica do hook principal)
 const normalizeText = (text: string): string => {
@@ -101,8 +101,9 @@ const parseExcelDate = (value: any): string | null => {
         month = p1.padStart(2, "0");
         day = p2.padStart(2, "0");
       } else {
-        day = p1.padStart(2, "0");
-        month = p2.padStart(2, "0");
+        // Ambíguo - assumir MM/DD/YYYY (padrão Google Forms americano)
+        month = p1.padStart(2, "0");
+        day = p2.padStart(2, "0");
       }
       return `${year}-${month}-${day}`;
     }
@@ -169,6 +170,22 @@ export const useAutoImportAcoesSociais = () => {
     setIsImporting(true);
 
     try {
+      // Buscar ID da planilha do banco de dados (system_settings)
+      let spreadsheetId = DEFAULT_SPREADSHEET_ID;
+      try {
+        const { data: setting } = await supabase
+          .from('system_settings')
+          .select('valor_texto')
+          .eq('chave', 'google_sheets_acoes_sociais_id')
+          .single();
+        if (setting?.valor_texto) {
+          spreadsheetId = setting.valor_texto;
+          console.log(`[AutoImport] Usando ID da planilha do banco: ${spreadsheetId}`);
+        }
+      } catch {
+        console.log('[AutoImport] Usando ID padrão da planilha');
+      }
+
       // Buscar nome da regional
       const { data: regional } = await supabase
         .from('regionais')
@@ -189,7 +206,7 @@ export const useAutoImportAcoesSociais = () => {
         "read-google-sheet",
         {
           body: {
-            spreadsheetId: DEFAULT_SPREADSHEET_ID,
+            spreadsheetId,
             includeHeaders: true,
           },
         }
