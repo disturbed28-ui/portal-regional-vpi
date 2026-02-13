@@ -1,100 +1,64 @@
 
+## Plano: Corrigir leitura de TODAS as abas da planilha de Ações Sociais
 
-## Plano: Importação Automática de Ações Sociais no Servidor (sem depender de usuários conectados)
+### Problema Identificado
 
-### Situação Atual
+A planilha do Google Sheets tem **múltiplas abas** (tabs/folhas):
+- **Aba 1**: "Respostas ao formulário 1" - contém dados até **26 de janeiro de 2026** (3.366 linhas)
+- **Aba 2+**: Outras abas (incluindo a do `gid=494771071` que você compartilhou) - contém as **ações novas de fevereiro** que não estão sendo capturadas
 
-Hoje, a importação automática roda no **navegador** do usuário (`useAutoImportAcoesSociais`). Isso significa que:
-- So funciona quando alguem esta logado
-- So importa acoes da regional do usuario conectado
-- Se ninguem acessar o sistema por horas, nenhuma acao e importada
+A função `read-google-sheet` só lê a **primeira aba**. Por isso, todas as ações novas que estão nas outras abas são invisíveis para o sistema.
 
-### Solucao
+### Evidência
 
-Criar uma **funcao no servidor** (backend function) que roda automaticamente a cada 60 minutos, **sem depender de ninguem estar conectado**. Ela vai:
+- Banco de dados: 992 ações registradas, última importação automática foi às 19:39 de hoje
+- Planilha (aba 1): 3.366 linhas, última entrada em 26/01/2026
+- Resultado da importação: 120 ações identificadas como duplicatas, 0 novas - porque os dados novos estão em outra aba
 
-1. Ler a planilha do Google Sheets
-2. Para **cada regional cadastrada** (VP1, VP2, VP3, Litoral Norte), filtrar as acoes
-3. Chamar a funcao de importacao existente para cada regional
+### Solução
 
-### O que sera feito
+#### Alteração 1: `read-google-sheet` - suportar leitura de todas as abas
 
-#### 1. Nova funcao no servidor: `auto-import-acoes-sociais`
+Modificar a função para aceitar um novo parâmetro `allSheets: true`. Quando ativado:
+1. Buscar metadados da planilha (já faz isso) para listar TODAS as abas
+2. Ler os dados de CADA aba
+3. Retornar os dados combinados de todas as abas
 
-Uma nova funcao backend que:
-- Busca o ID da planilha do banco de dados (ou usa o padrao)
-- Le a planilha via `read-google-sheet`
-- Busca todas as regionais cadastradas (exceto CMD, que nao tem divisoes)
-- Para cada regional, chama `import-acoes-sociais` com os dados filtrados
-- Registra o resultado no log do sistema
+Também adicionar retorno da lista de abas disponíveis no resultado, para diagnóstico.
 
-#### 2. Agendamento automatico (cron job)
+#### Alteração 2: `auto-import-acoes-sociais` - usar `allSheets: true`
 
-Configurar um agendamento no banco de dados para chamar essa funcao a cada 60 minutos, usando `pg_cron` e `pg_net`:
+Modificar a chamada ao `read-google-sheet` para passar `allSheets: true`, garantindo que TODAS as abas sejam lidas e combinadas antes de processar as ações.
 
-```text
-A cada 60 minutos:
-  Servidor -> auto-import-acoes-sociais -> Le planilha Google
-                                        -> Para cada regional:
-                                             -> Chama import-acoes-sociais
-                                        -> Registra log
+### Detalhes Técnicos
+
+#### `read-google-sheet` - novas capacidades
+
+- Novo parâmetro: `allSheets?: boolean` (default: false, para manter compatibilidade)
+- Quando `allSheets = true`:
+  - Buscar metadados para listar todas as abas
+  - Para cada aba, ler os dados (`{nomeAba}!A:ZZ`)
+  - Se `includeHeaders = true`, converter cada aba para objetos usando a primeira linha como headers
+  - Combinar todos os dados em um único array
+  - Retornar também a lista de abas encontradas (`sheets: string[]`)
+- Novo campo no resultado: `sheets: string[]` (nomes de todas as abas)
+
+#### `auto-import-acoes-sociais` - mudança mínima
+
+Alterar apenas a chamada ao `read-google-sheet`:
+```typescript
+body: JSON.stringify({ spreadsheetId, includeHeaders: true, allSheets: true })
 ```
 
-#### 3. Manter o hook do frontend como esta
+### Arquivos Afetados
 
-O hook `useAutoImportAcoesSociais` continuara funcionando normalmente como uma camada extra (redundancia), mas a importacao principal sera pelo servidor.
-
----
-
-### Detalhes Tecnicos
-
-#### Nova Edge Function: `supabase/functions/auto-import-acoes-sociais/index.ts`
-
-- Usa `SUPABASE_SERVICE_ROLE_KEY` (nao depende de usuario autenticado)
-- Busca `google_sheets_acoes_sociais_id` da tabela `system_settings` (fallback para ID padrao)
-- Chama `read-google-sheet` internamente via fetch direto (mesma logica de autenticacao Google)
-- Busca todas as regionais da tabela `regionais` (excluindo "CMD")
-- Para cada regional, mapeia as colunas da planilha e chama `import-acoes-sociais` via `fetch` interno
-- Inclui toda a logica de parsing de data (MM/DD/YYYY para ambiguos), normalizacao de headers, etc.
-- Registra resultado via `log-system-event`
-
-#### Configuracao no `supabase/config.toml`
-
-```toml
-[functions.auto-import-acoes-sociais]
-verify_jwt = false
-```
-
-#### Cron Job (SQL)
-
-Usar `pg_cron` + `pg_net` para agendar a chamada a cada 60 minutos:
-
-```sql
-SELECT cron.schedule(
-  'auto-import-acoes-sociais-hourly',
-  '0 * * * *',  -- a cada hora, no minuto 0
-  $$ SELECT net.http_post(...) $$
-);
-```
-
----
-
-### Regionais que serao processadas
-
-| Regional | Sigla | Sera importada |
-|----------|-------|----------------|
-| VALE DO PARAIBA I - SP | VP1 | Sim |
-| VALE DO PARAIBA II - SP | VP2 | Sim |
-| VALE DO PARAIBA III - SP | VP3 | Sim |
-| LITORAL NORTE - SP | LN | Sim |
-| CMD | CMD | Nao (nao tem divisoes/acoes) |
-
----
+| Arquivo | Alteração |
+|---------|-----------|
+| `supabase/functions/read-google-sheet/index.ts` | Adicionar suporte a `allSheets` para ler todas as abas |
+| `supabase/functions/auto-import-acoes-sociais/index.ts` | Passar `allSheets: true` na chamada |
 
 ### Resultado Esperado
 
-1. A cada 60 minutos, o servidor automaticamente importa novas acoes sociais de **todas** as regionais
-2. Nao depende de nenhum usuario estar conectado
-3. O hook do frontend continua como camada redundante
-4. Resultados de cada execucao ficam registrados nos logs do sistema
-
+1. A função passará a ler TODAS as abas da planilha
+2. As ações novas (fevereiro e futuras) serão capturadas independente de qual aba estejam
+3. O cron job continuará rodando a cada 60 minutos, agora cobrindo todas as abas
