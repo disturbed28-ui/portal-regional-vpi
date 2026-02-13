@@ -340,12 +340,33 @@ Deno.serve(async (req) => {
       const nomeNormalizado = normalizeText(responsavel);
       const divisaoDefault = (row.divisao || '').trim();
       
-      const { divisao_texto: divisaoTexto, divisao_id: divisaoId } = buscarDivisaoPorNome(
-        nomeNormalizado,
-        integrantesMap,
-        divisaoDefault,
-        null
-      );
+      // Remover prefixos comuns: "Social ", "S. " etc.
+      let nomeParaBusca = nomeNormalizado;
+      if (nomeParaBusca.startsWith('social ')) {
+        nomeParaBusca = nomeParaBusca.replace(/^social\s+/, '');
+      }
+      
+      // Tentar com nome original primeiro, depois sem prefixo
+      let divisaoTexto = divisaoDefault;
+      let divisaoId: string | null = null;
+      const nomesParaTentar = [nomeNormalizado];
+      if (nomeParaBusca !== nomeNormalizado) {
+        nomesParaTentar.push(nomeParaBusca);
+      }
+      
+      for (const nomeTentativa of nomesParaTentar) {
+        const resultado = buscarDivisaoPorNome(nomeTentativa, integrantesMap, divisaoDefault, null);
+        if (resultado.divisao_id !== null || resultado.divisao_texto !== divisaoDefault) {
+          divisaoTexto = resultado.divisao_texto;
+          divisaoId = resultado.divisao_id;
+          break;
+        }
+      }
+      if (divisaoTexto === divisaoDefault && divisaoId === null) {
+        const resultado = buscarDivisaoPorNome(nomeNormalizado, integrantesMap, divisaoDefault, null);
+        divisaoTexto = resultado.divisao_texto;
+        divisaoId = resultado.divisao_id;
+      }
 
       // Gerar hash de deduplicação (sempre lowercase, com tipo_acao e escopo)
       const tipoAcao = (row.tipo_acao || '').trim();
