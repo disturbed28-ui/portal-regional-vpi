@@ -335,18 +335,41 @@ Deno.serve(async (req) => {
 
         // Buscar divisão pelo nome do responsável
         const nomeNormalizado = normalizeText(responsavel);
+        
+        // Remover prefixos comuns: "Social ", "S. " etc.
+        let nomeParaBusca = nomeNormalizado;
+        if (nomeParaBusca.startsWith('social ')) {
+          nomeParaBusca = nomeParaBusca.replace(/^social\s+/, '');
+        }
+        
         let divisaoTexto = divisaoPlanilha;
         let divisaoId: string | null = null;
 
-        if (integrantesMap.has(nomeNormalizado)) {
-          const info = integrantesMap.get(nomeNormalizado)!;
-          divisaoTexto = info.divisao_texto;
-          divisaoId = info.divisao_id;
-        } else {
+        // Tentar com nome original primeiro, depois com nome sem prefixo
+        const nomesParaTentar = [nomeNormalizado];
+        if (nomeParaBusca !== nomeNormalizado) {
+          nomesParaTentar.push(nomeParaBusca);
+        }
+        
+        let encontrou = false;
+        for (const nomeTentativa of nomesParaTentar) {
+          if (integrantesMap.has(nomeTentativa)) {
+            const info = integrantesMap.get(nomeTentativa)!;
+            divisaoTexto = info.divisao_texto;
+            divisaoId = info.divisao_id;
+            encontrou = true;
+            break;
+          }
+        }
+        
+        if (!encontrou) {
+          // Busca parcial com todos os nomes candidatos
           const matches: { nomeKey: string; divisao_texto: string; divisao_id: string | null }[] = [];
-          for (const [nomeKey, divInfo] of integrantesMap) {
-            if (nomeKey.startsWith(nomeNormalizado) || nomeNormalizado.startsWith(nomeKey)) {
-              matches.push({ nomeKey, ...divInfo });
+          for (const nomeTentativa of nomesParaTentar) {
+            for (const [nomeKey, divInfo] of integrantesMap) {
+              if (nomeKey.startsWith(nomeTentativa) || nomeTentativa.startsWith(nomeKey)) {
+                matches.push({ nomeKey, ...divInfo });
+              }
             }
           }
           if (matches.length > 0) {
