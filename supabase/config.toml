@@ -65,3 +65,6 @@ verify_jwt = false
 
 [functions.limpar-roles-incorretas]
 verify_jwt = false
+
+[functions.auto-import-acoes-sociais]
+verify_jwt = false

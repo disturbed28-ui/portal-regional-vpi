@@ -86,6 +86,16 @@ const parseExcelDate = (value: any): string | null => {
     const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (isoMatch) return trimmed.substring(0, 10);
     
+    // Formato DD/MM (sem ano) - inferir ano atual
+    const twoPartMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})$/);
+    if (twoPartMatch) {
+      const [, p1, p2] = twoPartMatch;
+      const year = new Date().getFullYear().toString();
+      const day = p1.padStart(2, "0");
+      const month = p2.padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
     const slashMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
     if (slashMatch) {
       const [, p1, p2, yearPart] = slashMatch;
