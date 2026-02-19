@@ -267,19 +267,29 @@ Deno.serve(async (req) => {
       }
     });
 
-    // 6. Buscar hashes existentes
-    const { data: existingHashes } = await supabase
-      .from('acoes_sociais_registros')
-      .select('hash_deduplicacao')
-      .not('hash_deduplicacao', 'is', null);
+    // 6. Buscar TODOS os hashes existentes (paginação para ultrapassar limite de 1000)
+    const allHashStrings: string[] = [];
+    let hashOffset = 0;
+    const hashPageSize = 1000;
+    while (true) {
+      const { data: hashPage } = await supabase
+        .from('acoes_sociais_registros')
+        .select('hash_deduplicacao')
+        .not('hash_deduplicacao', 'is', null)
+        .range(hashOffset, hashOffset + hashPageSize - 1);
+      if (!hashPage || hashPage.length === 0) break;
+      allHashStrings.push(...hashPage.map(h => h.hash_deduplicacao));
+      if (hashPage.length < hashPageSize) break;
+      hashOffset += hashPageSize;
+    }
 
     const hashesExistentes = new Set<string>(
-      (existingHashes || []).map(h => {
+      allHashStrings.map(h => {
         try {
-          const decoded = atob(h.hash_deduplicacao);
+          const decoded = atob(h);
           return btoa(decoded.toLowerCase());
         } catch {
-          return (h.hash_deduplicacao || '').toLowerCase();
+          return (h || '').toLowerCase();
         }
       }).filter(Boolean)
     );
@@ -297,6 +307,9 @@ Deno.serve(async (req) => {
     const adminProfileId = adminRole?.user_id || '00000000-0000-0000-0000-000000000000';
 
     // 8. Para cada regional, filtrar e importar
+    // hashesNoLote GLOBAL - compartilhado entre todas as regionais para evitar duplicatas cross-regional
+    const hashesNoLote = new Set<string>();
+
     for (const regional of regionaisAtivas) {
       const normalizedRegionalFilter = normalizeRegionalText(regional.nome);
       console.log(`[auto-import] --- Processando: ${regional.nome} (${regional.sigla}) ---`);
@@ -318,7 +331,6 @@ Deno.serve(async (req) => {
       const registrosParaInserir: any[] = [];
       let duplicados = 0;
       let erros = 0;
-      const hashesNoLote = new Set<string>();
 
       for (const registro of acoesDaRegional) {
         const dataAcao = registro.data_acao_parsed;
@@ -428,7 +440,7 @@ Deno.serve(async (req) => {
           const batch = registrosParaInserir.slice(i, i + batchSize);
           const { error: insertError } = await supabase
             .from('acoes_sociais_registros')
-            .insert(batch);
+            .upsert(batch, { onConflict: 'hash_deduplicacao', ignoreDuplicates: true });
 
           if (insertError) {
             console.error(`[auto-import] Erro ao inserir lote para ${regional.sigla}:`, insertError.message);
