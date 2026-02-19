@@ -279,15 +279,25 @@ Deno.serve(async (req) => {
 
     console.log(`[import-acoes-sociais] ${integrantesMap.size} integrantes carregados para lookup`);
 
-    // Buscar hashes existentes para evitar duplicatas - NORMALIZAR PARA COMPARAÇÃO
-    const { data: existingHashes } = await supabase
-      .from('acoes_sociais_registros')
-      .select('hash_deduplicacao')
-      .not('hash_deduplicacao', 'is', null);
+    // Buscar TODOS os hashes existentes (paginação para ultrapassar limite de 1000)
+    const allHashStrings: string[] = [];
+    let hashOffset = 0;
+    const hashPageSize = 1000;
+    while (true) {
+      const { data: hashPage } = await supabase
+        .from('acoes_sociais_registros')
+        .select('hash_deduplicacao')
+        .not('hash_deduplicacao', 'is', null)
+        .range(hashOffset, hashOffset + hashPageSize - 1);
+      if (!hashPage || hashPage.length === 0) break;
+      allHashStrings.push(...hashPage.map(h => h.hash_deduplicacao));
+      if (hashPage.length < hashPageSize) break;
+      hashOffset += hashPageSize;
+    }
 
     // Normalizar todos os hashes existentes para comparação case-insensitive
     const hashesExistentes = new Set<string>(
-      existingHashes?.map(h => normalizeHashParaComparacao(h.hash_deduplicacao)).filter(Boolean) || []
+      allHashStrings.map(h => normalizeHashParaComparacao(h)).filter(Boolean)
     );
 
     console.log(`[import-acoes-sociais] ${hashesExistentes.size} hashes existentes carregados (normalizados)`);
@@ -445,7 +455,7 @@ Deno.serve(async (req) => {
         const batch = registrosParaInserir.slice(i, i + batchSize);
         const { error: insertError } = await supabase
           .from('acoes_sociais_registros')
-          .insert(batch);
+          .upsert(batch, { onConflict: 'hash_deduplicacao', ignoreDuplicates: true });
 
         if (insertError) {
           console.error('[import-acoes-sociais] Erro ao inserir lote:', insertError);
