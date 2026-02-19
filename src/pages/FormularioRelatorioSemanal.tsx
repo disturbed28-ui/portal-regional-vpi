@@ -895,7 +895,8 @@ const FormularioRelatorioSemanal = () => {
           .select("id, data_acao, escopo_acao, tipo_acao_nome_snapshot, descricao_acao")
           .eq("divisao_relatorio_id", divisaoSelecionada.id)
           .gte("data_acao", formatDateToSQL(semana.periodo_inicio))
-          .lte("data_acao", formatDateToSQL(semana.periodo_fim));
+          .lte("data_acao", formatDateToSQL(semana.periodo_fim))
+          .eq("foi_reportada_em_relatorio", false);
 
         // Buscar ações da SEMANA ANTERIOR (à semanaResposta) que NÃO foram reportadas
         const { data: acoesSemanaAnterior, error: errorAnterior } = await supabase

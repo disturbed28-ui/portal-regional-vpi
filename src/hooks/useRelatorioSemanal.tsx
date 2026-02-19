@@ -43,6 +43,8 @@ export const useSubmitRelatorioSemanal = () => {
     mutationFn: async (params: SubmitRelatorioParams) => {
       const { dados, existingReportId, limiteRespostas, acoesSociaisParaMarcar } = params;
 
+      let result: any;
+
       // CASO 1: Não existe relatório → INSERT
       if (!existingReportId) {
         const { data, error } = await supabase
@@ -52,32 +54,33 @@ export const useSubmitRelatorioSemanal = () => {
           .single();
         
         if (error) throw error;
-        return data;
+        result = data;
       }
-
       // CASO 2: Existe relatório com limite 'unica' → ERRO
-      if (limiteRespostas === 'unica') {
+      else if (limiteRespostas === 'unica') {
         throw new Error('Você já respondeu este formulário nesta semana. Apenas uma resposta é permitida.');
       }
-
       // CASO 3: Existe relatório com limite 'multipla' → UPDATE direto pelo ID
-      console.log('[RelatorioSemanal] Tentando UPDATE com id:', existingReportId);
-      
-      const { data, error } = await supabase
-        .from('relatorios_semanais_divisao')
-        .update(dados)
-        .eq('id', existingReportId)
-        .select()
-        .single();
-      
-      if (error) {
-        console.error('[RelatorioSemanal] Erro no UPDATE:', error);
-        throw error;
+      else {
+        console.log('[RelatorioSemanal] Tentando UPDATE com id:', existingReportId);
+        
+        const { data, error } = await supabase
+          .from('relatorios_semanais_divisao')
+          .update(dados)
+          .eq('id', existingReportId)
+          .select()
+          .single();
+        
+        if (error) {
+          console.error('[RelatorioSemanal] Erro no UPDATE:', error);
+          throw error;
+        }
+
+        console.log('[RelatorioSemanal] ✅ UPDATE bem-sucedido:', data.id);
+        result = data;
       }
 
-      console.log('[RelatorioSemanal] ✅ UPDATE bem-sucedido:', data.id);
-
-      // Após sucesso, marcar ações sociais como reportadas
+      // Após sucesso (INSERT ou UPDATE), marcar ações sociais como reportadas
       if (acoesSociaisParaMarcar && acoesSociaisParaMarcar.length > 0) {
         const { error: errorMarcar } = await supabase
           .from('acoes_sociais_registros')
@@ -91,7 +94,7 @@ export const useSubmitRelatorioSemanal = () => {
         }
       }
 
-      return data;
+      return result;
     },
     onSuccess: (_, variables) => {
       const isUpdate = !!variables.existingReportId;
