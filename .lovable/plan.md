@@ -1,81 +1,126 @@
 
 
-## Diagnóstico e Correções: Ações Sociais
+## Plano: Limpar Duplicatas e Corrigir Bug de Deduplicação
 
-### Descoberta Principal: O sistema ESTÁ funcionando
+### Causa Raiz Identificada
 
-A importação automática **está funcionando corretamente**. Na última execução (hoje às 19:39), foram importadas **60 novas ações** das regionais VP1, VP2, VP3 e LN. A execução seguinte (20:00) mostrou "0 inseridos, 120 duplicados" porque **todas as ações disponíveis na planilha já haviam sido importadas** na rodada anterior.
+Dois bugs no `auto-import-acoes-sociais`:
 
-A planilha (`1k3GBsA3E8IHTBNByWZz895RLvM0FgyHrgDIKl0szha4`) possui **apenas 1 aba** ("Respostas ao formulário 1") com 3.370 linhas. O link com `gid=494771071` é uma **visualização filtrada** da mesma aba, não uma aba separada. O sistema já lê todas as linhas dessa aba.
+1. **Limite de 1000 registros**: A consulta que busca hashes existentes no banco usa o limite padrão do Supabase (1000 linhas). Com 1.231 registros atualmente, cerca de 231 hashes não são carregados, e o sistema re-insere essas ações a cada execução do cron (a cada hora).
 
-| Regional | Ações no banco | Última ação importada |
-|----------|----------------|----------------------|
-| VP1 | 132 | 12/02/2026 |
-| VP2 | 26 | 11/02/2026 |
-| VP3 | 32 | 12/02/2026 |
-| LN | 117 | 05/02/2026 |
+2. **hashesNoLote reiniciado por regional**: O controle de duplicatas dentro de cada execução é zerado para cada regional processada. Se uma mesma linha da planilha combina com mais de uma regional, ela é inserida mais de uma vez.
 
-### Problema Real: Vin Diesel / "Social Vin Diesel"
+### Escala do Problema
 
-Existem **2 problemas** com o integrante Vin Diesel:
+| Ação duplicada | Responsável | Cópias | Deveria ter |
+|---|---|---|---|
+| Doação mobiliário (17/02) | Mutreta | 52 | 1 |
+| Ação Emergencial (16/02) | Figueiredo | 32 | 1 |
+| Roupas/Agasalhos (16/02) | Figueiredo | 32 | 1 |
+| Ação Emergencial (15/02) | Luanzão | 20 | 1 |
+| Visita Humanização (15/02) | Luan | 19 | 1 |
+| + outros... | ... | ... | ... |
+| **Total duplicatas a remover** | | **219** | |
 
-**Problema A**: Quando ele preenche como "Social Vin Diesel" (em vez de "Vin Diesel"), o sistema não encontra correspondência no cadastro de integrantes. Resultado: a divisão fica como preenchida no formulário ("Divisão Centro") em vez de ser corrigida para "DIVISAO SAO JOSE DOS CAMPOS CENTRO - SP".
+### Correções
 
-- Registro afetado: 1 entrada (data_acao: 09/02/2026, id: `5ced4ea2`)
-  - divisao_relatorio_texto: "Divisão Centro" (ERRADO)
-  - divisao_relatorio_id: null (ERRADO)
+#### 1. Limpar duplicatas existentes (SQL)
 
-**Problema B**: Mesmo quando o nome é encontrado ("Vin Diesel"), se ele preencher "Centro" como divisão no formulário, a divisão vem da tabela de integrantes (correto). Mas se um novo responsável preencher apenas "Centro" sem estar cadastrado, ficará errado.
-
-### Solução Proposta
-
-#### Correção 1: Corrigir dados existentes no banco (SQL)
-
-Atualizar o registro do "Social Vin Diesel" para apontar para a divisão correta:
+Deletar todos os registros duplicados, mantendo apenas o mais antigo de cada hash:
 
 ```sql
-UPDATE acoes_sociais_registros
-SET divisao_relatorio_texto = 'DIVISAO SAO JOSE DOS CAMPOS CENTRO - SP',
-    divisao_relatorio_id = '6c28d030-dadb-47ba-96a7-5bc383df666d',
-    responsavel_divisao_texto = 'DIVISAO SAO JOSE DOS CAMPOS CENTRO - SP'
-WHERE id = '5ced4ea2-3b93-4c3a-a454-6465b7958081';
+DELETE FROM acoes_sociais_registros
+WHERE id IN (
+  SELECT id FROM (
+    SELECT id, ROW_NUMBER() OVER (
+      PARTITION BY hash_deduplicacao 
+      ORDER BY created_at ASC
+    ) as rn
+    FROM acoes_sociais_registros
+    WHERE hash_deduplicacao IS NOT NULL
+  ) sub
+  WHERE rn > 1
+);
 ```
 
-#### Correção 2: Melhorar matching de nomes no auto-import
+#### 2. Adicionar constraint UNIQUE no hash (SQL)
 
-No `auto-import-acoes-sociais`, adicionar lógica para remover prefixos comuns como "Social " do nome do responsável antes de buscar no cadastro de integrantes. Assim, "Social Vin Diesel" será encontrado como "Vin Diesel".
+Adicionar uma constraint de unicidade na coluna `hash_deduplicacao` para que o banco de dados impeca duplicatas no futuro, independente de bugs no codigo:
 
-**Arquivo afetado:** `supabase/functions/auto-import-acoes-sociais/index.ts`
+```sql
+ALTER TABLE acoes_sociais_registros 
+ADD CONSTRAINT acoes_sociais_registros_hash_unique 
+UNIQUE (hash_deduplicacao);
+```
 
-Lógica a adicionar antes da busca no `integrantesMap`:
+#### 3. Corrigir o limite de 1000 na busca de hashes
+
+**Arquivo:** `supabase/functions/auto-import-acoes-sociais/index.ts`
+
+Buscar hashes em lotes para garantir que TODOS sejam carregados:
 
 ```typescript
-// Remover prefixos comuns: "Social ", "S. " etc.
-let nomeParaBusca = nomeNormalizado;
-if (nomeParaBusca.startsWith('social ')) {
-  nomeParaBusca = nomeParaBusca.replace(/^social\s+/, '');
+// Buscar TODOS os hashes existentes (sem limite de 1000)
+let allHashes: string[] = [];
+let offset = 0;
+const pageSize = 1000;
+while (true) {
+  const { data } = await supabase
+    .from('acoes_sociais_registros')
+    .select('hash_deduplicacao')
+    .not('hash_deduplicacao', 'is', null)
+    .range(offset, offset + pageSize - 1);
+  if (!data || data.length === 0) break;
+  allHashes.push(...data.map(h => h.hash_deduplicacao));
+  if (data.length < pageSize) break;
+  offset += pageSize;
 }
 ```
 
-Então buscar com `nomeParaBusca` além de `nomeNormalizado`.
+#### 4. Tornar hashesNoLote global entre regionais
 
-#### Correção 3: Aplicar mesma lógica no `import-acoes-sociais`
+**Arquivo:** `supabase/functions/auto-import-acoes-sociais/index.ts`
 
-O edge function de importação manual também precisa da mesma melhoria de matching de nomes.
+Mover `hashesNoLote` para fora do loop de regionais, para que uma acao processada em VP1 nao seja processada novamente em VP2:
 
-**Arquivo afetado:** `supabase/functions/import-acoes-sociais/index.ts`
+```typescript
+// ANTES do loop de regionais (era DENTRO)
+const hashesNoLote = new Set<string>();
 
-### Resumo
+for (const regional of regionaisAtivas) {
+  // ... hashesNoLote agora é compartilhado
+}
+```
 
-| Item | Ação |
-|------|------|
-| Dados existentes | SQL para corrigir 1 registro do "Social Vin Diesel" |
-| `auto-import-acoes-sociais` | Adicionar remoção de prefixo "Social" no matching de nomes |
-| `import-acoes-sociais` | Mesma melhoria de matching |
+#### 5. Usar upsert com ignoreDuplicates como camada extra
+
+**Arquivo:** `supabase/functions/auto-import-acoes-sociais/index.ts`
+
+Trocar `.insert()` por `.upsert()` com `ignoreDuplicates: true`, para que mesmo se um hash escapar da verificacao em memoria, o banco rejeite a duplicata:
+
+```typescript
+const { error } = await supabase
+  .from('acoes_sociais_registros')
+  .upsert(batch, { 
+    onConflict: 'hash_deduplicacao', 
+    ignoreDuplicates: true 
+  });
+```
+
+### Arquivos Afetados
+
+| Arquivo | Alteracao |
+|---|---|
+| Banco de dados (SQL) | Limpar 219 duplicatas + adicionar constraint UNIQUE |
+| `supabase/functions/auto-import-acoes-sociais/index.ts` | Corrigir limite 1000, hashesNoLote global, usar upsert |
+| `supabase/functions/import-acoes-sociais/index.ts` | Mesma correção de upsert (importação manual) |
+| `supabase/functions/manutencao-acoes-sociais/index.ts` | Revisar se precisa ajuste na lógica de dedup |
 
 ### Resultado Esperado
 
-1. O registro existente do "Social Vin Diesel" será corrigido para a divisão "Centro São José dos Campos"
-2. Futuras ações preenchidas como "Social Vin Diesel" serão automaticamente mapeadas para "Vin Diesel" no cadastro
-3. O sistema continuará importando normalmente a cada 60 minutos (já está funcionando)
+1. 219 registros duplicados serao removidos imediatamente
+2. A constraint UNIQUE impede fisicamente novas duplicatas no banco
+3. O bug do limite de 1000 é corrigido com paginação
+4. hashesNoLote global impede duplicatas entre regionais na mesma execução
+5. upsert como camada extra de segurança
 
