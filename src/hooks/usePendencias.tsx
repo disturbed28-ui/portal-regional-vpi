@@ -100,17 +100,32 @@ interface AjusteRolesDetalhes {
   created_at: string;
 }
 
+interface DesligamentoCompulsorioDetalhes {
+  cargo_grau_texto: string | null;
+  total_parcelas: number;
+  valor_total: number;
+  maior_atraso_dias: number;
+  parcelas: Array<{
+    ref: string;
+    data_vencimento: string;
+    valor: number;
+    dias_atraso: number;
+  }>;
+  primeira_divida: string;
+  ultima_divida: string;
+}
+
 interface Pendencia {
   nome_colete: string;
   divisao_texto: string;
-  tipo: 'mensalidade' | 'afastamento' | 'delta' | 'evento_cancelado' | 'treinamento_aprovador' | 'treinamento_integrante' | 'estagio_aprovador' | 'estagio_integrante' | 'ajuste_roles';
+  tipo: 'mensalidade' | 'afastamento' | 'delta' | 'evento_cancelado' | 'treinamento_aprovador' | 'treinamento_integrante' | 'estagio_aprovador' | 'estagio_integrante' | 'ajuste_roles' | 'desligamento_compulsorio';
   detalhe: string;
   data_ref: string;
   registro_id: number;
-  detalhes_completos: MensalidadeDetalhes | AfastamentoDetalhes | DeltaDetalhes | EventoCanceladoDetalhes | TreinamentoAprovadorDetalhes | TreinamentoIntegranteDetalhes | EstagioAprovadorDetalhes | EstagioIntegranteDetalhes | AjusteRolesDetalhes;
+  detalhes_completos: MensalidadeDetalhes | AfastamentoDetalhes | DeltaDetalhes | EventoCanceladoDetalhes | TreinamentoAprovadorDetalhes | TreinamentoIntegranteDetalhes | EstagioAprovadorDetalhes | EstagioIntegranteDetalhes | AjusteRolesDetalhes | DesligamentoCompulsorioDetalhes;
 }
 
-export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes };
+export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes };
 
 export const usePendencias = (
   userId: string | undefined,
@@ -352,6 +367,9 @@ export const usePendencias = (
       mensalidadesMap.forEach((entry) => {
         entry.parcelas.sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento));
         
+        const maiorAtrasoDias = Math.max(...entry.parcelas.map((p: any) => p.dias_atraso));
+        const cargoGrauTexto = cargosMensalidadesMap.get(entry.registro_id) || null;
+        
         todasPendencias.push({
           registro_id: entry.registro_id,
           nome_colete: entry.nome_colete,
@@ -360,7 +378,7 @@ export const usePendencias = (
           detalhe: `${entry.parcelas.length} parcela(s) atrasada(s)`,
           data_ref: entry.mais_antiga,
           detalhes_completos: {
-            cargo_grau_texto: cargosMensalidadesMap.get(entry.registro_id) || null,
+            cargo_grau_texto: cargoGrauTexto,
             total_parcelas: entry.parcelas.length,
             valor_total: entry.total_valor,
             parcelas: entry.parcelas,
@@ -368,6 +386,28 @@ export const usePendencias = (
             ultima_divida: entry.mais_recente
           }
         });
+
+        // Alerta de DESLIGAMENTO COMPULSÓRIO: 2+ parcelas E maior atraso >= 50 dias
+        // Visível apenas para admin e regional (inclui adm_regional e diretor_regional)
+        if (entry.parcelas.length >= 2 && maiorAtrasoDias >= 50 && (userRole === 'admin' || userRole === 'regional' || userRole === 'diretor_regional')) {
+          todasPendencias.push({
+            registro_id: entry.registro_id,
+            nome_colete: entry.nome_colete,
+            divisao_texto: entry.divisao_texto,
+            tipo: 'desligamento_compulsorio',
+            detalhe: `⚠️ ${entry.parcelas.length} parcelas - ${maiorAtrasoDias} dias de atraso`,
+            data_ref: entry.mais_antiga,
+            detalhes_completos: {
+              cargo_grau_texto: cargoGrauTexto,
+              total_parcelas: entry.parcelas.length,
+              valor_total: entry.total_valor,
+              maior_atraso_dias: maiorAtrasoDias,
+              parcelas: entry.parcelas,
+              primeira_divida: entry.mais_antiga,
+              ultima_divida: entry.mais_recente
+            } as DesligamentoCompulsorioDetalhes
+          });
+        }
       });
 
       // 2. Afastamentos com retorno atrasado
@@ -867,9 +907,13 @@ export const usePendencias = (
           todasPendencias.filter(p => p.tipo === 'ajuste_roles').length);
       }
 
-      // Ordenar: ajuste_roles primeiro (admin), depois deltas críticos, depois eventos cancelados, depois por data
+      // Ordenar: desligamento_compulsorio primeiro, depois ajuste_roles, depois eventos cancelados, depois por data
       todasPendencias.sort((a, b) => {
-        // Pendências de ajuste de roles têm prioridade máxima
+        // Desligamento compulsório tem prioridade MÁXIMA
+        if (a.tipo === 'desligamento_compulsorio' && b.tipo !== 'desligamento_compulsorio') return -1;
+        if (b.tipo === 'desligamento_compulsorio' && a.tipo !== 'desligamento_compulsorio') return 1;
+        
+        // Pendências de ajuste de roles têm prioridade alta
         if (a.tipo === 'ajuste_roles' && b.tipo !== 'ajuste_roles') return -1;
         if (b.tipo === 'ajuste_roles' && a.tipo !== 'ajuste_roles') return 1;
         

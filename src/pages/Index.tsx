@@ -40,7 +40,7 @@ const Index = () => {
   // Determinar role para pendências
   const isAdmin = hasRole("admin");
   const isDiretorDivisao = hasRole("diretor_divisao");
-  const isDiretorRegional = hasRole("diretor_regional") || hasRole("regional");
+  const isDiretorRegional = hasRole("diretor_regional") || hasRole("regional") || hasRole("adm_regional");
   const isModerator = hasRole("moderator");
 
   // Usar grau para determinar role de pendências (Grau V = Diretor Regional)

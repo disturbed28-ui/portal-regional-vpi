@@ -20,7 +20,7 @@ import {
   AlertTriangle,
   ArrowRight
 } from "lucide-react";
-import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes } from "@/hooks/usePendencias";
+import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes } from "@/hooks/usePendencias";
 
 interface PendenciasModalProps {
   pendencias: Pendencia[];
@@ -138,6 +138,104 @@ const MensalidadeDetalhesCard = ({ detalhes }: { detalhes: MensalidadeDetalhes }
               );
             })}
           </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Card para Desligamento Compulsório
+const DesligamentoCompulsorioCard = ({ detalhes }: { detalhes: DesligamentoCompulsorioDetalhes }) => {
+  const formatarValor = (valor: number) => 
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+  
+  const formatarData = (data: string) => 
+    format(new Date(data), 'dd/MM/yyyy', { locale: ptBR });
+  
+  return (
+    <Card className="bg-red-950/30 border-2 border-red-600">
+      <CardContent className="p-4 space-y-3">
+        {/* Alerta Principal */}
+        <div className="p-4 bg-red-700 text-white rounded-lg border-2 border-red-500 animate-pulse">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="h-6 w-6 flex-shrink-0" />
+            <div>
+              <p className="font-bold text-base">🚫 DESLIGAMENTO COMPULSÓRIO</p>
+              <p className="text-sm mt-1">
+                Integrante com {detalhes.total_parcelas} mensalidades em aberto. 
+                Maior atraso: {detalhes.maior_atraso_dias} dias (limite: 50 dias).
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Cargo do Integrante */}
+        {detalhes.cargo_grau_texto && (
+          <div className="flex items-center gap-2 p-2 bg-muted border border-border rounded">
+            <User className="h-4 w-4 text-red-600" />
+            <div className="text-xs text-foreground">
+              <span className="font-medium">Cargo:</span>{' '}
+              {detalhes.cargo_grau_texto}
+            </div>
+          </div>
+        )}
+
+        {/* Resumo Financeiro */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4 text-red-600" />
+            <div>
+              <p className="text-xs text-muted-foreground">Valor Total Devido</p>
+              <p className="font-bold text-red-600 text-lg">
+                {formatarValor(detalhes.valor_total)}
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-red-600" />
+            <div>
+              <p className="text-xs text-muted-foreground">Maior Atraso</p>
+              <p className="font-bold text-red-600 text-lg">{detalhes.maior_atraso_dias} dias</p>
+            </div>
+          </div>
+        </div>
+        
+        {/* Período */}
+        <div className="flex items-center gap-2 p-2 bg-red-950/40 border border-red-600/50 rounded">
+          <Calendar className="h-4 w-4 text-red-500" />
+          <div className="text-xs text-foreground">
+            <span className="font-medium">Período:</span>{' '}
+            {formatarData(detalhes.primeira_divida)} até {formatarData(detalhes.ultima_divida)}
+          </div>
+        </div>
+        
+        {/* Lista de Parcelas */}
+        <div>
+          <p className="text-xs font-semibold mb-2 flex items-center gap-1 text-red-500">
+            <AlertTriangle className="h-3 w-3" />
+            Parcelas Vencidas ({detalhes.total_parcelas}):
+          </p>
+          <div className="space-y-1 max-h-32 overflow-y-auto">
+            {detalhes.parcelas.map((parcela, idx) => (
+              <div 
+                key={idx}
+                className="grid grid-cols-[1fr_1fr_1fr_1fr] gap-2 text-xs p-2 rounded bg-red-950/30 border border-red-600/30"
+              >
+                <div><span className="font-medium">{parcela.ref}</span></div>
+                <div className="text-muted-foreground">{formatarData(parcela.data_vencimento)}</div>
+                <div className="font-medium text-red-500">{formatarValor(parcela.valor)}</div>
+                <div className="text-right text-red-500 font-bold">{parcela.dias_atraso}d</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Aviso */}
+        <div className="p-3 bg-red-950/50 border border-red-600 rounded-lg">
+          <p className="text-xs text-red-400 font-semibold">
+            ⚠️ Ação imediata necessária: Contatar integrante para regularização ou iniciar processo de desligamento conforme regulamento.
+          </p>
         </div>
       </CardContent>
     </Card>
@@ -808,6 +906,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
   const isEstagioAprovador = pendencia.tipo === 'estagio_aprovador';
   const isEstagioIntegrante = pendencia.tipo === 'estagio_integrante';
   const isAjusteRoles = pendencia.tipo === 'ajuste_roles';
+  const isDesligamento = pendencia.tipo === 'desligamento_compulsorio';
   const detalhes = pendencia.detalhes_completos;
   
   // LOG DE DEBUG TEMPORÁRIO
@@ -827,6 +926,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
   const isCritico = isMensalidade && maiorAtrasoMensalidade >= 80;
   
   const getBorderColor = () => {
+    if (isDesligamento) return 'border-red-700';
     if (isAjusteRoles) return 'border-emerald-500';
     if (isMensalidade && isCritico) return 'border-red-700';
     if (isMensalidade) return 'border-red-500';
@@ -846,6 +946,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
   };
   
   const getIcon = () => {
+    if (isDesligamento) return '🚫';
     if (isAjusteRoles) return '🔐';
     if (isMensalidade) return '💰';
     if (isAfastamento) return '🏥';
@@ -871,6 +972,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
   };
   
   const getLabel = () => {
+    if (isDesligamento) return 'DESLIGAMENTO';
     if (isAjusteRoles) return 'Ajuste Permissões';
     if (isMensalidade) return 'Mensalidade';
     if (isAfastamento) return 'Afastamento';
@@ -912,8 +1014,8 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
             {/* Linha 2: Badge + Detalhe */}
             <div className="flex items-center gap-2 flex-wrap">
               <Badge 
-                variant={isMensalidade ? 'destructive' : isDelta ? 'default' : 'secondary'}
-                className="text-xs"
+                variant={isDesligamento || isMensalidade ? 'destructive' : isDelta ? 'default' : 'secondary'}
+                className={`text-xs ${isDesligamento ? 'animate-pulse' : ''}`}
               >
                 {getIcon()} {getLabel()}
               </Badge>
@@ -939,8 +1041,8 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Badge 
-                  variant={isMensalidade ? 'destructive' : isDelta ? 'default' : 'secondary'}
-                  className="text-xs truncate"
+                  variant={isDesligamento || isMensalidade ? 'destructive' : isDelta ? 'default' : 'secondary'}
+                  className={`text-xs truncate ${isDesligamento ? 'animate-pulse' : ''}`}
                 >
                   {getIcon()} {getLabel()}
                 </Badge>
@@ -967,6 +1069,9 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
         {/* Conteúdo expansível */}
         <CollapsibleContent>
           <div className="px-3 pb-3 pt-0 space-y-3">
+            {/* Card de Desligamento Compulsório */}
+            {isDesligamento && detalhes && <DesligamentoCompulsorioCard detalhes={detalhes as DesligamentoCompulsorioDetalhes} />}
+            
             {isMensalidade && <MensalidadeDetalhesCard detalhes={detalhes as MensalidadeDetalhes} />}
             {isAfastamento && <AfastamentoDetalhesCard detalhes={detalhes as AfastamentoDetalhes} />}
             {isEventoCancelado && detalhes && <EventoCanceladoDetalhesCard detalhes={detalhes as EventoCanceladoDetalhes} />}
