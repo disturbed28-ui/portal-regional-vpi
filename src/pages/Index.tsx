@@ -354,7 +354,7 @@ const Index = () => {
               </Button>
             )}
 
-            {hasAcessoGestaoADM && !loadingGestaoADM && (
+            {!loadingPermissions && hasAcessoGestaoADM && (
               <Button
                 onClick={() => navigate("/gestao-adm")}
                 disabled={!isLoggedIn || !isActive}
