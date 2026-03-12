@@ -399,7 +399,7 @@ async function parseEventComponents(originalTitle: string): Promise<ParsedEvent>
     }
   } else {
     // Detectar divisão normal
-    divisao = detectDivisionFromTitle(normalized);
+    divisao = await detectDivisionFromTitle(normalized);
     
     // Extrair informações extras (texto após a divisão)
     const divIndex = originalTitle.toLowerCase().indexOf(divisao.toLowerCase());
