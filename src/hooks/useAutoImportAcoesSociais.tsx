@@ -159,7 +159,7 @@ interface SheetRow {
 export const useAutoImportAcoesSociais = () => {
   const { user } = useAuth();
   const { profile } = useProfile(user?.id);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [lastImport, setLastImport] = useState<Date | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const importingRef = useRef(false);

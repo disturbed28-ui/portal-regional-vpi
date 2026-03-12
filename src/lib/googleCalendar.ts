@@ -226,7 +226,7 @@ function detectRegionalSiglaFromTitle(title: string): string | null {
 }
 
 // Parsear componentes do título do evento
-function parseEventComponents(originalTitle: string): ParsedEvent {
+async function parseEventComponents(originalTitle: string): Promise<ParsedEvent> {
   const normalized = removeSpecialCharacters(originalTitle);
   const lower = normalized.toLowerCase();
   const upper = normalized.toUpperCase();
@@ -399,7 +399,7 @@ function parseEventComponents(originalTitle: string): ParsedEvent {
     }
   } else {
     // Detectar divisão normal
-    divisao = detectDivisionFromTitle(normalized);
+    divisao = await detectDivisionFromTitle(normalized);
     
     // Extrair informações extras (texto após a divisão)
     const divIndex = originalTitle.toLowerCase().indexOf(divisao.toLowerCase());
@@ -434,20 +434,19 @@ function parseEventComponents(originalTitle: string): ParsedEvent {
   return parsed;
 }
 
-// Detectar divisão do título (versão aprimorada)
-function detectDivisionFromTitle(title: string): string {
+// Detectar divisão do título (versão aprimorada com fallback dinâmico do banco)
+async function detectDivisionFromTitle(title: string): Promise<string> {
   const lower = title.toLowerCase();
   const normalized = removeSpecialCharacters(lower);
   
   console.log('[detectDivisionFromTitle] Input:', title);
   console.log('[detectDivisionFromTitle] Normalized:', normalized);
   
-  // Extrair regiões e cidades separadamente
+  // ===== FAST PATH: regras hardcoded para divisões com lógica especial (cidade+direção) =====
   const temSjc = normalized.includes('sjc') || normalized.includes('sao jose') || normalized.includes('sao jose dos campos');
   const temJac = normalized.includes('jac') || normalized.includes('jacarei');
   const temCacapava = normalized.includes('cacapava');
   
-  // Extrair direção
   const temNorte = normalized.includes('norte');
   const temSul = normalized.includes('sul');
   const temLeste = normalized.includes('leste');
@@ -455,31 +454,62 @@ function detectDivisionFromTitle(title: string): string {
   const temCentro = normalized.includes('centro');
   const temExtremo = normalized.includes('extremo') || normalized.includes('ext');
   
-  // PRIORIDADE MÁXIMA: Extremos de SJC (com ou sem mencionar SJC)
-  // Se tem "Ext" + direção, assume SJC por padrão
   if (temExtremo && temSul) return 'Divisao Sao Jose dos Campos Extremo Sul - SP';
   if (temExtremo && temNorte) return 'Divisao Sao Jose dos Campos Extremo Norte - SP';
   if (temExtremo && temLeste) return 'Divisao Sao Jose dos Campos Extremo Leste - SP';
   
-  // SJC Direções normais (precisa mencionar SJC)
   if (temSjc && temCentro) return 'Divisao Sao Jose dos Campos Centro - SP';
   if (temSjc && temLeste) return 'Divisao Sao Jose dos Campos Leste - SP';
   if (temSjc && temNorte) return 'Divisao Sao Jose dos Campos Norte - SP';
   if (temSjc && temSul) return 'Divisao Sao Jose dos Campos Sul - SP';
   if (temSjc && temOeste) return 'Divisao Sao Jose dos Campos Oeste - SP';
   
-  // Jacareí Direções
   if (temJac && temNorte) return 'Divisao Jacarei Norte - SP';
   if (temJac && temOeste) return 'Divisao Jacarei Oeste - SP';
   if (temJac && temLeste) return 'Divisao Jacarei Leste - SP';
   if (temJac && temSul) return 'Divisao Jacarei Sul - SP';
   if (temJac && temCentro) return 'Divisao Jacarei Centro - SP';
   
-  // Caçapava
   if (temCacapava) return 'Divisao Cacapava - SP';
+  
+  // ===== FALLBACK DINÂMICO: buscar divisões do banco e tentar match no título =====
+  const divisoes = await loadDivisoesCache();
+  const normalizedUpper = normalized.toUpperCase();
+  
+  // Extrair "nome limpo" de cada divisão (sem "DIVISAO " e " - SP") e buscar no título
+  // Ordenar por tamanho do nome decrescente para priorizar matches mais específicos
+  const candidatos = divisoes
+    .map(d => {
+      let nomeLimpo = d.normalizado
+        .replace(/^DIVISAO\s+/, '')
+        .replace(/\s*-\s*SP\s*$/, '')
+        .trim();
+      return { ...d, nomeLimpo };
+    })
+    .filter(d => d.nomeLimpo.length > 0)
+    .sort((a, b) => b.nomeLimpo.length - a.nomeLimpo.length);
+  
+  for (const candidato of candidatos) {
+    if (normalizedUpper.includes(candidato.nomeLimpo)) {
+      // Formatar como "Divisao NomeLimpo - SP" com capitalização adequada
+      const nomeFormatado = candidato.nome
+        .replace(/^DIVISAO\s+/i, '')
+        .replace(/\s*-\s*SP\s*$/i, '')
+        .trim();
+      const resultado = `Divisao ${nomeFormatado} - SP`;
+      console.log('[detectDivisionFromTitle] ✅ Match dinâmico:', resultado);
+      return resultado;
+    }
+  }
   
   console.log('[detectDivisionFromTitle] Nenhuma divisão detectada');
   return 'Sem Divisao';
+}
+
+// Exportar para invalidar cache quando novas divisões forem cadastradas
+export function invalidateDivisoesCache() {
+  divisoesCache = null;
+  console.log('[invalidateDivisoesCache] Cache de divisões invalidado');
 }
 
 // Construir título normalizado (com prefixo de sigla da regional)
@@ -544,7 +574,7 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
       const googleStatus = item.status || 'confirmed'; // Status do Google (confirmed, cancelled, tentative)
       
       // Parsear componentes do título
-      const components = parseEventComponents(originalTitle);
+      const components = await parseEventComponents(originalTitle);
       
       // Fazer matching de divisão com banco (agora retorna id E sigla)
       const matchResult = await matchDivisaoToId(components.divisao);
