@@ -314,7 +314,7 @@ const Index = () => {
               {isProfileIncomplete ? "Complete seu Perfil!" : "Perfil do Usuario"}
             </Button>
 
-  {hasAcessoAcoesSociais && !loadingAcessoAcoes && (
+  {!loadingPermissions && hasAcessoAcoesSociais && (
     <Button
       onClick={() => navigate("/acoes-sociais")}
       disabled={!isLoggedIn || !isActive}
