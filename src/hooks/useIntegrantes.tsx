@@ -61,7 +61,7 @@ export const useIntegrantes = (options?: UseIntegrantesOptions) => {
   );
 
   // Ref para debounce do realtime
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     fetchIntegrantes();
