@@ -324,7 +324,7 @@ const Index = () => {
     </Button>
   )}
 
-            {canSeeAdmin && !loadingAdminAccess && (
+            {!loadingPermissions && canSeeAdmin && (
               <Button
                 onClick={handleAdmin}
                 disabled={!isLoggedIn || !isActive}
