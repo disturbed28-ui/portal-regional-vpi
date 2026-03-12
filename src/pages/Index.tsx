@@ -344,7 +344,7 @@ const Index = () => {
               </Button>
             )}
 
-            {hasAcessoListasPresenca && !loadingAcessoListas && (
+            {!loadingPermissions && hasAcessoListasPresenca && (
               <Button
                 onClick={handleListasPresenca}
                 disabled={!isLoggedIn || !isActive}
