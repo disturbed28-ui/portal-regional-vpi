@@ -292,7 +292,7 @@ const Index = () => {
               Formularios
             </Button>
 
-            {!loadingOrganogramaAccess && canSeeOrganograma && (
+            {!loadingPermissions && canSeeOrganograma && (
               <Button
                 onClick={handleOrganograma}
                 disabled={!isLoggedIn || !isActive}
