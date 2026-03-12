@@ -3,8 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserRole } from "@/hooks/useUserRole";
-import { useScreenAccess } from "@/hooks/useScreenAccess";
-import { useAdminAccess } from "@/hooks/useAdminAccess";
+import { useScreenPermissionsBatch } from "@/hooks/useScreenPermissionsBatch";
 import { useToast } from "@/hooks/use-toast";
 import { usePresence } from "@/hooks/usePresence";
 import { OnlineUsersModal } from "@/components/OnlineUsersModal";
@@ -26,12 +25,17 @@ const Index = () => {
   const { hasRole, loading: roleLoading } = useUserRole(user?.id);
   const { onlineUsers, totalOnline } = usePresence(user?.id, profile?.nome_colete);
   const { links: linksAtivos } = useLinksUteis(true);
-  const { hasAccess: hasAcessoAcoesSociais, loading: loadingAcessoAcoes } = useScreenAccess('/acoes-sociais', user?.id);
-  const { hasAccess: hasAcessoListasPresenca, loading: loadingAcessoListas } = useScreenAccess('/listas-presenca', user?.id);
-  const { hasAccess: canSeeRelatorios, loading: loadingRelatoriosAccess } = useScreenAccess('/relatorios', user?.id);
-  const { hasAccess: canSeeOrganograma, loading: loadingOrganogramaAccess } = useScreenAccess('/organograma', user?.id);
-  const { hasAccess: canSeeAdmin, loading: loadingAdminAccess } = useAdminAccess();
-  const { hasAccess: hasAcessoGestaoADM, loading: loadingGestaoADM } = useScreenAccess('/gestao-adm', user?.id);
+  
+  // Batch único para todas as permissões de tela - elimina race conditions no refresh
+  const permissionRoutes = ['/acoes-sociais', '/listas-presenca', '/relatorios', '/organograma', '/admin', '/gestao-adm'];
+  const { permissions, loading: loadingPermissions } = useScreenPermissionsBatch(permissionRoutes, '/', user?.id);
+  
+  const hasAcessoAcoesSociais = permissions['/acoes-sociais']?.hasAccess ?? false;
+  const hasAcessoListasPresenca = permissions['/listas-presenca']?.hasAccess ?? false;
+  const canSeeRelatorios = permissions['/relatorios']?.hasAccess ?? false;
+  const canSeeOrganograma = permissions['/organograma']?.hasAccess ?? false;
+  const canSeeAdmin = permissions['/admin']?.hasAccess ?? false;
+  const hasAcessoGestaoADM = permissions['/gestao-adm']?.hasAccess ?? false;
   const [showQRCode, setShowQRCode] = useState(false);
 
   // Sincronização automática da Agenda para admins (detecta eventos cancelados/removidos)
@@ -288,7 +292,7 @@ const Index = () => {
               Formularios
             </Button>
 
-            {!loadingOrganogramaAccess && canSeeOrganograma && (
+            {!loadingPermissions && canSeeOrganograma && (
               <Button
                 onClick={handleOrganograma}
                 disabled={!isLoggedIn || !isActive}
@@ -310,7 +314,7 @@ const Index = () => {
               {isProfileIncomplete ? "Complete seu Perfil!" : "Perfil do Usuario"}
             </Button>
 
-  {hasAcessoAcoesSociais && !loadingAcessoAcoes && (
+  {!loadingPermissions && hasAcessoAcoesSociais && (
     <Button
       onClick={() => navigate("/acoes-sociais")}
       disabled={!isLoggedIn || !isActive}
@@ -320,7 +324,7 @@ const Index = () => {
     </Button>
   )}
 
-            {canSeeAdmin && !loadingAdminAccess && (
+            {!loadingPermissions && canSeeAdmin && (
               <Button
                 onClick={handleAdmin}
                 disabled={!isLoggedIn || !isActive}
@@ -330,7 +334,7 @@ const Index = () => {
               </Button>
             )}
 
-            {!loadingRelatoriosAccess && canSeeRelatorios && (
+            {!loadingPermissions && canSeeRelatorios && (
               <Button
                 onClick={handleRelatorios}
                 disabled={!isLoggedIn || !isActive}
@@ -340,7 +344,7 @@ const Index = () => {
               </Button>
             )}
 
-            {hasAcessoListasPresenca && !loadingAcessoListas && (
+            {!loadingPermissions && hasAcessoListasPresenca && (
               <Button
                 onClick={handleListasPresenca}
                 disabled={!isLoggedIn || !isActive}
@@ -350,7 +354,7 @@ const Index = () => {
               </Button>
             )}
 
-            {hasAcessoGestaoADM && !loadingGestaoADM && (
+            {!loadingPermissions && hasAcessoGestaoADM && (
               <Button
                 onClick={() => navigate("/gestao-adm")}
                 disabled={!isLoggedIn || !isActive}
