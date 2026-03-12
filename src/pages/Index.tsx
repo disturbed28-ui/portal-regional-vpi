@@ -361,15 +361,17 @@ const Index = () => {
             )}
           </div>
 
-          {/* Botão Instalar App */}
-          <Button
-            onClick={() => navigate("/instalar")}
-            variant="outline"
-            className="w-full h-10 text-sm rounded-xl border-primary/50 text-primary hover:bg-primary/10"
-          >
-            <Smartphone className="w-4 h-4 mr-2" />
-            Instalar no Celular
-          </Button>
+          {/* Botão Instalar App - oculto quando já está em modo PWA instalado */}
+          {!window.matchMedia('(display-mode: standalone)').matches && !(window.navigator as any).standalone && (
+            <Button
+              onClick={() => navigate("/instalar")}
+              variant="outline"
+              className="w-full h-10 text-sm rounded-xl border-primary/50 text-primary hover:bg-primary/10"
+            >
+              <Smartphone className="w-4 h-4 mr-2" />
+              Instalar no Celular
+            </Button>
+          )}
 
           {/* Footer - dentro do card, no bottom */}
           <div className="mt-auto pt-4 border-t border-border">
