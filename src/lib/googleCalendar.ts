@@ -574,7 +574,7 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
       const googleStatus = item.status || 'confirmed'; // Status do Google (confirmed, cancelled, tentative)
       
       // Parsear componentes do título
-      const components = parseEventComponents(originalTitle);
+      const components = await parseEventComponents(originalTitle);
       
       // Fazer matching de divisão com banco (agora retorna id E sigla)
       const matchResult = await matchDivisaoToId(components.divisao);
