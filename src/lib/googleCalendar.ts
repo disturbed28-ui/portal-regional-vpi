@@ -226,7 +226,7 @@ function detectRegionalSiglaFromTitle(title: string): string | null {
 }
 
 // Parsear componentes do título do evento
-function parseEventComponents(originalTitle: string): ParsedEvent {
+async function parseEventComponents(originalTitle: string): Promise<ParsedEvent> {
   const normalized = removeSpecialCharacters(originalTitle);
   const lower = normalized.toLowerCase();
   const upper = normalized.toUpperCase();
