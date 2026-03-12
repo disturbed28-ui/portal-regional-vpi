@@ -334,7 +334,7 @@ const Index = () => {
               </Button>
             )}
 
-            {!loadingRelatoriosAccess && canSeeRelatorios && (
+            {!loadingPermissions && canSeeRelatorios && (
               <Button
                 onClick={handleRelatorios}
                 disabled={!isLoggedIn || !isActive}
