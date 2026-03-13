@@ -89,7 +89,7 @@ export const FrequenciaDashboard = ({ grau, regionalId, divisaoId, isAdmin = fal
 
   // Determinar quais divisões mostrar no seletor
   const divisoesParaSelecao = useMemo(() => {
-    if (isAdmin || nivelAcesso === 'comando') {
+    if (nivelAcesso === 'comando') {
       return todasDivisoes || [];
     }
     return divisoesDaRegional;
