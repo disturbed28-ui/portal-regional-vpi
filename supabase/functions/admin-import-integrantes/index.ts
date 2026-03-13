@@ -884,15 +884,46 @@ afastados_ignorados: z.array(z.object({
       return [];
     }
 
+    // Função auxiliar para determinar roles baseado no grau do cargo (tabela cargos)
+    function determinarRolesDoCargo(cargoGrau: string, cargoNome: string): string[] {
+      const grauUpper = (cargoGrau || '').toUpperCase().trim();
+      const nomeLower = (cargoNome || '').toLowerCase();
+      
+      // Graus I-IV: comando
+      if (['I', 'II', 'III', 'IV'].includes(grauUpper)) {
+        return ['comando'];
+      }
+      
+      // Grau V
+      if (grauUpper === 'V') {
+        if (nomeLower.includes('diretor')) return ['diretor_regional'];
+        if (nomeLower.includes('adm')) return ['adm_regional'];
+        return ['regional'];
+      }
+      
+      // Grau VI
+      if (grauUpper === 'VI') {
+        if (nomeLower.includes('diretor') || nomeLower.includes('sub diretor') || 
+            nomeLower.includes('sub-diretor') || nomeLower.includes('subdiretor')) {
+          return ['diretor_divisao'];
+        }
+        if (nomeLower.includes('social')) return ['social_divisao'];
+        if (nomeLower.includes('adm')) return ['adm_divisao'];
+        return ['moderator'];
+      }
+      
+      return [];
+    }
+
     // Roles que podem ser gerenciadas automaticamente (não mexer em admin, user, app.authenticated, etc)
-    const rolesGerenciadas = ['regional', 'diretor_regional', 'diretor_divisao', 'social_divisao', 'adm_divisao', 'moderator'];
+    const rolesGerenciadas = ['regional', 'diretor_regional', 'diretor_divisao', 'social_divisao', 'adm_divisao', 'moderator', 'adm_regional', 'comando'];
 
     for (const integrante of integrantesParaAtribuirRoles) {
       try {
         // Buscar profile_id e cargo pelo registro_id
         const { data: integranteData } = await supabase
           .from('integrantes_portal')
-          .select('profile_id, cargo_grau_texto, grau, cargo_nome')
+          .select('id, profile_id, cargo_grau_texto, grau, cargo_nome, cargo_treinamento_id, cargo_estagio_id')
           .eq('registro_id', integrante.registro_id)
           .single();
         
@@ -906,6 +937,64 @@ afastados_ignorados: z.array(z.object({
           continue;
         }
         
+        // ========================================================================
+        // VERIFICAR TREINAMENTOS E ESTÁGIOS ATIVOS para roles adicionais
+        // ========================================================================
+        const rolesExtras: string[] = [];
+        
+        // Verificar treinamento ativo
+        if (integranteData.cargo_treinamento_id) {
+          const { data: treinamentoAtivo } = await supabase
+            .from('solicitacoes_treinamento')
+            .select('id, cargo_treinamento_id')
+            .eq('integrante_id', integranteData.id)
+            .eq('status', 'Em Treinamento')
+            .maybeSingle();
+          
+          if (treinamentoAtivo) {
+            // Buscar dados do cargo de treinamento
+            const { data: cargoTreinamento } = await supabase
+              .from('cargos')
+              .select('grau, nome')
+              .eq('id', integranteData.cargo_treinamento_id)
+              .single();
+            
+            if (cargoTreinamento) {
+              const rolesTreinamento = determinarRolesDoCargo(cargoTreinamento.grau, cargoTreinamento.nome);
+              rolesExtras.push(...rolesTreinamento);
+              console.log(`[admin-import-integrantes] Role extra (treinamento): ${integrante.registro_id} - ${cargoTreinamento.nome} -> ${rolesTreinamento.join(', ')}`);
+            }
+          }
+        }
+        
+        // Verificar estágio ativo
+        if (integranteData.cargo_estagio_id) {
+          const { data: estagioAtivo } = await supabase
+            .from('solicitacoes_estagio')
+            .select('id, cargo_estagio_id')
+            .eq('integrante_id', integranteData.id)
+            .eq('status', 'Em Estagio')
+            .maybeSingle();
+          
+          if (estagioAtivo) {
+            // Buscar dados do cargo de estágio
+            const { data: cargoEstagio } = await supabase
+              .from('cargos')
+              .select('grau, nome')
+              .eq('id', integranteData.cargo_estagio_id)
+              .single();
+            
+            if (cargoEstagio) {
+              const rolesEstagio = determinarRolesDoCargo(cargoEstagio.grau, cargoEstagio.nome);
+              rolesExtras.push(...rolesEstagio);
+              console.log(`[admin-import-integrantes] Role extra (estágio): ${integrante.registro_id} - ${cargoEstagio.nome} -> ${rolesEstagio.join(', ')}`);
+            }
+          }
+        }
+        
+        // Unir roles do cargo atual + roles extras de treinamento/estágio (sem duplicatas)
+        const todasRoles = [...new Set([...rolesCorretas, ...rolesExtras])];
+        
         // Remover apenas roles gerenciadas (mantendo admin, user, app.authenticated, presence.*)
         await supabase
           .from('user_roles')
@@ -914,7 +1003,7 @@ afastados_ignorados: z.array(z.object({
           .in('role', rolesGerenciadas);
         
         // Adicionar novas roles
-        for (const role of rolesCorretas) {
+        for (const role of todasRoles) {
           await supabase
             .from('user_roles')
             .upsert({ 
@@ -925,7 +1014,7 @@ afastados_ignorados: z.array(z.object({
             });
         }
         
-        console.log(`[admin-import-integrantes] Role: ${integrante.registro_id} - ${integranteData.cargo_grau_texto} -> ${rolesCorretas.length > 0 ? rolesCorretas.join(', ') : 'sem roles especiais'}`);
+        console.log(`[admin-import-integrantes] Role: ${integrante.registro_id} - ${integranteData.cargo_grau_texto} -> ${todasRoles.length > 0 ? todasRoles.join(', ') : 'sem roles especiais'}${rolesExtras.length > 0 ? ' (inclui treinamento/estágio)' : ''}`);
       } catch (roleError) {
         console.error('[admin-import-integrantes] Erro ao atribuir role:', roleError);
         // Não bloquear a importação por erro de role
