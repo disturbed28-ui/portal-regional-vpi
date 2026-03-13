@@ -137,7 +137,7 @@ export const ListasConsulta = ({
       if (error) throw error;
       return data;
     },
-    enabled: isAdmin || nivelAcesso === 'comando' || divisoesDaRegional.length > 0 || !!divisaoId || !!divisaoRegional || !!divisaoCMD
+    enabled: nivelAcesso === 'comando' || divisoesDaRegional.length > 0 || !!divisaoId || !!divisaoRegional || !!divisaoCMD
   });
 
   // Filtrar eventos de Caveira/Batedor no cliente
