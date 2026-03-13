@@ -109,8 +109,8 @@ export const ListasConsulta = ({
         .limit(50);
 
       // Aplicar filtro baseado no nível de acesso
-      if (!isAdmin) {
-        if (nivelAcesso === 'comando') {
+      if (nivelAcesso !== 'comando') {
+        if (false) { // placeholder for removed admin check
           // Graus I-IV: ver todos (sem filtro adicional de divisão)
         } else {
           // Construir lista de divisões visíveis

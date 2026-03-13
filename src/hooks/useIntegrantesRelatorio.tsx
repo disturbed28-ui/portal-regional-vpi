@@ -142,7 +142,7 @@ export const useIntegrantesRelatorio = (userId: string | undefined, isAdmin?: bo
     if (filtroInicializado || opcoesFiltragem.length === 0 || !profile) return;
 
     // Admin ou comando: inicia em "todos" (mostra tudo)
-    if (isAdmin || nivelAcesso === 'comando') {
+    if (nivelAcesso === 'comando') {
       setFiltroAtivo('todos');
       setFiltroInicializado(true);
       return;

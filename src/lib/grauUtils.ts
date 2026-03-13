@@ -59,3 +59,18 @@ export const getNivelAcesso = (grau: string | null | undefined): NivelAcesso => 
 export const compareGraus = (grauA: string | null, grauB: string | null): number => {
   return romanToNumber(grauA) - romanToNumber(grauB);
 };
+
+/**
+ * Determina o nível de acesso para contexto ADMIN.
+ * Grau V+ é tratado como 'regional' (nunca 'divisao'),
+ * pois admin nomeado pelo diretor regional vê toda a regional.
+ */
+export const getNivelAcessoAdmin = (grau: string | null | undefined): NivelAcesso => {
+  const grauNum = romanToNumber(grau);
+  
+  if (grauNum <= 4) {
+    return 'comando';   // Grau I-IV: vê tudo
+  }
+  
+  return 'regional';    // Grau V+: vê toda a regional (no contexto admin)
+};

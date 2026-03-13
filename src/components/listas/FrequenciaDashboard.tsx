@@ -302,7 +302,7 @@ export const FrequenciaDashboard = ({ grau, regionalId, divisaoId, isAdmin = fal
 
   // Label do seletor de divisão
   const getDivisaoPlaceholder = () => {
-    if (isAdmin || nivelAcesso === 'comando') return "Todas as Divisões";
+    if (nivelAcesso === 'comando') return "Todas as Divisões";
     return "Todas da Regional";
   };
 
