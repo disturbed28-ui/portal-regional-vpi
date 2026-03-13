@@ -12,6 +12,8 @@ import { useIntegrantes } from "@/hooks/useIntegrantes";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useAdminAccess } from "@/hooks/useAdminAccess";
+import { useProfile } from "@/hooks/useProfile";
+import { getNivelAcessoAdmin } from "@/lib/grauUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { parseExcelFile, processDelta, parseCargoGrau, TransferenciaDetectada } from "@/lib/excelParser";
 import { parseMensalidadesExcel, formatRef, ParseResult } from "@/lib/mensalidadesParser";
