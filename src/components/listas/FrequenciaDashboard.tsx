@@ -56,7 +56,7 @@ export const FrequenciaDashboard = ({ grau, regionalId, divisaoId, isAdmin = fal
       if (error) throw error;
       return data;
     },
-    enabled: isAdmin || nivelAcesso === 'comando'
+    enabled: nivelAcesso === 'comando'
   });
 
   // Buscar pesos dos tipos de evento
