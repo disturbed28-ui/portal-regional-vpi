@@ -36,7 +36,7 @@ export default function AcoesSociais() {
   const nivel = getNivelAcesso(grau);
 
   const escopoTexto = useMemo(() => {
-    if (isAdmin || nivel === 'comando') {
+    if (nivel === 'comando') {
       return 'Escopo: Comando (todas as ações)';
     }
     if (nivel === 'regional') {

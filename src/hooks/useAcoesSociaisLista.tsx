@@ -39,7 +39,7 @@ export const useAcoesSociaisLista = (filtros?: FiltrosAcoesSociais) => {
     });
 
     // REGRA 1: Admin ou Graus I-IV (comando) → Acesso total
-    if (isAdmin || nivel === 'comando') {
+    if (nivel === 'comando') {
       console.log('[useAcoesSociaisLista] Acesso total (admin ou comando)');
       
       let query = supabase

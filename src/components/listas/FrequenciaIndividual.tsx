@@ -89,7 +89,7 @@ export const FrequenciaIndividual = ({ grau, regionalId, divisaoId, isAdmin = fa
     }
     
     // CMD (Graus I-IV) ou Admin: todas as divisões
-    if (isAdmin || nivelAcesso === 'comando') {
+    if (nivelAcesso === 'comando') {
       return todasDivisoes || [];
     }
     
@@ -105,7 +105,7 @@ export const FrequenciaIndividual = ({ grau, regionalId, divisaoId, isAdmin = fa
     }
     
     // Admin ou CMD com "todas": sem filtro (vê tudo)
-    if (isAdmin || nivelAcesso === 'comando') {
+    if (nivelAcesso === 'comando') {
       return null;
     }
     
@@ -138,7 +138,7 @@ export const FrequenciaIndividual = ({ grau, regionalId, divisaoId, isAdmin = fa
     const grupos: GrupoFrequencia[] = [];
 
     // CMD (Graus I-IV) ou Admin: agrupar por Regional/Divisão
-    if (isAdmin || nivelAcesso === 'comando') {
+    if (nivelAcesso === 'comando') {
       regionais.forEach(regional => {
         // Integrantes que estão na Regional (divisao_texto === regional_texto)
         const integrantesRegional = dadosFrequencia.filter(

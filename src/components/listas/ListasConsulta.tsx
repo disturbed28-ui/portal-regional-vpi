@@ -109,10 +109,7 @@ export const ListasConsulta = ({
         .limit(50);
 
       // Aplicar filtro baseado no nível de acesso
-      if (!isAdmin) {
-        if (nivelAcesso === 'comando') {
-          // Graus I-IV: ver todos (sem filtro adicional de divisão)
-        } else {
+      if (nivelAcesso !== 'comando') {
           // Construir lista de divisões visíveis
           let divisoesVisiveis = [...divisoesDaRegional];
 
@@ -133,7 +130,6 @@ export const ListasConsulta = ({
             // Fallback: apenas a divisão do usuário
             query = query.eq('divisao_id', divisaoId);
           }
-        }
       }
 
       const { data, error } = await query;
@@ -141,7 +137,7 @@ export const ListasConsulta = ({
       if (error) throw error;
       return data;
     },
-    enabled: isAdmin || nivelAcesso === 'comando' || divisoesDaRegional.length > 0 || !!divisaoId || !!divisaoRegional || !!divisaoCMD
+    enabled: nivelAcesso === 'comando' || divisoesDaRegional.length > 0 || !!divisaoId || !!divisaoRegional || !!divisaoCMD
   });
 
   // Filtrar eventos de Caveira/Batedor no cliente

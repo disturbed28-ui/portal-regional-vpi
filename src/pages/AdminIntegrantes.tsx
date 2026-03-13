@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,8 @@ import { useIntegrantes } from "@/hooks/useIntegrantes";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useAdminAccess } from "@/hooks/useAdminAccess";
+import { useProfile } from "@/hooks/useProfile";
+import { getNivelAcessoAdmin } from "@/lib/grauUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { parseExcelFile, processDelta, parseCargoGrau, TransferenciaDetectada } from "@/lib/excelParser";
 import { parseMensalidadesExcel, formatRef, ParseResult } from "@/lib/mensalidadesParser";
@@ -41,7 +43,17 @@ const AdminIntegrantes = () => {
   const { user } = useAuth();
   const { hasAccess, loading: loadingAccess } = useAdminAccess();
   
-  const { integrantes, loading, stats, refetch } = useIntegrantes({ ativo: true });
+  const { profile } = useProfile(user?.id);
+  const nivelAdmin = getNivelAcessoAdmin(profile?.grau);
+  
+  const { integrantes: todosIntegrantes, loading, stats, refetch } = useIntegrantes({ ativo: true });
+  
+  // Filtrar integrantes por regional para admin com Grau V+
+  const integrantes = useMemo(() => {
+    if (nivelAdmin === 'comando') return todosIntegrantes;
+    if (!profile?.regional_id) return todosIntegrantes;
+    return todosIntegrantes.filter(i => i.regional_id === profile.regional_id);
+  }, [todosIntegrantes, nivelAdmin, profile?.regional_id]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [uploadPreview, setUploadPreview] = useState<any>(null);

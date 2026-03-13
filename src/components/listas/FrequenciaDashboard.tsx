@@ -56,7 +56,7 @@ export const FrequenciaDashboard = ({ grau, regionalId, divisaoId, isAdmin = fal
       if (error) throw error;
       return data;
     },
-    enabled: isAdmin || nivelAcesso === 'comando'
+    enabled: nivelAcesso === 'comando'
   });
 
   // Buscar pesos dos tipos de evento
@@ -89,7 +89,7 @@ export const FrequenciaDashboard = ({ grau, regionalId, divisaoId, isAdmin = fal
 
   // Determinar quais divisões mostrar no seletor
   const divisoesParaSelecao = useMemo(() => {
-    if (isAdmin || nivelAcesso === 'comando') {
+    if (nivelAcesso === 'comando') {
       return todasDivisoes || [];
     }
     return divisoesDaRegional;
@@ -129,10 +129,8 @@ export const FrequenciaDashboard = ({ grau, regionalId, divisaoId, isAdmin = fal
         query = query.eq('divisao_id', divisaoSelecionada);
       } else {
         // Aplicar filtro baseado no nível de acesso
-        if (!isAdmin) {
-          if (nivelAcesso === 'comando') {
-            // Graus I-IV: ver todos (sem filtro adicional)
-          } else if ((nivelAcesso === 'regional' || nivelAcesso === 'divisao') && divisaoIdsDaRegional.length > 0) {
+        if (nivelAcesso !== 'comando') {
+          if ((nivelAcesso === 'regional' || nivelAcesso === 'divisao') && divisaoIdsDaRegional.length > 0) {
             // Graus V e VI: ver eventos da regional inteira
             query = query.in('divisao_id', divisaoIdsDaRegional);
           } else if (divisaoId) {
@@ -147,7 +145,7 @@ export const FrequenciaDashboard = ({ grau, regionalId, divisaoId, isAdmin = fal
       if (error) throw error;
       return data;
     },
-    enabled: isAdmin || nivelAcesso === 'comando' || divisaoIdsDaRegional.length > 0 || !!divisaoId
+    enabled: nivelAcesso === 'comando' || divisaoIdsDaRegional.length > 0 || !!divisaoId
   });
 
   // Função para mapear justificativa_ausencia para formato padronizado
@@ -302,7 +300,7 @@ export const FrequenciaDashboard = ({ grau, regionalId, divisaoId, isAdmin = fal
 
   // Label do seletor de divisão
   const getDivisaoPlaceholder = () => {
-    if (isAdmin || nivelAcesso === 'comando') return "Todas as Divisões";
+    if (nivelAcesso === 'comando') return "Todas as Divisões";
     return "Todas da Regional";
   };
 
