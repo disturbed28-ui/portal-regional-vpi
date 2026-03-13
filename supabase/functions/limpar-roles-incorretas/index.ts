@@ -141,7 +141,7 @@ Deno.serve(async (req) => {
         // Buscar integrante vinculado a este profile
         const { data: integrante } = await supabase
           .from('integrantes_portal')
-          .select('grau, cargo_nome, nome_colete')
+          .select('id, grau, cargo_nome, nome_colete, cargo_treinamento_id, cargo_estagio_id')
           .eq('profile_id', profileId)
           .eq('ativo', true)
           .single();
@@ -174,11 +174,74 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        // ========================================================================
+        // VERIFICAR TREINAMENTOS E ESTÁGIOS ATIVOS para roles adicionais
+        // ========================================================================
+        const rolesExtras: string[] = [];
+        
+        if (integrante) {
+          // Verificar treinamento ativo
+          if (integrante.cargo_treinamento_id) {
+            const { data: treinamentoAtivo } = await supabase
+              .from('solicitacoes_treinamento')
+              .select('id')
+              .eq('integrante_id', integrante.id)
+              .eq('status', 'Em Treinamento')
+              .maybeSingle();
+            
+            if (treinamentoAtivo) {
+              const { data: cargoTreinamento } = await supabase
+                .from('cargos')
+                .select('grau, nome')
+                .eq('id', integrante.cargo_treinamento_id)
+                .single();
+              
+              if (cargoTreinamento) {
+                const rolesTreinamento = determinarRolesCorretas(cargoTreinamento.grau, cargoTreinamento.nome);
+                if (rolesTreinamento) {
+                  // Remove 'user' from extras to avoid duplication
+                  rolesExtras.push(...rolesTreinamento.filter(r => r !== 'user'));
+                  console.log(`[limpar-roles] Role extra (treinamento): ${nomeColete} - ${cargoTreinamento.nome} -> ${rolesTreinamento.join(', ')}`);
+                }
+              }
+            }
+          }
+          
+          // Verificar estágio ativo
+          if (integrante.cargo_estagio_id) {
+            const { data: estagioAtivo } = await supabase
+              .from('solicitacoes_estagio')
+              .select('id')
+              .eq('integrante_id', integrante.id)
+              .eq('status', 'Em Estagio')
+              .maybeSingle();
+            
+            if (estagioAtivo) {
+              const { data: cargoEstagio } = await supabase
+                .from('cargos')
+                .select('grau, nome')
+                .eq('id', integrante.cargo_estagio_id)
+                .single();
+              
+              if (cargoEstagio) {
+                const rolesEstagio = determinarRolesCorretas(cargoEstagio.grau, cargoEstagio.nome);
+                if (rolesEstagio) {
+                  rolesExtras.push(...rolesEstagio.filter(r => r !== 'user'));
+                  console.log(`[limpar-roles] Role extra (estágio): ${nomeColete} - ${cargoEstagio.nome} -> ${rolesEstagio.join(', ')}`);
+                }
+              }
+            }
+          }
+        }
+
+        // Unir roles do cargo atual + roles extras (sem duplicatas)
+        const todasRolesCorretas = [...new Set([...rolesCorretas, ...rolesExtras])];
+
         // Verificar se precisa corrigir
         const rolesGerenciadasAtuais = rolesAtuais.filter(r => ROLES_GERENCIADAS.includes(r));
         const precisaCorrigir = 
-          rolesGerenciadasAtuais.length !== rolesCorretas.length ||
-          !rolesGerenciadasAtuais.every(r => rolesCorretas.includes(r));
+          rolesGerenciadasAtuais.length !== todasRolesCorretas.length ||
+          !rolesGerenciadasAtuais.every(r => todasRolesCorretas.includes(r));
 
         if (!precisaCorrigir) {
           mantidos++;
@@ -202,8 +265,8 @@ Deno.serve(async (req) => {
             .eq('user_id', profileId)
             .in('role', ROLES_GERENCIADAS);
 
-          // Adicionar roles corretas
-          for (const role of rolesCorretas) {
+          // Adicionar roles corretas (incluindo extras de treinamento/estágio)
+          for (const role of todasRolesCorretas) {
             await supabase
               .from('user_roles')
               .upsert({ 
@@ -221,8 +284,8 @@ Deno.serve(async (req) => {
             grau: grau || 'N/A',
             cargo_nome: cargoNome || 'N/A',
             roles_antes: rolesAtuais,
-            roles_depois: rolesCorretas,
-            acao: 'CORRIGIDO'
+            roles_depois: todasRolesCorretas,
+            acao: rolesExtras.length > 0 ? 'CORRIGIDO (c/ treinamento/estágio)' : 'CORRIGIDO'
           });
         } else {
           // Modo relatório - apenas listar
@@ -233,8 +296,8 @@ Deno.serve(async (req) => {
             grau: grau || 'N/A',
             cargo_nome: cargoNome || 'N/A',
             roles_antes: rolesAtuais,
-            roles_depois: rolesCorretas,
-            acao: 'PENDENTE CORREÇÃO'
+            roles_depois: todasRolesCorretas,
+            acao: rolesExtras.length > 0 ? 'PENDENTE CORREÇÃO (c/ treinamento/estágio)' : 'PENDENTE CORREÇÃO'
           });
         }
       } catch (error) {
