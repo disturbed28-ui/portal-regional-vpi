@@ -129,8 +129,8 @@ export const FrequenciaDashboard = ({ grau, regionalId, divisaoId, isAdmin = fal
         query = query.eq('divisao_id', divisaoSelecionada);
       } else {
         // Aplicar filtro baseado no nível de acesso
-        if (!isAdmin) {
-          if (nivelAcesso === 'comando') {
+        if (nivelAcesso !== 'comando') {
+          if (false) { // placeholder for removed admin check
             // Graus I-IV: ver todos (sem filtro adicional)
           } else if ((nivelAcesso === 'regional' || nivelAcesso === 'divisao') && divisaoIdsDaRegional.length > 0) {
             // Graus V e VI: ver eventos da regional inteira
