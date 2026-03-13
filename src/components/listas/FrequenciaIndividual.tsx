@@ -89,7 +89,7 @@ export const FrequenciaIndividual = ({ grau, regionalId, divisaoId, isAdmin = fa
     }
     
     // CMD (Graus I-IV) ou Admin: todas as divisões
-    if (isAdmin || nivelAcesso === 'comando') {
+    if (nivelAcesso === 'comando') {
       return todasDivisoes || [];
     }
     
