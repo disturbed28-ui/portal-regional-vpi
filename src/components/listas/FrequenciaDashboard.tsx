@@ -147,7 +147,7 @@ export const FrequenciaDashboard = ({ grau, regionalId, divisaoId, isAdmin = fal
       if (error) throw error;
       return data;
     },
-    enabled: isAdmin || nivelAcesso === 'comando' || divisaoIdsDaRegional.length > 0 || !!divisaoId
+    enabled: nivelAcesso === 'comando' || divisaoIdsDaRegional.length > 0 || !!divisaoId
   });
 
   // Função para mapear justificativa_ausencia para formato padronizado
