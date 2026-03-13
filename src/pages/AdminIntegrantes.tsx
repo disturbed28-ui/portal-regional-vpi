@@ -43,7 +43,10 @@ const AdminIntegrantes = () => {
   const { user } = useAuth();
   const { hasAccess, loading: loadingAccess } = useAdminAccess();
   
-  const { integrantes, loading, stats, refetch } = useIntegrantes({ ativo: true });
+  const { profile } = useProfile(user?.id);
+  const nivelAdmin = getNivelAcessoAdmin(profile?.grau);
+  
+  const { integrantes: todosIntegrantes, loading, stats, refetch } = useIntegrantes({ ativo: true });
   const [searchTerm, setSearchTerm] = useState("");
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [uploadPreview, setUploadPreview] = useState<any>(null);
