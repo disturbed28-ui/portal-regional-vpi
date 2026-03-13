@@ -47,6 +47,13 @@ const AdminIntegrantes = () => {
   const nivelAdmin = getNivelAcessoAdmin(profile?.grau);
   
   const { integrantes: todosIntegrantes, loading, stats, refetch } = useIntegrantes({ ativo: true });
+  
+  // Filtrar integrantes por regional para admin com Grau V+
+  const integrantes = useMemo(() => {
+    if (nivelAdmin === 'comando') return todosIntegrantes;
+    if (!profile?.regional_id) return todosIntegrantes;
+    return todosIntegrantes.filter(i => i.regional_id === profile.regional_id);
+  }, [todosIntegrantes, nivelAdmin, profile?.regional_id]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [uploadPreview, setUploadPreview] = useState<any>(null);
