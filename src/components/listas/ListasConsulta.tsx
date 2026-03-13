@@ -110,9 +110,6 @@ export const ListasConsulta = ({
 
       // Aplicar filtro baseado no nível de acesso
       if (nivelAcesso !== 'comando') {
-        if (false) { // placeholder for removed admin check
-          // Graus I-IV: ver todos (sem filtro adicional de divisão)
-        } else {
           // Construir lista de divisões visíveis
           let divisoesVisiveis = [...divisoesDaRegional];
 
@@ -133,7 +130,6 @@ export const ListasConsulta = ({
             // Fallback: apenas a divisão do usuário
             query = query.eq('divisao_id', divisaoId);
           }
-        }
       }
 
       const { data, error } = await query;
