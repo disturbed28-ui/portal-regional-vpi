@@ -1,14 +1,23 @@
 
 
-## Confirmação
+## Plano: Corrigir status do estágio que não atualiza após todas as aprovações
 
-O plano já está com o critério de **50 dias**. Nenhuma alteração necessária no plano apresentado anteriormente.
+### Causa raiz
 
-### Resumo das alterações a implementar
+A tabela `solicitacoes_estagio` não tem uma **policy RLS de UPDATE para diretores**. Quando o último aprovador (que não é admin) aprova, o código tenta fazer `UPDATE ... SET status = 'Em Estagio'`, mas o banco **rejeita silenciosamente** por falta de permissão RLS. A tabela de treinamento (`solicitacoes_treinamento`) já tem essa policy — foi adicionada na migration `20260112222058`, mas nunca foi replicada para estágios.
 
-1. **`src/pages/Index.tsx`** — Incluir `adm_regional` na detecção de role regional
-2. **`src/hooks/usePendencias.tsx`** — Novo tipo `desligamento_compulsorio`: 2+ parcelas vencidas E maior atraso >= **50 dias**. Visível para `admin`, `regional` (inclui `adm_regional`)
-3. **`src/components/PendenciasModal.tsx`** — Card visual vermelho com alerta "DESLIGAMENTO COMPULSÓRIO"
+### Solução
 
-Critério: `parcelas >= 2 AND maior_atraso_dias >= 50`
+Uma única migration SQL que:
+
+1. **Adiciona a policy RLS de UPDATE** na tabela `solicitacoes_estagio` para diretores regionais e de divisão (idêntica à que já existe em `solicitacoes_treinamento`):
+   - `diretor_regional` e `diretor_divisao` podem atualizar solicitações da sua regional
+
+2. **Corrige o registro travado do Lenhador** (solicitação `19615fd8-...`):
+   - Atualiza status de `'Em Aprovacao'` para `'Em Estagio'`
+   - Define `data_aprovacao` como a data da última aprovação
+
+### Nenhuma alteração em código front-end
+
+O código em `useAprovacoesEstagiosPendentes.tsx` já faz a lógica correta (linhas 240-246 e 320-326). O problema é exclusivamente de permissão no banco.
 
