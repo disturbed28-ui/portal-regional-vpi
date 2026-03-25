@@ -87,6 +87,31 @@ function normalizarComandoParaSalvar(texto: string): string {
   return normalizado;
 }
 
+/**
+ * Parseia cargo_grau_texto em cargo_nome e grau separados.
+ * Ex: "Adm. Divisão (Grau VI)" → { cargo_nome: "Adm. Divisão", grau: "VI" }
+ * Ex: "Full Grau VIII" → { cargo_nome: "Full", grau: "VIII" }
+ * Ex: "Camiseta (Grau X)" → { cargo_nome: "Camiseta", grau: "X" }
+ */
+function parseCargoGrau(cargoGrauTexto: string): { cargo_nome: string; grau: string | null } {
+  if (!cargoGrauTexto) return { cargo_nome: '', grau: null };
+  
+  // Padrão com parênteses: "Diretor Regional (Grau V)"
+  const matchParenteses = cargoGrauTexto.match(/(.+?)\s*\(Grau\s+([IVX]+)\)/i);
+  if (matchParenteses) {
+    return { cargo_nome: matchParenteses[1].trim(), grau: matchParenteses[2].toUpperCase() };
+  }
+  
+  // Padrão com espaço: "Full Grau VIII"
+  const matchEspaco = cargoGrauTexto.match(/(.+?)\s+Grau\s+([IVX]+)/i);
+  if (matchEspaco) {
+    return { cargo_nome: matchEspaco[1].trim(), grau: matchEspaco[2].toUpperCase() };
+  }
+  
+  // Sem grau
+  return { cargo_nome: cargoGrauTexto.trim(), grau: null };
+}
+
 // Função para normalizar texto de divisão para busca (usado internamente)
 function normalizarDivisaoTexto(texto: string): string {
   return texto
