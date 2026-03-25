@@ -87,6 +87,31 @@ function normalizarComandoParaSalvar(texto: string): string {
   return normalizado;
 }
 
+/**
+ * Parseia cargo_grau_texto em cargo_nome e grau separados.
+ * Ex: "Adm. Divisão (Grau VI)" → { cargo_nome: "Adm. Divisão", grau: "VI" }
+ * Ex: "Full Grau VIII" → { cargo_nome: "Full", grau: "VIII" }
+ * Ex: "Camiseta (Grau X)" → { cargo_nome: "Camiseta", grau: "X" }
+ */
+function parseCargoGrau(cargoGrauTexto: string): { cargo_nome: string; grau: string | null } {
+  if (!cargoGrauTexto) return { cargo_nome: '', grau: null };
+  
+  // Padrão com parênteses: "Diretor Regional (Grau V)"
+  const matchParenteses = cargoGrauTexto.match(/(.+?)\s*\(Grau\s+([IVX]+)\)/i);
+  if (matchParenteses) {
+    return { cargo_nome: matchParenteses[1].trim(), grau: matchParenteses[2].toUpperCase() };
+  }
+  
+  // Padrão com espaço: "Full Grau VIII"
+  const matchEspaco = cargoGrauTexto.match(/(.+?)\s+Grau\s+([IVX]+)/i);
+  if (matchEspaco) {
+    return { cargo_nome: matchEspaco[1].trim(), grau: matchEspaco[2].toUpperCase() };
+  }
+  
+  // Sem grau
+  return { cargo_nome: cargoGrauTexto.trim(), grau: null };
+}
+
 // Função para normalizar texto de divisão para busca (usado internamente)
 function normalizarDivisaoTexto(texto: string): string {
   return texto
@@ -490,13 +515,18 @@ afastados_ignorados: z.array(z.object({
         const hierarquia = await buscarIdsHierarquia(supabase, item.divisao_texto, item.regional_texto);
         
         // NORMALIZAR TEXTOS ANTES DE SALVAR
+        // DERIVAR cargo_nome e grau a partir de cargo_grau_texto
+        const parsedCargo = parseCargoGrau(item.cargo_grau_texto);
+        
         novosEnriquecidos.push({
           ...item,
           divisao_texto: normalizarDivisaoParaSalvar(item.divisao_texto),
           regional_texto: normalizarRegionalParaSalvar(item.regional_texto),
           comando_texto: normalizarComandoParaSalvar(item.comando_texto),
           divisao_id: hierarquia.divisao_id,
-          regional_id: hierarquia.regional_id
+          regional_id: hierarquia.regional_id,
+          cargo_nome: parsedCargo.cargo_nome || item.cargo_nome || null,
+          grau: parsedCargo.grau || item.grau || null
         });
       }
       
@@ -552,6 +582,13 @@ afastados_ignorados: z.array(z.object({
         }
         if (updateData.comando_texto) {
           updateDataEnriquecido.comando_texto = normalizarComandoParaSalvar(updateData.comando_texto);
+        }
+        
+        // DERIVAR cargo_nome e grau a partir de cargo_grau_texto
+        if (updateData.cargo_grau_texto) {
+          const parsedCargo = parseCargoGrau(updateData.cargo_grau_texto);
+          updateDataEnriquecido.cargo_nome = parsedCargo.cargo_nome || null;
+          updateDataEnriquecido.grau = parsedCargo.grau || null;
         }
         
         // Buscar IDs de hierarquia
