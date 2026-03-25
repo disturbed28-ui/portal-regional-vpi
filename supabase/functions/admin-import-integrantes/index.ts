@@ -584,6 +584,13 @@ afastados_ignorados: z.array(z.object({
           updateDataEnriquecido.comando_texto = normalizarComandoParaSalvar(updateData.comando_texto);
         }
         
+        // DERIVAR cargo_nome e grau a partir de cargo_grau_texto
+        if (updateData.cargo_grau_texto) {
+          const parsedCargo = parseCargoGrau(updateData.cargo_grau_texto);
+          updateDataEnriquecido.cargo_nome = parsedCargo.cargo_nome || null;
+          updateDataEnriquecido.grau = parsedCargo.grau || null;
+        }
+        
         // Buscar IDs de hierarquia
         if (updateData.divisao_texto) {
           const hierarquia = await buscarIdsHierarquia(supabase, updateData.divisao_texto, updateData.regional_texto);
