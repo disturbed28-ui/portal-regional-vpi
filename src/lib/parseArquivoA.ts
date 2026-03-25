@@ -176,14 +176,53 @@ export async function parseArquivoA(file: File): Promise<ParseArquivoAResult> {
         let divisaoAtual = '';
         
         // Palavras que NÃO devem ser consideradas como divisão
-        // São cabeçalhos ou totalizadores do relatório
         const palavrasIgnorar = ['numero', 'total', 'total:', 'integrantes', 'id', 'nome', 'data'];
         
-        // Sub-graus que NÃO são divisões - são categorias dentro de uma divisão
+        // Sub-graus que NÃO são divisões
         const subgrausIgnorar = [
           'FULL', 'PP', 'MEIO', 'CAMISETA', 'PROSPECT', 
           'HANG AROUND', 'HANGAROUND', 'HA', 'HANG-AROUND'
         ];
+        
+        // ========================================================
+        // DETECÇÃO DINÂMICA DE COLUNAS
+        // ========================================================
+        // O Arquivo A pode ter diferentes layouts:
+        //   Formato antigo (3 cols): ID | Nome | Data
+        //   Formato novo  (5 cols): ID | Nome | Cargo | Data | Count
+        // Detectamos o cabeçalho para mapear a posição correta
+        // ========================================================
+        let colNome = 1;    // default: coluna 1
+        let colData = 2;    // default: coluna 2 (formato antigo)
+        
+        // Procurar linha de cabeçalho nas primeiras 10 linhas
+        for (let i = 0; i < Math.min(jsonData.length, 10); i++) {
+          const linha = jsonData[i];
+          if (!linha) continue;
+          
+          for (let c = 0; c < linha.length; c++) {
+            const valor = String(linha[c] || '').toLowerCase().trim();
+            // Detectar coluna de data: "dt.adm.", "data", "data admissão", etc.
+            if (valor.includes('dt.adm') || valor.includes('dt adm') || 
+                valor === 'data' || valor.includes('data_admissao') ||
+                valor.includes('data admiss')) {
+              colData = c;
+              console.log(`[parseArquivoA] Cabeçalho detectado na linha ${i + 1}: coluna de data no índice ${c} ("${linha[c]}")`);
+              break;
+            }
+          }
+          
+          // Se encontrou coluna de nome também
+          for (let c = 0; c < linha.length; c++) {
+            const valor = String(linha[c] || '').toLowerCase().trim();
+            if (valor === 'apelido' || valor === 'nome' || valor === 'nome_colete') {
+              colNome = c;
+              break;
+            }
+          }
+        }
+        
+        console.log(`[parseArquivoA] Layout detectado: colNome=${colNome}, colData=${colData}`);
         
         for (let i = 0; i < jsonData.length; i++) {
           const linha = jsonData[i];
@@ -197,7 +236,6 @@ export async function parseArquivoA(file: File): Promise<ParseArquivoAResult> {
           if (primeiraColunaUpper.includes('REGIONAL')) {
             regionalAtual = primeiraColuna;
             regionaisSet.add(regionalAtual);
-            // Resetar divisão ao mudar de regional - integrantes do comando usarão a regional
             divisaoAtual = '';
             console.log(`[parseArquivoA] Regional detectada: ${regionalAtual}`);
             continue;
@@ -206,27 +244,22 @@ export async function parseArquivoA(file: File): Promise<ParseArquivoAResult> {
           // Detectar se é uma linha de integrante (primeira coluna é número)
           const numeroId = parseInt(primeiraColuna);
           if (!isNaN(numeroId) && numeroId > 0) {
-            // É uma linha de integrante
-            // Estrutura típica: ID | Nome | Data
-            const nome = String(linha[1] || '').trim();
-            const dataAdmissao = formatarData(linha[2]);
+            const nome = String(linha[colNome] || '').trim();
+            const dataAdmissao = formatarData(linha[colData]);
             
             if (nome) {
-              // Determinar qual divisão usar para a chave de busca
-              // Se não tem divisão válida (está no Comando Regional), usar a regional
               const divisaoParaChave = divisaoAtual || regionalAtual;
               
               const integrante: ArquivoAIntegrante = {
                 id_integrante: numeroId,
                 nome_colete: nome,
                 data_admissao: dataAdmissao,
-                divisao_original: divisaoAtual || regionalAtual, // Guardar regional se não tem divisão
+                divisao_original: divisaoAtual || regionalAtual,
                 regional_original: regionalAtual
               };
               
               integrantes.push(integrante);
               
-              // Adicionar ao dicionário com chave principal
               const chave = criarChaveBusca(nome, divisaoParaChave);
               const dadosIntegrante = {
                 id: numeroId,
@@ -235,8 +268,6 @@ export async function parseArquivoA(file: File): Promise<ParseArquivoAResult> {
               };
               dicionario.set(chave, dadosIntegrante);
               
-              // Se integrante está em uma divisão, adicionar chave alternativa com regional
-              // Isso permite matching quando o Arquivo B usa regional como divisão
               if (divisaoAtual && divisaoAtual !== regionalAtual) {
                 const chaveAlternativa = criarChaveBusca(nome, regionalAtual);
                 if (!dicionario.has(chaveAlternativa)) {
@@ -245,21 +276,17 @@ export async function parseArquivoA(file: File): Promise<ParseArquivoAResult> {
               }
             }
           } else if (primeiraColuna && primeiraColuna.length > 2) {
-            // Potencial linha de divisão
-            // Verificar se NÃO é uma palavra a ignorar (cabeçalhos, totalizadores)
             const semNumeros = !/^\d+$/.test(primeiraColuna);
             const ehPalavraIgnorar = palavrasIgnorar.some(p => 
               primeiraColunaLower === p || primeiraColunaLower.startsWith(p + ':')
             );
             
-            // Verificar se NÃO é um sub-grau (FULL, PP, MEIO, CAMISETA, etc.)
             const ehSubgrau = subgrausIgnorar.includes(primeiraColunaUpper);
             
-            // Só considerar como divisão se começa com "DIVISÃO" ou "DIVISAO"
             const pareceSerDivisao = 
               primeiraColunaUpper.startsWith('DIVISÃO') ||
               primeiraColunaUpper.startsWith('DIVISAO') ||
-              primeiraColunaUpper.startsWith('DIVISÂO'); // typo comum
+              primeiraColunaUpper.startsWith('DIVISÂO');
             
             if (semNumeros && !ehPalavraIgnorar && !ehSubgrau && pareceSerDivisao) {
               divisaoAtual = primeiraColuna;
@@ -276,6 +303,13 @@ export async function parseArquivoA(file: File): Promise<ParseArquivoAResult> {
           regionais: regionaisSet.size,
           divisoes: divisoesSet.size
         });
+        
+        // Validar se datas foram parseadas (sanity check)
+        const integrantesComData = integrantes.filter(i => i.data_admissao !== null);
+        console.log(`[parseArquivoA] Integrantes com data de admissão: ${integrantesComData.length}/${integrantes.length}`);
+        if (integrantes.length > 0 && integrantesComData.length === 0) {
+          console.warn('[parseArquivoA] ⚠️ NENHUMA data de admissão foi parseada! Verifique o layout do arquivo.');
+        }
         
         resolve({
           integrantes,
