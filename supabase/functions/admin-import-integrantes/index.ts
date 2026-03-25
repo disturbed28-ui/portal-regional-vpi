@@ -515,13 +515,18 @@ afastados_ignorados: z.array(z.object({
         const hierarquia = await buscarIdsHierarquia(supabase, item.divisao_texto, item.regional_texto);
         
         // NORMALIZAR TEXTOS ANTES DE SALVAR
+        // DERIVAR cargo_nome e grau a partir de cargo_grau_texto
+        const parsedCargo = parseCargoGrau(item.cargo_grau_texto);
+        
         novosEnriquecidos.push({
           ...item,
           divisao_texto: normalizarDivisaoParaSalvar(item.divisao_texto),
           regional_texto: normalizarRegionalParaSalvar(item.regional_texto),
           comando_texto: normalizarComandoParaSalvar(item.comando_texto),
           divisao_id: hierarquia.divisao_id,
-          regional_id: hierarquia.regional_id
+          regional_id: hierarquia.regional_id,
+          cargo_nome: parsedCargo.cargo_nome || item.cargo_nome || null,
+          grau: parsedCargo.grau || item.grau || null
         });
       }
       
