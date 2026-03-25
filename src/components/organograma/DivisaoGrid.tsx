@@ -6,12 +6,14 @@ interface DivisaoGridProps {
 }
 
 const getBadges = (integrante: IntegranteComFoto) => {
-  const badges: ('sgt_armas' | 'caveira' | 'caveira_suplente' | 'batedor' | 'combate_insano')[] = [];
+  const badges: ('sgt_armas' | 'caveira' | 'caveira_suplente' | 'batedor' | 'combate_insano' | 'lobo' | 'ursinho')[] = [];
   if (integrante.sgt_armas) badges.push('sgt_armas');
   if (integrante.caveira) badges.push('caveira');
   if (integrante.caveira_suplente) badges.push('caveira_suplente');
   if (integrante.batedor) badges.push('batedor');
   if (integrante.combate_insano) badges.push('combate_insano');
+  if (integrante.lobo) badges.push('lobo');
+  if (integrante.ursinho) badges.push('ursinho');
   return badges;
 };
 

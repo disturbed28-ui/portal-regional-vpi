@@ -1,4 +1,4 @@
-import { Shield, Skull, HardHat, Bike, Swords } from 'lucide-react';
+import { Shield, Skull, HardHat, Bike, Swords, Dog, Baby } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import skullIcon from '@/assets/skull_icon.png';
@@ -9,7 +9,7 @@ interface IntegranteListItemProps {
   grau?: string;
   divisao?: string;
   foto?: string | null;
-  badges?: ('sgt_armas' | 'caveira' | 'caveira_suplente' | 'batedor' | 'combate_insano')[];
+  badges?: ('sgt_armas' | 'caveira' | 'caveira_suplente' | 'batedor' | 'combate_insano' | 'lobo' | 'ursinho')[];
   onClick?: () => void;
 }
 
@@ -18,7 +18,9 @@ const badgeConfig = {
   caveira: { icon: Skull, label: 'Caveira' },
   caveira_suplente: { icon: HardHat, label: 'Caveira Suplente' },
   batedor: { icon: Bike, label: 'Batedor' },
-  combate_insano: { icon: Swords, label: 'Combate Insano' }
+  combate_insano: { icon: Swords, label: 'Combate Insano' },
+  lobo: { icon: Dog, label: 'Lobo' },
+  ursinho: { icon: Baby, label: 'Ursinho' },
 };
 
 export const IntegranteListItem = ({
