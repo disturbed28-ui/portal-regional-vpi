@@ -19,6 +19,8 @@ export interface IntegranteComFoto {
   caveira_suplente: boolean;
   batedor: boolean;
   combate_insano: boolean;
+  lobo: boolean;
+  ursinho: boolean;
 }
 
 interface HierarquiaRegional {
@@ -101,6 +103,8 @@ export const useOrganogramaData = (regionalId: string | null) => {
           caveira_suplente: i.caveira_suplente || false,
           batedor: i.batedor || false,
           combate_insano: i.combate_insano || false,
+          lobo: i.lobo || false,
+          ursinho: i.ursinho || false,
         }));
 
         // 4. Funções auxiliares para comparação flexível de cargos
