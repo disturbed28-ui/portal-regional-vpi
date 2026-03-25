@@ -1,4 +1,6 @@
-import { Shield, Skull, HardHat, Bike, Swords, Dog, Baby } from 'lucide-react';
+import { Shield, Skull, HardHat, Bike, Swords } from 'lucide-react';
+import { LoboIcon } from '@/components/icons/LoboIcon';
+import { UrsinhoIcon } from '@/components/icons/UrsinhoIcon';
 import { Card, CardContent } from '@/components/ui/card';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import skullIcon from '@/assets/skull_icon.png';
@@ -18,8 +20,8 @@ const badgeConfig = {
   caveira_suplente: { icon: HardHat, label: 'Caveira Suplente' },
   batedor: { icon: Bike, label: 'Batedor' },
   combate_insano: { icon: Swords, label: 'Combate Insano' },
-  lobo: { icon: Dog, label: 'Lobo' },
-  ursinho: { icon: Baby, label: 'Ursinho' },
+  lobo: { icon: LoboIcon, label: 'Lobo' },
+  ursinho: { icon: UrsinhoIcon, label: 'Ursinho' },
 };
 
 export const HierarchyCard = ({
