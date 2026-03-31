@@ -265,8 +265,8 @@ async function parseEventComponents(originalTitle: string): Promise<ParsedEvent>
       subtipo = 'Arrecadacao';
     }
   }
-  // Bate e Volta (antes de reunião para não confundir com bate-papo)
-  else if (lower.includes('bate e volta')) {
+  // Bate e Volta / Bate-Volta (antes de reunião para não confundir com bate-papo)
+  else if (lower.includes('bate e volta') || lower.includes('bate-volta') || lower.includes('bate volta')) {
     tipoEvento = 'Bate e Volta';
   }
   // Reunião (incluindo bate-papo) - múltiplas formas de detecção para diferentes encodings
@@ -280,8 +280,8 @@ async function parseEventComponents(originalTitle: string): Promise<ParsedEvent>
   ) {
     tipoEvento = 'Reuniao';
   }
-  // Bonde Insano
-  else if (lower.includes('bonde insano') || lower.includes('bonde')) {
+  // Bonde / Bonde Treino / Bonde Insano / Viagem Insana
+  else if (lower.includes('bonde insano') || lower.includes('bonde') || lower.includes('viagem insana')) {
     tipoEvento = 'Bonde Insano';
   }
   
