@@ -950,6 +950,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
   
   const getIcon = () => {
     if (isDesligamento) return '🚫';
+    if (isDadosDesatualizados) return '📊';
     if (isAjusteRoles) return '🔐';
     if (isMensalidade) return '💰';
     if (isAfastamento) return '🏥';
