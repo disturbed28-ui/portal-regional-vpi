@@ -18,9 +18,10 @@ import {
   FileText,
   User,
   AlertTriangle,
-  ArrowRight
+  ArrowRight,
+  RefreshCw
 } from "lucide-react";
-import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes } from "@/hooks/usePendencias";
+import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes } from "@/hooks/usePendencias";
 
 interface PendenciasModalProps {
   pendencias: Pendencia[];
@@ -907,6 +908,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
   const isEstagioIntegrante = pendencia.tipo === 'estagio_integrante';
   const isAjusteRoles = pendencia.tipo === 'ajuste_roles';
   const isDesligamento = pendencia.tipo === 'desligamento_compulsorio';
+  const isDadosDesatualizados = pendencia.tipo === 'dados_desatualizados';
   const detalhes = pendencia.detalhes_completos;
   
   // LOG DE DEBUG TEMPORÁRIO
@@ -927,6 +929,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
   
   const getBorderColor = () => {
     if (isDesligamento) return 'border-red-700';
+    if (isDadosDesatualizados) return 'border-amber-500';
     if (isAjusteRoles) return 'border-emerald-500';
     if (isMensalidade && isCritico) return 'border-red-700';
     if (isMensalidade) return 'border-red-500';
@@ -947,6 +950,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
   
   const getIcon = () => {
     if (isDesligamento) return '🚫';
+    if (isDadosDesatualizados) return '📊';
     if (isAjusteRoles) return '🔐';
     if (isMensalidade) return '💰';
     if (isAfastamento) return '🏥';
@@ -973,6 +977,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
   
   const getLabel = () => {
     if (isDesligamento) return 'DESLIGAMENTO';
+    if (isDadosDesatualizados) return 'Dados Desatualizados';
     if (isAjusteRoles) return 'Ajuste Permissões';
     if (isMensalidade) return 'Mensalidade';
     if (isAfastamento) return 'Afastamento';
@@ -1098,6 +1103,53 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
             
             {/* Card de Ajuste de Roles */}
             {isAjusteRoles && detalhes && <AjusteRolesDetalhesCard detalhes={detalhes as AjusteRolesDetalhes} />}
+
+            {/* Card de Dados Desatualizados */}
+            {isDadosDesatualizados && detalhes && (() => {
+              const d = detalhes as DadosDesatualizadosDetalhes;
+              return (
+                <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-700">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center gap-3 p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg border border-amber-300 dark:border-amber-700">
+                      <RefreshCw className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                      <div>
+                        <p className="font-semibold text-amber-800 dark:text-amber-300 text-sm">
+                          {d.label} — Atualização Necessária
+                        </p>
+                        <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+                          {d.ultima_atualizacao
+                            ? `Última atualização: ${format(new Date(d.ultima_atualizacao), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} (${d.dias_desde_atualizacao} dias atrás)`
+                            : 'Dados nunca foram importados'}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Os dados precisam ser atualizados regularmente (a cada 7 dias) para manter a precisão das informações no portal.
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            })()}
+
+            {/* Botão para ir a Gestão ADM */}
+            {isDadosDesatualizados && (
+              <Button 
+                onClick={() => {
+                  const d = detalhes as DadosDesatualizadosDetalhes;
+                  const tabMap: Record<string, string> = {
+                    integrantes: 'integrantes',
+                    inadimplencia: 'inadimplencia',
+                    aniversariantes: 'aniversariantes',
+                  };
+                  navigate(`/gestao-adm?mainTab=${tabMap[d.tipo_dado] || 'integrantes'}`);
+                }}
+                className="w-full"
+                variant="default"
+              >
+                <ArrowRight className="h-4 w-4 mr-2" />
+                Ir para Gestão ADM
+              </Button>
+            )}
             
             {/* Botão Resolver para Anomalias */}
             {isDelta && (
@@ -1106,7 +1158,6 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
                   const deltaDetalhes = detalhes as DeltaDetalhes | null;
                   const isAfastadoDelta = deltaDetalhes?.tipo_delta === 'SUMIU_AFASTADOS' || 
                                           deltaDetalhes?.tipo_delta === 'NOVO_AFASTADOS';
-                  // Para deltas de afastados, ir para Relatórios; caso contrário, ir para Admin
                   navigate(isAfastadoDelta ? '/relatorios' : '/admin/integrantes');
                 }}
                 className="w-full"

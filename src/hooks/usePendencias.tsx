@@ -115,17 +115,24 @@ interface DesligamentoCompulsorioDetalhes {
   ultima_divida: string;
 }
 
+interface DadosDesatualizadosDetalhes {
+  tipo_dado: 'integrantes' | 'inadimplencia' | 'aniversariantes';
+  label: string;
+  ultima_atualizacao: string | null;
+  dias_desde_atualizacao: number | null;
+}
+
 interface Pendencia {
   nome_colete: string;
   divisao_texto: string;
-  tipo: 'mensalidade' | 'afastamento' | 'delta' | 'evento_cancelado' | 'treinamento_aprovador' | 'treinamento_integrante' | 'estagio_aprovador' | 'estagio_integrante' | 'ajuste_roles' | 'desligamento_compulsorio';
+  tipo: 'mensalidade' | 'afastamento' | 'delta' | 'evento_cancelado' | 'treinamento_aprovador' | 'treinamento_integrante' | 'estagio_aprovador' | 'estagio_integrante' | 'ajuste_roles' | 'desligamento_compulsorio' | 'dados_desatualizados';
   detalhe: string;
   data_ref: string;
   registro_id: number;
-  detalhes_completos: MensalidadeDetalhes | AfastamentoDetalhes | DeltaDetalhes | EventoCanceladoDetalhes | TreinamentoAprovadorDetalhes | TreinamentoIntegranteDetalhes | EstagioAprovadorDetalhes | EstagioIntegranteDetalhes | AjusteRolesDetalhes | DesligamentoCompulsorioDetalhes;
+  detalhes_completos: MensalidadeDetalhes | AfastamentoDetalhes | DeltaDetalhes | EventoCanceladoDetalhes | TreinamentoAprovadorDetalhes | TreinamentoIntegranteDetalhes | EstagioAprovadorDetalhes | EstagioIntegranteDetalhes | AjusteRolesDetalhes | DesligamentoCompulsorioDetalhes | DadosDesatualizadosDetalhes;
 }
 
-export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes };
+export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes };
 
 export const usePendencias = (
   userId: string | undefined,
@@ -907,6 +914,99 @@ export const usePendencias = (
           todasPendencias.filter(p => p.tipo === 'ajuste_roles').length);
       }
 
+      // 8. Verificar dados desatualizados (> 7 dias)
+      // Somente para roles que podem atualizar dados
+      if (userRole === 'admin' || userRole === 'diretor_regional' || userRole === 'regional') {
+        const LIMITE_DIAS = 7;
+        const agora = new Date();
+        const calcDias = (d: string | null) => {
+          if (!d) return null;
+          return Math.floor((agora.getTime() - new Date(d).getTime()) / (1000 * 60 * 60 * 24));
+        };
+
+        // Integrantes
+        const { data: cargaInt } = await supabase
+          .from('cargas_historico')
+          .select('data_carga')
+          .eq('tipo_carga', 'integrantes')
+          .order('data_carga', { ascending: false })
+          .limit(1);
+        const diasInt = calcDias(cargaInt?.[0]?.data_carga || null);
+        if (diasInt === null || diasInt > LIMITE_DIAS) {
+          todasPendencias.push({
+            nome_colete: 'Sistema',
+            divisao_texto: 'Gestão ADM',
+            tipo: 'dados_desatualizados',
+            detalhe: diasInt !== null 
+              ? `Dados de Integrantes não são atualizados há ${diasInt} dias` 
+              : 'Dados de Integrantes nunca foram importados',
+            data_ref: cargaInt?.[0]?.data_carga || new Date().toISOString(),
+            registro_id: 0,
+            detalhes_completos: {
+              tipo_dado: 'integrantes',
+              label: 'Integrantes',
+              ultima_atualizacao: cargaInt?.[0]?.data_carga || null,
+              dias_desde_atualizacao: diasInt,
+            } as DadosDesatualizadosDetalhes
+          });
+        }
+
+        // Inadimplência (mensalidades)
+        const { data: cargaMens } = await supabase
+          .from('mensalidades_atraso')
+          .select('data_carga')
+          .eq('ativo', true)
+          .order('data_carga', { ascending: false })
+          .limit(1);
+        const diasMens = calcDias(cargaMens?.[0]?.data_carga || null);
+        if (diasMens === null || diasMens > LIMITE_DIAS) {
+          todasPendencias.push({
+            nome_colete: 'Sistema',
+            divisao_texto: 'Gestão ADM',
+            tipo: 'dados_desatualizados',
+            detalhe: diasMens !== null
+              ? `Dados de Inadimplência não são atualizados há ${diasMens} dias`
+              : 'Dados de Inadimplência nunca foram importados',
+            data_ref: cargaMens?.[0]?.data_carga || new Date().toISOString(),
+            registro_id: 0,
+            detalhes_completos: {
+              tipo_dado: 'inadimplencia',
+              label: 'Inadimplência',
+              ultima_atualizacao: cargaMens?.[0]?.data_carga || null,
+              dias_desde_atualizacao: diasMens,
+            } as DadosDesatualizadosDetalhes
+          });
+        }
+
+        // Aniversariantes
+        const { data: ultimoAniv } = await supabase
+          .from('integrantes_portal')
+          .select('updated_at')
+          .not('data_nascimento', 'is', null)
+          .eq('ativo', true)
+          .order('updated_at', { ascending: false })
+          .limit(1);
+        const diasAniv = calcDias(ultimoAniv?.[0]?.updated_at || null);
+        if (diasAniv === null || diasAniv > LIMITE_DIAS) {
+          todasPendencias.push({
+            nome_colete: 'Sistema',
+            divisao_texto: 'Gestão ADM',
+            tipo: 'dados_desatualizados',
+            detalhe: diasAniv !== null
+              ? `Dados de Aniversariantes não são atualizados há ${diasAniv} dias`
+              : 'Dados de Aniversariantes nunca foram importados',
+            data_ref: ultimoAniv?.[0]?.updated_at || new Date().toISOString(),
+            registro_id: 0,
+            detalhes_completos: {
+              tipo_dado: 'aniversariantes',
+              label: 'Aniversários',
+              ultima_atualizacao: ultimoAniv?.[0]?.updated_at || null,
+              dias_desde_atualizacao: diasAniv,
+            } as DadosDesatualizadosDetalhes
+          });
+        }
+      }
+
       // Ordenar: desligamento_compulsorio primeiro, depois ajuste_roles, depois eventos cancelados, depois por data
       todasPendencias.sort((a, b) => {
         // Desligamento compulsório tem prioridade MÁXIMA
@@ -916,6 +1016,10 @@ export const usePendencias = (
         // Pendências de ajuste de roles têm prioridade alta
         if (a.tipo === 'ajuste_roles' && b.tipo !== 'ajuste_roles') return -1;
         if (b.tipo === 'ajuste_roles' && a.tipo !== 'ajuste_roles') return 1;
+        
+        // Dados desatualizados têm prioridade alta
+        if (a.tipo === 'dados_desatualizados' && b.tipo !== 'dados_desatualizados') return -1;
+        if (b.tipo === 'dados_desatualizados' && a.tipo !== 'dados_desatualizados') return 1;
         
         // Eventos cancelados têm prioridade alta (mas menor que ajuste_roles)
         if (a.tipo === 'evento_cancelado' && b.tipo !== 'evento_cancelado') return -1;

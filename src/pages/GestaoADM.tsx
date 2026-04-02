@@ -5,7 +5,11 @@ import { useScreenPermissionsBatch, getDefaultPermission } from "@/hooks/useScre
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Users, DollarSign, GraduationCap, Cake, Clock, FileEdit, History, ClipboardCheck, XCircle, List, Award, Image, RefreshCw } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ArrowLeft, Users, DollarSign, GraduationCap, Cake, Clock, FileEdit, History, ClipboardCheck, XCircle, List, Award, Image, RefreshCw, AlertTriangle } from "lucide-react";
+import { useUltimasAtualizacoes } from "@/hooks/useUltimasAtualizacoes";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { toast } from "@/hooks/use-toast";
 import { MensalidadesUploadCard } from "@/components/admin/MensalidadesUploadCard";
 import { DashboardInadimplencia } from "@/components/relatorios/DashboardInadimplencia";
@@ -64,6 +68,9 @@ const GestaoADM = () => {
 
   // Permissões da página principal
   const hasAccess = getPerm('/gestao-adm').hasAnyAccess;
+
+  // Buscar datas de última atualização
+  const { data: atualizacoes } = useUltimasAtualizacoes(!loading && hasAccess);
 
   // Permissões das abas principais
   const integrantesP = getPerm('/gestao-adm-integrantes');
@@ -261,16 +268,60 @@ const GestaoADM = () => {
         <Tabs defaultValue={initialMainTab} className="w-full">
           <div className="overflow-x-auto -mx-4 px-4 pb-2">
             <TabsList className="inline-flex w-max min-w-full h-auto bg-muted/50 p-1 gap-1">
-              {visibleTabs.map((tab) => (
-                <TabsTrigger
-                  key={tab.value}
-                  value={tab.value}
-                  className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                >
-                  <tab.icon className="h-4 w-4 shrink-0" />
-                  <span>{tab.label}</span>
-                </TabsTrigger>
-              ))}
+              <TooltipProvider delayDuration={300}>
+                {visibleTabs.map((tab) => {
+                  // Mapear valor da aba para o tipo de atualização
+                  const tipoMap: Record<string, string> = {
+                    integrantes: 'integrantes',
+                    inadimplencia: 'inadimplencia',
+                    aniversariantes: 'aniversariantes',
+                  };
+                  const atualizacao = atualizacoes?.find(a => a.tipo === tipoMap[tab.value]);
+                  const isDesatualizado = atualizacao?.desatualizado ?? false;
+                  const diasStr = atualizacao?.diasDesdeAtualizacao !== null && atualizacao?.diasDesdeAtualizacao !== undefined
+                    ? `${atualizacao.diasDesdeAtualizacao} dia(s)`
+                    : null;
+                  const dataFormatada = atualizacao?.ultimaAtualizacao
+                    ? format(new Date(atualizacao.ultimaAtualizacao), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+                    : null;
+                  const tooltipMsg = atualizacao
+                    ? isDesatualizado
+                      ? `⚠️ Última atualização há ${diasStr} (${dataFormatada}). Necessário atualizar!`
+                      : `✅ Atualizado há ${diasStr} (${dataFormatada})`
+                    : null;
+
+                  const tabTrigger = (
+                    <TabsTrigger
+                      key={tab.value}
+                      value={tab.value}
+                      className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm ${
+                        isDesatualizado ? 'text-amber-600 dark:text-amber-400 border border-amber-400/50' : ''
+                      }`}
+                    >
+                      <tab.icon className="h-4 w-4 shrink-0" />
+                      <span>{tab.label}</span>
+                      {isDesatualizado && (
+                        <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                      )}
+                    </TabsTrigger>
+                  );
+
+                  if (tooltipMsg) {
+                    return (
+                      <Tooltip key={tab.value}>
+                        <TooltipTrigger asChild>
+                          {tabTrigger}
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-xs text-xs">
+                          {tooltipMsg}
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  }
+
+                  return tabTrigger;
+                })}
+              </TooltipProvider>
             </TabsList>
           </div>
 
