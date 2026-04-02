@@ -914,6 +914,99 @@ export const usePendencias = (
           todasPendencias.filter(p => p.tipo === 'ajuste_roles').length);
       }
 
+      // 8. Verificar dados desatualizados (> 7 dias)
+      // Somente para roles que podem atualizar dados
+      if (userRole === 'admin' || userRole === 'diretor_regional' || userRole === 'regional') {
+        const LIMITE_DIAS = 7;
+        const agora = new Date();
+        const calcDias = (d: string | null) => {
+          if (!d) return null;
+          return Math.floor((agora.getTime() - new Date(d).getTime()) / (1000 * 60 * 60 * 24));
+        };
+
+        // Integrantes
+        const { data: cargaInt } = await supabase
+          .from('cargas_historico')
+          .select('data_carga')
+          .eq('tipo_carga', 'integrantes')
+          .order('data_carga', { ascending: false })
+          .limit(1);
+        const diasInt = calcDias(cargaInt?.[0]?.data_carga || null);
+        if (diasInt === null || diasInt > LIMITE_DIAS) {
+          todasPendencias.push({
+            nome_colete: 'Sistema',
+            divisao_texto: 'Gestão ADM',
+            tipo: 'dados_desatualizados',
+            detalhe: diasInt !== null 
+              ? `Dados de Integrantes não são atualizados há ${diasInt} dias` 
+              : 'Dados de Integrantes nunca foram importados',
+            data_ref: cargaInt?.[0]?.data_carga || new Date().toISOString(),
+            registro_id: 0,
+            detalhes_completos: {
+              tipo_dado: 'integrantes',
+              label: 'Integrantes',
+              ultima_atualizacao: cargaInt?.[0]?.data_carga || null,
+              dias_desde_atualizacao: diasInt,
+            } as DadosDesatualizadosDetalhes
+          });
+        }
+
+        // Inadimplência (mensalidades)
+        const { data: cargaMens } = await supabase
+          .from('mensalidades_atraso')
+          .select('data_carga')
+          .eq('ativo', true)
+          .order('data_carga', { ascending: false })
+          .limit(1);
+        const diasMens = calcDias(cargaMens?.[0]?.data_carga || null);
+        if (diasMens === null || diasMens > LIMITE_DIAS) {
+          todasPendencias.push({
+            nome_colete: 'Sistema',
+            divisao_texto: 'Gestão ADM',
+            tipo: 'dados_desatualizados',
+            detalhe: diasMens !== null
+              ? `Dados de Inadimplência não são atualizados há ${diasMens} dias`
+              : 'Dados de Inadimplência nunca foram importados',
+            data_ref: cargaMens?.[0]?.data_carga || new Date().toISOString(),
+            registro_id: 0,
+            detalhes_completos: {
+              tipo_dado: 'inadimplencia',
+              label: 'Inadimplência',
+              ultima_atualizacao: cargaMens?.[0]?.data_carga || null,
+              dias_desde_atualizacao: diasMens,
+            } as DadosDesatualizadosDetalhes
+          });
+        }
+
+        // Aniversariantes
+        const { data: ultimoAniv } = await supabase
+          .from('integrantes_portal')
+          .select('updated_at')
+          .not('data_nascimento', 'is', null)
+          .eq('ativo', true)
+          .order('updated_at', { ascending: false })
+          .limit(1);
+        const diasAniv = calcDias(ultimoAniv?.[0]?.updated_at || null);
+        if (diasAniv === null || diasAniv > LIMITE_DIAS) {
+          todasPendencias.push({
+            nome_colete: 'Sistema',
+            divisao_texto: 'Gestão ADM',
+            tipo: 'dados_desatualizados',
+            detalhe: diasAniv !== null
+              ? `Dados de Aniversariantes não são atualizados há ${diasAniv} dias`
+              : 'Dados de Aniversariantes nunca foram importados',
+            data_ref: ultimoAniv?.[0]?.updated_at || new Date().toISOString(),
+            registro_id: 0,
+            detalhes_completos: {
+              tipo_dado: 'aniversariantes',
+              label: 'Aniversários',
+              ultima_atualizacao: ultimoAniv?.[0]?.updated_at || null,
+              dias_desde_atualizacao: diasAniv,
+            } as DadosDesatualizadosDetalhes
+          });
+        }
+      }
+
       // Ordenar: desligamento_compulsorio primeiro, depois ajuste_roles, depois eventos cancelados, depois por data
       todasPendencias.sort((a, b) => {
         // Desligamento compulsório tem prioridade MÁXIMA
