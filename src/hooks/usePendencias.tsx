@@ -1017,6 +1017,10 @@ export const usePendencias = (
         if (a.tipo === 'ajuste_roles' && b.tipo !== 'ajuste_roles') return -1;
         if (b.tipo === 'ajuste_roles' && a.tipo !== 'ajuste_roles') return 1;
         
+        // Dados desatualizados têm prioridade alta
+        if (a.tipo === 'dados_desatualizados' && b.tipo !== 'dados_desatualizados') return -1;
+        if (b.tipo === 'dados_desatualizados' && a.tipo !== 'dados_desatualizados') return 1;
+        
         // Eventos cancelados têm prioridade alta (mas menor que ajuste_roles)
         if (a.tipo === 'evento_cancelado' && b.tipo !== 'evento_cancelado') return -1;
         if (b.tipo === 'evento_cancelado' && a.tipo !== 'evento_cancelado') return 1;
