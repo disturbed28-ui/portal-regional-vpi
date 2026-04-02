@@ -977,6 +977,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
   
   const getLabel = () => {
     if (isDesligamento) return 'DESLIGAMENTO';
+    if (isDadosDesatualizados) return 'Dados Desatualizados';
     if (isAjusteRoles) return 'Ajuste Permissões';
     if (isMensalidade) return 'Mensalidade';
     if (isAfastamento) return 'Afastamento';
