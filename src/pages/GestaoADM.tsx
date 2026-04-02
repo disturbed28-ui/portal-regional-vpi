@@ -69,6 +69,9 @@ const GestaoADM = () => {
   // Permissões da página principal
   const hasAccess = getPerm('/gestao-adm').hasAnyAccess;
 
+  // Buscar datas de última atualização
+  const { data: atualizacoes } = useUltimasAtualizacoes(!loading && hasAccess);
+
   // Permissões das abas principais
   const integrantesP = getPerm('/gestao-adm-integrantes');
   const inadimplenciaP = getPerm('/gestao-adm-inadimplencia');
