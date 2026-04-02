@@ -929,6 +929,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
   
   const getBorderColor = () => {
     if (isDesligamento) return 'border-red-700';
+    if (isDadosDesatualizados) return 'border-amber-500';
     if (isAjusteRoles) return 'border-emerald-500';
     if (isMensalidade && isCritico) return 'border-red-700';
     if (isMensalidade) return 'border-red-500';
