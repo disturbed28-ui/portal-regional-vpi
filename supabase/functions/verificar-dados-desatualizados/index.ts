@@ -118,6 +118,7 @@ serve(async (req) => {
       '/gestao-adm-integrantes-atualizacao',
       '/gestao-adm-inadimplencia',
       '/gestao-adm-aniversariantes',
+      '/gestao-adm-afastamentos',
     ];
 
     const { data: screens } = await supabaseAdmin
