@@ -8,6 +8,9 @@ export interface AfastadoExcel {
   tipo_afastamento: string;
   data_afastamento: string; // ISO format YYYY-MM-DD
   data_retorno_prevista: string; // ISO format YYYY-MM-DD
+  suspenso?: boolean; // true when dates were auto-generated (suspension)
+  dias_suspensao?: number; // default 30, editable by user
+  observacao_auto?: string; // auto-generated observation
 }
 
 export interface ParseAfastadosResult {
@@ -112,20 +115,25 @@ export async function parseAfastadosExcel(file: File): Promise<ParseAfastadosRes
         const data_afastamento = convertDateFormat(dt_afastamento);
         const data_retorno_prevista = convertDateFormat(dt_retorno);
 
-        if (!data_afastamento || !isValidDate(data_afastamento)) {
-          erros.push(`Linha ${i + 1} (${nome_colete}): Data de afastamento inválida`);
-          continue;
-        }
+        // Se não tem data de afastamento ou retorno, tratar como suspenso (default 30 dias)
+        const isSuspenso = !data_afastamento || !isValidDate(data_afastamento || '') || !data_retorno_prevista || !isValidDate(data_retorno_prevista || '');
 
-        if (!data_retorno_prevista || !isValidDate(data_retorno_prevista)) {
-          erros.push(`Linha ${i + 1} (${nome_colete}): Data de retorno inválida`);
-          continue;
-        }
+        let finalDataAfastamento = data_afastamento;
+        let finalDataRetorno = data_retorno_prevista;
+        const diasSuspensaoPadrao = 30;
 
-        // Validar que data_afastamento < data_retorno_prevista
-        if (new Date(data_afastamento) >= new Date(data_retorno_prevista)) {
-          erros.push(`Linha ${i + 1} (${nome_colete}): Data de afastamento deve ser anterior à data de retorno`);
-          continue;
+        if (isSuspenso) {
+          const hoje = new Date();
+          finalDataAfastamento = hoje.toISOString().split('T')[0];
+          const retorno = new Date(hoje);
+          retorno.setDate(retorno.getDate() + diasSuspensaoPadrao);
+          finalDataRetorno = retorno.toISOString().split('T')[0];
+        } else {
+          // Validar que data_afastamento < data_retorno_prevista
+          if (new Date(finalDataAfastamento!) >= new Date(finalDataRetorno!)) {
+            erros.push(`Linha ${i + 1} (${nome_colete}): Data de afastamento deve ser anterior à data de retorno`);
+            continue;
+          }
         }
 
         afastados.push({
@@ -133,9 +141,12 @@ export async function parseAfastadosExcel(file: File): Promise<ParseAfastadosRes
           nome_colete,
           divisao_texto: divisaoAtual,
           cargo_grau_texto: cargo_grau_texto ? String(cargo_grau_texto).trim() : null,
-          tipo_afastamento,
-          data_afastamento,
-          data_retorno_prevista,
+          tipo_afastamento: isSuspenso ? 'Suspenso' : tipo_afastamento,
+          data_afastamento: finalDataAfastamento!,
+          data_retorno_prevista: finalDataRetorno!,
+          suspenso: isSuspenso,
+          dias_suspensao: isSuspenso ? diasSuspensaoPadrao : undefined,
+          observacao_auto: isSuspenso ? `${nome_colete} está suspenso (sem datas no arquivo original)` : undefined,
         });
 
         // Contar por divisão

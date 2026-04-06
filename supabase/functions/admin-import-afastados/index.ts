@@ -9,6 +9,9 @@ interface AfastadoInput {
   tipo_afastamento: string;
   data_afastamento: string;
   data_retorno_prevista: string;
+  suspenso?: boolean;
+  dias_suspensao?: number;
+  observacao_auto?: string;
 }
 
 const normalizarTexto = (texto: string): string => {
@@ -222,6 +225,7 @@ Deno.serve(async (req) => {
           data_retorno_prevista: afastado.data_retorno_prevista,
           ativo: true,
           carga_historico_id: cargaHistorico.id,
+          observacoes: afastado.observacao_auto || null,
         };
 
         if (existente) {

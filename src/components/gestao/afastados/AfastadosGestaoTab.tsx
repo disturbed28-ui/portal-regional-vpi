@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, Calendar, UserCheck, AlertTriangle, Loader2 } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, Calendar, UserCheck, AlertTriangle, Loader2, ShieldAlert } from "lucide-react";
 import { parseAfastadosExcel, type AfastadoExcel } from "@/lib/afastadosParser";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -346,6 +346,18 @@ export const AfastadosGestaoTab = ({ userId, readOnly = false }: AfastadosGestao
             <CardDescription>Confira antes de confirmar a importação</CardDescription>
           </CardHeader>
           <CardContent>
+            {/* Suspensos warning */}
+            {preview.some(a => a.suspenso) && (
+              <Alert className="mb-4 border-orange-300 bg-orange-50 dark:bg-orange-950/30">
+                <ShieldAlert className="h-4 w-4 text-orange-600" />
+                <AlertDescription className="text-xs">
+                  <strong>Atenção:</strong> {preview.filter(a => a.suspenso).length} integrante(s) sem datas no arquivo.
+                  Foram marcados como <strong>Suspenso</strong> com prazo padrão de 30 dias.
+                  Você pode ajustar os dias abaixo.
+                </AlertDescription>
+              </Alert>
+            )}
+
             <div className="space-y-4">
               {Object.entries(afastadosPorDivisao).map(([divisao, afastados]) => (
                 <div key={divisao} className="space-y-2">
@@ -364,15 +376,49 @@ export const AfastadosGestaoTab = ({ userId, readOnly = false }: AfastadosGestao
                       </thead>
                       <tbody>
                         {afastados.map((afastado, idx) => (
-                          <tr key={idx} className="border-b">
+                          <tr key={idx} className={`border-b ${afastado.suspenso ? 'bg-orange-50/50 dark:bg-orange-950/20' : ''}`}>
                             <td className="p-1.5">{afastado.registro_id}</td>
-                            <td className="p-1.5 font-medium">{afastado.nome_colete}</td>
+                            <td className="p-1.5 font-medium">
+                              {afastado.nome_colete}
+                              {afastado.suspenso && (
+                                <Badge className="ml-1 bg-orange-500 text-[10px] px-1 py-0">Suspenso</Badge>
+                              )}
+                            </td>
                             <td className="p-1.5">{afastado.tipo_afastamento}</td>
                             <td className="p-1.5">
                               {format(new Date(afastado.data_afastamento), 'dd/MM', { locale: ptBR })}
                             </td>
                             <td className="p-1.5">
-                              {format(new Date(afastado.data_retorno_prevista), 'dd/MM', { locale: ptBR })}
+                              {afastado.suspenso ? (
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    max={365}
+                                    value={afastado.dias_suspensao || 30}
+                                    onChange={(e) => {
+                                      const dias = parseInt(e.target.value) || 30;
+                                      setPreview(prev => prev.map(a => {
+                                        if (a.registro_id === afastado.registro_id && a.suspenso) {
+                                          const retorno = new Date();
+                                          retorno.setDate(retorno.getDate() + dias);
+                                          return {
+                                            ...a,
+                                            dias_suspensao: dias,
+                                            data_retorno_prevista: retorno.toISOString().split('T')[0],
+                                            observacao_auto: `${a.nome_colete} está suspenso por ${dias} dias`,
+                                          };
+                                        }
+                                        return a;
+                                      }));
+                                    }}
+                                    className="w-12 h-5 text-center text-xs border rounded bg-background"
+                                  />
+                                  <span className="text-muted-foreground">dias</span>
+                                </div>
+                              ) : (
+                                format(new Date(afastado.data_retorno_prevista), 'dd/MM', { locale: ptBR })
+                              )}
                             </td>
                             <td className="p-1.5">{getStatusBadge(afastado.data_retorno_prevista)}</td>
                           </tr>
