@@ -424,7 +424,8 @@ export function useConsolidacaoIntegrantes(userId?: string) {
           removidos: removidosParaInativar,
           promovidos: removidosParaPromover,
           afastados_ignorados: removidosAfastados,
-          lote_id: lote.id
+          lote_id: lote.id,
+          skip_deltas: true
         }
       });
       

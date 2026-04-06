@@ -125,6 +125,7 @@ export const AfastadosGestaoTab = ({ userId, readOnly = false }: AfastadosGestao
           afastados: [],
           observacoes: `Baixa total via arquivo vazio - ${file?.name}`,
           permitir_vazio: true,
+          skip_deltas: true,
         },
       });
 
@@ -161,6 +162,7 @@ export const AfastadosGestaoTab = ({ userId, readOnly = false }: AfastadosGestao
         body: {
           afastados: preview,
           observacoes: `Carga via Excel - ${file?.name}`,
+          skip_deltas: true,
         },
       });
 

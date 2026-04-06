@@ -65,10 +65,11 @@ Deno.serve(async (req) => {
       throw new Error('Permissão negada. Você não tem acesso para importar afastados.');
     }
 
-    const { afastados, observacoes, permitir_vazio } = await req.json() as {
+    const { afastados, observacoes, permitir_vazio, skip_deltas } = await req.json() as {
       afastados: AfastadoInput[],
       observacoes?: string,
       permitir_vazio?: boolean,
+      skip_deltas?: boolean,
     };
 
     // Buscar afastados ativos atuais
@@ -264,8 +265,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Salvar deltas
-    if (deltasPendentes.length > 0) {
+    // Salvar deltas (skip se chamado pela Gestão ADM)
+    if (deltasPendentes.length > 0 && !skip_deltas) {
       for (const delta of deltasPendentes) {
         await supabase
           .from('deltas_pendentes')
