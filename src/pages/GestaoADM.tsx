@@ -173,9 +173,6 @@ const GestaoADM = () => {
     return visibleEstagioSubTabs[0]?.value || 'solicitacao';
   }, [searchParams, visibleEstagioSubTabs]);
 
-  const initialFlyersSubTab = useMemo(() => {
-    return visibleFlyersSubTabs[0]?.value || 'grau5';
-  }, [visibleFlyersSubTabs]);
 
   useEffect(() => {
     if (!loading && !hasAccess) {
