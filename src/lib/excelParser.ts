@@ -328,7 +328,8 @@ const detectarRegionalDaCarga = (excelData: ExcelIntegrante[]): string => {
 export const processDelta = (
   excelData: ExcelIntegrante[],
   dbData: IntegrantePortal[],
-  todosIntegrantesAtivos?: IntegrantePortal[]
+  todosIntegrantesAtivos?: IntegrantePortal[],
+  afastadosAtivosIds?: Set<number>
 ): ProcessDeltaResult => {
   const novos: ExcelIntegrante[] = [];
   const atualizados: Array<{ antigo: IntegrantePortal; novo: ExcelIntegrante }> = [];
@@ -392,6 +393,12 @@ export const processDelta = (
   const todosAtivos = todosIntegrantesAtivos || dbData;
   
   for (const candidato of candidatosRemocao) {
+    // Verificar se este integrante está com afastamento ativo
+    if (afastadosAtivosIds?.has(candidato.registro_id)) {
+      console.log('[processDelta] ⏸️ Afastado ativo, ignorando remoção:', candidato.nome_colete, `(${candidato.registro_id})`);
+      continue;
+    }
+    
     // Verificar se este integrante existe ATIVO em OUTRA regional
     const emOutraRegional = todosAtivos.find(
       i => i.registro_id === candidato.registro_id && 
