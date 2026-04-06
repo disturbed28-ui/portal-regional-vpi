@@ -31,6 +31,7 @@ const COR_ENTRADAS = 'hsl(142, 71%, 45%)';
 const COR_SAIDAS = 'hsl(0, 84%, 60%)';
 
 export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps) => {
+  const isMobile = useIsMobile();
   const [visualizacao, setVisualizacao] = useState<string>('total');
   const [periodo, setPeriodo] = useState<string>('todos');
   const [dataInicio, setDataInicio] = useState<Date | undefined>();
