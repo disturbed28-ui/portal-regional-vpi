@@ -940,6 +940,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
     if (isTreinamentoIntegrante) return 'border-blue-500';
     if (isEstagioAprovador) return 'border-fuchsia-500';
     if (isEstagioIntegrante) return 'border-cyan-500';
+    if (isFlyerPendente) return 'border-indigo-500';
     if (isDelta) {
       const deltaDetalhes = detalhes as DeltaDetalhes | null;
       if (!deltaDetalhes) return 'border-gray-500';
@@ -957,6 +958,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
     if (isAfastamento) return '🏥';
     if (isTreinamentoAprovador || isTreinamentoIntegrante) return '🎓';
     if (isEstagioAprovador || isEstagioIntegrante) return '🎖️';
+    if (isFlyerPendente) return '🖼️';
     if (isEventoCancelado) {
       const eventDetalhes = detalhes as EventoCanceladoDetalhes;
       return eventDetalhes?.status === 'cancelled' ? '📅' : '❌';
@@ -988,6 +990,10 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
     if (isEstagioAprovador) return 'Aprovação Estágio';
     if (isEstagioIntegrante) return 'Estágio';
     if (isDelta) return 'Anomalia';
+    if (isFlyerPendente) {
+      const flyerDet = detalhes as FlyerPendenteDetalhes;
+      return flyerDet?.status_flyer === 'solicitado' ? 'Flyer Aguardando' : 'Flyer Pendente';
+    }
     return 'Pendência';
   };
   
