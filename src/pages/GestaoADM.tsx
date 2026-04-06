@@ -472,51 +472,7 @@ const GestaoADM = () => {
 
                     {flyersP.hasAnyAccess && (
                       <TabsContent value="flyers" className="m-0">
-                        {visibleFlyersSubTabs.length > 0 ? (
-                          <Tabs defaultValue={initialFlyersSubTab} className="w-full">
-                            <div className="overflow-x-auto -mx-4 px-4 pb-2 mb-4">
-                              <TabsList className="inline-flex w-max min-w-full h-auto bg-muted/20 p-1 gap-1">
-                                {visibleFlyersSubTabs.map((subTab) => (
-                                  <TabsTrigger
-                                    key={subTab.value}
-                                    value={subTab.value}
-                                    className="flex-shrink-0 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                                  >
-                                    <span>{subTab.label}</span>
-                                  </TabsTrigger>
-                                ))}
-                              </TabsList>
-                            </div>
-
-                            {grau5P.hasAnyAccess && (
-                              <TabsContent value="grau5" className="m-0">
-                                <EstagioGrauV readOnly={grau5P.isReadOnly || flyersP.isReadOnly || estagioP.isReadOnly} />
-                              </TabsContent>
-                            )}
-
-                            {grau6P.hasAnyAccess && (
-                              <TabsContent value="grau6" className="m-0">
-                                <EstagioGrauVI readOnly={grau6P.isReadOnly || flyersP.isReadOnly || estagioP.isReadOnly} />
-                              </TabsContent>
-                            )}
-
-                            {filaP.hasAnyAccess && (
-                              <TabsContent value="fila" className="m-0">
-                                <FilaProducao readOnly={filaP.isReadOnly || flyersP.isReadOnly || estagioP.isReadOnly} />
-                              </TabsContent>
-                            )}
-                          </Tabs>
-                        ) : (
-                          <Card className="border-border/50">
-                            <CardContent className="flex flex-col items-center justify-center py-12 px-4 text-center">
-                              <Clock className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                              <h3 className="text-lg font-medium text-foreground mb-2">Sem permissões</h3>
-                              <p className="text-sm text-muted-foreground max-w-xs">
-                                Você não tem permissão para acessar nenhuma sub-aba de Flyers.
-                              </p>
-                            </CardContent>
-                          </Card>
-                        )}
+                        <FlyersEstagioList userId={user?.id} readOnly={flyersP.isReadOnly || estagioP.isReadOnly} />
                       </TabsContent>
                     )}
                   </Tabs>
