@@ -8,6 +8,9 @@ export interface AfastadoExcel {
   tipo_afastamento: string;
   data_afastamento: string; // ISO format YYYY-MM-DD
   data_retorno_prevista: string; // ISO format YYYY-MM-DD
+  suspenso?: boolean; // true when dates were auto-generated (suspension)
+  dias_suspensao?: number; // default 30, editable by user
+  observacao_auto?: string; // auto-generated observation
 }
 
 export interface ParseAfastadosResult {
