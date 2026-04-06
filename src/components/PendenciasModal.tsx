@@ -1108,6 +1108,32 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
             {isEstagioAprovador && detalhes && <EstagioAprovadorDetalhesCard detalhes={detalhes as EstagioAprovadorDetalhes} />}
             {isEstagioIntegrante && detalhes && <EstagioIntegranteDetalhesCard detalhes={detalhes as EstagioIntegranteDetalhes} />}
             
+            {/* Card de Flyer Pendente */}
+            {isFlyerPendente && detalhes && (() => {
+              const d = detalhes as FlyerPendenteDetalhes;
+              return (
+                <Card className="bg-background/50 border-indigo-300 dark:border-indigo-700">
+                  <CardContent className="p-4 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">🖼️</span>
+                      <div>
+                        <p className="text-sm font-medium">{d.cargo_estagio_nome} (Grau {d.grau_estagio})</p>
+                        <p className="text-xs text-muted-foreground">{d.divisao_texto}</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Status: <span className="font-medium">{d.status_flyer === 'pendente' ? 'Aguardando solicitação' : 'Solicitado, aguardando conclusão'}</span>
+                    </p>
+                    {d.data_aprovacao && (
+                      <p className="text-xs text-muted-foreground">
+                        Aprovado em: {format(new Date(d.data_aprovacao), 'dd/MM/yyyy', { locale: ptBR })}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })()}
+
             {/* Card de Ajuste de Roles */}
             {isAjusteRoles && detalhes && <AjusteRolesDetalhesCard detalhes={detalhes as AjusteRolesDetalhes} />}
 
