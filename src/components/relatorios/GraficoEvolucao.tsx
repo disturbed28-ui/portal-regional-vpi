@@ -35,12 +35,10 @@ export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps
   const [dataInicio, setDataInicio] = useState<Date | undefined>();
   const [dataFim, setDataFim] = useState<Date | undefined>();
 
-  if (!cargas || cargas.length === 0 || !divisoesUnicas || divisoesUnicas.length === 0) {
-    return <div className="text-center text-muted-foreground py-8">Dados insuficientes para gerar o gráfico</div>;
-  }
-
   // Filtrar cargas por período
   const cargasFiltradas = useMemo(() => {
+    if (!cargas || cargas.length === 0) return [];
+
     if (periodo === 'todos') return cargas;
 
     let inicio: Date;
