@@ -359,7 +359,9 @@ afastados_ignorados: z.array(z.object({
       })).optional()
     });
 
-    const { admin_user_id, novos, atualizados, removidos, promovidos, afastados_ignorados, transferencias_internas } = requestSchema.parse(await req.json());
+    const parsedBody = await req.json();
+    const { admin_user_id, novos, atualizados, removidos, promovidos, afastados_ignorados, transferencias_internas } = requestSchema.parse(parsedBody);
+    const skipDeltas = parsedBody.skip_deltas === true;
 
     console.log('[admin-import-integrantes] Validating admin:', admin_user_id);
     console.log('[admin-import-integrantes] Novos:', novos?.length || 0);
@@ -1186,8 +1188,8 @@ afastados_ignorados: z.array(z.object({
       }
     }
 
-    // Salvar deltas detectados no banco
-    if (deltasPendentes.length > 0) {
+    // Salvar deltas detectados no banco (skip se chamado pela Gestão ADM)
+    if (deltasPendentes.length > 0 && !skipDeltas) {
       console.log(`[admin-import-integrantes] Salvando ${deltasPendentes.length} deltas...`);
       
       // Buscar relações automáticas com SUMIU_AFASTADOS nas últimas 24h
