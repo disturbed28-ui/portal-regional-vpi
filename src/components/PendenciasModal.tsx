@@ -1140,6 +1140,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
                     integrantes: 'integrantes',
                     inadimplencia: 'inadimplencia',
                     aniversariantes: 'aniversariantes',
+                    afastados: 'afastamentos',
                   };
                   navigate(`/gestao-adm?mainTab=${tabMap[d.tipo_dado] || 'integrantes'}`);
                 }}
