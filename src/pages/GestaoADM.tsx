@@ -279,6 +279,7 @@ const GestaoADM = () => {
                     integrantes: 'integrantes',
                     inadimplencia: 'inadimplencia',
                     aniversariantes: 'aniversariantes',
+                    afastamentos: 'afastados',
                   };
                   const atualizacao = atualizacoes?.find(a => a.tipo === tipoMap[tab.value]);
                   const isDesatualizado = atualizacao?.desatualizado ?? false;
