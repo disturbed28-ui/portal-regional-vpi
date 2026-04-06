@@ -122,6 +122,16 @@ export function useConsolidacaoIntegrantes(userId?: string) {
       if (dbError) {
         throw new Error('Erro ao buscar integrantes: ' + dbError.message);
       }
+
+      // 3.5. Buscar afastados ativos para excluir da lista de removidos
+      const { data: afastadosAtivos } = await supabase
+        .from('integrantes_afastados')
+        .select('registro_id')
+        .eq('ativo', true);
+      
+      const afastadosAtivosIds = new Set(
+        (afastadosAtivos || []).map(a => a.registro_id)
+      );
       
       // 4. Converter registros consolidados para formato do Delta
       const registrosParaDelta: ExcelIntegrante[] = consolidacao.registros
@@ -145,9 +155,9 @@ export function useConsolidacaoIntegrantes(userId?: string) {
           data_entrada: r.data_entrada
         }));
       
-      // 5. Executar Delta
+      // 5. Executar Delta (passando afastados para ignorar na remoção)
       console.log('[useConsolidacaoIntegrantes] Executando delta...');
-      const delta = processDelta(registrosParaDelta, integrantesDB || [], integrantesDB || []);
+      const delta = processDelta(registrosParaDelta, integrantesDB || [], integrantesDB || [], afastadosAtivosIds);
       
       // 6. Inicializar seleções (todos marcados por padrão)
       const novosSelecionados = new Set(delta.novos.map(n => n.id_integrante));
