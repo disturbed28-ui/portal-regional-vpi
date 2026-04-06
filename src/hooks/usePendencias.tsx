@@ -115,6 +115,16 @@ interface DesligamentoCompulsorioDetalhes {
   ultima_divida: string;
 }
 
+interface FlyerPendenteDetalhes {
+  solicitacao_id: string;
+  integrante_nome_colete: string;
+  cargo_estagio_nome: string;
+  grau_estagio: string;
+  divisao_texto: string;
+  status_flyer: string;
+  data_aprovacao: string | null;
+}
+
 interface DadosDesatualizadosDetalhes {
   tipo_dado: 'integrantes' | 'inadimplencia' | 'aniversariantes' | 'afastados';
   label: string;
