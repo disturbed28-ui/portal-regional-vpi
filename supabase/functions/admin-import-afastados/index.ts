@@ -216,10 +216,32 @@ Deno.serve(async (req) => {
           .eq('ativo', true)
           .maybeSingle();
 
+        // Buscar divisao_id via integrantes_portal ou via texto
+        let divisao_id: string | null = null;
+        const { data: integrantePortal } = await supabase
+          .from('integrantes_portal')
+          .select('divisao_id')
+          .eq('registro_id', afastado.registro_id)
+          .maybeSingle();
+        
+        if (integrantePortal?.divisao_id) {
+          divisao_id = integrantePortal.divisao_id;
+        } else {
+          // Fallback: buscar divisão pelo texto normalizado
+          const divisaoNorm = normalizarDivisaoParaSalvar(afastado.divisao_texto);
+          const { data: divisaoMatch } = await supabase
+            .from('divisoes')
+            .select('id')
+            .ilike('nome', divisaoNorm.replace(/^DIVISAO\s*/i, '').replace(/\s*-\s*SP$/i, '').trim())
+            .maybeSingle();
+          if (divisaoMatch) divisao_id = divisaoMatch.id;
+        }
+
         const afastadoData = {
           registro_id: afastado.registro_id,
           nome_colete: afastado.nome_colete,
           divisao_texto: normalizarDivisaoParaSalvar(afastado.divisao_texto),
+          divisao_id,
           cargo_grau_texto: afastado.cargo_grau_texto,
           tipo_afastamento: afastado.tipo_afastamento,
           data_afastamento: afastado.data_afastamento,
