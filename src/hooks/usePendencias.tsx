@@ -116,7 +116,7 @@ interface DesligamentoCompulsorioDetalhes {
 }
 
 interface DadosDesatualizadosDetalhes {
-  tipo_dado: 'integrantes' | 'inadimplencia' | 'aniversariantes';
+  tipo_dado: 'integrantes' | 'inadimplencia' | 'aniversariantes' | 'afastados';
   label: string;
   ultima_atualizacao: string | null;
   dias_desde_atualizacao: number | null;
