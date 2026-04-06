@@ -909,6 +909,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
   const isAjusteRoles = pendencia.tipo === 'ajuste_roles';
   const isDesligamento = pendencia.tipo === 'desligamento_compulsorio';
   const isDadosDesatualizados = pendencia.tipo === 'dados_desatualizados';
+  const isFlyerPendente = pendencia.tipo === 'flyer_pendente';
   const detalhes = pendencia.detalhes_completos;
   
   // LOG DE DEBUG TEMPORÁRIO
