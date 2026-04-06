@@ -142,15 +142,6 @@ const GestaoADM = () => {
     return allSubTabs.filter(tab => tab.hasAccess);
   }, [solicitacaoEstagioP.hasAnyAccess, aprovacaoEstagioP.hasAnyAccess, encerramentoEstagioP.hasAnyAccess, historicoEstagioP.hasAnyAccess, flyersP.hasAnyAccess]);
 
-  // Montar lista de sub-sub-abas de Flyers visíveis
-  const visibleFlyersSubTabs = useMemo(() => {
-    const allSubTabs = [
-      { value: "grau5", label: "Estágio Grau V", shortLabel: "Grau V", hasAccess: grau5P.hasAnyAccess },
-      { value: "grau6", label: "Estágio Grau VI", shortLabel: "Grau VI", hasAccess: grau6P.hasAnyAccess },
-      { value: "fila", label: "Fila de Produção", shortLabel: "Fila", hasAccess: filaP.hasAnyAccess },
-    ];
-    return allSubTabs.filter(tab => tab.hasAccess);
-  }, [grau5P.hasAnyAccess, grau6P.hasAnyAccess, filaP.hasAnyAccess]);
 
   // Determinar aba inicial baseado no que o usuário tem acesso
   const initialMainTab = useMemo(() => {
