@@ -2266,6 +2266,7 @@ export type Database = {
           solicitante_integrante_id: string | null
           solicitante_nome_colete: string
           status: string
+          status_flyer: string
           tempo_estagio_meses: number | null
           updated_at: string
         }
@@ -2288,6 +2289,7 @@ export type Database = {
           solicitante_integrante_id?: string | null
           solicitante_nome_colete: string
           status?: string
+          status_flyer?: string
           tempo_estagio_meses?: number | null
           updated_at?: string
         }
@@ -2310,6 +2312,7 @@ export type Database = {
           solicitante_integrante_id?: string | null
           solicitante_nome_colete?: string
           status?: string
+          status_flyer?: string
           tempo_estagio_meses?: number | null
           updated_at?: string
         }

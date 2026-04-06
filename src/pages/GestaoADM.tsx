@@ -26,9 +26,7 @@ import { SolicitacaoEstagio } from "@/components/admin/estagio/SolicitacaoEstagi
 import { AprovacaoPendenteEstagio } from "@/components/admin/estagio/AprovacaoPendenteEstagio";
 import { EncerramentoEstagio } from "@/components/admin/estagio/EncerramentoEstagio";
 import { HistoricoEstagio } from "@/components/admin/estagio/HistoricoEstagio";
-import { EstagioGrauV } from "@/components/admin/estagio/flyers/EstagioGrauV";
-import { EstagioGrauVI } from "@/components/admin/estagio/flyers/EstagioGrauVI";
-import { FilaProducao } from "@/components/admin/estagio/flyers/FilaProducao";
+import { FlyersEstagioList } from "@/components/admin/estagio/flyers/FlyersEstagioList";
 import { AfastadosGestaoTab } from "@/components/gestao/afastados/AfastadosGestaoTab";
 
 // Todas as rotas que precisamos verificar permissões
@@ -50,9 +48,6 @@ const ALL_ROUTES = [
   '/gestao-adm-estagio-encerramento',
   '/gestao-adm-estagio-historico',
   '/gestao-adm-estagio-flyers',
-  '/gestao-adm-estagio-flyers-grau5',
-  '/gestao-adm-estagio-flyers-grau6',
-  '/gestao-adm-estagio-flyers-fila',
   '/gestao-adm-aniversariantes',
   '/gestao-adm-afastamentos',
 ];
@@ -100,10 +95,6 @@ const GestaoADM = () => {
   const historicoEstagioP = getPerm('/gestao-adm-estagio-historico');
   const flyersP = getPerm('/gestao-adm-estagio-flyers');
 
-  // Permissões das sub-sub-abas de Flyers
-  const grau5P = getPerm('/gestao-adm-estagio-flyers-grau5');
-  const grau6P = getPerm('/gestao-adm-estagio-flyers-grau6');
-  const filaP = getPerm('/gestao-adm-estagio-flyers-fila');
 
   // Montar lista de abas visíveis
   const visibleTabs = useMemo(() => {
@@ -151,15 +142,6 @@ const GestaoADM = () => {
     return allSubTabs.filter(tab => tab.hasAccess);
   }, [solicitacaoEstagioP.hasAnyAccess, aprovacaoEstagioP.hasAnyAccess, encerramentoEstagioP.hasAnyAccess, historicoEstagioP.hasAnyAccess, flyersP.hasAnyAccess]);
 
-  // Montar lista de sub-sub-abas de Flyers visíveis
-  const visibleFlyersSubTabs = useMemo(() => {
-    const allSubTabs = [
-      { value: "grau5", label: "Estágio Grau V", shortLabel: "Grau V", hasAccess: grau5P.hasAnyAccess },
-      { value: "grau6", label: "Estágio Grau VI", shortLabel: "Grau VI", hasAccess: grau6P.hasAnyAccess },
-      { value: "fila", label: "Fila de Produção", shortLabel: "Fila", hasAccess: filaP.hasAnyAccess },
-    ];
-    return allSubTabs.filter(tab => tab.hasAccess);
-  }, [grau5P.hasAnyAccess, grau6P.hasAnyAccess, filaP.hasAnyAccess]);
 
   // Determinar aba inicial baseado no que o usuário tem acesso
   const initialMainTab = useMemo(() => {
@@ -191,9 +173,6 @@ const GestaoADM = () => {
     return visibleEstagioSubTabs[0]?.value || 'solicitacao';
   }, [searchParams, visibleEstagioSubTabs]);
 
-  const initialFlyersSubTab = useMemo(() => {
-    return visibleFlyersSubTabs[0]?.value || 'grau5';
-  }, [visibleFlyersSubTabs]);
 
   useEffect(() => {
     if (!loading && !hasAccess) {
@@ -493,51 +472,7 @@ const GestaoADM = () => {
 
                     {flyersP.hasAnyAccess && (
                       <TabsContent value="flyers" className="m-0">
-                        {visibleFlyersSubTabs.length > 0 ? (
-                          <Tabs defaultValue={initialFlyersSubTab} className="w-full">
-                            <div className="overflow-x-auto -mx-4 px-4 pb-2 mb-4">
-                              <TabsList className="inline-flex w-max min-w-full h-auto bg-muted/20 p-1 gap-1">
-                                {visibleFlyersSubTabs.map((subTab) => (
-                                  <TabsTrigger
-                                    key={subTab.value}
-                                    value={subTab.value}
-                                    className="flex-shrink-0 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                                  >
-                                    <span>{subTab.label}</span>
-                                  </TabsTrigger>
-                                ))}
-                              </TabsList>
-                            </div>
-
-                            {grau5P.hasAnyAccess && (
-                              <TabsContent value="grau5" className="m-0">
-                                <EstagioGrauV readOnly={grau5P.isReadOnly || flyersP.isReadOnly || estagioP.isReadOnly} />
-                              </TabsContent>
-                            )}
-
-                            {grau6P.hasAnyAccess && (
-                              <TabsContent value="grau6" className="m-0">
-                                <EstagioGrauVI readOnly={grau6P.isReadOnly || flyersP.isReadOnly || estagioP.isReadOnly} />
-                              </TabsContent>
-                            )}
-
-                            {filaP.hasAnyAccess && (
-                              <TabsContent value="fila" className="m-0">
-                                <FilaProducao readOnly={filaP.isReadOnly || flyersP.isReadOnly || estagioP.isReadOnly} />
-                              </TabsContent>
-                            )}
-                          </Tabs>
-                        ) : (
-                          <Card className="border-border/50">
-                            <CardContent className="flex flex-col items-center justify-center py-12 px-4 text-center">
-                              <Clock className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                              <h3 className="text-lg font-medium text-foreground mb-2">Sem permissões</h3>
-                              <p className="text-sm text-muted-foreground max-w-xs">
-                                Você não tem permissão para acessar nenhuma sub-aba de Flyers.
-                              </p>
-                            </CardContent>
-                          </Card>
-                        )}
+                        <FlyersEstagioList userId={user?.id} readOnly={flyersP.isReadOnly || estagioP.isReadOnly} />
                       </TabsContent>
                     )}
                   </Tabs>

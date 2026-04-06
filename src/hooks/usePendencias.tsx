@@ -115,6 +115,16 @@ interface DesligamentoCompulsorioDetalhes {
   ultima_divida: string;
 }
 
+interface FlyerPendenteDetalhes {
+  solicitacao_id: string;
+  integrante_nome_colete: string;
+  cargo_estagio_nome: string;
+  grau_estagio: string;
+  divisao_texto: string;
+  status_flyer: string;
+  data_aprovacao: string | null;
+}
+
 interface DadosDesatualizadosDetalhes {
   tipo_dado: 'integrantes' | 'inadimplencia' | 'aniversariantes' | 'afastados';
   label: string;
@@ -125,14 +135,14 @@ interface DadosDesatualizadosDetalhes {
 interface Pendencia {
   nome_colete: string;
   divisao_texto: string;
-  tipo: 'mensalidade' | 'afastamento' | 'delta' | 'evento_cancelado' | 'treinamento_aprovador' | 'treinamento_integrante' | 'estagio_aprovador' | 'estagio_integrante' | 'ajuste_roles' | 'desligamento_compulsorio' | 'dados_desatualizados';
+  tipo: 'mensalidade' | 'afastamento' | 'delta' | 'evento_cancelado' | 'treinamento_aprovador' | 'treinamento_integrante' | 'estagio_aprovador' | 'estagio_integrante' | 'ajuste_roles' | 'desligamento_compulsorio' | 'dados_desatualizados' | 'flyer_pendente';
   detalhe: string;
   data_ref: string;
   registro_id: number;
-  detalhes_completos: MensalidadeDetalhes | AfastamentoDetalhes | DeltaDetalhes | EventoCanceladoDetalhes | TreinamentoAprovadorDetalhes | TreinamentoIntegranteDetalhes | EstagioAprovadorDetalhes | EstagioIntegranteDetalhes | AjusteRolesDetalhes | DesligamentoCompulsorioDetalhes | DadosDesatualizadosDetalhes;
+  detalhes_completos: MensalidadeDetalhes | AfastamentoDetalhes | DeltaDetalhes | EventoCanceladoDetalhes | TreinamentoAprovadorDetalhes | TreinamentoIntegranteDetalhes | EstagioAprovadorDetalhes | EstagioIntegranteDetalhes | AjusteRolesDetalhes | DesligamentoCompulsorioDetalhes | DadosDesatualizadosDetalhes | FlyerPendenteDetalhes;
 }
 
-export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes };
+export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes, FlyerPendenteDetalhes };
 
 export const usePendencias = (
   userId: string | undefined,
@@ -859,6 +869,98 @@ export const usePendencias = (
         
         console.log('[usePendencias] Pendências de estágio encontradas:', 
           todasPendencias.filter(p => p.tipo === 'estagio_aprovador' || p.tipo === 'estagio_integrante').length);
+      }
+
+      // 5.2 Pendências de Flyer de Estágio
+      // adm_regional vê flyers com status 'pendente', diretor_regional vê 'solicitado'
+      if (userRole === 'admin' || userRole === 'regional') {
+        console.log('[usePendencias] Buscando pendências de flyer de estágio...');
+
+        // Verificar roles específicas do usuário para saber se é adm_regional ou diretor_regional
+        const { data: userRolesData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userId);
+
+        const userRolesList = userRolesData?.map(r => r.role) || [];
+        const isAdmRegional = userRolesList.includes('adm_regional') || userRolesList.includes('comando') || userRole === 'admin';
+        const isDiretorRegional = userRolesList.includes('diretor_regional') || userRolesList.includes('comando') || userRole === 'admin';
+
+        // Buscar estágios ativos com flyer pendente ou solicitado
+        const statusFlyerFiltro: string[] = [];
+        if (isAdmRegional) statusFlyerFiltro.push('pendente');
+        if (isDiretorRegional) statusFlyerFiltro.push('solicitado');
+
+        if (statusFlyerFiltro.length > 0) {
+          let queryFlyers = supabase
+            .from('solicitacoes_estagio')
+            .select(`
+              id, status_flyer, grau_estagio, data_aprovacao,
+              divisao_id, regional_id,
+              integrantes_portal!solicitacoes_estagio_integrante_id_fkey(nome_colete, divisao_texto),
+              cargos!solicitacoes_estagio_cargo_estagio_id_fkey(nome)
+            `)
+            .eq('status', 'Em Estagio')
+            .in('status_flyer', statusFlyerFiltro);
+
+          if (userRole === 'regional' && regionalId) {
+            queryFlyers = queryFlyers.eq('regional_id', regionalId);
+          }
+
+          const { data: flyersSol, error: flyersError } = await queryFlyers;
+
+          if (!flyersError && flyersSol) {
+            for (const sol of flyersSol) {
+              const integrante = sol.integrantes_portal as any;
+              const cargoEstagio = sol.cargos as any;
+
+              // Flyer pendente → pendência para adm_regional
+              // Flyer solicitado → pendência para diretor_regional
+              if (sol.status_flyer === 'pendente' && isAdmRegional) {
+                todasPendencias.push({
+                  registro_id: 0,
+                  nome_colete: integrante?.nome_colete || 'N/A',
+                  divisao_texto: integrante?.divisao_texto || '',
+                  tipo: 'flyer_pendente',
+                  detalhe: '🖼️ Solicitação de flyer pendente',
+                  data_ref: sol.data_aprovacao || new Date().toISOString(),
+                  detalhes_completos: {
+                    solicitacao_id: sol.id,
+                    integrante_nome_colete: integrante?.nome_colete || 'N/A',
+                    cargo_estagio_nome: cargoEstagio?.nome || 'N/A',
+                    grau_estagio: sol.grau_estagio,
+                    divisao_texto: integrante?.divisao_texto || '',
+                    status_flyer: sol.status_flyer,
+                    data_aprovacao: sol.data_aprovacao,
+                  } as FlyerPendenteDetalhes
+                });
+              }
+
+              if (sol.status_flyer === 'solicitado' && isDiretorRegional) {
+                todasPendencias.push({
+                  registro_id: 0,
+                  nome_colete: integrante?.nome_colete || 'N/A',
+                  divisao_texto: integrante?.divisao_texto || '',
+                  tipo: 'flyer_pendente',
+                  detalhe: '📋 Flyer solicitado, aguardando conclusão',
+                  data_ref: sol.data_aprovacao || new Date().toISOString(),
+                  detalhes_completos: {
+                    solicitacao_id: sol.id,
+                    integrante_nome_colete: integrante?.nome_colete || 'N/A',
+                    cargo_estagio_nome: cargoEstagio?.nome || 'N/A',
+                    grau_estagio: sol.grau_estagio,
+                    divisao_texto: integrante?.divisao_texto || '',
+                    status_flyer: sol.status_flyer,
+                    data_aprovacao: sol.data_aprovacao,
+                  } as FlyerPendenteDetalhes
+                });
+              }
+            }
+          }
+
+          console.log('[usePendencias] Pendências de flyer encontradas:',
+            todasPendencias.filter(p => p.tipo === 'flyer_pendente').length);
+        }
       }
 
       // 6. Pendências de Ajuste de Roles (apenas para admin)

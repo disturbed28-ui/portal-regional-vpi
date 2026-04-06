@@ -21,7 +21,7 @@ import {
   ArrowRight,
   RefreshCw
 } from "lucide-react";
-import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes } from "@/hooks/usePendencias";
+import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes, FlyerPendenteDetalhes } from "@/hooks/usePendencias";
 
 interface PendenciasModalProps {
   pendencias: Pendencia[];
@@ -909,6 +909,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
   const isAjusteRoles = pendencia.tipo === 'ajuste_roles';
   const isDesligamento = pendencia.tipo === 'desligamento_compulsorio';
   const isDadosDesatualizados = pendencia.tipo === 'dados_desatualizados';
+  const isFlyerPendente = pendencia.tipo === 'flyer_pendente';
   const detalhes = pendencia.detalhes_completos;
   
   // LOG DE DEBUG TEMPORÁRIO
@@ -939,6 +940,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
     if (isTreinamentoIntegrante) return 'border-blue-500';
     if (isEstagioAprovador) return 'border-fuchsia-500';
     if (isEstagioIntegrante) return 'border-cyan-500';
+    if (isFlyerPendente) return 'border-indigo-500';
     if (isDelta) {
       const deltaDetalhes = detalhes as DeltaDetalhes | null;
       if (!deltaDetalhes) return 'border-gray-500';
@@ -956,6 +958,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
     if (isAfastamento) return '🏥';
     if (isTreinamentoAprovador || isTreinamentoIntegrante) return '🎓';
     if (isEstagioAprovador || isEstagioIntegrante) return '🎖️';
+    if (isFlyerPendente) return '🖼️';
     if (isEventoCancelado) {
       const eventDetalhes = detalhes as EventoCanceladoDetalhes;
       return eventDetalhes?.status === 'cancelled' ? '📅' : '❌';
@@ -987,6 +990,10 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
     if (isEstagioAprovador) return 'Aprovação Estágio';
     if (isEstagioIntegrante) return 'Estágio';
     if (isDelta) return 'Anomalia';
+    if (isFlyerPendente) {
+      const flyerDet = detalhes as FlyerPendenteDetalhes;
+      return flyerDet?.status_flyer === 'solicitado' ? 'Flyer Aguardando' : 'Flyer Pendente';
+    }
     return 'Pendência';
   };
   
@@ -1101,6 +1108,32 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
             {isEstagioAprovador && detalhes && <EstagioAprovadorDetalhesCard detalhes={detalhes as EstagioAprovadorDetalhes} />}
             {isEstagioIntegrante && detalhes && <EstagioIntegranteDetalhesCard detalhes={detalhes as EstagioIntegranteDetalhes} />}
             
+            {/* Card de Flyer Pendente */}
+            {isFlyerPendente && detalhes && (() => {
+              const d = detalhes as FlyerPendenteDetalhes;
+              return (
+                <Card className="bg-background/50 border-indigo-300 dark:border-indigo-700">
+                  <CardContent className="p-4 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">🖼️</span>
+                      <div>
+                        <p className="text-sm font-medium">{d.cargo_estagio_nome} (Grau {d.grau_estagio})</p>
+                        <p className="text-xs text-muted-foreground">{d.divisao_texto}</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Status: <span className="font-medium">{d.status_flyer === 'pendente' ? 'Aguardando solicitação' : 'Solicitado, aguardando conclusão'}</span>
+                    </p>
+                    {d.data_aprovacao && (
+                      <p className="text-xs text-muted-foreground">
+                        Aprovado em: {format(new Date(d.data_aprovacao), 'dd/MM/yyyy', { locale: ptBR })}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })()}
+
             {/* Card de Ajuste de Roles */}
             {isAjusteRoles && detalhes && <AjusteRolesDetalhesCard detalhes={detalhes as AjusteRolesDetalhes} />}
 
