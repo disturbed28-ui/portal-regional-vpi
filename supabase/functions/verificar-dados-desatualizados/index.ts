@@ -86,6 +86,23 @@ serve(async (req) => {
       });
     }
 
+    // Afastados
+    const { data: cargaAfast } = await supabaseAdmin
+      .from('cargas_historico')
+      .select('data_carga')
+      .eq('tipo_carga', 'afastados')
+      .order('data_carga', { ascending: false })
+      .limit(1);
+    const diasAfast = calcDias(cargaAfast?.[0]?.data_carga || null);
+    if (diasAfast === null || diasAfast > LIMITE_DIAS) {
+      desatualizados.push({
+        tipo: 'afastados',
+        label: 'Afastados',
+        ultima_atualizacao: cargaAfast?.[0]?.data_carga || null,
+        dias_desde_atualizacao: diasAfast,
+      });
+    }
+
     if (desatualizados.length === 0) {
       console.log('[verificar-dados-desatualizados] ✅ Todos os dados estão atualizados');
       return new Response(
