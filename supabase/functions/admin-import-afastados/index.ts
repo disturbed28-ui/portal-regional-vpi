@@ -9,6 +9,9 @@ interface AfastadoInput {
   tipo_afastamento: string;
   data_afastamento: string;
   data_retorno_prevista: string;
+  suspenso?: boolean;
+  dias_suspensao?: number;
+  observacao_auto?: string;
 }
 
 const normalizarTexto = (texto: string): string => {
