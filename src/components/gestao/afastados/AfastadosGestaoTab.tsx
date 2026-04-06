@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, Calendar, UserCheck, AlertTriangle, Loader2 } from "lucide-react";
+import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, Calendar, UserCheck, AlertTriangle, Loader2, ShieldAlert } from "lucide-react";
 import { parseAfastadosExcel, type AfastadoExcel } from "@/lib/afastadosParser";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
