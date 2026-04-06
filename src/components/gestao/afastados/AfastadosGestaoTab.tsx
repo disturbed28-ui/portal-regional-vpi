@@ -483,31 +483,25 @@ export const AfastadosGestaoTab = ({ userId, readOnly = false }: AfastadosGestao
                     {afastados.map((afastado) => (
                       <div
                         key={afastado.id}
-                        className="flex items-center justify-between p-2 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                        className="p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors space-y-2"
                       >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm truncate">{afastado.nome_colete}</span>
-                            <span className="text-xs text-muted-foreground">#{afastado.registro_id}</span>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm break-words">{afastado.nome_colete}</p>
+                            <p className="text-xs text-muted-foreground">#{afastado.registro_id} • {afastado.cargo_grau_texto || afastado.tipo_afastamento}</p>
                           </div>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-xs text-muted-foreground">
-                              {afastado.tipo_afastamento}
-                            </span>
-                            <span className="text-xs text-muted-foreground">•</span>
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              {format(new Date(afastado.data_afastamento), 'dd/MM/yy')} → {format(new Date(afastado.data_retorno_prevista), 'dd/MM/yy')}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 ml-2">
                           {getStatusBadge(afastado.data_retorno_prevista)}
+                        </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Calendar className="h-3 w-3 shrink-0" />
+                            {format(new Date(afastado.data_afastamento), 'dd/MM/yy')} → {format(new Date(afastado.data_retorno_prevista), 'dd/MM/yy')}
+                          </span>
                           {!readOnly && (
                             <Button
                               variant="outline"
                               size="sm"
-                              className="text-xs h-7"
+                              className="text-xs h-7 shrink-0"
                               onClick={() => {
                                 setSelectedAfastado(afastado);
                                 setShowBaixaModal(true);
@@ -517,6 +511,9 @@ export const AfastadosGestaoTab = ({ userId, readOnly = false }: AfastadosGestao
                             </Button>
                           )}
                         </div>
+                        {afastado.observacoes && (
+                          <p className="text-xs text-muted-foreground italic">{afastado.observacoes}</p>
+                        )}
                       </div>
                     ))}
                   </div>
