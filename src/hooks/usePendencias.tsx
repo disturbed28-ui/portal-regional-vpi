@@ -116,7 +116,7 @@ interface DesligamentoCompulsorioDetalhes {
 }
 
 interface DadosDesatualizadosDetalhes {
-  tipo_dado: 'integrantes' | 'inadimplencia' | 'aniversariantes';
+  tipo_dado: 'integrantes' | 'inadimplencia' | 'aniversariantes' | 'afastados';
   label: string;
   ultima_atualizacao: string | null;
   dias_desde_atualizacao: number | null;
@@ -1002,6 +1002,33 @@ export const usePendencias = (
               label: 'Aniversários',
               ultima_atualizacao: ultimoAniv?.[0]?.updated_at || null,
               dias_desde_atualizacao: diasAniv,
+            } as DadosDesatualizadosDetalhes
+          });
+        }
+
+        // Afastados
+        const { data: cargaAfast } = await supabase
+          .from('cargas_historico')
+          .select('data_carga')
+          .eq('tipo_carga', 'afastados')
+          .order('data_carga', { ascending: false })
+          .limit(1);
+        const diasAfast = calcDias(cargaAfast?.[0]?.data_carga || null);
+        if (diasAfast === null || diasAfast > LIMITE_DIAS) {
+          todasPendencias.push({
+            nome_colete: 'Sistema',
+            divisao_texto: 'Gestão ADM',
+            tipo: 'dados_desatualizados',
+            detalhe: diasAfast !== null
+              ? `Dados de Afastados não são atualizados há ${diasAfast} dias`
+              : 'Dados de Afastados nunca foram importados',
+            data_ref: cargaAfast?.[0]?.data_carga || new Date().toISOString(),
+            registro_id: 0,
+            detalhes_completos: {
+              tipo_dado: 'afastados',
+              label: 'Afastados',
+              ultima_atualizacao: cargaAfast?.[0]?.data_carga || null,
+              dias_desde_atualizacao: diasAfast,
             } as DadosDesatualizadosDetalhes
           });
         }
