@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ArrowLeft, Users, DollarSign, GraduationCap, Cake, Clock, FileEdit, History, ClipboardCheck, XCircle, List, Award, Image, RefreshCw, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Users, DollarSign, GraduationCap, Cake, Clock, FileEdit, History, ClipboardCheck, XCircle, List, Award, Image, RefreshCw, AlertTriangle, UserMinus } from "lucide-react";
 import { useUltimasAtualizacoes } from "@/hooks/useUltimasAtualizacoes";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -29,6 +29,7 @@ import { HistoricoEstagio } from "@/components/admin/estagio/HistoricoEstagio";
 import { EstagioGrauV } from "@/components/admin/estagio/flyers/EstagioGrauV";
 import { EstagioGrauVI } from "@/components/admin/estagio/flyers/EstagioGrauVI";
 import { FilaProducao } from "@/components/admin/estagio/flyers/FilaProducao";
+import { AfastadosGestaoTab } from "@/components/gestao/afastados/AfastadosGestaoTab";
 
 // Todas as rotas que precisamos verificar permissões
 const ALL_ROUTES = [
@@ -53,6 +54,7 @@ const ALL_ROUTES = [
   '/gestao-adm-estagio-flyers-grau6',
   '/gestao-adm-estagio-flyers-fila',
   '/gestao-adm-aniversariantes',
+  '/gestao-adm-afastamentos',
 ];
 
 const GestaoADM = () => {
@@ -78,6 +80,7 @@ const GestaoADM = () => {
   const treinamentoP = getPerm('/gestao-adm-treinamento');
   const estagioP = getPerm('/gestao-adm-estagio');
   const aniversariantesP = getPerm('/gestao-adm-aniversariantes');
+  const afastamentosP = getPerm('/gestao-adm-afastamentos');
 
   // Permissões das sub-abas de Integrantes
   const listaP = getPerm('/gestao-adm-integrantes-lista');
@@ -110,9 +113,10 @@ const GestaoADM = () => {
       { value: "treinamento", label: "Treinamento", icon: GraduationCap, hasAccess: treinamentoP.hasAnyAccess },
       { value: "estagio", label: "Estágio", icon: Award, hasAccess: estagioP.hasAnyAccess },
       { value: "aniversariantes", label: "Aniversários", icon: Cake, hasAccess: aniversariantesP.hasAnyAccess },
+      { value: "afastamentos", label: "Afastados", icon: UserMinus, hasAccess: afastamentosP.hasAnyAccess },
     ];
     return allTabs.filter(tab => tab.hasAccess);
-  }, [integrantesP.hasAnyAccess, inadimplenciaP.hasAnyAccess, treinamentoP.hasAnyAccess, estagioP.hasAnyAccess, aniversariantesP.hasAnyAccess]);
+  }, [integrantesP.hasAnyAccess, inadimplenciaP.hasAnyAccess, treinamentoP.hasAnyAccess, estagioP.hasAnyAccess, aniversariantesP.hasAnyAccess, afastamentosP.hasAnyAccess]);
 
   // Montar lista de sub-abas de Integrantes visíveis
   const visibleIntegrantesSubTabs = useMemo(() => {
