@@ -225,6 +225,7 @@ Deno.serve(async (req) => {
           data_retorno_prevista: afastado.data_retorno_prevista,
           ativo: true,
           carga_historico_id: cargaHistorico.id,
+          observacoes: afastado.observacao_auto || null,
         };
 
         if (existente) {
