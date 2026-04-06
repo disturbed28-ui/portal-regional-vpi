@@ -29,35 +29,14 @@ interface AfastadosGestaoTabProps {
 }
 
 export const AfastadosGestaoTab = ({ userId, readOnly = false }: AfastadosGestaoTabProps) => {
-  const { profile } = useProfile();
+  const { profile } = useProfile(userId);
   const nivelAcesso = getNivelAcessoAdmin(profile?.grau);
-
-  // Montar filtros baseado no nível de acesso
-  const filtros = (() => {
-    if (nivelAcesso === 'comando') return undefined;
-    if (nivelAcesso === 'regional' && profile?.regional_id) {
-      return { divisaoIds: [] as string[] }; // será preenchido abaixo
-    }
-    if (profile?.divisao_id) {
-      return { divisaoId: profile.divisao_id };
-    }
-    return undefined;
-  })();
 
   // Para regional, buscar divisões da regional
   const [divisaoIds, setDivisaoIds] = useState<string[]>([]);
 
   // Buscar divisões da regional do usuário
-  const { afastados: afastadosAtivos, loading: loadingAtivos, refetch } = useAfastadosAtivos(
-    nivelAcesso === 'regional' && divisaoIds.length > 0
-      ? { divisaoIds }
-      : nivelAcesso === 'divisao' && profile?.divisao_id
-        ? { divisaoId: profile.divisao_id }
-        : undefined
-  );
-
-  // Buscar divisões da regional para filtro
-  useState(() => {
+  useEffect(() => {
     if (nivelAcesso === 'regional' && profile?.regional_id) {
       supabase
         .from('divisoes')
@@ -67,7 +46,15 @@ export const AfastadosGestaoTab = ({ userId, readOnly = false }: AfastadosGestao
           if (data) setDivisaoIds(data.map(d => d.id));
         });
     }
-  });
+  }, [nivelAcesso, profile?.regional_id]);
+
+  const { afastados: afastadosAtivos, loading: loadingAtivos, refetch } = useAfastadosAtivos(
+    nivelAcesso === 'regional' && divisaoIds.length > 0
+      ? { divisaoIds }
+      : nivelAcesso === 'divisao' && profile?.divisao_id
+        ? { divisaoId: profile.divisao_id }
+        : undefined
+  );
 
   const { registrarRetorno } = useRegistrarRetorno();
 
