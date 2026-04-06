@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, subMonths, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer } from 'recharts';
+import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Button } from '@/components/ui/button';
 import { CalendarIcon } from 'lucide-react';
 import { normalizarNomeDivisao } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface DivisaoSnapshot {
   divisao: string;
@@ -30,6 +31,7 @@ const COR_ENTRADAS = 'hsl(142, 71%, 45%)';
 const COR_SAIDAS = 'hsl(0, 84%, 60%)';
 
 export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps) => {
+  const isMobile = useIsMobile();
   const [visualizacao, setVisualizacao] = useState<string>('total');
   const [periodo, setPeriodo] = useState<string>('todos');
   const [dataInicio, setDataInicio] = useState<Date | undefined>();
@@ -135,14 +137,28 @@ export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps
     },
   };
 
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload) return null;
+    return (
+      <div className="bg-popover border border-border rounded-lg p-2 shadow-md text-xs">
+        <p className="font-medium text-foreground mb-1">{label}</p>
+        {payload.map((entry: any, i: number) => (
+          <p key={i} style={{ color: entry.color }}>
+            {entry.name}: {entry.value}
+          </p>
+        ))}
+      </div>
+    );
+  };
+
   return (
-    <div className="space-y-3 sm:space-y-4">
-      {/* Filtros */}
-      <div className="flex flex-col gap-2 sm:gap-3">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-          <label className="text-xs sm:text-sm font-medium shrink-0">Visualizar:</label>
+    <div className="space-y-2">
+      {/* Filtros compactos */}
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-[10px] sm:text-xs font-medium text-muted-foreground">Visualizar</label>
           <Select value={visualizacao} onValueChange={setVisualizacao}>
-            <SelectTrigger className="w-full sm:w-[280px]">
+            <SelectTrigger className="h-8 text-xs">
               <SelectValue placeholder="Selecione..." />
             </SelectTrigger>
             <SelectContent>
@@ -156,14 +172,14 @@ export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps
           </Select>
         </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-          <label className="text-xs sm:text-sm font-medium shrink-0">Período:</label>
+        <div>
+          <label className="text-[10px] sm:text-xs font-medium text-muted-foreground">Período</label>
           <Select value={periodo} onValueChange={setPeriodo}>
-            <SelectTrigger className="w-full sm:w-[280px]">
+            <SelectTrigger className="h-8 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="todos">Todo o histórico</SelectItem>
+              <SelectItem value="todos">Todo histórico</SelectItem>
               <SelectItem value="mes_atual">Mês atual</SelectItem>
               <SelectItem value="ultimos_3">Últimos 3 meses</SelectItem>
               <SelectItem value="ultimos_6">Últimos 6 meses</SelectItem>
@@ -172,93 +188,105 @@ export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps
             </SelectContent>
           </Select>
         </div>
-
-        {periodo === 'personalizado' && (
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-center">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="justify-start text-left font-normal w-full sm:w-auto">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dataInicio ? format(dataInicio, 'MMM/yyyy', { locale: ptBR }) : 'Início'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={dataInicio} onSelect={setDataInicio} />
-              </PopoverContent>
-            </Popover>
-            <span className="text-xs text-muted-foreground text-center">até</span>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="justify-start text-left font-normal w-full sm:w-auto">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dataFim ? format(dataFim, 'MMM/yyyy', { locale: ptBR }) : 'Fim'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={dataFim} onSelect={setDataFim} />
-              </PopoverContent>
-            </Popover>
-          </div>
-        )}
       </div>
+
+      {periodo === 'personalizado' && (
+        <div className="flex gap-2 items-center">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-7 text-[10px] flex-1 justify-start font-normal">
+                <CalendarIcon className="mr-1 h-3 w-3" />
+                {dataInicio ? format(dataInicio, 'MMM/yy', { locale: ptBR }) : 'Início'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={dataInicio} onSelect={setDataInicio} />
+            </PopoverContent>
+          </Popover>
+          <span className="text-[10px] text-muted-foreground">até</span>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-7 text-[10px] flex-1 justify-start font-normal">
+                <CalendarIcon className="mr-1 h-3 w-3" />
+                {dataFim ? format(dataFim, 'MMM/yy', { locale: ptBR }) : 'Fim'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={dataFim} onSelect={setDataFim} />
+            </PopoverContent>
+          </Popover>
+        </div>
+      )}
 
       {/* Gráfico */}
       {cargasFiltradas.length < 1 ? (
-        <div className="text-center text-muted-foreground py-8">Nenhum dado para o período selecionado</div>
+        <div className="text-center text-muted-foreground py-8 text-sm">Nenhum dado para o período selecionado</div>
       ) : (
-        <ChartContainer config={chartConfig} className="h-[280px] sm:h-[400px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={dadosGrafico}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis
-                dataKey="mes"
-                className="text-xs"
-                tick={{ fill: 'hsl(var(--foreground))', fontSize: 11 }}
-              />
-              <YAxis
-                yAxisId="left"
-                className="text-xs"
-                tick={{ fill: 'hsl(var(--foreground))', fontSize: 11 }}
-              />
-              <YAxis
-                yAxisId="right"
-                orientation="right"
-                className="text-xs"
-                tick={{ fill: 'hsl(var(--foreground))', fontSize: 11 }}
-              />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Legend wrapperStyle={{ fontSize: '11px' }} iconType="line" />
+        <div className={isMobile ? "overflow-x-auto -mx-2 px-2" : ""}>
+          <div style={isMobile ? { minWidth: Math.max(dadosGrafico.length * 56, 320) } : undefined}>
+            <ChartContainer config={chartConfig} className="h-[240px] sm:h-[400px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={dadosGrafico} margin={isMobile ? { top: 5, right: 5, left: -15, bottom: 0 } : undefined}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis
+                    dataKey="mes"
+                    tick={{ fill: 'hsl(var(--foreground))', fontSize: isMobile ? 9 : 11 }}
+                    interval={isMobile ? 'preserveStartEnd' : 0}
+                    angle={isMobile ? -45 : 0}
+                    textAnchor={isMobile ? 'end' : 'middle'}
+                    height={isMobile ? 40 : 30}
+                  />
+                  <YAxis
+                    yAxisId="left"
+                    tick={{ fill: 'hsl(var(--foreground))', fontSize: isMobile ? 9 : 11 }}
+                    width={isMobile ? 30 : 40}
+                  />
+                  {!isMobile && (
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      tick={{ fill: 'hsl(var(--foreground))', fontSize: 11 }}
+                    />
+                  )}
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend
+                    wrapperStyle={{ fontSize: isMobile ? '9px' : '11px' }}
+                    iconSize={isMobile ? 8 : 14}
+                    iconType="line"
+                  />
 
-              <Bar
-                yAxisId="right"
-                dataKey="entradas"
-                fill={COR_ENTRADAS}
-                name="Entradas"
-                barSize={16}
-                radius={[2, 2, 0, 0]}
-              />
-              <Bar
-                yAxisId="right"
-                dataKey="saidas"
-                fill={COR_SAIDAS}
-                name="Saídas"
-                barSize={16}
-                radius={[2, 2, 0, 0]}
-              />
-              <Line
-                yAxisId="left"
-                type="monotone"
-                dataKey="total"
-                stroke="hsl(var(--primary))"
-                strokeWidth={3}
-                name={labelTotal}
-                dot={{ r: 3 }}
-                activeDot={{ r: 5 }}
-                connectNulls={true}
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </ChartContainer>
+                  <Bar
+                    yAxisId={isMobile ? "left" : "right"}
+                    dataKey="entradas"
+                    fill={COR_ENTRADAS}
+                    name="Entradas"
+                    barSize={isMobile ? 10 : 16}
+                    radius={[2, 2, 0, 0]}
+                  />
+                  <Bar
+                    yAxisId={isMobile ? "left" : "right"}
+                    dataKey="saidas"
+                    fill={COR_SAIDAS}
+                    name="Saídas"
+                    barSize={isMobile ? 10 : 16}
+                    radius={[2, 2, 0, 0]}
+                  />
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="total"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={isMobile ? 2 : 3}
+                    name={labelTotal}
+                    dot={{ r: isMobile ? 2 : 3 }}
+                    activeDot={{ r: isMobile ? 3 : 5 }}
+                    connectNulls={true}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </div>
+        </div>
       )}
     </div>
   );
