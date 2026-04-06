@@ -135,14 +135,14 @@ interface DadosDesatualizadosDetalhes {
 interface Pendencia {
   nome_colete: string;
   divisao_texto: string;
-  tipo: 'mensalidade' | 'afastamento' | 'delta' | 'evento_cancelado' | 'treinamento_aprovador' | 'treinamento_integrante' | 'estagio_aprovador' | 'estagio_integrante' | 'ajuste_roles' | 'desligamento_compulsorio' | 'dados_desatualizados';
+  tipo: 'mensalidade' | 'afastamento' | 'delta' | 'evento_cancelado' | 'treinamento_aprovador' | 'treinamento_integrante' | 'estagio_aprovador' | 'estagio_integrante' | 'ajuste_roles' | 'desligamento_compulsorio' | 'dados_desatualizados' | 'flyer_pendente';
   detalhe: string;
   data_ref: string;
   registro_id: number;
-  detalhes_completos: MensalidadeDetalhes | AfastamentoDetalhes | DeltaDetalhes | EventoCanceladoDetalhes | TreinamentoAprovadorDetalhes | TreinamentoIntegranteDetalhes | EstagioAprovadorDetalhes | EstagioIntegranteDetalhes | AjusteRolesDetalhes | DesligamentoCompulsorioDetalhes | DadosDesatualizadosDetalhes;
+  detalhes_completos: MensalidadeDetalhes | AfastamentoDetalhes | DeltaDetalhes | EventoCanceladoDetalhes | TreinamentoAprovadorDetalhes | TreinamentoIntegranteDetalhes | EstagioAprovadorDetalhes | EstagioIntegranteDetalhes | AjusteRolesDetalhes | DesligamentoCompulsorioDetalhes | DadosDesatualizadosDetalhes | FlyerPendenteDetalhes;
 }
 
-export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes };
+export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes, FlyerPendenteDetalhes };
 
 export const usePendencias = (
   userId: string | undefined,
