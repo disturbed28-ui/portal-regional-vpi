@@ -563,6 +563,12 @@ const GestaoADM = () => {
                 </div>
               </TabsContent>
             )}
+
+            {afastamentosP.hasAnyAccess && (
+              <TabsContent value="afastamentos" className="m-0">
+                <AfastadosGestaoTab userId={user?.id} readOnly={afastamentosP.isReadOnly} />
+              </TabsContent>
+            )}
           </div>
         </Tabs>
       </div>

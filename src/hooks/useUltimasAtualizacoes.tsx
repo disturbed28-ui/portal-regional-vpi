@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface UltimaAtualizacao {
-  tipo: 'integrantes' | 'inadimplencia' | 'aniversariantes';
+  tipo: 'integrantes' | 'inadimplencia' | 'aniversariantes' | 'afastados';
   label: string;
   ultimaAtualizacao: string | null;
   diasDesdeAtualizacao: number | null;
@@ -49,6 +49,16 @@ export const useUltimasAtualizacoes = (enabled = true) => {
 
       const dataAniversariantes = ultimoAniversariante?.[0]?.updated_at || null;
 
+      // 4. Afastados - cargas_historico tipo 'afastados'
+      const { data: cargaAfastados } = await supabase
+        .from('cargas_historico')
+        .select('data_carga')
+        .eq('tipo_carga', 'afastados')
+        .order('data_carga', { ascending: false })
+        .limit(1);
+
+      const dataAfastados = cargaAfastados?.[0]?.data_carga || null;
+
       const calcularDias = (dataStr: string | null): number | null => {
         if (!dataStr) return null;
         const data = new Date(dataStr);
@@ -58,6 +68,7 @@ export const useUltimasAtualizacoes = (enabled = true) => {
       const diasIntegrantes = calcularDias(dataIntegrantes);
       const diasMensalidades = calcularDias(dataMensalidades);
       const diasAniversariantes = calcularDias(dataAniversariantes);
+      const diasAfastados = calcularDias(dataAfastados);
 
       return [
         {
@@ -80,6 +91,13 @@ export const useUltimasAtualizacoes = (enabled = true) => {
           ultimaAtualizacao: dataAniversariantes,
           diasDesdeAtualizacao: diasAniversariantes,
           desatualizado: diasAniversariantes !== null ? diasAniversariantes > LIMITE_DIAS : true,
+        },
+        {
+          tipo: 'afastados',
+          label: 'Afastados',
+          ultimaAtualizacao: dataAfastados,
+          diasDesdeAtualizacao: diasAfastados,
+          desatualizado: diasAfastados !== null ? diasAfastados > LIMITE_DIAS : true,
         },
       ];
     },
