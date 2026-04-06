@@ -39,7 +39,7 @@ export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps
   const cargasFiltradas = useMemo(() => {
     if (!cargas || cargas.length === 0) return [];
 
-    if (periodo === 'todos') return cargas;
+    if (periodo === 'todos') return cargas || [];
 
     let inicio: Date;
     let fim: Date;
