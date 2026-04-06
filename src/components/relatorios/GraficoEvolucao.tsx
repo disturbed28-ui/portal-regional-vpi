@@ -108,6 +108,10 @@ export const GraficoEvolucao = ({ cargas, divisoesUnicas }: GraficoEvolucaoProps
     });
   }, [cargasFiltradas, visualizacao]);
 
+  if (!cargas || cargas.length === 0 || !divisoesUnicas || divisoesUnicas.length === 0) {
+    return <div className="text-center text-muted-foreground py-8">Dados insuficientes para gerar o gráfico</div>;
+  }
+
   const formatarNomeDivisao = (nome: string) => {
     return nome
       .replace('DIVISAO ', 'Divisão ')
