@@ -26,9 +26,7 @@ import { SolicitacaoEstagio } from "@/components/admin/estagio/SolicitacaoEstagi
 import { AprovacaoPendenteEstagio } from "@/components/admin/estagio/AprovacaoPendenteEstagio";
 import { EncerramentoEstagio } from "@/components/admin/estagio/EncerramentoEstagio";
 import { HistoricoEstagio } from "@/components/admin/estagio/HistoricoEstagio";
-import { EstagioGrauV } from "@/components/admin/estagio/flyers/EstagioGrauV";
-import { EstagioGrauVI } from "@/components/admin/estagio/flyers/EstagioGrauVI";
-import { FilaProducao } from "@/components/admin/estagio/flyers/FilaProducao";
+import { FlyersEstagioList } from "@/components/admin/estagio/flyers/FlyersEstagioList";
 import { AfastadosGestaoTab } from "@/components/gestao/afastados/AfastadosGestaoTab";
 
 // Todas as rotas que precisamos verificar permissões
@@ -50,9 +48,6 @@ const ALL_ROUTES = [
   '/gestao-adm-estagio-encerramento',
   '/gestao-adm-estagio-historico',
   '/gestao-adm-estagio-flyers',
-  '/gestao-adm-estagio-flyers-grau5',
-  '/gestao-adm-estagio-flyers-grau6',
-  '/gestao-adm-estagio-flyers-fila',
   '/gestao-adm-aniversariantes',
   '/gestao-adm-afastamentos',
 ];
@@ -100,10 +95,6 @@ const GestaoADM = () => {
   const historicoEstagioP = getPerm('/gestao-adm-estagio-historico');
   const flyersP = getPerm('/gestao-adm-estagio-flyers');
 
-  // Permissões das sub-sub-abas de Flyers
-  const grau5P = getPerm('/gestao-adm-estagio-flyers-grau5');
-  const grau6P = getPerm('/gestao-adm-estagio-flyers-grau6');
-  const filaP = getPerm('/gestao-adm-estagio-flyers-fila');
 
   // Montar lista de abas visíveis
   const visibleTabs = useMemo(() => {
