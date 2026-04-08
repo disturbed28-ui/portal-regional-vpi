@@ -7,7 +7,7 @@ import { EventDetailDialog } from "@/components/agenda/EventDetailDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { format, startOfMonth, endOfMonth, addMonths, subMonths, isWithinInterval } from "date-fns";
+import { format, startOfMonth, endOfMonth, addMonths, subMonths, isWithinInterval, isBefore, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarEvent } from "@/lib/googleCalendar";
 import { useState, useEffect } from "react";
@@ -125,12 +125,22 @@ const Agenda = () => {
     );
   }
 
+  const hoje = dataAtualBrasil();
+  const limitePassado = startOfMonth(subMonths(hoje, 2));
+  const limiteFuturo = startOfMonth(addMonths(hoje, 6));
+
   const handlePreviousMonth = () => {
-    setSelectedMonth(subMonths(selectedMonth, 1));
+    const prev = subMonths(selectedMonth, 1);
+    if (!isBefore(startOfMonth(prev), limitePassado)) {
+      setSelectedMonth(prev);
+    }
   };
 
   const handleNextMonth = () => {
-    setSelectedMonth(addMonths(selectedMonth, 1));
+    const next = addMonths(selectedMonth, 1);
+    if (!isAfter(startOfMonth(next), limiteFuturo)) {
+      setSelectedMonth(next);
+    }
   };
 
   const handleEventClick = (event: CalendarEvent) => {
