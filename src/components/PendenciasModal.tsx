@@ -894,9 +894,10 @@ interface PendenciaItemProps {
   itemId: string;
   isOpen: boolean;
   onToggle: (id: string) => void;
+  onDispensarDados?: (tipoDado: string) => void;
 }
 
-const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemProps) => {
+const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle, onDispensarDados }: PendenciaItemProps) => {
   const navigate = useNavigate();
   const isMensalidade = pendencia.tipo === 'mensalidade';
   const isAfastamento = pendencia.tipo === 'afastamento';
