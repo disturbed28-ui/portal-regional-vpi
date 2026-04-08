@@ -106,7 +106,7 @@ export function SolicitacaoEstagio({ userId, readOnly = false }: SolicitacaoEsta
     setSearchTerm('');
     setDataInicioEstagio(new Date());
     setGrauEstagio(null);
-    // Não resetar tempoEstagioMeses - manter memória
+    setDivisaoEstagioId('');
   }
 
   async function handleEnviarSolicitacao() {
