@@ -114,8 +114,8 @@ Deno.serve(async (req) => {
     const allEvents = await fetchAllEvents(
       CALENDAR_ID,
       API_KEY,
-      threeMonthsBefore.toISOString(),
-      threeMonthsLater.toISOString()
+      monthsBefore.toISOString(),
+      monthsAfter.toISOString()
     );
 
     console.log('[get-calendar-events] Total events fetched:', allEvents.length);
