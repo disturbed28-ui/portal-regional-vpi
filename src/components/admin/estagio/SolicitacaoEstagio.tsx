@@ -50,6 +50,7 @@ export function SolicitacaoEstagio({ userId, readOnly = false }: SolicitacaoEsta
   const [cargoEstagioNome, setCargoEstagioNome] = useState<string | null>(null);
   const [grauEstagioAtual, setGrauEstagioAtual] = useState<string | null>(null);
   const [dataInicioEstagio, setDataInicioEstagio] = useState<Date | undefined>(new Date());
+  const [divisaoEstagioId, setDivisaoEstagioId] = useState<string>('');
 
   const { getSettingTextValue, updateSettingText } = useSystemSettings();
   const tempoGrau5Padrao = getSettingTextValue('tempo_estagio_grau5_padrao') || '9';
