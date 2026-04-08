@@ -185,7 +185,8 @@ const Agenda = () => {
             variant="ghost"
             size="sm"
             onClick={handlePreviousMonth}
-            className="text-primary-foreground hover:bg-primary-foreground/10"
+            disabled={isBefore(startOfMonth(subMonths(selectedMonth, 1)), limitePassado)}
+            className="text-primary-foreground hover:bg-primary-foreground/10 disabled:opacity-30"
           >
             <ChevronLeft className="h-5 w-5" />
           </Button>
@@ -194,7 +195,8 @@ const Agenda = () => {
             variant="ghost"
             size="sm"
             onClick={handleNextMonth}
-            className="text-primary-foreground hover:bg-primary-foreground/10"
+            disabled={isAfter(startOfMonth(addMonths(selectedMonth, 1)), limiteFuturo)}
+            className="text-primary-foreground hover:bg-primary-foreground/10 disabled:opacity-30"
           >
             <ChevronRight className="h-5 w-5" />
           </Button>
