@@ -20,6 +20,7 @@ import { useCargosGrau } from '@/hooks/useCargosGrau';
 import { useSolicitacaoEstagio } from '@/hooks/useSolicitacaoEstagio';
 import { useProfile } from '@/hooks/useProfile';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
+import { useDivisoesPorRegional } from '@/hooks/useDivisoesPorRegional';
 import { IntegranteEstagioCard } from './IntegranteEstagioCard';
 import { ReadOnlyBanner } from '@/components/ui/read-only-banner';
 import { format, addMonths } from 'date-fns';
