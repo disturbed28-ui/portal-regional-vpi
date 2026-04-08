@@ -93,9 +93,7 @@ async function matchDivisaoToId(divisaoText: string): Promise<{ id: string | nul
   const divisoes = await loadDivisoesCache();
   const normalizado = removeSpecialCharacters(divisaoText).toUpperCase();
   
-  console.log('[matchDivisaoToId] Tentando match para:', divisaoText, '→', normalizado);
-  
-  // CASO ESPECIAL: "Regional VP1/VP2/VP3/LN" → buscar a regional correspondente
+  // CASO ESPECIAL: "Regional VP1/VP2/VP3/LN"
   const siglaMatch = normalizado.match(/^REGIONAL\s*(VP1|VP2|VP3|LN)$/i);
   if (siglaMatch) {
     const sigla = siglaMatch[1].toUpperCase();
@@ -110,36 +108,30 @@ async function matchDivisaoToId(divisaoText: string): Promise<{ id: string | nul
     if (nomeBuscado) {
       for (const div of divisoes) {
         if (div.normalizado.includes(nomeBuscado)) {
-          console.log('[matchDivisaoToId] ✅ Match por sigla regional:', div.nome, '| Sigla:', sigla);
           return { id: div.id, regionalSigla: sigla };
         }
       }
     }
-    
-    // Se não encontrou no banco, retornar com a sigla mesmo sem ID
-    console.log('[matchDivisaoToId] ⚠️ Regional não encontrada no banco, usando sigla:', sigla);
     return { id: null, regionalSigla: sigla };
   }
   
   // 1. Match exato
   for (const div of divisoes) {
     if (div.normalizado === normalizado) {
-      console.log('[matchDivisaoToId] ✅ Match exato:', div.nome, '| Sigla:', div.regionalSigla);
       return { id: div.id, regionalSigla: div.regionalSigla };
     }
   }
   
-  // 2. Match por contains (divisão contém o texto ou vice-versa)
+  // 2. Match por contains
   for (const div of divisoes) {
     if (div.normalizado.includes(normalizado) || normalizado.includes(div.normalizado)) {
-      console.log('[matchDivisaoToId] ✅ Match parcial:', div.nome, '| Sigla:', div.regionalSigla);
       return { id: div.id, regionalSigla: div.regionalSigla };
     }
   }
   
-  // 3. Match por palavras-chave específicas
+  // 3. Match por palavras-chave
   const keywords: Record<string, string[]> = {
-    'CACAPAVA': ['CACAPAVA', 'CAÇAPAVA', 'CACAPAVA'],
+    'CACAPAVA': ['CACAPAVA', 'CAÇAPAVA'],
     'JACAREI NORTE': ['JAC NORTE', 'JACAREI NORTE', 'JAC. NORTE', 'JACNORTE', 'NORTE JACAREI'],
     'JACAREI OESTE': ['JAC OESTE', 'JACAREI OESTE', 'JAC. OESTE', 'JACOESTE', 'OESTE JACAREI'],
     'JACAREI LESTE': ['JAC LESTE', 'JACAREI LESTE', 'JAC. LESTE', 'JACLESTE', 'LESTE JACAREI'],
@@ -157,12 +149,10 @@ async function matchDivisaoToId(divisaoText: string): Promise<{ id: string | nul
   
   for (const div of divisoes) {
     const divNormalizada = div.normalizado;
-    
     for (const [key, patterns] of Object.entries(keywords)) {
       if (divNormalizada.includes(key)) {
         for (const pattern of patterns) {
           if (normalizado.includes(pattern)) {
-            console.log('[matchDivisaoToId] ✅ Match por keyword:', div.nome, '(pattern:', pattern, ') | Sigla:', div.regionalSigla);
             return { id: div.id, regionalSigla: div.regionalSigla };
           }
         }
@@ -170,7 +160,6 @@ async function matchDivisaoToId(divisaoText: string): Promise<{ id: string | nul
     }
   }
   
-  console.log('[matchDivisaoToId] ❌ Nenhum match encontrado para:', divisaoText);
   return { id: null, regionalSigla: null };
 }
 
