@@ -63,7 +63,6 @@ let divisoesCache: Array<{
 async function loadDivisoesCache() {
   if (divisoesCache) return divisoesCache;
   
-  console.log('[loadDivisoesCache] Carregando divisões do banco com sigla da regional...');
   const { data, error } = await supabase
     .from('divisoes')
     .select(`
@@ -86,7 +85,6 @@ async function loadDivisoesCache() {
     regionalSigla: (d.regionais as any)?.sigla || null
   }));
   
-  console.log('[loadDivisoesCache] Carregadas', divisoesCache.length, 'divisões com siglas');
   return divisoesCache;
 }
 
@@ -95,9 +93,7 @@ async function matchDivisaoToId(divisaoText: string): Promise<{ id: string | nul
   const divisoes = await loadDivisoesCache();
   const normalizado = removeSpecialCharacters(divisaoText).toUpperCase();
   
-  console.log('[matchDivisaoToId] Tentando match para:', divisaoText, '→', normalizado);
-  
-  // CASO ESPECIAL: "Regional VP1/VP2/VP3/LN" → buscar a regional correspondente
+  // CASO ESPECIAL: "Regional VP1/VP2/VP3/LN"
   const siglaMatch = normalizado.match(/^REGIONAL\s*(VP1|VP2|VP3|LN)$/i);
   if (siglaMatch) {
     const sigla = siglaMatch[1].toUpperCase();
@@ -112,36 +108,30 @@ async function matchDivisaoToId(divisaoText: string): Promise<{ id: string | nul
     if (nomeBuscado) {
       for (const div of divisoes) {
         if (div.normalizado.includes(nomeBuscado)) {
-          console.log('[matchDivisaoToId] ✅ Match por sigla regional:', div.nome, '| Sigla:', sigla);
           return { id: div.id, regionalSigla: sigla };
         }
       }
     }
-    
-    // Se não encontrou no banco, retornar com a sigla mesmo sem ID
-    console.log('[matchDivisaoToId] ⚠️ Regional não encontrada no banco, usando sigla:', sigla);
     return { id: null, regionalSigla: sigla };
   }
   
   // 1. Match exato
   for (const div of divisoes) {
     if (div.normalizado === normalizado) {
-      console.log('[matchDivisaoToId] ✅ Match exato:', div.nome, '| Sigla:', div.regionalSigla);
       return { id: div.id, regionalSigla: div.regionalSigla };
     }
   }
   
-  // 2. Match por contains (divisão contém o texto ou vice-versa)
+  // 2. Match por contains
   for (const div of divisoes) {
     if (div.normalizado.includes(normalizado) || normalizado.includes(div.normalizado)) {
-      console.log('[matchDivisaoToId] ✅ Match parcial:', div.nome, '| Sigla:', div.regionalSigla);
       return { id: div.id, regionalSigla: div.regionalSigla };
     }
   }
   
-  // 3. Match por palavras-chave específicas
+  // 3. Match por palavras-chave
   const keywords: Record<string, string[]> = {
-    'CACAPAVA': ['CACAPAVA', 'CAÇAPAVA', 'CACAPAVA'],
+    'CACAPAVA': ['CACAPAVA', 'CAÇAPAVA'],
     'JACAREI NORTE': ['JAC NORTE', 'JACAREI NORTE', 'JAC. NORTE', 'JACNORTE', 'NORTE JACAREI'],
     'JACAREI OESTE': ['JAC OESTE', 'JACAREI OESTE', 'JAC. OESTE', 'JACOESTE', 'OESTE JACAREI'],
     'JACAREI LESTE': ['JAC LESTE', 'JACAREI LESTE', 'JAC. LESTE', 'JACLESTE', 'LESTE JACAREI'],
@@ -159,12 +149,10 @@ async function matchDivisaoToId(divisaoText: string): Promise<{ id: string | nul
   
   for (const div of divisoes) {
     const divNormalizada = div.normalizado;
-    
     for (const [key, patterns] of Object.entries(keywords)) {
       if (divNormalizada.includes(key)) {
         for (const pattern of patterns) {
           if (normalizado.includes(pattern)) {
-            console.log('[matchDivisaoToId] ✅ Match por keyword:', div.nome, '(pattern:', pattern, ') | Sigla:', div.regionalSigla);
             return { id: div.id, regionalSigla: div.regionalSigla };
           }
         }
@@ -172,7 +160,6 @@ async function matchDivisaoToId(divisaoText: string): Promise<{ id: string | nul
     }
   }
   
-  console.log('[matchDivisaoToId] ❌ Nenhum match encontrado para:', divisaoText);
   return { id: null, regionalSigla: null };
 }
 
@@ -231,93 +218,44 @@ async function parseEventComponents(originalTitle: string): Promise<ParsedEvent>
   const lower = normalized.toLowerCase();
   const upper = normalized.toUpperCase();
   
-  console.log('[parseEventComponents] ===== INÍCIO DO PARSING =====');
-  console.log('[parseEventComponents] Original:', originalTitle);
-  console.log('[parseEventComponents] Normalized:', normalized);
-  
-  // Detectar se é CMD ou Regional
   const isCMD = upper.includes('CMD');
   const isRegional = upper.includes('REGIONAL');
-  
-  // Detectar se é evento Caveira (restrito) - match em qualquer posição do título
   const isCaveira = /\bcaveiras?\b/i.test(originalTitle);
   
-  console.log('[parseEventComponents] É CMD?', isCMD);
-  console.log('[parseEventComponents] É Regional?', isRegional);
-  console.log('[parseEventComponents] É Caveira?', isCaveira);
-  
-  // Detectar tipo de evento (prioridade)
+  // Detectar tipo de evento
   let tipoEvento = 'Outros';
   let subtipo: string | undefined;
   
-  // Caveira tem prioridade máxima
   if (isCaveira) {
     tipoEvento = 'Caveira';
-  }
-  // PUB tem prioridade
-  else if (lower.includes('pub')) {
+  } else if (lower.includes('pub')) {
     tipoEvento = 'PUB';
-  }
-  // Ação Social / Arrecadação
-  else if (lower.includes('acao social') || lower.includes('arrecadacao')) {
+  } else if (lower.includes('acao social') || lower.includes('arrecadacao')) {
     tipoEvento = 'Acao Social';
-    if (lower.includes('arrecadacao')) {
-      subtipo = 'Arrecadacao';
-    }
-  }
-  // Bate e Volta / Bate-Volta (antes de reunião para não confundir com bate-papo)
-  else if (lower.includes('bate e volta') || lower.includes('bate-volta') || lower.includes('bate volta')) {
+    if (lower.includes('arrecadacao')) subtipo = 'Arrecadacao';
+  } else if (lower.includes('bate e volta') || lower.includes('bate-volta') || lower.includes('bate volta')) {
     tipoEvento = 'Bate e Volta';
-  }
-  // Reunião (incluindo bate-papo) - múltiplas formas de detecção para diferentes encodings
-  else if (
-    lower.includes('reuniao') || 
-    lower.includes('reunia') ||
-    /reuni[aã]o/i.test(originalTitle) ||
-    /reuni[aã]/i.test(normalized) ||
-    lower.includes('bate papo') || 
-    lower.includes('bate-papo')
+  } else if (
+    lower.includes('reuniao') || lower.includes('reunia') ||
+    /reuni[aã]o/i.test(originalTitle) || /reuni[aã]/i.test(normalized) ||
+    lower.includes('bate papo') || lower.includes('bate-papo')
   ) {
     tipoEvento = 'Reuniao';
-  }
-  // Bonde / Bonde Treino / Bonde Insano / Viagem Insana
-  else if (lower.includes('bonde insano') || lower.includes('bonde') || lower.includes('viagem insana')) {
+  } else if (lower.includes('bonde insano') || lower.includes('bonde') || lower.includes('viagem insana')) {
     tipoEvento = 'Bonde Insano';
   }
   
-  console.log('[parseEventComponents] Tipo detectado:', tipoEvento);
+  if (lower.includes('entrega de coletes')) subtipo = 'Entrega de Coletes';
   
-  // Detectar subtipos específicos
-  if (lower.includes('entrega de coletes')) {
-    subtipo = 'Entrega de Coletes';
-  }
-  
-  if (subtipo) {
-    console.log('[parseEventComponents] Subtipo detectado:', subtipo);
-  }
-  
-  // Detectar divisão e informações extras
   let divisao = 'Sem Divisao';
   let informacoesExtras: string | undefined;
-  
-  // Variável para armazenar sigla regional detectada diretamente do título
   let regionalSiglaDetectada: string | null = null;
   
-  // Se for Caveira, detectar sigla regional e extrair informações extras
   if (isCaveira) {
-    // Detectar sigla de regional no título (VP1, VP2, VP3, LN, CMD)
     const siglaMatch = originalTitle.match(/\b(VP1|VP2|VP3|LN|CMD)\b/i);
     regionalSiglaDetectada = siglaMatch ? siglaMatch[1].toUpperCase() : null;
-    
-    // Usar a regional detectada como divisão (não "Caveira" para evitar duplicação)
-    // O badge de tipo já mostra "Caveira"
     divisao = regionalSiglaDetectada || 'Sem Divisao';
     
-    console.log('[parseEventComponents] Caveira - Sigla regional detectada:', regionalSiglaDetectada);
-    
-    // Extrair o título removendo "Caveira/Caveiras" E a sigla da regional
-    // "Reunião Caveira VP1" → "Reunião"
-    // "Caveiras VP1 Reunião" → "Reunião"
     const tituloSemCaveira = originalTitle
       .replace(/\bcaveiras?\b/gi, '')
       .replace(/\b(VP1|VP2|VP3|LN|CMD)\b/gi, '')
@@ -325,83 +263,26 @@ async function parseEventComponents(originalTitle: string): Promise<ParsedEvent>
       .replace(/^\s*[-:–]\s*/, '')
       .replace(/\s*[-:–]\s*$/, '')
       .trim();
-    
-    if (tituloSemCaveira) {
-      informacoesExtras = tituloSemCaveira;
-    }
-  }
-  // Se for CMD, usar título original como informações extras
-  else if (isCMD) {
+    if (tituloSemCaveira) informacoesExtras = tituloSemCaveira;
+  } else if (isCMD) {
     divisao = 'CMD';
-    
-    // Usar o título completo como informações extras, removendo apenas tipo de evento
     let tituloParaExtras = originalTitle;
-    
-    // Remover tipo de evento do início
-    if (lower.includes('pub')) {
-      tituloParaExtras = originalTitle.replace(/pub\s*[-\s]*/gi, '').trim();
-    }
-    if (lower.includes('reuniao')) {
-      tituloParaExtras = originalTitle.replace(/reuniao\s*[-\s]*/gi, '').trim();
-    }
-    if (lower.includes('acao social')) {
-      tituloParaExtras = originalTitle.replace(/acao\s+social\s*[-\s]*/gi, '').trim();
-    }
-    
-    // Remover "CMD" e parênteses do início/fim
-    tituloParaExtras = tituloParaExtras
-      .replace(/cmd\s*[-\s]*/gi, '')
-      .replace(/^\(+/, '')
-      .replace(/\)+$/, '')
-      .trim();
-    
-    if (tituloParaExtras.length > 0) {
-      informacoesExtras = tituloParaExtras;
-    }
+    if (lower.includes('pub')) tituloParaExtras = originalTitle.replace(/pub\s*[-\s]*/gi, '').trim();
+    if (lower.includes('reuniao')) tituloParaExtras = originalTitle.replace(/reuniao\s*[-\s]*/gi, '').trim();
+    if (lower.includes('acao social')) tituloParaExtras = originalTitle.replace(/acao\s+social\s*[-\s]*/gi, '').trim();
+    tituloParaExtras = tituloParaExtras.replace(/cmd\s*[-\s]*/gi, '').replace(/^\(+/, '').replace(/\)+$/, '').trim();
+    if (tituloParaExtras.length > 0) informacoesExtras = tituloParaExtras;
   } else if (isRegional) {
-    // Para eventos Regionais, detectar qual regional especificamente
-    // Usar a nova função para detectar sigla (VP1, VP2, VP3, LN ou numerais romanos)
     regionalSiglaDetectada = detectRegionalSiglaFromTitle(originalTitle);
-    
-    console.log('[parseEventComponents] Regional - Sigla detectada:', regionalSiglaDetectada);
-    
-    // Usar a sigla detectada para criar a divisão no formato correto
-    if (regionalSiglaDetectada) {
-      divisao = `Regional ${regionalSiglaDetectada}`;
-    } else {
-      divisao = 'Regional';
-    }
-    
-    // Usar o título completo como informações extras, removendo apenas tipo de evento
+    divisao = regionalSiglaDetectada ? `Regional ${regionalSiglaDetectada}` : 'Regional';
     let tituloParaExtras = originalTitle;
-    
-    // Remover tipo de evento do início
-    if (lower.includes('pub')) {
-      tituloParaExtras = originalTitle.replace(/pub\s*[-\s]*/gi, '').trim();
-    }
-    if (lower.includes('reuniao')) {
-      tituloParaExtras = originalTitle.replace(/reuniao\s*[-\s]*/gi, '').trim();
-    }
-    if (lower.includes('acao social')) {
-      tituloParaExtras = originalTitle.replace(/acao\s+social\s*[-\s]*/gi, '').trim();
-    }
-    
-    // Remover "Regional" e parênteses/hífens do início/fim
-    tituloParaExtras = tituloParaExtras
-      .replace(/regional\s*[-\s]*/gi, '')
-      .replace(/^\(+/, '')
-      .replace(/\)+$/, '')
-      .replace(/^[-\s]+/, '')
-      .trim();
-    
-    if (tituloParaExtras.length > 0) {
-      informacoesExtras = tituloParaExtras;
-    }
+    if (lower.includes('pub')) tituloParaExtras = originalTitle.replace(/pub\s*[-\s]*/gi, '').trim();
+    if (lower.includes('reuniao')) tituloParaExtras = originalTitle.replace(/reuniao\s*[-\s]*/gi, '').trim();
+    if (lower.includes('acao social')) tituloParaExtras = originalTitle.replace(/acao\s+social\s*[-\s]*/gi, '').trim();
+    tituloParaExtras = tituloParaExtras.replace(/regional\s*[-\s]*/gi, '').replace(/^\(+/, '').replace(/\)+$/, '').replace(/^[-\s]+/, '').trim();
+    if (tituloParaExtras.length > 0) informacoesExtras = tituloParaExtras;
   } else {
-    // Detectar divisão normal
     divisao = await detectDivisionFromTitle(normalized);
-    
-    // Extrair informações extras (texto após a divisão)
     const divIndex = originalTitle.toLowerCase().indexOf(divisao.toLowerCase());
     if (divIndex > -1 && divIndex + divisao.length < originalTitle.length) {
       const extras = originalTitle.substring(divIndex + divisao.length).trim();
@@ -411,36 +292,23 @@ async function parseEventComponents(originalTitle: string): Promise<ParsedEvent>
     }
   }
   
-  console.log('[parseEventComponents] Divisão detectada:', divisao);
-  
-  if (informacoesExtras) {
-    console.log('[parseEventComponents] Informações extras:', informacoesExtras);
-  }
-  
-  const parsed: ParsedEvent = {
+  return {
     tipoEvento,
     subtipo,
     divisao,
-    divisaoId: null, // Será preenchido depois
-    regionalSigla: regionalSiglaDetectada, // Para Caveira, já vem preenchida; outros serão preenchidos depois
+    divisaoId: null,
+    regionalSigla: regionalSiglaDetectada,
     informacoesExtras,
     isCMD,
     isRegional,
     isCaveira
   };
-  
-  console.log('[parseEventComponents] ===== RESULTADO FINAL =====');
-  console.log('[parseEventComponents] Parsed:', JSON.stringify(parsed, null, 2));
-  return parsed;
 }
 
 // Detectar divisão do título (versão aprimorada com fallback dinâmico do banco)
 async function detectDivisionFromTitle(title: string): Promise<string> {
   const lower = title.toLowerCase();
   const normalized = removeSpecialCharacters(lower);
-  
-  console.log('[detectDivisionFromTitle] Input:', title);
-  console.log('[detectDivisionFromTitle] Normalized:', normalized);
   
   // ===== FAST PATH: regras hardcoded para divisões com lógica especial (cidade+direção) =====
   const temSjc = normalized.includes('sjc') || normalized.includes('sao jose') || normalized.includes('sao jose dos campos');
@@ -497,12 +365,10 @@ async function detectDivisionFromTitle(title: string): Promise<string> {
         .replace(/\s*-\s*SP\s*$/i, '')
         .trim();
       const resultado = `Divisao ${nomeFormatado} - SP`;
-      console.log('[detectDivisionFromTitle] ✅ Match dinâmico:', resultado);
       return resultado;
     }
   }
   
-  console.log('[detectDivisionFromTitle] Nenhuma divisão detectada');
   return 'Sem Divisao';
 }
 
@@ -544,14 +410,11 @@ function buildNormalizedTitle(components: ParsedEvent): string {
     innerTitle = `[${components.regionalSigla}] ${innerTitle}`;
   }
   
-  console.log('[buildNormalizedTitle] Título normalizado:', innerTitle, '| Sigla:', components.regionalSigla);
   return innerTitle;
 }
 
 export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
   try {
-    console.log('[fetchCalendarEvents] Chamando edge function segura');
-    
     const { data, error } = await supabase.functions.invoke('get-calendar-events');
 
     if (error) {
@@ -560,85 +423,65 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
     }
 
     if (!data || !data.items) {
-      console.warn('[fetchCalendarEvents] Nenhum evento retornado');
       return [];
     }
 
-    console.log('[fetchCalendarEvents] Processando', data.items.length, 'eventos...');
+    // Pré-carregar cache de divisões antes do processamento paralelo
+    await loadDivisoesCache();
 
-    const allEvents: CalendarEvent[] = []; // Todos os eventos (para sincronização)
-    const activeEvents: CalendarEvent[] = []; // Apenas eventos ativos (para exibição)
-    
-    for (const item of data.items) {
-      const originalTitle = item.summary || "Sem titulo";
-      const googleStatus = item.status || 'confirmed'; // Status do Google (confirmed, cancelled, tentative)
-      
-      // Parsear componentes do título
-      const components = await parseEventComponents(originalTitle);
-      
-      // Fazer matching de divisão com banco (agora retorna id E sigla)
-      const matchResult = await matchDivisaoToId(components.divisao);
-      components.divisaoId = matchResult.id;
-      
-      // Determinar sigla da regional
-      if (components.isCaveira && components.regionalSigla) {
-        // Para eventos Caveira, manter a sigla detectada no parseEventComponents
-        console.log('[fetchCalendarEvents] Caveira - Mantendo sigla detectada:', components.regionalSigla);
-      } else if (components.isCMD) {
-        // Para eventos CMD, usar sigla "CMD"
-        components.regionalSigla = 'CMD';
-      } else if (matchResult.regionalSigla) {
-        // Para eventos de divisão normal ou regional, usar a sigla encontrada
-        components.regionalSigla = matchResult.regionalSigla;
-      }
-      
-      // Construir título normalizado (agora com sigla)
-      const normalizedTitle = buildNormalizedTitle(components);
-      
-      const event: CalendarEvent = {
-        id: item.id,
-        title: normalizedTitle,
-        originalTitle,
-        normalizedComponents: components,
-        description: item.description || "",
-        start: item.start?.dateTime || (item.start?.date ? `${item.start.date}T00:00:00-03:00` : ''),
-        end: item.end?.dateTime || (item.end?.date ? `${item.end.date}T23:59:59-03:00` : ''),
-        location: item.location,
-        type: components.tipoEvento,
-        division: components.divisao,
-        divisao_id: matchResult.id,
-        htmlLink: item.htmlLink || '',
-        isComandoEvent: components.isCMD,
-        isRegionalEvent: components.isRegional,
-        isCaveiraEvent: components.isCaveira,
-        googleStatus, // Incluir status do Google
-      };
-      
-      // Adicionar a todos os eventos (para sincronização)
-      allEvents.push(event);
-      
-      // Só adicionar aos eventos ativos se NÃO estiver cancelado/deletado
-      // e se tiver um título válido (não vazio)
-      if (googleStatus !== 'cancelled' && originalTitle !== 'Sem titulo') {
-        activeEvents.push(event);
-      } else {
-        console.log(`[fetchCalendarEvents] ⚠️ Evento filtrado da exibição (status: ${googleStatus}, titulo: "${originalTitle}")`);
-      }
-      
-      if (!matchResult.id && components.divisao !== 'Sem Divisao' && googleStatus !== 'cancelled') {
-        console.warn('[fetchCalendarEvents] ⚠️ Divisão não encontrada no banco:', {
-          titulo_original: originalTitle,
-          divisao_detectada: components.divisao
-        });
-      }
-    }
+    // Processar todos os eventos em paralelo
+    const processedEvents = await Promise.all(
+      data.items.map(async (item: any) => {
+        const originalTitle = item.summary || "Sem titulo";
+        const googleStatus = item.status || 'confirmed';
+        
+        const components = await parseEventComponents(originalTitle);
+        const matchResult = await matchDivisaoToId(components.divisao);
+        components.divisaoId = matchResult.id;
+        
+        if (components.isCaveira && components.regionalSigla) {
+          // manter sigla detectada
+        } else if (components.isCMD) {
+          components.regionalSigla = 'CMD';
+        } else if (matchResult.regionalSigla) {
+          components.regionalSigla = matchResult.regionalSigla;
+        }
+        
+        const normalizedTitle = buildNormalizedTitle(components);
+        
+        return {
+          id: item.id,
+          title: normalizedTitle,
+          originalTitle,
+          normalizedComponents: components,
+          description: item.description || "",
+          start: item.start?.dateTime || (item.start?.date ? `${item.start.date}T00:00:00-03:00` : ''),
+          end: item.end?.dateTime || (item.end?.date ? `${item.end.date}T23:59:59-03:00` : ''),
+          location: item.location,
+          type: components.tipoEvento,
+          division: components.divisao,
+          divisao_id: matchResult.id,
+          htmlLink: item.htmlLink || '',
+          isComandoEvent: components.isCMD,
+          isRegionalEvent: components.isRegional,
+          isCaveiraEvent: components.isCaveira,
+          googleStatus,
+        } as CalendarEvent;
+      })
+    );
 
-    console.log('[fetchCalendarEvents] Total de eventos:', allEvents.length, '| Eventos ativos para exibição:', activeEvents.length);
+    const allEvents = processedEvents;
+    const activeEvents = allEvents.filter(
+      e => e.googleStatus !== 'cancelled' && e.originalTitle !== 'Sem titulo'
+    );
 
-    // Sincronizar TODOS os eventos (incluindo cancelados) para detectar mudanças de status
-    await syncEventsWithDatabase(allEvents);
+    console.log('[fetchCalendarEvents] Eventos:', allEvents.length, '| Ativos:', activeEvents.length);
 
-    // Retornar apenas eventos ativos para exibição na UI
+    // Sincronizar em background (não bloquear retorno)
+    syncEventsWithDatabase(allEvents).catch(err => 
+      console.error('[syncEventsWithDatabase] Erro:', err)
+    );
+
     return activeEvents;
   } catch (error) {
     console.error('[fetchCalendarEvents] Erro:', error);
