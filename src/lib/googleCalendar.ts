@@ -310,9 +310,6 @@ async function detectDivisionFromTitle(title: string): Promise<string> {
   const lower = title.toLowerCase();
   const normalized = removeSpecialCharacters(lower);
   
-  console.log('[detectDivisionFromTitle] Input:', title);
-  console.log('[detectDivisionFromTitle] Normalized:', normalized);
-  
   // ===== FAST PATH: regras hardcoded para divisões com lógica especial (cidade+direção) =====
   const temSjc = normalized.includes('sjc') || normalized.includes('sao jose') || normalized.includes('sao jose dos campos');
   const temJac = normalized.includes('jac') || normalized.includes('jacarei');
@@ -368,12 +365,10 @@ async function detectDivisionFromTitle(title: string): Promise<string> {
         .replace(/\s*-\s*SP\s*$/i, '')
         .trim();
       const resultado = `Divisao ${nomeFormatado} - SP`;
-      console.log('[detectDivisionFromTitle] ✅ Match dinâmico:', resultado);
       return resultado;
     }
   }
   
-  console.log('[detectDivisionFromTitle] Nenhuma divisão detectada');
   return 'Sem Divisao';
 }
 
