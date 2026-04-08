@@ -279,7 +279,7 @@ Deno.serve(async (req) => {
           .eq('registro_id', afastado.registro_id)
           .maybeSingle();
 
-        if (!integrantePortal) {
+        if (!integranteCheck) {
           avisos.push(`${afastado.nome_colete} (${afastado.registro_id}) não encontrado em integrantes_portal`);
         }
       } catch (error) {
