@@ -415,14 +415,11 @@ function buildNormalizedTitle(components: ParsedEvent): string {
     innerTitle = `[${components.regionalSigla}] ${innerTitle}`;
   }
   
-  console.log('[buildNormalizedTitle] Título normalizado:', innerTitle, '| Sigla:', components.regionalSigla);
   return innerTitle;
 }
 
 export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
   try {
-    console.log('[fetchCalendarEvents] Chamando edge function segura');
-    
     const { data, error } = await supabase.functions.invoke('get-calendar-events');
 
     if (error) {
@@ -431,85 +428,65 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
     }
 
     if (!data || !data.items) {
-      console.warn('[fetchCalendarEvents] Nenhum evento retornado');
       return [];
     }
 
-    console.log('[fetchCalendarEvents] Processando', data.items.length, 'eventos...');
+    // Pré-carregar cache de divisões antes do processamento paralelo
+    await loadDivisoesCache();
 
-    const allEvents: CalendarEvent[] = []; // Todos os eventos (para sincronização)
-    const activeEvents: CalendarEvent[] = []; // Apenas eventos ativos (para exibição)
-    
-    for (const item of data.items) {
-      const originalTitle = item.summary || "Sem titulo";
-      const googleStatus = item.status || 'confirmed'; // Status do Google (confirmed, cancelled, tentative)
-      
-      // Parsear componentes do título
-      const components = await parseEventComponents(originalTitle);
-      
-      // Fazer matching de divisão com banco (agora retorna id E sigla)
-      const matchResult = await matchDivisaoToId(components.divisao);
-      components.divisaoId = matchResult.id;
-      
-      // Determinar sigla da regional
-      if (components.isCaveira && components.regionalSigla) {
-        // Para eventos Caveira, manter a sigla detectada no parseEventComponents
-        console.log('[fetchCalendarEvents] Caveira - Mantendo sigla detectada:', components.regionalSigla);
-      } else if (components.isCMD) {
-        // Para eventos CMD, usar sigla "CMD"
-        components.regionalSigla = 'CMD';
-      } else if (matchResult.regionalSigla) {
-        // Para eventos de divisão normal ou regional, usar a sigla encontrada
-        components.regionalSigla = matchResult.regionalSigla;
-      }
-      
-      // Construir título normalizado (agora com sigla)
-      const normalizedTitle = buildNormalizedTitle(components);
-      
-      const event: CalendarEvent = {
-        id: item.id,
-        title: normalizedTitle,
-        originalTitle,
-        normalizedComponents: components,
-        description: item.description || "",
-        start: item.start?.dateTime || (item.start?.date ? `${item.start.date}T00:00:00-03:00` : ''),
-        end: item.end?.dateTime || (item.end?.date ? `${item.end.date}T23:59:59-03:00` : ''),
-        location: item.location,
-        type: components.tipoEvento,
-        division: components.divisao,
-        divisao_id: matchResult.id,
-        htmlLink: item.htmlLink || '',
-        isComandoEvent: components.isCMD,
-        isRegionalEvent: components.isRegional,
-        isCaveiraEvent: components.isCaveira,
-        googleStatus, // Incluir status do Google
-      };
-      
-      // Adicionar a todos os eventos (para sincronização)
-      allEvents.push(event);
-      
-      // Só adicionar aos eventos ativos se NÃO estiver cancelado/deletado
-      // e se tiver um título válido (não vazio)
-      if (googleStatus !== 'cancelled' && originalTitle !== 'Sem titulo') {
-        activeEvents.push(event);
-      } else {
-        console.log(`[fetchCalendarEvents] ⚠️ Evento filtrado da exibição (status: ${googleStatus}, titulo: "${originalTitle}")`);
-      }
-      
-      if (!matchResult.id && components.divisao !== 'Sem Divisao' && googleStatus !== 'cancelled') {
-        console.warn('[fetchCalendarEvents] ⚠️ Divisão não encontrada no banco:', {
-          titulo_original: originalTitle,
-          divisao_detectada: components.divisao
-        });
-      }
-    }
+    // Processar todos os eventos em paralelo
+    const processedEvents = await Promise.all(
+      data.items.map(async (item: any) => {
+        const originalTitle = item.summary || "Sem titulo";
+        const googleStatus = item.status || 'confirmed';
+        
+        const components = await parseEventComponents(originalTitle);
+        const matchResult = await matchDivisaoToId(components.divisao);
+        components.divisaoId = matchResult.id;
+        
+        if (components.isCaveira && components.regionalSigla) {
+          // manter sigla detectada
+        } else if (components.isCMD) {
+          components.regionalSigla = 'CMD';
+        } else if (matchResult.regionalSigla) {
+          components.regionalSigla = matchResult.regionalSigla;
+        }
+        
+        const normalizedTitle = buildNormalizedTitle(components);
+        
+        return {
+          id: item.id,
+          title: normalizedTitle,
+          originalTitle,
+          normalizedComponents: components,
+          description: item.description || "",
+          start: item.start?.dateTime || (item.start?.date ? `${item.start.date}T00:00:00-03:00` : ''),
+          end: item.end?.dateTime || (item.end?.date ? `${item.end.date}T23:59:59-03:00` : ''),
+          location: item.location,
+          type: components.tipoEvento,
+          division: components.divisao,
+          divisao_id: matchResult.id,
+          htmlLink: item.htmlLink || '',
+          isComandoEvent: components.isCMD,
+          isRegionalEvent: components.isRegional,
+          isCaveiraEvent: components.isCaveira,
+          googleStatus,
+        } as CalendarEvent;
+      })
+    );
 
-    console.log('[fetchCalendarEvents] Total de eventos:', allEvents.length, '| Eventos ativos para exibição:', activeEvents.length);
+    const allEvents = processedEvents;
+    const activeEvents = allEvents.filter(
+      e => e.googleStatus !== 'cancelled' && e.originalTitle !== 'Sem titulo'
+    );
 
-    // Sincronizar TODOS os eventos (incluindo cancelados) para detectar mudanças de status
-    await syncEventsWithDatabase(allEvents);
+    console.log('[fetchCalendarEvents] Eventos:', allEvents.length, '| Ativos:', activeEvents.length);
 
-    // Retornar apenas eventos ativos para exibição na UI
+    // Sincronizar em background (não bloquear retorno)
+    syncEventsWithDatabase(allEvents).catch(err => 
+      console.error('[syncEventsWithDatabase] Erro:', err)
+    );
+
     return activeEvents;
   } catch (error) {
     console.error('[fetchCalendarEvents] Erro:', error);
