@@ -7,6 +7,7 @@ export interface UltimaAtualizacao {
   ultimaAtualizacao: string | null;
   diasDesdeAtualizacao: number | null;
   desatualizado: boolean; // > 7 dias
+  dispensado: boolean; // dispensado manualmente
 }
 
 export const useUltimasAtualizacoes = (enabled = true) => {
@@ -17,6 +18,14 @@ export const useUltimasAtualizacoes = (enabled = true) => {
     queryFn: async (): Promise<UltimaAtualizacao[]> => {
       const agora = new Date();
       const LIMITE_DIAS = 7;
+
+      // Buscar dispensas ativas
+      const { data: dispensasAtivas } = await supabase
+        .from('dados_atualizacao_dispensa')
+        .select('tipo_dado')
+        .gte('valido_ate', new Date().toISOString());
+      
+      const tiposDispensados = new Set(dispensasAtivas?.map(d => d.tipo_dado) || []);
 
       // 1. Integrantes - cargas_historico
       const { data: cargaIntegrantes } = await supabase
@@ -76,28 +85,32 @@ export const useUltimasAtualizacoes = (enabled = true) => {
           label: 'Integrantes',
           ultimaAtualizacao: dataIntegrantes,
           diasDesdeAtualizacao: diasIntegrantes,
-          desatualizado: diasIntegrantes !== null ? diasIntegrantes > LIMITE_DIAS : true,
+          desatualizado: (diasIntegrantes !== null ? diasIntegrantes > LIMITE_DIAS : true) && !tiposDispensados.has('integrantes'),
+          dispensado: tiposDispensados.has('integrantes'),
         },
         {
           tipo: 'inadimplencia',
           label: 'Inadimplência',
           ultimaAtualizacao: dataMensalidades,
           diasDesdeAtualizacao: diasMensalidades,
-          desatualizado: diasMensalidades !== null ? diasMensalidades > LIMITE_DIAS : true,
+          desatualizado: (diasMensalidades !== null ? diasMensalidades > LIMITE_DIAS : true) && !tiposDispensados.has('inadimplencia'),
+          dispensado: tiposDispensados.has('inadimplencia'),
         },
         {
           tipo: 'aniversariantes',
           label: 'Aniversários',
           ultimaAtualizacao: dataAniversariantes,
           diasDesdeAtualizacao: diasAniversariantes,
-          desatualizado: diasAniversariantes !== null ? diasAniversariantes > LIMITE_DIAS : true,
+          desatualizado: (diasAniversariantes !== null ? diasAniversariantes > LIMITE_DIAS : true) && !tiposDispensados.has('aniversariantes'),
+          dispensado: tiposDispensados.has('aniversariantes'),
         },
         {
           tipo: 'afastados',
           label: 'Afastados',
           ultimaAtualizacao: dataAfastados,
           diasDesdeAtualizacao: diasAfastados,
-          desatualizado: diasAfastados !== null ? diasAfastados > LIMITE_DIAS : true,
+          desatualizado: (diasAfastados !== null ? diasAfastados > LIMITE_DIAS : true) && !tiposDispensados.has('afastados'),
+          dispensado: tiposDispensados.has('afastados'),
         },
       ];
     },
