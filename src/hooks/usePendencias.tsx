@@ -1026,6 +1026,14 @@ export const usePendencias = (
           return Math.floor((agora.getTime() - new Date(d).getTime()) / (1000 * 60 * 60 * 24));
         };
 
+        // Buscar dispensas ativas (válidas)
+        const { data: dispensasAtivas } = await supabase
+          .from('dados_atualizacao_dispensa')
+          .select('tipo_dado')
+          .gte('valido_ate', new Date().toISOString());
+        
+        const tiposDispensados = new Set(dispensasAtivas?.map(d => d.tipo_dado) || []);
+
         // Integrantes
         const { data: cargaInt } = await supabase
           .from('cargas_historico')
