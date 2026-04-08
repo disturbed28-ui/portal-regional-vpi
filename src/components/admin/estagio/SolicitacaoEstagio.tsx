@@ -230,6 +230,7 @@ export function SolicitacaoEstagio({ userId, readOnly = false }: SolicitacaoEsta
   const canSubmit = integranteSelecionado && 
     grauEstagio &&
     cargoEstagioId && 
+    divisaoEstagioId &&
     dataInicioEstagio &&
     tempoEstagioMeses &&
     !processando && 
