@@ -715,6 +715,30 @@ export type Database = {
         }
         Relationships: []
       }
+      dados_atualizacao_dispensa: {
+        Row: {
+          created_at: string
+          dispensado_por: string
+          id: string
+          tipo_dado: string
+          valido_ate: string
+        }
+        Insert: {
+          created_at?: string
+          dispensado_por: string
+          id?: string
+          tipo_dado: string
+          valido_ate: string
+        }
+        Update: {
+          created_at?: string
+          dispensado_por?: string
+          id?: string
+          tipo_dado?: string
+          valido_ate?: string
+        }
+        Relationships: []
+      }
       deltas_pendentes: {
         Row: {
           carga_id: string | null

@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,7 +21,8 @@ import {
   User,
   AlertTriangle,
   ArrowRight,
-  RefreshCw
+  RefreshCw,
+  CheckCircle
 } from "lucide-react";
 import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes, FlyerPendenteDetalhes } from "@/hooks/usePendencias";
 
@@ -894,9 +897,10 @@ interface PendenciaItemProps {
   itemId: string;
   isOpen: boolean;
   onToggle: (id: string) => void;
+  onDispensarDados?: (tipoDado: string) => void;
 }
 
-const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemProps) => {
+const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle, onDispensarDados }: PendenciaItemProps) => {
   const navigate = useNavigate();
   const isMensalidade = pendencia.tipo === 'mensalidade';
   const isAfastamento = pendencia.tipo === 'afastamento';
@@ -1166,23 +1170,36 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
 
             {/* Botão para ir a Gestão ADM */}
             {isDadosDesatualizados && (
-              <Button 
-                onClick={() => {
-                  const d = detalhes as DadosDesatualizadosDetalhes;
-                  const tabMap: Record<string, string> = {
-                    integrantes: 'integrantes',
-                    inadimplencia: 'inadimplencia',
-                    aniversariantes: 'aniversariantes',
-                    afastados: 'afastamentos',
-                  };
-                  navigate(`/gestao-adm?mainTab=${tabMap[d.tipo_dado] || 'integrantes'}`);
-                }}
-                className="w-full"
-                variant="default"
-              >
-                <ArrowRight className="h-4 w-4 mr-2" />
-                Ir para Gestão ADM
-              </Button>
+              <div className="flex flex-col gap-2">
+                <Button 
+                  onClick={() => {
+                    const d = detalhes as DadosDesatualizadosDetalhes;
+                    const tabMap: Record<string, string> = {
+                      integrantes: 'integrantes',
+                      inadimplencia: 'inadimplencia',
+                      aniversariantes: 'aniversariantes',
+                      afastados: 'afastamentos',
+                    };
+                    navigate(`/gestao-adm?mainTab=${tabMap[d.tipo_dado] || 'integrantes'}`);
+                  }}
+                  className="w-full"
+                  variant="default"
+                >
+                  <ArrowRight className="h-4 w-4 mr-2" />
+                  Ir para Gestão ADM
+                </Button>
+                <Button 
+                  onClick={() => {
+                    const d = detalhes as DadosDesatualizadosDetalhes;
+                    onDispensarDados?.(d.tipo_dado);
+                  }}
+                  className="w-full"
+                  variant="outline"
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Dispensar esta semana
+                </Button>
+              </div>
             )}
             
             {/* Botão Resolver para Anomalias */}
@@ -1211,10 +1228,70 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle }: PendenciaItemPro
 export const PendenciasModal = ({ pendencias, totalPendencias }: PendenciasModalProps) => {
   const navigate = useNavigate();
   const [openItemId, setOpenItemId] = useState<string | null>(null);
+  const [dispensandoTipo, setDispensandoTipo] = useState<string | null>(null);
+  const [pendenciasLocais, setPendenciasLocais] = useState<Pendencia[]>(pendencias);
   
-  const totalAnomalias = pendencias.filter(p => p.tipo === 'delta').length;
+  // Sincronizar com props
+  useState(() => { setPendenciasLocais(pendencias); });
+  if (pendenciasLocais !== pendencias && !dispensandoTipo) {
+    setPendenciasLocais(pendencias);
+  }
+
+  const totalAnomalias = pendenciasLocais.filter(p => p.tipo === 'delta').length;
+
+  const handleDispensarDados = async (tipoDado: string) => {
+    setDispensandoTipo(tipoDado);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+
+      // Dispensa válida por 7 dias
+      const validoAte = new Date();
+      validoAte.setDate(validoAte.getDate() + 7);
+
+      const { error } = await supabase
+        .from('dados_atualizacao_dispensa')
+        .insert({
+          tipo_dado: tipoDado,
+          dispensado_por: user.id,
+          valido_ate: validoAte.toISOString(),
+        });
+
+      if (error) throw error;
+
+      // Remover pendência localmente
+      setPendenciasLocais(prev => prev.filter(p => {
+        if (p.tipo !== 'dados_desatualizados') return true;
+        const d = p.detalhes_completos as DadosDesatualizadosDetalhes;
+        return d.tipo_dado !== tipoDado;
+      }));
+
+      // Limpar caches de pendências
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('pendencias_')) {
+          localStorage.removeItem(key);
+        }
+      });
+
+      toast({
+        title: "Alerta dispensado",
+        description: `O alerta de ${tipoDado} foi dispensado por 7 dias.`,
+      });
+    } catch (error) {
+      console.error('Erro ao dispensar:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao dispensar o alerta.",
+        variant: "destructive",
+      });
+    } finally {
+      setDispensandoTipo(null);
+    }
+  };
   
-  if (totalPendencias === 0) return null;
+  if (totalPendencias === 0 && pendenciasLocais.length === 0) return null;
+
+  const countExibido = pendenciasLocais.length;
 
   return (
     <Dialog>
@@ -1225,9 +1302,9 @@ export const PendenciasModal = ({ pendencias, totalPendencias }: PendenciasModal
           className="relative h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
         >
           <Bell className="h-5 w-5" />
-          {totalPendencias > 0 && (
+          {countExibido > 0 && (
             <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white">
-              {totalPendencias > 99 ? '99+' : totalPendencias}
+              {countExibido > 99 ? '99+' : countExibido}
             </span>
           )}
         </Button>
@@ -1238,7 +1315,7 @@ export const PendenciasModal = ({ pendencias, totalPendencias }: PendenciasModal
           <div className="flex items-center justify-between gap-4">
             <DialogTitle className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-red-600" />
-              Pendências ({totalPendencias})
+              Pendências ({countExibido})
             </DialogTitle>
             
             {/* Botão Ver Todas as Anomalias */}
@@ -1257,15 +1334,21 @@ export const PendenciasModal = ({ pendencias, totalPendencias }: PendenciasModal
         </DialogHeader>
         
         <div className="space-y-2 overflow-y-auto max-h-[65vh] pr-2">
-          {pendencias.map((p, idx) => (
+          {pendenciasLocais.map((p, idx) => (
             <PendenciaItem 
-              key={idx} 
+              key={`${p.tipo}_${idx}`} 
               pendencia={p}
               itemId={`${p.tipo}_${p.registro_id}`}
               isOpen={openItemId === `${p.tipo}_${p.registro_id}`}
               onToggle={(id) => setOpenItemId(openItemId === id ? null : id)}
+              onDispensarDados={handleDispensarDados}
             />
           ))}
+          {pendenciasLocais.length === 0 && (
+            <p className="text-center text-muted-foreground py-8 text-sm">
+              Nenhuma pendência no momento 🎉
+            </p>
+          )}
         </div>
       </DialogContent>
     </Dialog>

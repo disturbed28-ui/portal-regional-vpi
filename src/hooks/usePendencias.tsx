@@ -1026,6 +1026,14 @@ export const usePendencias = (
           return Math.floor((agora.getTime() - new Date(d).getTime()) / (1000 * 60 * 60 * 24));
         };
 
+        // Buscar dispensas ativas (válidas)
+        const { data: dispensasAtivas } = await supabase
+          .from('dados_atualizacao_dispensa')
+          .select('tipo_dado')
+          .gte('valido_ate', new Date().toISOString());
+        
+        const tiposDispensados = new Set(dispensasAtivas?.map(d => d.tipo_dado) || []);
+
         // Integrantes
         const { data: cargaInt } = await supabase
           .from('cargas_historico')
@@ -1034,7 +1042,7 @@ export const usePendencias = (
           .order('data_carga', { ascending: false })
           .limit(1);
         const diasInt = calcDias(cargaInt?.[0]?.data_carga || null);
-        if (diasInt === null || diasInt > LIMITE_DIAS) {
+        if ((diasInt === null || diasInt > LIMITE_DIAS) && !tiposDispensados.has('integrantes')) {
           todasPendencias.push({
             nome_colete: 'Sistema',
             divisao_texto: 'Gestão ADM',
@@ -1061,7 +1069,7 @@ export const usePendencias = (
           .order('data_carga', { ascending: false })
           .limit(1);
         const diasMens = calcDias(cargaMens?.[0]?.data_carga || null);
-        if (diasMens === null || diasMens > LIMITE_DIAS) {
+        if ((diasMens === null || diasMens > LIMITE_DIAS) && !tiposDispensados.has('inadimplencia')) {
           todasPendencias.push({
             nome_colete: 'Sistema',
             divisao_texto: 'Gestão ADM',
@@ -1089,7 +1097,7 @@ export const usePendencias = (
           .order('updated_at', { ascending: false })
           .limit(1);
         const diasAniv = calcDias(ultimoAniv?.[0]?.updated_at || null);
-        if (diasAniv === null || diasAniv > LIMITE_DIAS) {
+        if ((diasAniv === null || diasAniv > LIMITE_DIAS) && !tiposDispensados.has('aniversariantes')) {
           todasPendencias.push({
             nome_colete: 'Sistema',
             divisao_texto: 'Gestão ADM',
@@ -1116,7 +1124,7 @@ export const usePendencias = (
           .order('data_carga', { ascending: false })
           .limit(1);
         const diasAfast = calcDias(cargaAfast?.[0]?.data_carga || null);
-        if (diasAfast === null || diasAfast > LIMITE_DIAS) {
+        if ((diasAfast === null || diasAfast > LIMITE_DIAS) && !tiposDispensados.has('afastados')) {
           todasPendencias.push({
             nome_colete: 'Sistema',
             divisao_texto: 'Gestão ADM',
