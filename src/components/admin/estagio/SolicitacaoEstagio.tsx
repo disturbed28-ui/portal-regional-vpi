@@ -20,6 +20,7 @@ import { useCargosGrau } from '@/hooks/useCargosGrau';
 import { useSolicitacaoEstagio } from '@/hooks/useSolicitacaoEstagio';
 import { useProfile } from '@/hooks/useProfile';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
+import { useDivisoesPorRegional } from '@/hooks/useDivisoesPorRegional';
 import { IntegranteEstagioCard } from './IntegranteEstagioCard';
 import { ReadOnlyBanner } from '@/components/ui/read-only-banner';
 import { format, addMonths } from 'date-fns';
@@ -49,6 +50,7 @@ export function SolicitacaoEstagio({ userId, readOnly = false }: SolicitacaoEsta
   const [cargoEstagioNome, setCargoEstagioNome] = useState<string | null>(null);
   const [grauEstagioAtual, setGrauEstagioAtual] = useState<string | null>(null);
   const [dataInicioEstagio, setDataInicioEstagio] = useState<Date | undefined>(new Date());
+  const [divisaoEstagioId, setDivisaoEstagioId] = useState<string>('');
 
   const { getSettingTextValue, updateSettingText } = useSystemSettings();
   const tempoGrau5Padrao = getSettingTextValue('tempo_estagio_grau5_padrao') || '9';
@@ -58,6 +60,7 @@ export function SolicitacaoEstagio({ userId, readOnly = false }: SolicitacaoEsta
   const { resultados: integrantes, loading: buscando } = useBuscaIntegranteTodos(searchTerm);
   const { cargos: cargosGrau, loading: loadingCargos } = useCargosGrau(grauEstagio);
   const { profile } = useProfile(userId);
+  const { divisoes, isLoading: loadingDivisoes } = useDivisoesPorRegional(integranteSelecionado?.regional_id);
   const {
     loading: processando,
     verificarEstagioAtivo,
@@ -80,6 +83,7 @@ export function SolicitacaoEstagio({ userId, readOnly = false }: SolicitacaoEsta
     setIntegranteSelecionado(integrante);
     setCargoEstagioId('');
     setGrauEstagio(null);
+    setDivisaoEstagioId(integrante.divisao_id || '');
 
     // Verificar se está em estágio
     const { emEstagio, cargoEstagioNome: nome, grauEstagio: grau } = await verificarEstagioAtivo(integrante.id);
@@ -87,10 +91,9 @@ export function SolicitacaoEstagio({ userId, readOnly = false }: SolicitacaoEsta
     if (emEstagio) {
       setCargoEstagioNome(nome);
       setGrauEstagioAtual(grau);
-      // Atualizar o integrante com a info de estágio
       setIntegranteSelecionado({
         ...integrante,
-        cargo_estagio_id: 'pending' // Marcador temporário
+        cargo_estagio_id: 'pending'
       });
     }
   }
@@ -103,7 +106,7 @@ export function SolicitacaoEstagio({ userId, readOnly = false }: SolicitacaoEsta
     setSearchTerm('');
     setDataInicioEstagio(new Date());
     setGrauEstagio(null);
-    // Não resetar tempoEstagioMeses - manter memória
+    setDivisaoEstagioId('');
   }
 
   async function handleEnviarSolicitacao() {
@@ -150,11 +153,14 @@ export function SolicitacaoEstagio({ userId, readOnly = false }: SolicitacaoEsta
 
     const tempoMeses = parseInt(tempoEstagioMeses, 10);
 
+    const integranteComDivisao = {
+      ...integranteSelecionado,
+      divisao_id: divisaoEstagioId || integranteSelecionado.divisao_id,
+      cargo_estagio_id: null
+    };
+
     const success = await createSolicitacao({
-      integrante: {
-        ...integranteSelecionado,
-        cargo_estagio_id: null // Já foi limpo
-      },
+      integrante: integranteComDivisao,
       cargoEstagioId,
       grauEstagio,
       solicitante: {
@@ -224,6 +230,7 @@ export function SolicitacaoEstagio({ userId, readOnly = false }: SolicitacaoEsta
   const canSubmit = integranteSelecionado && 
     grauEstagio &&
     cargoEstagioId && 
+    divisaoEstagioId &&
     dataInicioEstagio &&
     tempoEstagioMeses &&
     !processando && 
@@ -339,6 +346,34 @@ export function SolicitacaoEstagio({ userId, readOnly = false }: SolicitacaoEsta
                 cargoEstagioNome={cargoEstagioNome}
                 grauEstagio={grauEstagioAtual}
               />
+
+              {/* Seletor de Divisão para o Estágio */}
+              {!integranteSelecionado.cargo_estagio_id && (
+                <div className="space-y-2">
+                  <Label className="text-sm">Divisão do Estágio</Label>
+                  <Select
+                    value={divisaoEstagioId}
+                    onValueChange={setDivisaoEstagioId}
+                    disabled={loadingDivisoes}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a divisão..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {divisoes.map((div) => (
+                        <SelectItem key={div.id} value={div.id}>
+                          {div.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {divisaoEstagioId && divisaoEstagioId !== integranteSelecionado.divisao_id && (
+                    <p className="text-xs text-amber-600">
+                      ⚠ Divisão diferente da original do integrante
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Botão de encerrar se em estágio */}
               {integranteSelecionado.cargo_estagio_id && (
