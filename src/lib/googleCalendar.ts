@@ -218,9 +218,16 @@ async function parseEventComponents(originalTitle: string): Promise<ParsedEvent>
   const lower = normalized.toLowerCase();
   const upper = normalized.toUpperCase();
   
-  const isCMD = upper.includes('CMD');
-  const isRegional = upper.includes('REGIONAL');
   const isCaveira = /\bcaveiras?\b/i.test(originalTitle);
+
+  // Detectar CMD: "CMD" sozinho ou "Comando Mundial" (mas NÃO "CMD Regional" / "Comando Regional")
+  const hasCMDKeyword = upper.includes('CMD') || /comando\s+mundial/i.test(normalized);
+  // Detectar Regional: "Regional", "Comando Regional", "CMD Regional"
+  const hasRegionalKeyword = /\bregional\b/i.test(normalized) || /comando\s+regional/i.test(normalized) || /\bcmd\s+regional\b/i.test(normalized);
+  
+  // Se tem "CMD Regional" ou "Comando Regional", é Regional (não CMD)
+  const isRegional = hasRegionalKeyword;
+  const isCMD = hasCMDKeyword && !isRegional;
   
   // Detectar tipo de evento
   let tipoEvento = 'Outros';
@@ -270,7 +277,10 @@ async function parseEventComponents(originalTitle: string): Promise<ParsedEvent>
     if (lower.includes('pub')) tituloParaExtras = originalTitle.replace(/pub\s*[-\s]*/gi, '').trim();
     if (lower.includes('reuniao')) tituloParaExtras = originalTitle.replace(/reuniao\s*[-\s]*/gi, '').trim();
     if (lower.includes('acao social')) tituloParaExtras = originalTitle.replace(/acao\s+social\s*[-\s]*/gi, '').trim();
-    tituloParaExtras = tituloParaExtras.replace(/cmd\s*[-\s]*/gi, '').replace(/^\(+/, '').replace(/\)+$/, '').trim();
+    tituloParaExtras = tituloParaExtras
+      .replace(/comando\s+mundial\s*[-\s]*/gi, '')
+      .replace(/cmd\s*[-\s]*/gi, '')
+      .replace(/^\(+/, '').replace(/\)+$/, '').trim();
     if (tituloParaExtras.length > 0) informacoesExtras = tituloParaExtras;
   } else if (isRegional) {
     regionalSiglaDetectada = detectRegionalSiglaFromTitle(originalTitle);
@@ -279,7 +289,11 @@ async function parseEventComponents(originalTitle: string): Promise<ParsedEvent>
     if (lower.includes('pub')) tituloParaExtras = originalTitle.replace(/pub\s*[-\s]*/gi, '').trim();
     if (lower.includes('reuniao')) tituloParaExtras = originalTitle.replace(/reuniao\s*[-\s]*/gi, '').trim();
     if (lower.includes('acao social')) tituloParaExtras = originalTitle.replace(/acao\s+social\s*[-\s]*/gi, '').trim();
-    tituloParaExtras = tituloParaExtras.replace(/regional\s*[-\s]*/gi, '').replace(/^\(+/, '').replace(/\)+$/, '').replace(/^[-\s]+/, '').trim();
+    tituloParaExtras = tituloParaExtras
+      .replace(/comando\s+regional\s*[-\s]*/gi, '')
+      .replace(/cmd\s+regional\s*[-\s]*/gi, '')
+      .replace(/regional\s*[-\s]*/gi, '')
+      .replace(/^\(+/, '').replace(/\)+$/, '').replace(/^[-\s]+/, '').trim();
     if (tituloParaExtras.length > 0) informacoesExtras = tituloParaExtras;
   } else {
     divisao = await detectDivisionFromTitle(normalized);
