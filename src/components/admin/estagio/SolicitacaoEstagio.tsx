@@ -346,6 +346,34 @@ export function SolicitacaoEstagio({ userId, readOnly = false }: SolicitacaoEsta
                 grauEstagio={grauEstagioAtual}
               />
 
+              {/* Seletor de Divisão para o Estágio */}
+              {!integranteSelecionado.cargo_estagio_id && (
+                <div className="space-y-2">
+                  <Label className="text-sm">Divisão do Estágio</Label>
+                  <Select
+                    value={divisaoEstagioId}
+                    onValueChange={setDivisaoEstagioId}
+                    disabled={loadingDivisoes}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a divisão..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {divisoes.map((div) => (
+                        <SelectItem key={div.id} value={div.id}>
+                          {div.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {divisaoEstagioId && divisaoEstagioId !== integranteSelecionado.divisao_id && (
+                    <p className="text-xs text-amber-600">
+                      ⚠ Divisão diferente da original do integrante
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Botão de encerrar se em estágio */}
               {integranteSelecionado.cargo_estagio_id && (
                 <Button
