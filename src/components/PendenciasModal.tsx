@@ -1167,23 +1167,36 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle, onDispensarDados }
 
             {/* Botão para ir a Gestão ADM */}
             {isDadosDesatualizados && (
-              <Button 
-                onClick={() => {
-                  const d = detalhes as DadosDesatualizadosDetalhes;
-                  const tabMap: Record<string, string> = {
-                    integrantes: 'integrantes',
-                    inadimplencia: 'inadimplencia',
-                    aniversariantes: 'aniversariantes',
-                    afastados: 'afastamentos',
-                  };
-                  navigate(`/gestao-adm?mainTab=${tabMap[d.tipo_dado] || 'integrantes'}`);
-                }}
-                className="w-full"
-                variant="default"
-              >
-                <ArrowRight className="h-4 w-4 mr-2" />
-                Ir para Gestão ADM
-              </Button>
+              <div className="flex flex-col gap-2">
+                <Button 
+                  onClick={() => {
+                    const d = detalhes as DadosDesatualizadosDetalhes;
+                    const tabMap: Record<string, string> = {
+                      integrantes: 'integrantes',
+                      inadimplencia: 'inadimplencia',
+                      aniversariantes: 'aniversariantes',
+                      afastados: 'afastamentos',
+                    };
+                    navigate(`/gestao-adm?mainTab=${tabMap[d.tipo_dado] || 'integrantes'}`);
+                  }}
+                  className="w-full"
+                  variant="default"
+                >
+                  <ArrowRight className="h-4 w-4 mr-2" />
+                  Ir para Gestão ADM
+                </Button>
+                <Button 
+                  onClick={() => {
+                    const d = detalhes as DadosDesatualizadosDetalhes;
+                    onDispensarDados?.(d.tipo_dado);
+                  }}
+                  className="w-full"
+                  variant="outline"
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Dispensar esta semana
+                </Button>
+              </div>
             )}
             
             {/* Botão Resolver para Anomalias */}
