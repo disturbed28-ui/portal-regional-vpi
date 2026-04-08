@@ -273,13 +273,13 @@ Deno.serve(async (req) => {
         }
 
         // Verificar se integrante existe no portal
-        const { data: integrantePortal } = await supabase
+        const { data: integranteCheck } = await supabase
           .from('integrantes_portal')
           .select('id')
           .eq('registro_id', afastado.registro_id)
           .maybeSingle();
 
-        if (!integrantePortal) {
+        if (!integranteCheck) {
           avisos.push(`${afastado.nome_colete} (${afastado.registro_id}) não encontrado em integrantes_portal`);
         }
       } catch (error) {
