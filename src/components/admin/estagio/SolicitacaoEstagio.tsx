@@ -153,11 +153,14 @@ export function SolicitacaoEstagio({ userId, readOnly = false }: SolicitacaoEsta
 
     const tempoMeses = parseInt(tempoEstagioMeses, 10);
 
+    const integranteComDivisao = {
+      ...integranteSelecionado,
+      divisao_id: divisaoEstagioId || integranteSelecionado.divisao_id,
+      cargo_estagio_id: null
+    };
+
     const success = await createSolicitacao({
-      integrante: {
-        ...integranteSelecionado,
-        cargo_estagio_id: null // Já foi limpo
-      },
+      integrante: integranteComDivisao,
       cargoEstagioId,
       grauEstagio,
       solicitante: {
