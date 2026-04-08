@@ -63,7 +63,6 @@ let divisoesCache: Array<{
 async function loadDivisoesCache() {
   if (divisoesCache) return divisoesCache;
   
-  console.log('[loadDivisoesCache] Carregando divisões do banco com sigla da regional...');
   const { data, error } = await supabase
     .from('divisoes')
     .select(`
@@ -86,7 +85,6 @@ async function loadDivisoesCache() {
     regionalSigla: (d.regionais as any)?.sigla || null
   }));
   
-  console.log('[loadDivisoesCache] Carregadas', divisoesCache.length, 'divisões com siglas');
   return divisoesCache;
 }
 
