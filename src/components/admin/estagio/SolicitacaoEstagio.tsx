@@ -83,6 +83,7 @@ export function SolicitacaoEstagio({ userId, readOnly = false }: SolicitacaoEsta
     setIntegranteSelecionado(integrante);
     setCargoEstagioId('');
     setGrauEstagio(null);
+    setDivisaoEstagioId(integrante.divisao_id || '');
 
     // Verificar se está em estágio
     const { emEstagio, cargoEstagioNome: nome, grauEstagio: grau } = await verificarEstagioAtivo(integrante.id);
@@ -90,10 +91,9 @@ export function SolicitacaoEstagio({ userId, readOnly = false }: SolicitacaoEsta
     if (emEstagio) {
       setCargoEstagioNome(nome);
       setGrauEstagioAtual(grau);
-      // Atualizar o integrante com a info de estágio
       setIntegranteSelecionado({
         ...integrante,
-        cargo_estagio_id: 'pending' // Marcador temporário
+        cargo_estagio_id: 'pending'
       });
     }
   }
