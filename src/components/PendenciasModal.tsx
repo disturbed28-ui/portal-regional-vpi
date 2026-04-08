@@ -19,7 +19,8 @@ import {
   User,
   AlertTriangle,
   ArrowRight,
-  RefreshCw
+  RefreshCw,
+  CheckCircle
 } from "lucide-react";
 import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes, FlyerPendenteDetalhes } from "@/hooks/usePendencias";
 
