@@ -273,7 +273,7 @@ Deno.serve(async (req) => {
         }
 
         // Verificar se integrante existe no portal
-        const { data: integrantePortal } = await supabase
+        const { data: integranteCheck } = await supabase
           .from('integrantes_portal')
           .select('id')
           .eq('registro_id', afastado.registro_id)
