@@ -60,6 +60,7 @@ export function SolicitacaoEstagio({ userId, readOnly = false }: SolicitacaoEsta
   const { resultados: integrantes, loading: buscando } = useBuscaIntegranteTodos(searchTerm);
   const { cargos: cargosGrau, loading: loadingCargos } = useCargosGrau(grauEstagio);
   const { profile } = useProfile(userId);
+  const { divisoes, isLoading: loadingDivisoes } = useDivisoesPorRegional(integranteSelecionado?.regional_id);
   const {
     loading: processando,
     verificarEstagioAtivo,
