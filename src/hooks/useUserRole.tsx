@@ -10,21 +10,25 @@ interface UserRole {
 export const useUserRole = (userId: string | undefined) => {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
 
   useEffect(() => {
     console.log('[useUserRole] Hook iniciado com userId:', userId);
-    
+
     if (!userId) {
-      console.log('[useUserRole] userId e undefined/null, aguardando...');
+      console.log('[useUserRole] userId ausente, limpando roles');
       setRoles([]);
-      // NÃO setar loading como false - continuar aguardando até receber userId válido
+      setResolvedUserId(null);
+      setLoading(false);
       return;
     }
 
+    setRoles([]);
+    setLoading(true);
+
     const fetchRoles = async () => {
-      setLoading(true); // Garantir que loading esta true durante fetch
       console.log('[useUserRole] Buscando roles para userId:', userId);
-      
+
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
@@ -39,12 +43,13 @@ export const useUserRole = (userId: string | undefined) => {
         console.log('[useUserRole] Roles mapeadas:', mappedRoles);
         setRoles(mappedRoles);
       }
+
+      setResolvedUserId(userId);
       setLoading(false);
     };
 
     fetchRoles();
 
-    // Subscribe to role changes
     const channel = supabase
       .channel(`user-roles-changes-${userId}`)
       .on(
@@ -70,5 +75,7 @@ export const useUserRole = (userId: string | undefined) => {
     return roles.includes(role);
   };
 
-  return { roles, loading, hasRole };
+  const effectiveLoading = !!userId && (loading || resolvedUserId !== userId);
+
+  return { roles, loading: effectiveLoading, hasRole };
 };
