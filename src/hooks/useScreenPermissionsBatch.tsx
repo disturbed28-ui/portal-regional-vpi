@@ -39,14 +39,14 @@ export function useScreenPermissionsBatch(
   const [loading, setLoading] = useState(true);
   const { roles, loading: roleLoading } = useUserRole(userId);
   
-  // Usar ref para evitar re-fetches desnecessários
   const routesKey = routes.join(',');
   const prevKeyRef = useRef<string>('');
 
   useEffect(() => {
-    // Se userId não existe ou roles ainda carregando, aguardar
     if (!userId) {
-      setLoading(true);
+      prevKeyRef.current = '';
+      setPermissions({});
+      setLoading(false);
       return;
     }
 
@@ -55,7 +55,6 @@ export function useScreenPermissionsBatch(
       return;
     }
 
-    // Evitar re-fetch se as rotas não mudaram
     const currentKey = `${userId}-${routesKey}-${roles.join(',')}`;
     if (currentKey === prevKeyRef.current) {
       return;
@@ -66,20 +65,18 @@ export function useScreenPermissionsBatch(
       setLoading(true);
       
       try {
-        // Verificar roles especiais que concedem acesso automático
         const isAdmRegional = roles.includes('adm_regional');
         const isComando = roles.includes('comando');
         const isAdmin = roles.includes('admin');
         
-        // Se for comando ou admin, acesso total a tudo
         if (isComando || isAdmin) {
           const allFull = routes.reduce((acc, route) => ({
             ...acc,
-            [route]: { 
-              hasAccess: true, 
-              accessLevel: 'full' as AccessLevel, 
-              isReadOnly: false, 
-              hasAnyAccess: true 
+            [route]: {
+              hasAccess: true,
+              accessLevel: 'full' as AccessLevel,
+              isReadOnly: false,
+              hasAnyAccess: true
             }
           }), {} as Record<string, ScreenPermission>);
           setPermissions(allFull);
@@ -87,12 +84,10 @@ export function useScreenPermissionsBatch(
           return;
         }
 
-        // Incluir parentRoute na busca se não estiver nas routes
-        const allRoutes = routes.includes(parentRoute) 
-          ? routes 
+        const allRoutes = routes.includes(parentRoute)
+          ? routes
           : [parentRoute, ...routes];
 
-        // 1. Buscar todas as telas de uma vez
         const { data: screens, error: screensError } = await supabase
           .from('system_screens')
           .select('id, rota')
@@ -104,15 +99,14 @@ export function useScreenPermissionsBatch(
           throw screensError;
         }
 
-        // Se nenhuma tela cadastrada, permitir todas (backward compatibility)
         if (!screens?.length) {
           const allAllowed = routes.reduce((acc, route) => ({
             ...acc,
-            [route]: { 
-              hasAccess: true, 
-              accessLevel: 'full' as AccessLevel, 
-              isReadOnly: false, 
-              hasAnyAccess: true 
+            [route]: {
+              hasAccess: true,
+              accessLevel: 'full' as AccessLevel,
+              isReadOnly: false,
+              hasAnyAccess: true
             }
           }), {} as Record<string, ScreenPermission>);
           setPermissions(allAllowed);
@@ -120,7 +114,6 @@ export function useScreenPermissionsBatch(
           return;
         }
 
-        // 2. Buscar todas as permissões de uma vez
         const screenIds = screens.map(s => s.id);
         const { data: allPerms, error: permsError } = await supabase
           .from('screen_permissions')
@@ -132,10 +125,9 @@ export function useScreenPermissionsBatch(
           throw permsError;
         }
 
-        // 3. Mapear permissões por rota
         const screenIdToRoute = new Map(screens.map(s => [s.id, s.rota]));
         const routeToScreenId = new Map(screens.map(s => [s.rota, s.id]));
-        
+
         const permsByRoute = new Map<string, AppRole[]>();
         allPerms?.forEach(p => {
           const route = screenIdToRoute.get(p.screen_id);
@@ -145,30 +137,24 @@ export function useScreenPermissionsBatch(
           }
         });
 
-        // 4. Verificar acesso do parent
         const parentPerms = permsByRoute.get(parentRoute) || [];
         const hasParentAccess = roles.some(r => parentPerms.includes(r as AppRole));
 
-        // 5. Calcular acesso para cada rota
         const result: Record<string, ScreenPermission> = {};
-        
+
         routes.forEach(route => {
           const routePerms = permsByRoute.get(route) || [];
           const screenExists = routeToScreenId.has(route);
-          
+
           let accessLevel: AccessLevel = 'none';
-          
-          // REGRA ESPECIAL: ADM Regional tem acesso full a /gestao-adm*
+
           if (isAdmRegional && route.startsWith('/gestao-adm')) {
             accessLevel = 'full';
           } else if (!screenExists) {
-            // Tela não cadastrada = permitir (backward compatibility)
             accessLevel = 'full';
           } else if (roles.some(r => routePerms.includes(r as AppRole))) {
-            // Tem permissão explícita na aba
             accessLevel = 'full';
           } else if (hasParentAccess) {
-            // Só tem permissão no parent → readonly
             accessLevel = 'readonly';
           }
 
@@ -183,14 +169,13 @@ export function useScreenPermissionsBatch(
         setPermissions(result);
       } catch (error) {
         console.error('[useScreenPermissionsBatch] Error:', error);
-        // Em caso de erro, negar acesso por segurança
         const denied = routes.reduce((acc, route) => ({
           ...acc,
-          [route]: { 
-            hasAccess: false, 
-            accessLevel: 'none' as AccessLevel, 
-            isReadOnly: false, 
-            hasAnyAccess: false 
+          [route]: {
+            hasAccess: false,
+            accessLevel: 'none' as AccessLevel,
+            isReadOnly: false,
+            hasAnyAccess: false
           }
         }), {} as Record<string, ScreenPermission>);
         setPermissions(denied);
@@ -202,7 +187,9 @@ export function useScreenPermissionsBatch(
     fetchPermissions();
   }, [userId, routesKey, roles, roleLoading, parentRoute]);
 
-  return { permissions, loading };
+  const effectiveLoading = !!userId && (loading || roleLoading);
+
+  return { permissions, loading: effectiveLoading };
 }
 
 /**
