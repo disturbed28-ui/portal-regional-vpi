@@ -23,11 +23,14 @@ export const useUserRole = (userId: string | undefined) => {
       return;
     }
 
-    setRoles([]);
-    setLoading(true);
+    // Só limpar roles se mudou de usuário (evita "flash de sem permissão" em refetch)
+    if (resolvedUserId !== userId) {
+      setRoles([]);
+      setLoading(true);
+    }
 
-    const fetchRoles = async () => {
-      console.log('[useUserRole] Buscando roles para userId:', userId);
+    const fetchRoles = async (isRefetch = false) => {
+      console.log('[useUserRole] Buscando roles para userId:', userId, 'isRefetch:', isRefetch);
 
       const { data, error } = await supabase
         .from('user_roles')
@@ -36,19 +39,25 @@ export const useUserRole = (userId: string | undefined) => {
 
       if (error) {
         console.error('[useUserRole] ERRO ao buscar roles:', error);
-        setRoles([]);
+        // Em refetch, manter roles anteriores em caso de erro transitório
+        if (!isRefetch) setRoles([]);
       } else {
-        console.log('[useUserRole] Roles encontradas:', data);
         const mappedRoles = (data as UserRole[]).map(r => r.role);
         console.log('[useUserRole] Roles mapeadas:', mappedRoles);
-        setRoles(mappedRoles);
+        // Só atualizar se realmente mudou (evita re-renders desnecessários)
+        setRoles(prev => {
+          if (prev.length === mappedRoles.length && prev.every(r => mappedRoles.includes(r))) {
+            return prev;
+          }
+          return mappedRoles;
+        });
       }
 
       setResolvedUserId(userId);
       setLoading(false);
     };
 
-    fetchRoles();
+    fetchRoles(false);
 
     const channel = supabase
       .channel(`user-roles-changes-${userId}`)
@@ -61,7 +70,7 @@ export const useUserRole = (userId: string | undefined) => {
           filter: `user_id=eq.${userId}`,
         },
         () => {
-          fetchRoles();
+          fetchRoles(true);
         }
       )
       .subscribe();
