@@ -1,17 +1,24 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useAuth } from "@/hooks/useAuth";
 import { logSystemEventFromClient } from "@/lib/logSystemEvent";
 
 export const useScreenAccess = (screenRoute: string, userId: string | undefined) => {
   const [hasAccess, setHasAccess] = useState(false);
   const [loading, setLoading] = useState(true);
+  const { loading: authLoading } = useAuth();
   const { roles, loading: roleLoading } = useUserRole(userId);
 
   useEffect(() => {
     const checkAccess = async () => {
+      if (authLoading) {
+        setLoading(true);
+        return;
+      }
+
       if (!userId) {
-        console.log("[useScreenAccess] ===== SEM userId =====", {
+        console.log("[useScreenAccess] ===== SEM userId APÓS AUTH =====", {
           screenRoute,
           userId: 'undefined'
         });
@@ -54,20 +61,12 @@ export const useScreenAccess = (screenRoute: string, userId: string | undefined)
       setLoading(true);
 
       try {
-        console.log("[useScreenAccess] ===== VERIFICANDO ACESSO =====", {
-          screenRoute,
-          userId,
-          roles
-        });
-
         const { data: screen, error: screenError } = await supabase
           .from('system_screens')
           .select('id')
           .eq('rota', screenRoute)
           .eq('ativo', true)
           .maybeSingle();
-
-        console.log("[useScreenAccess] Tela encontrada?", { screen, screenError });
 
         if (screenError) {
           console.error("[useScreenAccess] Erro ao buscar tela:", screenError);
@@ -83,10 +82,6 @@ export const useScreenAccess = (screenRoute: string, userId: string | undefined)
         }
 
         if (!screen) {
-          console.log("[useScreenAccess] ===== TELA NÃO CADASTRADA - PERMITINDO ACESSO =====", {
-            screenRoute,
-            motivo: 'backward compatibility'
-          });
           setHasAccess(true);
           return;
         }
@@ -95,8 +90,6 @@ export const useScreenAccess = (screenRoute: string, userId: string | undefined)
           .from('screen_permissions')
           .select('role')
           .eq('screen_id', screen.id);
-
-        console.log("[useScreenAccess] Permissões da tela:", { permissions, permError });
 
         if (permError) {
           console.error('[useScreenAccess] Erro ao verificar permissões:', permError);
@@ -113,14 +106,6 @@ export const useScreenAccess = (screenRoute: string, userId: string | undefined)
 
         const allowedRoles = permissions?.map(p => p.role) || [];
         const userHasAccess = roles.some(role => allowedRoles.includes(role));
-
-        console.log("[useScreenAccess] ===== RESULTADO FINAL =====", {
-          screenRoute,
-          allowedRoles,
-          userRoles: roles,
-          userHasAccess,
-          comparacao: roles.map(r => ({ role: r, allowed: allowedRoles.includes(r) }))
-        });
 
         if (!userHasAccess) {
           logSystemEventFromClient({
@@ -159,9 +144,9 @@ export const useScreenAccess = (screenRoute: string, userId: string | undefined)
     };
 
     checkAccess();
-  }, [screenRoute, roles, userId, roleLoading]);
+  }, [screenRoute, roles, userId, roleLoading, authLoading]);
 
-  const effectiveLoading = !!userId && (loading || roleLoading);
+  const effectiveLoading = authLoading || (!!userId && (loading || roleLoading));
 
   return { hasAccess, loading: effectiveLoading };
 };
