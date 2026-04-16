@@ -12,7 +12,7 @@ import { useBuscaIntegrante, useBuscaIntegranteTodos } from "@/hooks/useIntegran
 import { useMovimentacoesConsolidadas } from "@/hooks/useMovimentacoesConsolidadas";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { normalizeText, normalizarRegional, calcularSemanaOperacional, formatDateToSQL, SemanaOperacional } from "@/lib/normalizeText";
+import { normalizeText, normalizarRegional, calcularPeriodoAtual, calcularPeriodoAnterior, formatarRangePeriodo, formatDateToSQL, SemanaOperacional } from "@/lib/normalizeText";
 import { cn } from "@/lib/utils";
 import { useSubmitRelatorioSemanal, SubmitRelatorioParams } from "@/hooks/useRelatorioSemanal";
 import { useAcoesResolucaoDelta } from "@/hooks/useAcoesResolucaoDelta";
