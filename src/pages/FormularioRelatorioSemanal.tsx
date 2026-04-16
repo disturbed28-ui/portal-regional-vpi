@@ -523,18 +523,12 @@ const FormularioRelatorioSemanal = () => {
   const [carregandoAcoesSociaisAuto, setCarregandoAcoesSociaisAuto] = useState(false);
 
   // ==============================
-  // ESTADOS PARA CONTROLE DE SEMANA SELECIONADA (domingo com semana anterior pendente)
+  // ESTADOS PARA CONTROLE DO PERÍODO SELECIONADO (Relatório CMD - 10 dias)
   // ==============================
   const hoje = new Date();
   const diaHoje = hoje.getDay(); // 0=Dom, 1=Seg, ..., 6=Sab
-  
-  const calcularSemanaAnterior = (): SemanaOperacional => {
-    const setesDiasAtras = new Date();
-    setesDiasAtras.setDate(setesDiasAtras.getDate() - 7);
-    return calcularSemanaOperacional(setesDiasAtras);
-  };
 
-  const [semanaResposta, setSemanaResposta] = useState<SemanaOperacional>(calcularSemanaOperacional());
+  const [semanaResposta, setSemanaResposta] = useState<SemanaOperacional>(calcularPeriodoAtual());
   const [semanaRespostaModo, setSemanaRespostaModo] = useState<"atual" | "anterior">("atual");
   const [pendenciaSemanaAnterior, setPendenciaSemanaAnterior] = useState(false);
   const [verificandoPendencia, setVerificandoPendencia] = useState(false);
@@ -544,7 +538,7 @@ const FormularioRelatorioSemanal = () => {
   const [saidasAplicadasAuto, setSaidasAplicadasAuto] = useState(false);
   const [entradasAplicadasAuto, setEntradasAplicadasAuto] = useState(false);
 
-  // Hook consolidado para buscar entradas/saídas - USANDO semanaResposta
+  // Hook consolidado para buscar entradas/saídas - USANDO semanaResposta (período selecionado)
   const { data: movimentacoesConsolidadas } = useMovimentacoesConsolidadas(
     divisaoSelecionada?.nome && semanaResposta
       ? {
@@ -555,26 +549,28 @@ const FormularioRelatorioSemanal = () => {
       : null
   );
 
-  // Calcular dia permitido
+  // Calcular dia permitido (dias da semana)
   const diasPermitidos = formConfig?.dias_semana;
   const hojePermitido =
     !diasPermitidos || diasPermitidos.length === 0 || diasPermitidos.includes(diaHoje);
-  
-  // EXCEÇÃO: Domingo + semana anterior pendente + modo "anterior" = permitir envio
-  const excecaoDomingoSemanaAnterior = diaHoje === 0 && pendenciaSemanaAnterior && semanaRespostaModo === "anterior";
-  const hojePermitidoEfetivo = hojePermitido || excecaoDomingoSemanaAnterior;
+
+  // EXCEÇÃO: período anterior pendente + modo "anterior" = sempre permitir envio
+  // (independente do dia da semana, enquanto o anterior não tiver sido respondido)
+  const excecaoPeriodoAnteriorPendente = pendenciaSemanaAnterior && semanaRespostaModo === "anterior";
+  const hojePermitidoEfetivo = hojePermitido || excecaoPeriodoAnteriorPendente;
 
   // Log de diagnóstico
-  console.log("[FormularioRelatorioSemanal] Diagnóstico semana:", {
+  console.log("[FormularioRelatorioCMD] Diagnóstico período:", {
     hoje: hoje.toISOString(),
     dow: diaHoje,
     diaNome: DIAS_SEMANA_NOMES[diaHoje],
     semanaRespostaModo,
-    semanaResposta_inicio: semanaResposta?.periodo_inicio?.toISOString(),
-    semanaResposta_fim: semanaResposta?.periodo_fim?.toISOString(),
+    periodo_inicio: semanaResposta?.periodo_inicio?.toISOString(),
+    periodo_fim: semanaResposta?.periodo_fim?.toISOString(),
+    periodo_no_mes: semanaResposta?.semana_no_mes,
     pendenciaSemanaAnterior,
     hojePermitido,
-    excecaoDomingoSemanaAnterior,
+    excecaoPeriodoAnteriorPendente,
     hojePermitidoEfetivo,
   });
   console.log("[FormularioRelatorioSemanal] Limite respostas:", formConfig?.limite_respostas);
@@ -641,30 +637,29 @@ const FormularioRelatorioSemanal = () => {
         setFormularioId(formulario?.id || null);
         setFormConfig(formulario);
 
-        // Buscar relatório existente da semana atual para a divisão inicial
-        // Nota: isso usa calcularSemanaOperacional() apenas para carga inicial
-        // Depois o useEffect de verificação de pendência ajustará semanaResposta se necessário
+        // Buscar relatório existente do PERÍODO ATUAL para a divisão inicial
+        // Nota: depois o useEffect de verificação de pendência ajustará semanaResposta se necessário
         if (formulario?.id && divisaoIntegrante?.id) {
-          const semana = calcularSemanaOperacional();
+          const periodo = calcularPeriodoAtual();
 
           const { data: relatorioExistente } = await supabase
             .from("relatorios_semanais_divisao")
             .select("*")
             .eq("formulario_id", formulario.id)
             .eq("divisao_relatorio_id", divisaoIntegrante.id)
-            .eq("semana_inicio", formatDateToSQL(semana.periodo_inicio))
-            .eq("semana_fim", formatDateToSQL(semana.periodo_fim))
+            .eq("semana_inicio", formatDateToSQL(periodo.periodo_inicio))
+            .eq("semana_fim", formatDateToSQL(periodo.periodo_fim))
             .maybeSingle();
 
           if (relatorioExistente) {
             setExistingReport(relatorioExistente);
             console.log(
-              "[FormularioRelatorioSemanal] Relatório existente para divisão:",
+              "[FormularioRelatorioCMD] Relatório existente para divisão:",
               divisaoIntegrante.nome,
               relatorioExistente.id
             );
           } else {
-            console.log("[FormularioRelatorioSemanal] Nenhum relatório existente para divisão:", divisaoIntegrante.nome);
+            console.log("[FormularioRelatorioCMD] Nenhum relatório existente para divisão:", divisaoIntegrante.nome);
           }
         }
 
@@ -774,64 +769,59 @@ const FormularioRelatorioSemanal = () => {
   }, [divisaoSelecionada]);
 
   // ==============================
-  // USEEFFECT: VERIFICAR PENDÊNCIA DA SEMANA ANTERIOR NO DOMINGO
+  // USEEFFECT: VERIFICAR PENDÊNCIA DO PERÍODO ANTERIOR
+  // (Sempre verifica, independente do dia. Se o período anterior estiver
+  //  pendente, sugere respondê-lo enquanto não for enviado.)
   // ==============================
   useEffect(() => {
-    const verificarPendenciaDomingo = async () => {
-      // Só verificar se hoje é domingo (dow === 0)
-      const dow = new Date().getDay();
-      if (dow !== 0) {
-        setPendenciaSemanaAnterior(false);
-        return;
-      }
-
+    const verificarPendenciaPeriodoAnterior = async () => {
       // Precisa ter formularioId e divisaoSelecionada
       if (!formularioId || !divisaoSelecionada?.id) return;
 
       setVerificandoPendencia(true);
 
-      const semanaAtual = calcularSemanaOperacional();
-      const semanaAnterior = calcularSemanaAnterior();
+      const periodoAtualCalc = calcularPeriodoAtual();
+      const periodoAnteriorCalc = calcularPeriodoAnterior();
 
-      console.log("[FormularioRelatorioSemanal] Verificando pendência no domingo:", {
-        semanaAnterior_inicio: formatDateToSQL(semanaAnterior.periodo_inicio),
-        semanaAnterior_fim: formatDateToSQL(semanaAnterior.periodo_fim),
+      console.log("[FormularioRelatorioCMD] Verificando pendência do período anterior:", {
+        periodoAnterior_inicio: formatDateToSQL(periodoAnteriorCalc.periodo_inicio),
+        periodoAnterior_fim: formatDateToSQL(periodoAnteriorCalc.periodo_fim),
         divisaoId: divisaoSelecionada.id,
       });
 
-      // Verificar se existe relatório da semana anterior
-      const { data: relatorioSemanaAnterior, error } = await supabase
+      // Verificar se existe relatório do período anterior
+      const { data: relatorioPeriodoAnterior, error } = await supabase
         .from("relatorios_semanais_divisao")
         .select("id")
         .eq("formulario_id", formularioId)
         .eq("divisao_relatorio_id", divisaoSelecionada.id)
-        .eq("semana_inicio", formatDateToSQL(semanaAnterior.periodo_inicio))
-        .eq("semana_fim", formatDateToSQL(semanaAnterior.periodo_fim))
+        .eq("semana_inicio", formatDateToSQL(periodoAnteriorCalc.periodo_inicio))
+        .eq("semana_fim", formatDateToSQL(periodoAnteriorCalc.periodo_fim))
         .maybeSingle();
 
       setVerificandoPendencia(false);
 
       if (error) {
-        console.error("[FormularioRelatorioSemanal] Erro ao verificar pendência:", error);
+        console.error("[FormularioRelatorioCMD] Erro ao verificar pendência:", error);
         return;
       }
 
-      if (!relatorioSemanaAnterior) {
-        // Semana anterior PENDENTE
+      if (!relatorioPeriodoAnterior) {
+        // Período anterior PENDENTE - sugerir responder
         setPendenciaSemanaAnterior(true);
-        setSemanaResposta(semanaAnterior);
+        setSemanaResposta(periodoAnteriorCalc);
         setSemanaRespostaModo("anterior");
-        console.log("[FormularioRelatorioSemanal] Domingo: semana anterior pendente, sugerindo responder");
+        console.log("[FormularioRelatorioCMD] Período anterior pendente, sugerindo responder");
       } else {
-        // Semana anterior já enviada
+        // Período anterior já enviado
         setPendenciaSemanaAnterior(false);
-        setSemanaResposta(semanaAtual);
+        setSemanaResposta(periodoAtualCalc);
         setSemanaRespostaModo("atual");
-        console.log("[FormularioRelatorioSemanal] Domingo: semana anterior já enviada");
+        console.log("[FormularioRelatorioCMD] Período anterior já enviado");
       }
     };
 
-    verificarPendenciaDomingo();
+    verificarPendenciaPeriodoAnterior();
   }, [formularioId, divisaoSelecionada?.id]);
 
   // T6: Carregar inadimplências da divisão (com normalizacao para impedir "-" e vazio)
