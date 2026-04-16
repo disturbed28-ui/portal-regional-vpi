@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useAuth } from "@/hooks/useAuth";
 
 export type AccessLevel = 'full' | 'readonly' | 'none';
 
@@ -11,25 +12,13 @@ interface ScreenPermission {
   hasAnyAccess: boolean;
 }
 
-type AppRole = 'admin' | 'moderator' | 'user' | 'diretor_divisao' | 'diretor_regional' | 'regional' | 'social_divisao' | 'adm_divisao' | 'adm_regional' | 'comando';
+type AppRole = 'admin' | 'moderator' | 'user' | 'diretor_divisao' | 'diretor_regional' | 'regional' | 'social_divisao' | 'adm_divisao' | 'comando';
 
 interface UseScreenPermissionsBatchResult {
   permissions: Record<string, ScreenPermission>;
   loading: boolean;
 }
 
-/**
- * Hook otimizado para buscar permissões de múltiplas telas em lote.
- * Reduz de N*2 queries para apenas 2 queries totais.
- * 
- * Regras especiais de acesso automático:
- * - Role 'adm_regional': Acesso full a todas as rotas /gestao-adm*
- * - Role 'comando': Acesso full a tudo (como admin)
- * 
- * @param routes - Array de rotas para verificar permissões
- * @param parentRoute - Rota pai para determinar acesso readonly
- * @param userId - ID do usuário
- */
 export function useScreenPermissionsBatch(
   routes: string[],
   parentRoute: string,
@@ -37,12 +26,18 @@ export function useScreenPermissionsBatch(
 ): UseScreenPermissionsBatchResult {
   const [permissions, setPermissions] = useState<Record<string, ScreenPermission>>({});
   const [loading, setLoading] = useState(true);
+  const { loading: authLoading } = useAuth();
   const { roles, loading: roleLoading } = useUserRole(userId);
-  
+
   const routesKey = routes.join(',');
   const prevKeyRef = useRef<string>('');
 
   useEffect(() => {
+    if (authLoading) {
+      setLoading(true);
+      return;
+    }
+
     if (!userId) {
       prevKeyRef.current = '';
       setPermissions({});
@@ -63,12 +58,12 @@ export function useScreenPermissionsBatch(
 
     const fetchPermissions = async () => {
       setLoading(true);
-      
+
       try {
         const isAdmRegional = roles.includes('adm_regional');
         const isComando = roles.includes('comando');
         const isAdmin = roles.includes('admin');
-        
+
         if (isComando || isAdmin) {
           const allFull = routes.reduce((acc, route) => ({
             ...acc,
@@ -180,21 +175,18 @@ export function useScreenPermissionsBatch(
         }), {} as Record<string, ScreenPermission>);
         setPermissions(denied);
       }
-      
+
       setLoading(false);
     };
 
     fetchPermissions();
-  }, [userId, routesKey, roles, roleLoading, parentRoute]);
+  }, [userId, routesKey, roles, roleLoading, parentRoute, authLoading]);
 
-  const effectiveLoading = !!userId && (loading || roleLoading);
+  const effectiveLoading = authLoading || (!!userId && (loading || roleLoading));
 
   return { permissions, loading: effectiveLoading };
 }
 
-/**
- * Helper para criar objeto de permissão padrão (sem acesso)
- */
 export function getDefaultPermission(): ScreenPermission {
   return {
     hasAccess: false,
