@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -40,16 +40,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const hasResolvedInitialSessionRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
+    let initialSessionFallbackTimer: ReturnType<typeof setTimeout> | null = null;
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const applySession = (nextSession: Session | null) => {
       if (!isMounted) return;
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+    };
+
+    const resolveInitialSession = (nextSession: Session | null) => {
+      applySession(nextSession);
+
+      if (!hasResolvedInitialSessionRef.current && isMounted) {
+        hasResolvedInitialSessionRef.current = true;
+        setLoading(false);
+      }
+    };
+
+    const startInitialSessionFallback = () => {
+      if (initialSessionFallbackTimer) {
+        clearTimeout(initialSessionFallbackTimer);
+      }
+
+      initialSessionFallbackTimer = setTimeout(async () => {
+        if (!isMounted || hasResolvedInitialSessionRef.current) return;
+
+        const { data: { session: fallbackSession } } = await supabase.auth.getSession();
+        console.log('[useAuth] Fallback resolveu sessão inicial');
+        resolveInitialSession(fallbackSession);
+      }, 1500);
+    };
+
+    startInitialSessionFallback();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -57,9 +83,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (!isMounted) return;
 
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
+        if (!hasResolvedInitialSessionRef.current || event === 'INITIAL_SESSION') {
+          resolveInitialSession(session);
+        } else {
+          applySession(session);
+          setLoading(false);
+        }
 
         if (event === 'SIGNED_IN' && session?.user) {
           setTimeout(async () => {
@@ -132,8 +161,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isMounted) return;
+
+      applySession(session);
+    });
+
     return () => {
       isMounted = false;
+      if (initialSessionFallbackTimer) {
+        clearTimeout(initialSessionFallbackTimer);
+      }
       subscription.unsubscribe();
     };
   }, [toast]);
