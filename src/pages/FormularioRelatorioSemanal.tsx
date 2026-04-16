@@ -952,6 +952,9 @@ const FormularioRelatorioSemanal = () => {
   }, [divisaoSelecionada, formConfig, modoEdicao, acoesSociais, semanaResposta]);
 
   // T6: Carregar entradas e saídas automaticamente das movimentações consolidadas
+  // Para Relatório CMD: enriquecer com integrante_id + DATAS REAIS
+  //   - Entradas → data_entrada de integrantes_portal
+  //   - Saídas   → data_inativacao (preferência) → data_afastamento → fallback created_at
   useEffect(() => {
     // Não sobrescrever em modo de edição
     if (modoEdicao === "editar") return;
@@ -968,48 +971,108 @@ const FormularioRelatorioSemanal = () => {
     // Marcar como já aplicado para evitar re-aplicação
     movimentacoesAplicadas.current = true;
 
-    // Mapear entradas para o formato do formulário
-    if (entradasConsolidadas.length > 0) {
-      const entradasMapeadas = entradasConsolidadas.map((m: any) => ({
-        nome_colete: m.nome_colete,
-        data_entrada: m.data_movimentacao?.split("T")[0] || "",
-        motivo_entrada: m.tipo === "REATIVACAO" ? "Reativado" : "Transferido",
-        possui_carro: false,
-        possui_moto: false,
-        nenhum: true,
-        origem: "automatico",
-        tipo_movimentacao: m.tipo,
-        detalhes: m.detalhes,
-      }));
-      setTeveEntradas(true);
-      setEntradas(entradasMapeadas);
-      setEntradasAplicadasAuto(true);
-      console.log("[FormularioRelatorioSemanal] Entradas aplicadas automaticamente:", entradasMapeadas.length);
-    }
+    const aplicarMovimentacoes = async () => {
+      // Coletar IDs de integrantes para enriquecer com dados reais
+      const idsParaBuscar = new Set<string>();
+      entradasConsolidadas.forEach((m: any) => m.integrante_id && idsParaBuscar.add(m.integrante_id));
+      saidasConsolidadas.forEach((m: any) => m.integrante_id && idsParaBuscar.add(m.integrante_id));
 
-    // Mapear saídas para o formato do formulário
-    if (saidasConsolidadas.length > 0) {
-      const saidasMapeadas = saidasConsolidadas.map((m: any) => ({
-        integrante_id: m.integrante_id || "",
-        nome_colete: m.nome_colete,
-        data_saida: m.data_movimentacao?.split("T")[0] || "",
-        motivo_codigo: m.tipo === "INATIVACAO" ? "INATIVACAO" : "TRANSFERENCIA",
-        justificativa: m.detalhes || "",
-        tem_moto: false,
-        tem_carro: false,
-        origem: "automatico",
-        tipo_movimentacao: m.tipo,
-      }));
-      setTeveSaidas(true);
-      setSaidas(saidasMapeadas);
-      setSaidasAplicadasAuto(true);
-      console.log("[FormularioRelatorioSemanal] Saídas aplicadas automaticamente:", saidasMapeadas.length);
-    }
+      // Buscar dados reais (data_entrada e data_inativacao) de integrantes_portal
+      const dadosReaisMap = new Map<string, { data_entrada: string | null; data_inativacao: string | null }>();
+      if (idsParaBuscar.size > 0) {
+        const { data: integrantesData } = await supabase
+          .from("integrantes_portal")
+          .select("id, data_entrada, data_inativacao")
+          .in("id", Array.from(idsParaBuscar));
+        (integrantesData || []).forEach((i: any) => {
+          dadosReaisMap.set(i.id, {
+            data_entrada: i.data_entrada,
+            data_inativacao: i.data_inativacao,
+          });
+        });
+      }
 
-    console.log("[FormularioRelatorioSemanal] Movimentações consolidadas aplicadas:", {
-      entradas: entradasConsolidadas.length,
-      saidas: saidasConsolidadas.length,
-    });
+      // Buscar data_afastamento de integrantes_afastados (fallback para saídas)
+      const dataAfastamentoMap = new Map<number, string>();
+      const registroIdsSaidas = saidasConsolidadas
+        .map((m: any) => m.registro_id)
+        .filter((r: any) => r !== undefined && r !== null);
+      if (registroIdsSaidas.length > 0) {
+        const { data: afastadosData } = await supabase
+          .from("integrantes_afastados")
+          .select("registro_id, data_afastamento")
+          .in("registro_id", registroIdsSaidas)
+          .eq("ativo", true);
+        (afastadosData || []).forEach((a: any) => {
+          if (!dataAfastamentoMap.has(a.registro_id)) {
+            dataAfastamentoMap.set(a.registro_id, a.data_afastamento);
+          }
+        });
+      }
+
+      // Mapear ENTRADAS → usar data_entrada REAL quando existir
+      if (entradasConsolidadas.length > 0) {
+        const entradasMapeadas = entradasConsolidadas.map((m: any) => {
+          const dadosReais = m.integrante_id ? dadosReaisMap.get(m.integrante_id) : null;
+          const dataReal = dadosReais?.data_entrada;
+          const dataFallback = m.data_movimentacao?.split("T")[0] || "";
+          return {
+            integrante_id: m.integrante_id || "",
+            nome_colete: m.nome_colete,
+            data_entrada: dataReal || dataFallback,
+            motivo_entrada: m.tipo === "REATIVACAO" ? "Reativado" : "Transferido",
+            possui_carro: false,
+            possui_moto: false,
+            nenhum: true,
+            origem: "automatico",
+            tipo_movimentacao: m.tipo,
+            detalhes: m.detalhes,
+          };
+        });
+        setTeveEntradas(true);
+        setEntradas(entradasMapeadas);
+        setEntradasAplicadasAuto(true);
+        console.log("[FormularioRelatorioCMD] Entradas aplicadas (com datas reais):", entradasMapeadas.length);
+      }
+
+      // Mapear SAÍDAS → cascata: data_inativacao → data_afastamento → fallback created_at
+      if (saidasConsolidadas.length > 0) {
+        const saidasMapeadas = saidasConsolidadas.map((m: any) => {
+          const dadosReais = m.integrante_id ? dadosReaisMap.get(m.integrante_id) : null;
+          const dataInativacao = dadosReais?.data_inativacao
+            ? dadosReais.data_inativacao.split("T")[0]
+            : null;
+          const dataAfastamento = m.registro_id
+            ? dataAfastamentoMap.get(m.registro_id) || null
+            : null;
+          const dataFallback = m.data_movimentacao?.split("T")[0] || "";
+          const dataSaida = dataInativacao || dataAfastamento || dataFallback;
+
+          return {
+            integrante_id: m.integrante_id || "",
+            nome_colete: m.nome_colete,
+            data_saida: dataSaida,
+            motivo_codigo: m.tipo === "INATIVACAO" ? "INATIVACAO" : "TRANSFERENCIA",
+            justificativa: m.detalhes || "",
+            tem_moto: false,
+            tem_carro: false,
+            origem: "automatico",
+            tipo_movimentacao: m.tipo,
+          };
+        });
+        setTeveSaidas(true);
+        setSaidas(saidasMapeadas);
+        setSaidasAplicadasAuto(true);
+        console.log("[FormularioRelatorioCMD] Saídas aplicadas (com datas reais):", saidasMapeadas.length);
+      }
+
+      console.log("[FormularioRelatorioCMD] Movimentações consolidadas aplicadas:", {
+        entradas: entradasConsolidadas.length,
+        saidas: saidasConsolidadas.length,
+      });
+    };
+
+    aplicarMovimentacoes();
   }, [movimentacoesConsolidadas, modoEdicao, entradas, saidas]);
 
   // Recarregar relatório existente quando divisão ou semanaResposta mudar
