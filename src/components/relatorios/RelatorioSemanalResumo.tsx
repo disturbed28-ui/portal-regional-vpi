@@ -122,10 +122,10 @@ export const RelatorioSemanalResumo = ({ regionalId, ano, mes, semana }: Relator
         </CardContent>
       </Card>
 
-      {/* Seção 2: Dados dos Formulários Semanais */}
+      {/* Seção 2: Dados dos Formulários do Período */}
       <Card>
         <CardHeader>
-          <CardTitle>Dados dos Relatórios Semanais - Ano {ano} / Mês {mes} / Semana {semana}</CardTitle>
+          <CardTitle>Dados dos Relatórios CMD - Ano {ano} / Mês {mes} / Período {semana}</CardTitle>
         </CardHeader>
         <CardContent>
           <Accordion type="multiple" className="w-full">
@@ -324,7 +324,7 @@ export const RelatorioSemanalResumo = ({ regionalId, ano, mes, semana }: Relator
 
           {relatoriosSemanais?.length === 0 && (
             <p className="text-center text-muted-foreground py-4">
-              Nenhum relatório semanal encontrado para este período.
+              Nenhum relatório CMD encontrado para este período.
             </p>
           )}
         </CardContent>
