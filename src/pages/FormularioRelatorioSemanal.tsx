@@ -1242,73 +1242,79 @@ const FormularioRelatorioSemanal = () => {
           </Button>
           <div className="min-w-0 flex-1">
             <p className="text-xs sm:text-sm text-muted-foreground truncate">Regional {dadosResponsavel?.regional_texto}</p>
-            <h1 className="text-lg sm:text-2xl font-bold">Relatório Semanal da Divisão</h1>
+            <h1 className="text-lg sm:text-2xl font-bold">Relatório CMD</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+              Período {semanaResposta.semana_no_mes} ({formatarRangePeriodo(semanaResposta)}) · {format(semanaResposta.periodo_inicio, "dd/MM/yyyy")} a {format(semanaResposta.periodo_fim, "dd/MM/yyyy")}
+            </p>
           </div>
         </div>
 
-        {/* Banner: Domingo com semana anterior pendente - ESCOLHA DE SEMANA */}
-        {pendenciaSemanaAnterior && diaHoje === 0 && divisaoSelecionada && (
-          <Card className="p-4 bg-orange-50 dark:bg-orange-950 border-orange-300 dark:border-orange-700">
-            <div className="flex items-start gap-3">
-              <Calendar className="h-6 w-6 text-orange-600 dark:text-orange-400 mt-0.5 shrink-0" />
-              <div className="flex-1">
-                <h4 className="font-semibold text-orange-900 dark:text-orange-100 mb-1">
-                  Relatório da última semana não foi respondido
-                </h4>
-                <p className="text-sm text-orange-800 dark:text-orange-200 mb-3">
-                  Detectamos que a divisão <strong>{divisaoSelecionada?.nome}</strong> não enviou 
-                  o relatório da semana <strong>
-                    {format(calcularSemanaAnterior().periodo_inicio, "dd/MM")} a{" "}
-                    {format(calcularSemanaAnterior().periodo_fim, "dd/MM")}
-                  </strong>. 
-                  Deseja responder a semana anterior agora ou iniciar a semana atual?
-                </p>
-                
-                <div className="text-xs text-orange-700 dark:text-orange-300 mb-3 space-y-1">
-                  <p>• Semana anterior: {format(calcularSemanaAnterior().periodo_inicio, "dd/MM")} a {format(calcularSemanaAnterior().periodo_fim, "dd/MM")}</p>
-                  <p>• Semana atual: {format(calcularSemanaOperacional().periodo_inicio, "dd/MM")} a {format(calcularSemanaOperacional().periodo_fim, "dd/MM")}</p>
-                </div>
+        {/* Banner: Período anterior pendente - ESCOLHA DE PERÍODO */}
+        {pendenciaSemanaAnterior && divisaoSelecionada && (() => {
+          const periodoAnterior = calcularPeriodoAnterior();
+          const periodoAtual = calcularPeriodoAtual();
+          return (
+            <Card className="p-4 bg-orange-50 dark:bg-orange-950 border-orange-300 dark:border-orange-700">
+              <div className="flex items-start gap-3">
+                <Calendar className="h-6 w-6 text-orange-600 dark:text-orange-400 mt-0.5 shrink-0" />
+                <div className="flex-1">
+                  <h4 className="font-semibold text-orange-900 dark:text-orange-100 mb-1">
+                    Relatório CMD do período anterior não foi respondido
+                  </h4>
+                  <p className="text-sm text-orange-800 dark:text-orange-200 mb-3">
+                    Detectamos que a divisão <strong>{divisaoSelecionada?.nome}</strong> não enviou
+                    o relatório do período <strong>
+                      {format(periodoAnterior.periodo_inicio, "dd/MM")} a {format(periodoAnterior.periodo_fim, "dd/MM")}
+                    </strong>.
+                    Deseja responder o período anterior agora ou iniciar o período atual?
+                  </p>
 
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Button
-                    size="sm"
-                    className={cn(
-                      "w-full sm:w-auto",
-                      semanaRespostaModo === "anterior" && "ring-2 ring-orange-500"
-                    )}
-                    onClick={() => {
-                      setSemanaResposta(calcularSemanaAnterior());
-                      setSemanaRespostaModo("anterior");
-                      resetarFormularioParaNovaSemana();
-                    }}
-                  >
-                    Responder semana anterior (pendente)
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={cn(
-                      "w-full sm:w-auto",
-                      semanaRespostaModo === "atual" && "ring-2 ring-orange-500"
-                    )}
-                    onClick={() => {
-                      setSemanaResposta(calcularSemanaOperacional());
-                      setSemanaRespostaModo("atual");
-                      resetarFormularioParaNovaSemana();
-                    }}
-                  >
-                    Responder semana atual
-                  </Button>
-                </div>
+                  <div className="text-xs text-orange-700 dark:text-orange-300 mb-3 space-y-1">
+                    <p>• Período anterior: {format(periodoAnterior.periodo_inicio, "dd/MM")} a {format(periodoAnterior.periodo_fim, "dd/MM")}</p>
+                    <p>• Período atual: {format(periodoAtual.periodo_inicio, "dd/MM")} a {format(periodoAtual.periodo_fim, "dd/MM")}</p>
+                  </div>
 
-                {/* Indicador da semana selecionada */}
-                <p className="text-xs text-orange-700 dark:text-orange-300 mt-3 font-medium">
-                  ✓ Respondendo: {semanaRespostaModo === "anterior" ? "Semana anterior" : "Semana atual"} ({format(semanaResposta.periodo_inicio, "dd/MM")} a {format(semanaResposta.periodo_fim, "dd/MM")})
-                </p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button
+                      size="sm"
+                      className={cn(
+                        "w-full sm:w-auto",
+                        semanaRespostaModo === "anterior" && "ring-2 ring-orange-500"
+                      )}
+                      onClick={() => {
+                        setSemanaResposta(calcularPeriodoAnterior());
+                        setSemanaRespostaModo("anterior");
+                        resetarFormularioParaNovaSemana();
+                      }}
+                    >
+                      Responder período anterior (pendente)
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        "w-full sm:w-auto",
+                        semanaRespostaModo === "atual" && "ring-2 ring-orange-500"
+                      )}
+                      onClick={() => {
+                        setSemanaResposta(calcularPeriodoAtual());
+                        setSemanaRespostaModo("atual");
+                        resetarFormularioParaNovaSemana();
+                      }}
+                    >
+                      Responder período atual
+                    </Button>
+                  </div>
+
+                  {/* Indicador do período selecionado */}
+                  <p className="text-xs text-orange-700 dark:text-orange-300 mt-3 font-medium">
+                    ✓ Respondendo: {semanaRespostaModo === "anterior" ? "Período anterior" : "Período atual"} ({format(semanaResposta.periodo_inicio, "dd/MM")} a {format(semanaResposta.periodo_fim, "dd/MM")})
+                  </p>
+                </div>
               </div>
-            </div>
-          </Card>
-        )}
+            </Card>
+          );
+        })()}
 
         {/* Banner: Dia não permitido (apenas se não for exceção de domingo) */}
         {!hojePermitidoEfetivo && formConfig && (
