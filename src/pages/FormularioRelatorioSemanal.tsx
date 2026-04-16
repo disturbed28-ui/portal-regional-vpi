@@ -86,7 +86,7 @@ const SecaoSaidas = ({
       )}
 
       <div className="space-y-2">
-        <p className="text-sm text-muted-foreground">Houve saída de integrantes nesta semana?</p>
+        <p className="text-sm text-muted-foreground">Houve saída de integrantes neste período?</p>
         <div className="flex gap-2">
           <Button
             type="button"
@@ -1528,7 +1528,7 @@ const FormularioRelatorioSemanal = () => {
           )}
 
           <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">Houve entrada de integrantes nesta semana?</p>
+            <p className="text-sm text-muted-foreground">Houve entrada de integrantes neste período?</p>
             <div className="flex gap-2">
               <Button
                 type="button"
@@ -1682,6 +1682,7 @@ const FormularioRelatorioSemanal = () => {
                   setEntradas([
                     ...entradas,
                     {
+                      integrante_id: "",
                       nome_colete: "",
                       data_entrada: "",
                       motivo_entrada: "",
@@ -1716,7 +1717,7 @@ const FormularioRelatorioSemanal = () => {
         <Card className="p-4 sm:p-6 space-y-4">
           <h3 className="font-semibold">Conflitos Internos e Externos</h3>
           <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">Houve conflitos esta semana?</p>
+            <p className="text-sm text-muted-foreground">Houve conflitos neste período?</p>
             <div className="flex gap-2">
               <Button type="button" variant={teveConflitos ? "default" : "outline"} className="min-h-[44px]" onClick={() => setTeveConflitos(true)}>
                 Sim
@@ -1804,7 +1805,7 @@ const FormularioRelatorioSemanal = () => {
         <Card className="p-4 sm:p-6 space-y-4">
           <h3 className="font-semibold">Ações Sociais</h3>
           <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">Houve ações sociais esta semana?</p>
+            <p className="text-sm text-muted-foreground">Houve ações sociais neste período?</p>
             <div className="flex gap-2">
               <Button type="button" variant={teveAcoesSociais ? "default" : "outline"} className="min-h-[44px]" onClick={() => setTeveAcoesSociais(true)}>
                 Sim
