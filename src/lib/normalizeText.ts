@@ -88,79 +88,126 @@ export const normalizarDivisao = (texto: string): string => {
 };
 
 /**
- * Dados da semana operacional (Domingo → Sábado)
+ * Dados do período operacional.
+ * 
+ * NOVA LÓGICA (Relatório CMD - 10 dias):
+ *   Período 1 = dia 01 a 10
+ *   Período 2 = dia 11 a 20
+ *   Período 3 = dia 21 ao último dia do mês
+ *
+ * Os campos `periodo_inicio` / `periodo_fim` / `ano_referencia` /
+ * `mes_referencia` / `semana_no_mes` são reaproveitados:
+ *   semana_no_mes = 1 → período 01–10
+ *   semana_no_mes = 2 → período 11–20
+ *   semana_no_mes = 3 → período 21–fim do mês
  */
 export interface SemanaOperacional {
-  periodo_inicio: Date;  // Domingo
-  periodo_fim: Date;     // Sábado
+  periodo_inicio: Date;  // Primeiro dia do período
+  periodo_fim: Date;     // Último dia do período
   ano_referencia: number;
   mes_referencia: number;
-  semana_no_mes: number;
+  semana_no_mes: number; // 1, 2 ou 3 (reaproveitado como "período no mês")
 }
 
 /**
- * Calcula os dados da semana operacional (Domingo → Sábado)
- * A partir de uma data base, retorna:
- * - periodo_inicio: Domingo da semana
- * - periodo_fim: Sábado da semana  
- * - ano_referencia: Ano do sábado
- * - mes_referencia: Mês do sábado (1-12)
- * - semana_no_mes: Posição do sábado entre os sábados do mês (1-5)
+ * Calcula o período operacional CMD (10 dias) a partir de uma data base.
+ *
+ * Períodos do mês:
+ *   1 → dia 01 a 10
+ *   2 → dia 11 a 20
+ *   3 → dia 21 ao último dia do mês (28/29/30/31)
+ *
+ * Retorna:
+ * - periodo_inicio: primeiro dia do período (00:00)
+ * - periodo_fim: último dia do período (23:59:59.999)
+ * - ano_referencia / mes_referencia: do mês corrente da data base
+ * - semana_no_mes: 1, 2 ou 3 (reaproveitado como número do período)
  */
-export const calcularSemanaOperacional = (dataBase: Date = new Date()): SemanaOperacional => {
-  // 1. Normalizar data (sem hora)
-  const hoje = new Date(dataBase);
-  hoje.setHours(0, 0, 0, 0);
-  
-  // 2. Dia da semana (0=Domingo, 1=Segunda, ..., 6=Sábado)
-  const dow = hoje.getDay();
-  
-  // 3. Calcular o sábado (periodo_fim) da semana
-  const diasAteSabado = (6 - dow + 7) % 7;
-  const periodo_fim = new Date(hoje);
-  periodo_fim.setDate(hoje.getDate() + diasAteSabado);
-  periodo_fim.setHours(23, 59, 59, 999);
-  
-  // 4. Calcular o domingo (periodo_inicio) = sábado - 6 dias
-  const periodo_inicio = new Date(periodo_fim);
-  periodo_inicio.setDate(periodo_fim.getDate() - 6);
-  periodo_inicio.setHours(0, 0, 0, 0);
-  
-  // 5. Ano e mês de referência = do sábado
-  const ano_referencia = periodo_fim.getFullYear();
-  const mes_referencia = periodo_fim.getMonth() + 1; // 1-12
-  
-  // 6. Calcular semana_no_mes
-  // Primeiro dia do mês do sábado
-  const primeiroDiaMes = new Date(ano_referencia, mes_referencia - 1, 1);
-  const dowPrimeiro = primeiroDiaMes.getDay();
-  
-  // Primeiro sábado do mês
-  const offsetParaSabado = (6 - dowPrimeiro + 7) % 7;
-  const primeiroSabadoMes = new Date(primeiroDiaMes);
-  primeiroSabadoMes.setDate(1 + offsetParaSabado);
-  
-  // Diferença em dias entre o primeiro sábado e o sábado atual
-  const diffMs = periodo_fim.getTime() - primeiroSabadoMes.getTime();
-  const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  const semana_no_mes = 1 + Math.floor(diffDias / 7);
-  
+export const calcularPeriodoAtual = (dataBase: Date = new Date()): SemanaOperacional => {
+  const ref = new Date(dataBase);
+  ref.setHours(0, 0, 0, 0);
+
+  const ano = ref.getFullYear();
+  const mes = ref.getMonth(); // 0-11
+  const dia = ref.getDate();
+
+  // Último dia do mês (dia 0 do mês seguinte)
+  const ultimoDiaMes = new Date(ano, mes + 1, 0).getDate();
+
+  let diaInicio: number;
+  let diaFim: number;
+  let periodoNumero: 1 | 2 | 3;
+
+  if (dia <= 10) {
+    diaInicio = 1;
+    diaFim = 10;
+    periodoNumero = 1;
+  } else if (dia <= 20) {
+    diaInicio = 11;
+    diaFim = 20;
+    periodoNumero = 2;
+  } else {
+    diaInicio = 21;
+    diaFim = ultimoDiaMes;
+    periodoNumero = 3;
+  }
+
+  const periodo_inicio = new Date(ano, mes, diaInicio, 0, 0, 0, 0);
+  const periodo_fim = new Date(ano, mes, diaFim, 23, 59, 59, 999);
+
   return {
     periodo_inicio,
     periodo_fim,
-    ano_referencia,
-    mes_referencia,
-    semana_no_mes
+    ano_referencia: ano,
+    mes_referencia: mes + 1, // 1-12
+    semana_no_mes: periodoNumero,
   };
 };
 
 /**
- * @deprecated Use calcularSemanaOperacional() 
- * Calcula início e fim da semana atual (segunda a domingo)
+ * Calcula o período operacional anterior ao da data base.
+ * Trata corretamente a virada de mês (período 1 → período 3 do mês anterior).
+ */
+export const calcularPeriodoAnterior = (dataBase: Date = new Date()): SemanaOperacional => {
+  const atual = calcularPeriodoAtual(dataBase);
+
+  if (atual.semana_no_mes === 1) {
+    // Período anterior = período 3 do mês anterior
+    // Pega o dia 25 do mês anterior como referência
+    const baseMesAnterior = new Date(atual.ano_referencia, atual.mes_referencia - 2, 25);
+    return calcularPeriodoAtual(baseMesAnterior);
+  }
+
+  // Períodos 2 ou 3: pegar uma data dentro do período anterior do mesmo mês
+  const diaReferencia = atual.semana_no_mes === 2 ? 5 : 15;
+  const baseMesmoMes = new Date(atual.ano_referencia, atual.mes_referencia - 1, diaReferencia);
+  return calcularPeriodoAtual(baseMesmoMes);
+};
+
+/**
+ * Retorna label legível do período (ex.: "01–10", "11–20", "21–31").
+ */
+export const formatarRangePeriodo = (periodo: SemanaOperacional): string => {
+  const inicio = String(periodo.periodo_inicio.getDate()).padStart(2, "0");
+  const fim = String(periodo.periodo_fim.getDate()).padStart(2, "0");
+  return `${inicio}–${fim}`;
+};
+
+/**
+ * @deprecated Use calcularPeriodoAtual() — mantido apenas como alias para compatibilidade.
+ * A lógica antiga de "semana operacional" (Domingo→Sábado) foi substituída pelo
+ * sistema de períodos de 10 dias (Relatório CMD). Esta função agora retorna o período atual.
+ */
+export const calcularSemanaOperacional = (dataBase: Date = new Date()): SemanaOperacional => {
+  return calcularPeriodoAtual(dataBase);
+};
+
+/**
+ * @deprecated Use calcularPeriodoAtual()
  */
 export const getSemanaAtual = (): { inicio: Date; fim: Date } => {
-  const semana = calcularSemanaOperacional();
-  return { inicio: semana.periodo_inicio, fim: semana.periodo_fim };
+  const periodo = calcularPeriodoAtual();
+  return { inicio: periodo.periodo_inicio, fim: periodo.periodo_fim };
 };
 
 /**

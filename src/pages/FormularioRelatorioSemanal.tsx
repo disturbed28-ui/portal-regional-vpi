@@ -12,7 +12,7 @@ import { useBuscaIntegrante, useBuscaIntegranteTodos } from "@/hooks/useIntegran
 import { useMovimentacoesConsolidadas } from "@/hooks/useMovimentacoesConsolidadas";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { normalizeText, normalizarRegional, calcularSemanaOperacional, formatDateToSQL, SemanaOperacional } from "@/lib/normalizeText";
+import { normalizeText, normalizarRegional, calcularPeriodoAtual, calcularPeriodoAnterior, formatarRangePeriodo, formatDateToSQL, SemanaOperacional } from "@/lib/normalizeText";
 import { cn } from "@/lib/utils";
 import { useSubmitRelatorioSemanal, SubmitRelatorioParams } from "@/hooks/useRelatorioSemanal";
 import { useAcoesResolucaoDelta } from "@/hooks/useAcoesResolucaoDelta";
@@ -86,7 +86,7 @@ const SecaoSaidas = ({
       )}
 
       <div className="space-y-2">
-        <p className="text-sm text-muted-foreground">Houve saída de integrantes nesta semana?</p>
+        <p className="text-sm text-muted-foreground">Houve saída de integrantes neste período?</p>
         <div className="flex gap-2">
           <Button
             type="button"
@@ -523,18 +523,12 @@ const FormularioRelatorioSemanal = () => {
   const [carregandoAcoesSociaisAuto, setCarregandoAcoesSociaisAuto] = useState(false);
 
   // ==============================
-  // ESTADOS PARA CONTROLE DE SEMANA SELECIONADA (domingo com semana anterior pendente)
+  // ESTADOS PARA CONTROLE DO PERÍODO SELECIONADO (Relatório CMD - 10 dias)
   // ==============================
   const hoje = new Date();
   const diaHoje = hoje.getDay(); // 0=Dom, 1=Seg, ..., 6=Sab
-  
-  const calcularSemanaAnterior = (): SemanaOperacional => {
-    const setesDiasAtras = new Date();
-    setesDiasAtras.setDate(setesDiasAtras.getDate() - 7);
-    return calcularSemanaOperacional(setesDiasAtras);
-  };
 
-  const [semanaResposta, setSemanaResposta] = useState<SemanaOperacional>(calcularSemanaOperacional());
+  const [semanaResposta, setSemanaResposta] = useState<SemanaOperacional>(calcularPeriodoAtual());
   const [semanaRespostaModo, setSemanaRespostaModo] = useState<"atual" | "anterior">("atual");
   const [pendenciaSemanaAnterior, setPendenciaSemanaAnterior] = useState(false);
   const [verificandoPendencia, setVerificandoPendencia] = useState(false);
@@ -544,7 +538,7 @@ const FormularioRelatorioSemanal = () => {
   const [saidasAplicadasAuto, setSaidasAplicadasAuto] = useState(false);
   const [entradasAplicadasAuto, setEntradasAplicadasAuto] = useState(false);
 
-  // Hook consolidado para buscar entradas/saídas - USANDO semanaResposta
+  // Hook consolidado para buscar entradas/saídas - USANDO semanaResposta (período selecionado)
   const { data: movimentacoesConsolidadas } = useMovimentacoesConsolidadas(
     divisaoSelecionada?.nome && semanaResposta
       ? {
@@ -555,26 +549,28 @@ const FormularioRelatorioSemanal = () => {
       : null
   );
 
-  // Calcular dia permitido
+  // Calcular dia permitido (dias da semana)
   const diasPermitidos = formConfig?.dias_semana;
   const hojePermitido =
     !diasPermitidos || diasPermitidos.length === 0 || diasPermitidos.includes(diaHoje);
-  
-  // EXCEÇÃO: Domingo + semana anterior pendente + modo "anterior" = permitir envio
-  const excecaoDomingoSemanaAnterior = diaHoje === 0 && pendenciaSemanaAnterior && semanaRespostaModo === "anterior";
-  const hojePermitidoEfetivo = hojePermitido || excecaoDomingoSemanaAnterior;
+
+  // EXCEÇÃO: período anterior pendente + modo "anterior" = sempre permitir envio
+  // (independente do dia da semana, enquanto o anterior não tiver sido respondido)
+  const excecaoPeriodoAnteriorPendente = pendenciaSemanaAnterior && semanaRespostaModo === "anterior";
+  const hojePermitidoEfetivo = hojePermitido || excecaoPeriodoAnteriorPendente;
 
   // Log de diagnóstico
-  console.log("[FormularioRelatorioSemanal] Diagnóstico semana:", {
+  console.log("[FormularioRelatorioCMD] Diagnóstico período:", {
     hoje: hoje.toISOString(),
     dow: diaHoje,
     diaNome: DIAS_SEMANA_NOMES[diaHoje],
     semanaRespostaModo,
-    semanaResposta_inicio: semanaResposta?.periodo_inicio?.toISOString(),
-    semanaResposta_fim: semanaResposta?.periodo_fim?.toISOString(),
+    periodo_inicio: semanaResposta?.periodo_inicio?.toISOString(),
+    periodo_fim: semanaResposta?.periodo_fim?.toISOString(),
+    periodo_no_mes: semanaResposta?.semana_no_mes,
     pendenciaSemanaAnterior,
     hojePermitido,
-    excecaoDomingoSemanaAnterior,
+    excecaoPeriodoAnteriorPendente,
     hojePermitidoEfetivo,
   });
   console.log("[FormularioRelatorioSemanal] Limite respostas:", formConfig?.limite_respostas);
@@ -641,30 +637,29 @@ const FormularioRelatorioSemanal = () => {
         setFormularioId(formulario?.id || null);
         setFormConfig(formulario);
 
-        // Buscar relatório existente da semana atual para a divisão inicial
-        // Nota: isso usa calcularSemanaOperacional() apenas para carga inicial
-        // Depois o useEffect de verificação de pendência ajustará semanaResposta se necessário
+        // Buscar relatório existente do PERÍODO ATUAL para a divisão inicial
+        // Nota: depois o useEffect de verificação de pendência ajustará semanaResposta se necessário
         if (formulario?.id && divisaoIntegrante?.id) {
-          const semana = calcularSemanaOperacional();
+          const periodo = calcularPeriodoAtual();
 
           const { data: relatorioExistente } = await supabase
             .from("relatorios_semanais_divisao")
             .select("*")
             .eq("formulario_id", formulario.id)
             .eq("divisao_relatorio_id", divisaoIntegrante.id)
-            .eq("semana_inicio", formatDateToSQL(semana.periodo_inicio))
-            .eq("semana_fim", formatDateToSQL(semana.periodo_fim))
+            .eq("semana_inicio", formatDateToSQL(periodo.periodo_inicio))
+            .eq("semana_fim", formatDateToSQL(periodo.periodo_fim))
             .maybeSingle();
 
           if (relatorioExistente) {
             setExistingReport(relatorioExistente);
             console.log(
-              "[FormularioRelatorioSemanal] Relatório existente para divisão:",
+              "[FormularioRelatorioCMD] Relatório existente para divisão:",
               divisaoIntegrante.nome,
               relatorioExistente.id
             );
           } else {
-            console.log("[FormularioRelatorioSemanal] Nenhum relatório existente para divisão:", divisaoIntegrante.nome);
+            console.log("[FormularioRelatorioCMD] Nenhum relatório existente para divisão:", divisaoIntegrante.nome);
           }
         }
 
@@ -774,64 +769,59 @@ const FormularioRelatorioSemanal = () => {
   }, [divisaoSelecionada]);
 
   // ==============================
-  // USEEFFECT: VERIFICAR PENDÊNCIA DA SEMANA ANTERIOR NO DOMINGO
+  // USEEFFECT: VERIFICAR PENDÊNCIA DO PERÍODO ANTERIOR
+  // (Sempre verifica, independente do dia. Se o período anterior estiver
+  //  pendente, sugere respondê-lo enquanto não for enviado.)
   // ==============================
   useEffect(() => {
-    const verificarPendenciaDomingo = async () => {
-      // Só verificar se hoje é domingo (dow === 0)
-      const dow = new Date().getDay();
-      if (dow !== 0) {
-        setPendenciaSemanaAnterior(false);
-        return;
-      }
-
+    const verificarPendenciaPeriodoAnterior = async () => {
       // Precisa ter formularioId e divisaoSelecionada
       if (!formularioId || !divisaoSelecionada?.id) return;
 
       setVerificandoPendencia(true);
 
-      const semanaAtual = calcularSemanaOperacional();
-      const semanaAnterior = calcularSemanaAnterior();
+      const periodoAtualCalc = calcularPeriodoAtual();
+      const periodoAnteriorCalc = calcularPeriodoAnterior();
 
-      console.log("[FormularioRelatorioSemanal] Verificando pendência no domingo:", {
-        semanaAnterior_inicio: formatDateToSQL(semanaAnterior.periodo_inicio),
-        semanaAnterior_fim: formatDateToSQL(semanaAnterior.periodo_fim),
+      console.log("[FormularioRelatorioCMD] Verificando pendência do período anterior:", {
+        periodoAnterior_inicio: formatDateToSQL(periodoAnteriorCalc.periodo_inicio),
+        periodoAnterior_fim: formatDateToSQL(periodoAnteriorCalc.periodo_fim),
         divisaoId: divisaoSelecionada.id,
       });
 
-      // Verificar se existe relatório da semana anterior
-      const { data: relatorioSemanaAnterior, error } = await supabase
+      // Verificar se existe relatório do período anterior
+      const { data: relatorioPeriodoAnterior, error } = await supabase
         .from("relatorios_semanais_divisao")
         .select("id")
         .eq("formulario_id", formularioId)
         .eq("divisao_relatorio_id", divisaoSelecionada.id)
-        .eq("semana_inicio", formatDateToSQL(semanaAnterior.periodo_inicio))
-        .eq("semana_fim", formatDateToSQL(semanaAnterior.periodo_fim))
+        .eq("semana_inicio", formatDateToSQL(periodoAnteriorCalc.periodo_inicio))
+        .eq("semana_fim", formatDateToSQL(periodoAnteriorCalc.periodo_fim))
         .maybeSingle();
 
       setVerificandoPendencia(false);
 
       if (error) {
-        console.error("[FormularioRelatorioSemanal] Erro ao verificar pendência:", error);
+        console.error("[FormularioRelatorioCMD] Erro ao verificar pendência:", error);
         return;
       }
 
-      if (!relatorioSemanaAnterior) {
-        // Semana anterior PENDENTE
+      if (!relatorioPeriodoAnterior) {
+        // Período anterior PENDENTE - sugerir responder
         setPendenciaSemanaAnterior(true);
-        setSemanaResposta(semanaAnterior);
+        setSemanaResposta(periodoAnteriorCalc);
         setSemanaRespostaModo("anterior");
-        console.log("[FormularioRelatorioSemanal] Domingo: semana anterior pendente, sugerindo responder");
+        console.log("[FormularioRelatorioCMD] Período anterior pendente, sugerindo responder");
       } else {
-        // Semana anterior já enviada
+        // Período anterior já enviado
         setPendenciaSemanaAnterior(false);
-        setSemanaResposta(semanaAtual);
+        setSemanaResposta(periodoAtualCalc);
         setSemanaRespostaModo("atual");
-        console.log("[FormularioRelatorioSemanal] Domingo: semana anterior já enviada");
+        console.log("[FormularioRelatorioCMD] Período anterior já enviado");
       }
     };
 
-    verificarPendenciaDomingo();
+    verificarPendenciaPeriodoAnterior();
   }, [formularioId, divisaoSelecionada?.id]);
 
   // T6: Carregar inadimplências da divisão (com normalizacao para impedir "-" e vazio)
@@ -962,6 +952,9 @@ const FormularioRelatorioSemanal = () => {
   }, [divisaoSelecionada, formConfig, modoEdicao, acoesSociais, semanaResposta]);
 
   // T6: Carregar entradas e saídas automaticamente das movimentações consolidadas
+  // Para Relatório CMD: enriquecer com integrante_id + DATAS REAIS
+  //   - Entradas → data_entrada de integrantes_portal
+  //   - Saídas   → data_inativacao (preferência) → data_afastamento → fallback created_at
   useEffect(() => {
     // Não sobrescrever em modo de edição
     if (modoEdicao === "editar") return;
@@ -978,48 +971,108 @@ const FormularioRelatorioSemanal = () => {
     // Marcar como já aplicado para evitar re-aplicação
     movimentacoesAplicadas.current = true;
 
-    // Mapear entradas para o formato do formulário
-    if (entradasConsolidadas.length > 0) {
-      const entradasMapeadas = entradasConsolidadas.map((m: any) => ({
-        nome_colete: m.nome_colete,
-        data_entrada: m.data_movimentacao?.split("T")[0] || "",
-        motivo_entrada: m.tipo === "REATIVACAO" ? "Reativado" : "Transferido",
-        possui_carro: false,
-        possui_moto: false,
-        nenhum: true,
-        origem: "automatico",
-        tipo_movimentacao: m.tipo,
-        detalhes: m.detalhes,
-      }));
-      setTeveEntradas(true);
-      setEntradas(entradasMapeadas);
-      setEntradasAplicadasAuto(true);
-      console.log("[FormularioRelatorioSemanal] Entradas aplicadas automaticamente:", entradasMapeadas.length);
-    }
+    const aplicarMovimentacoes = async () => {
+      // Coletar IDs de integrantes para enriquecer com dados reais
+      const idsParaBuscar = new Set<string>();
+      entradasConsolidadas.forEach((m: any) => m.integrante_id && idsParaBuscar.add(m.integrante_id));
+      saidasConsolidadas.forEach((m: any) => m.integrante_id && idsParaBuscar.add(m.integrante_id));
 
-    // Mapear saídas para o formato do formulário
-    if (saidasConsolidadas.length > 0) {
-      const saidasMapeadas = saidasConsolidadas.map((m: any) => ({
-        integrante_id: m.integrante_id || "",
-        nome_colete: m.nome_colete,
-        data_saida: m.data_movimentacao?.split("T")[0] || "",
-        motivo_codigo: m.tipo === "INATIVACAO" ? "INATIVACAO" : "TRANSFERENCIA",
-        justificativa: m.detalhes || "",
-        tem_moto: false,
-        tem_carro: false,
-        origem: "automatico",
-        tipo_movimentacao: m.tipo,
-      }));
-      setTeveSaidas(true);
-      setSaidas(saidasMapeadas);
-      setSaidasAplicadasAuto(true);
-      console.log("[FormularioRelatorioSemanal] Saídas aplicadas automaticamente:", saidasMapeadas.length);
-    }
+      // Buscar dados reais (data_entrada e data_inativacao) de integrantes_portal
+      const dadosReaisMap = new Map<string, { data_entrada: string | null; data_inativacao: string | null }>();
+      if (idsParaBuscar.size > 0) {
+        const { data: integrantesData } = await supabase
+          .from("integrantes_portal")
+          .select("id, data_entrada, data_inativacao")
+          .in("id", Array.from(idsParaBuscar));
+        (integrantesData || []).forEach((i: any) => {
+          dadosReaisMap.set(i.id, {
+            data_entrada: i.data_entrada,
+            data_inativacao: i.data_inativacao,
+          });
+        });
+      }
 
-    console.log("[FormularioRelatorioSemanal] Movimentações consolidadas aplicadas:", {
-      entradas: entradasConsolidadas.length,
-      saidas: saidasConsolidadas.length,
-    });
+      // Buscar data_afastamento de integrantes_afastados (fallback para saídas)
+      const dataAfastamentoMap = new Map<number, string>();
+      const registroIdsSaidas = saidasConsolidadas
+        .map((m: any) => m.registro_id)
+        .filter((r: any) => r !== undefined && r !== null);
+      if (registroIdsSaidas.length > 0) {
+        const { data: afastadosData } = await supabase
+          .from("integrantes_afastados")
+          .select("registro_id, data_afastamento")
+          .in("registro_id", registroIdsSaidas)
+          .eq("ativo", true);
+        (afastadosData || []).forEach((a: any) => {
+          if (!dataAfastamentoMap.has(a.registro_id)) {
+            dataAfastamentoMap.set(a.registro_id, a.data_afastamento);
+          }
+        });
+      }
+
+      // Mapear ENTRADAS → usar data_entrada REAL quando existir
+      if (entradasConsolidadas.length > 0) {
+        const entradasMapeadas = entradasConsolidadas.map((m: any) => {
+          const dadosReais = m.integrante_id ? dadosReaisMap.get(m.integrante_id) : null;
+          const dataReal = dadosReais?.data_entrada;
+          const dataFallback = m.data_movimentacao?.split("T")[0] || "";
+          return {
+            integrante_id: m.integrante_id || "",
+            nome_colete: m.nome_colete,
+            data_entrada: dataReal || dataFallback,
+            motivo_entrada: m.tipo === "REATIVACAO" ? "Reativado" : "Transferido",
+            possui_carro: false,
+            possui_moto: false,
+            nenhum: true,
+            origem: "automatico",
+            tipo_movimentacao: m.tipo,
+            detalhes: m.detalhes,
+          };
+        });
+        setTeveEntradas(true);
+        setEntradas(entradasMapeadas);
+        setEntradasAplicadasAuto(true);
+        console.log("[FormularioRelatorioCMD] Entradas aplicadas (com datas reais):", entradasMapeadas.length);
+      }
+
+      // Mapear SAÍDAS → cascata: data_inativacao → data_afastamento → fallback created_at
+      if (saidasConsolidadas.length > 0) {
+        const saidasMapeadas = saidasConsolidadas.map((m: any) => {
+          const dadosReais = m.integrante_id ? dadosReaisMap.get(m.integrante_id) : null;
+          const dataInativacao = dadosReais?.data_inativacao
+            ? dadosReais.data_inativacao.split("T")[0]
+            : null;
+          const dataAfastamento = m.registro_id
+            ? dataAfastamentoMap.get(m.registro_id) || null
+            : null;
+          const dataFallback = m.data_movimentacao?.split("T")[0] || "";
+          const dataSaida = dataInativacao || dataAfastamento || dataFallback;
+
+          return {
+            integrante_id: m.integrante_id || "",
+            nome_colete: m.nome_colete,
+            data_saida: dataSaida,
+            motivo_codigo: m.tipo === "INATIVACAO" ? "INATIVACAO" : "TRANSFERENCIA",
+            justificativa: m.detalhes || "",
+            tem_moto: false,
+            tem_carro: false,
+            origem: "automatico",
+            tipo_movimentacao: m.tipo,
+          };
+        });
+        setTeveSaidas(true);
+        setSaidas(saidasMapeadas);
+        setSaidasAplicadasAuto(true);
+        console.log("[FormularioRelatorioCMD] Saídas aplicadas (com datas reais):", saidasMapeadas.length);
+      }
+
+      console.log("[FormularioRelatorioCMD] Movimentações consolidadas aplicadas:", {
+        entradas: entradasConsolidadas.length,
+        saidas: saidasConsolidadas.length,
+      });
+    };
+
+    aplicarMovimentacoes();
   }, [movimentacoesConsolidadas, modoEdicao, entradas, saidas]);
 
   // Recarregar relatório existente quando divisão ou semanaResposta mudar
@@ -1252,73 +1305,79 @@ const FormularioRelatorioSemanal = () => {
           </Button>
           <div className="min-w-0 flex-1">
             <p className="text-xs sm:text-sm text-muted-foreground truncate">Regional {dadosResponsavel?.regional_texto}</p>
-            <h1 className="text-lg sm:text-2xl font-bold">Relatório Semanal da Divisão</h1>
+            <h1 className="text-lg sm:text-2xl font-bold">Relatório CMD</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+              Período {semanaResposta.semana_no_mes} ({formatarRangePeriodo(semanaResposta)}) · {format(semanaResposta.periodo_inicio, "dd/MM/yyyy")} a {format(semanaResposta.periodo_fim, "dd/MM/yyyy")}
+            </p>
           </div>
         </div>
 
-        {/* Banner: Domingo com semana anterior pendente - ESCOLHA DE SEMANA */}
-        {pendenciaSemanaAnterior && diaHoje === 0 && divisaoSelecionada && (
-          <Card className="p-4 bg-orange-50 dark:bg-orange-950 border-orange-300 dark:border-orange-700">
-            <div className="flex items-start gap-3">
-              <Calendar className="h-6 w-6 text-orange-600 dark:text-orange-400 mt-0.5 shrink-0" />
-              <div className="flex-1">
-                <h4 className="font-semibold text-orange-900 dark:text-orange-100 mb-1">
-                  Relatório da última semana não foi respondido
-                </h4>
-                <p className="text-sm text-orange-800 dark:text-orange-200 mb-3">
-                  Detectamos que a divisão <strong>{divisaoSelecionada?.nome}</strong> não enviou 
-                  o relatório da semana <strong>
-                    {format(calcularSemanaAnterior().periodo_inicio, "dd/MM")} a{" "}
-                    {format(calcularSemanaAnterior().periodo_fim, "dd/MM")}
-                  </strong>. 
-                  Deseja responder a semana anterior agora ou iniciar a semana atual?
-                </p>
-                
-                <div className="text-xs text-orange-700 dark:text-orange-300 mb-3 space-y-1">
-                  <p>• Semana anterior: {format(calcularSemanaAnterior().periodo_inicio, "dd/MM")} a {format(calcularSemanaAnterior().periodo_fim, "dd/MM")}</p>
-                  <p>• Semana atual: {format(calcularSemanaOperacional().periodo_inicio, "dd/MM")} a {format(calcularSemanaOperacional().periodo_fim, "dd/MM")}</p>
-                </div>
+        {/* Banner: Período anterior pendente - ESCOLHA DE PERÍODO */}
+        {pendenciaSemanaAnterior && divisaoSelecionada && (() => {
+          const periodoAnterior = calcularPeriodoAnterior();
+          const periodoAtual = calcularPeriodoAtual();
+          return (
+            <Card className="p-4 bg-orange-50 dark:bg-orange-950 border-orange-300 dark:border-orange-700">
+              <div className="flex items-start gap-3">
+                <Calendar className="h-6 w-6 text-orange-600 dark:text-orange-400 mt-0.5 shrink-0" />
+                <div className="flex-1">
+                  <h4 className="font-semibold text-orange-900 dark:text-orange-100 mb-1">
+                    Relatório CMD do período anterior não foi respondido
+                  </h4>
+                  <p className="text-sm text-orange-800 dark:text-orange-200 mb-3">
+                    Detectamos que a divisão <strong>{divisaoSelecionada?.nome}</strong> não enviou
+                    o relatório do período <strong>
+                      {format(periodoAnterior.periodo_inicio, "dd/MM")} a {format(periodoAnterior.periodo_fim, "dd/MM")}
+                    </strong>.
+                    Deseja responder o período anterior agora ou iniciar o período atual?
+                  </p>
 
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Button
-                    size="sm"
-                    className={cn(
-                      "w-full sm:w-auto",
-                      semanaRespostaModo === "anterior" && "ring-2 ring-orange-500"
-                    )}
-                    onClick={() => {
-                      setSemanaResposta(calcularSemanaAnterior());
-                      setSemanaRespostaModo("anterior");
-                      resetarFormularioParaNovaSemana();
-                    }}
-                  >
-                    Responder semana anterior (pendente)
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={cn(
-                      "w-full sm:w-auto",
-                      semanaRespostaModo === "atual" && "ring-2 ring-orange-500"
-                    )}
-                    onClick={() => {
-                      setSemanaResposta(calcularSemanaOperacional());
-                      setSemanaRespostaModo("atual");
-                      resetarFormularioParaNovaSemana();
-                    }}
-                  >
-                    Responder semana atual
-                  </Button>
-                </div>
+                  <div className="text-xs text-orange-700 dark:text-orange-300 mb-3 space-y-1">
+                    <p>• Período anterior: {format(periodoAnterior.periodo_inicio, "dd/MM")} a {format(periodoAnterior.periodo_fim, "dd/MM")}</p>
+                    <p>• Período atual: {format(periodoAtual.periodo_inicio, "dd/MM")} a {format(periodoAtual.periodo_fim, "dd/MM")}</p>
+                  </div>
 
-                {/* Indicador da semana selecionada */}
-                <p className="text-xs text-orange-700 dark:text-orange-300 mt-3 font-medium">
-                  ✓ Respondendo: {semanaRespostaModo === "anterior" ? "Semana anterior" : "Semana atual"} ({format(semanaResposta.periodo_inicio, "dd/MM")} a {format(semanaResposta.periodo_fim, "dd/MM")})
-                </p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button
+                      size="sm"
+                      className={cn(
+                        "w-full sm:w-auto",
+                        semanaRespostaModo === "anterior" && "ring-2 ring-orange-500"
+                      )}
+                      onClick={() => {
+                        setSemanaResposta(calcularPeriodoAnterior());
+                        setSemanaRespostaModo("anterior");
+                        resetarFormularioParaNovaSemana();
+                      }}
+                    >
+                      Responder período anterior (pendente)
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        "w-full sm:w-auto",
+                        semanaRespostaModo === "atual" && "ring-2 ring-orange-500"
+                      )}
+                      onClick={() => {
+                        setSemanaResposta(calcularPeriodoAtual());
+                        setSemanaRespostaModo("atual");
+                        resetarFormularioParaNovaSemana();
+                      }}
+                    >
+                      Responder período atual
+                    </Button>
+                  </div>
+
+                  {/* Indicador do período selecionado */}
+                  <p className="text-xs text-orange-700 dark:text-orange-300 mt-3 font-medium">
+                    ✓ Respondendo: {semanaRespostaModo === "anterior" ? "Período anterior" : "Período atual"} ({format(semanaResposta.periodo_inicio, "dd/MM")} a {format(semanaResposta.periodo_fim, "dd/MM")})
+                  </p>
+                </div>
               </div>
-            </div>
-          </Card>
-        )}
+            </Card>
+          );
+        })()}
 
         {/* Banner: Dia não permitido (apenas se não for exceção de domingo) */}
         {!hojePermitidoEfetivo && formConfig && (
@@ -1469,7 +1528,7 @@ const FormularioRelatorioSemanal = () => {
           )}
 
           <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">Houve entrada de integrantes nesta semana?</p>
+            <p className="text-sm text-muted-foreground">Houve entrada de integrantes neste período?</p>
             <div className="flex gap-2">
               <Button
                 type="button"
@@ -1623,6 +1682,7 @@ const FormularioRelatorioSemanal = () => {
                   setEntradas([
                     ...entradas,
                     {
+                      integrante_id: "",
                       nome_colete: "",
                       data_entrada: "",
                       motivo_entrada: "",
@@ -1657,7 +1717,7 @@ const FormularioRelatorioSemanal = () => {
         <Card className="p-4 sm:p-6 space-y-4">
           <h3 className="font-semibold">Conflitos Internos e Externos</h3>
           <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">Houve conflitos esta semana?</p>
+            <p className="text-sm text-muted-foreground">Houve conflitos neste período?</p>
             <div className="flex gap-2">
               <Button type="button" variant={teveConflitos ? "default" : "outline"} className="min-h-[44px]" onClick={() => setTeveConflitos(true)}>
                 Sim
@@ -1745,7 +1805,7 @@ const FormularioRelatorioSemanal = () => {
         <Card className="p-4 sm:p-6 space-y-4">
           <h3 className="font-semibold">Ações Sociais</h3>
           <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">Houve ações sociais esta semana?</p>
+            <p className="text-sm text-muted-foreground">Houve ações sociais neste período?</p>
             <div className="flex gap-2">
               <Button type="button" variant={teveAcoesSociais ? "default" : "outline"} className="min-h-[44px]" onClick={() => setTeveAcoesSociais(true)}>
                 Sim

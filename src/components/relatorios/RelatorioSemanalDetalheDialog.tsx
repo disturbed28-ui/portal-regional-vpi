@@ -150,7 +150,7 @@ export const RelatorioSemanalDetalheDialog = ({
                 <DialogHeader className="space-y-2 border-b pb-4 mb-6">
                   <div className="flex items-start justify-between">
                     <DialogTitle className="text-lg">
-                      Relatório Semanal – {divisao?.nome || relatorio.divisao_relatorio_texto}
+                      Relatório CMD – {divisao?.nome || relatorio.divisao_relatorio_texto}
                     </DialogTitle>
                     <Button
                       variant="ghost"
@@ -167,7 +167,7 @@ export const RelatorioSemanalDetalheDialog = ({
                   </div>
 
                   <div className="text-sm">
-                    Semana {relatorio.semana_no_mes} – {formatarData(relatorio.semana_inicio)} até {formatarData(relatorio.semana_fim)}
+                    Período {relatorio.semana_no_mes} – {formatarData(relatorio.semana_inicio)} até {formatarData(relatorio.semana_fim)}
                   </div>
 
                   <div className="text-sm">
@@ -199,7 +199,10 @@ export const RelatorioSemanalDetalheDialog = ({
                           {relatorio.entradas_json.map((entrada: any, idx: number) => (
                             <div key={idx} className="border-b last:border-0 pb-3 last:pb-0">
                               <p className="text-sm"><strong>Nome:</strong> {entrada.nome_colete}</p>
-                              <p className="text-sm"><strong>Data:</strong> {formatarData(entrada.data_entrada)}</p>
+                              {entrada.integrante_id && (
+                                <p className="text-xs text-muted-foreground"><strong>ID:</strong> {entrada.integrante_id}</p>
+                              )}
+                              <p className="text-sm"><strong>Data de entrada:</strong> {formatarData(entrada.data_entrada)}</p>
                               <p className="text-sm"><strong>Motivo:</strong> {entrada.motivo_entrada}</p>
                               <p className="text-sm">
                                 <strong>Veículos:</strong>{' '}
@@ -213,7 +216,7 @@ export const RelatorioSemanalDetalheDialog = ({
                           ))}
                         </div>
                       ) : (
-                        <p className="text-sm text-muted-foreground">Nenhuma entrada nesta semana</p>
+                        <p className="text-sm text-muted-foreground">Nenhuma entrada neste período</p>
                       )}
                     </CardContent>
                   </Card>
@@ -227,7 +230,10 @@ export const RelatorioSemanalDetalheDialog = ({
                           {relatorio.saidas_json.map((saida: any, idx: number) => (
                             <div key={idx} className="border-b last:border-0 pb-3 last:pb-0">
                               <p className="text-sm"><strong>Nome:</strong> {saida.nome_colete}</p>
-                              <p className="text-sm"><strong>Data:</strong> {formatarData(saida.data_saida)}</p>
+                              {saida.integrante_id && (
+                                <p className="text-xs text-muted-foreground"><strong>ID:</strong> {saida.integrante_id}</p>
+                              )}
+                              <p className="text-sm"><strong>Data de saída:</strong> {formatarData(saida.data_saida)}</p>
                               <p className="text-sm"><strong>Motivo:</strong> {saida.motivo_codigo}</p>
                               {saida.justificativa && (
                                 <p className="text-sm"><strong>Justificativa:</strong> {saida.justificativa}</p>
@@ -236,7 +242,7 @@ export const RelatorioSemanalDetalheDialog = ({
                           ))}
                         </div>
                       ) : (
-                        <p className="text-sm text-muted-foreground">Nenhuma saída nesta semana</p>
+                        <p className="text-sm text-muted-foreground">Nenhuma saída neste período</p>
                       )}
                     </CardContent>
                   </Card>

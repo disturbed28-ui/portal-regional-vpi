@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 import { RelatorioSemanalDetalheDialog } from './RelatorioSemanalDetalheDialog';
 import { RelatorioSemanalResumo } from './RelatorioSemanalResumo';
 import { toast } from 'sonner';
-import { calcularSemanaOperacional } from '@/lib/normalizeText';
+import { calcularPeriodoAtual, formatarRangePeriodo } from '@/lib/normalizeText';
 
 const CMD_REGIONAL_ID = 'da8de519-f9c1-45cb-9d26-af56b7c4aa6d';
 
@@ -46,13 +46,13 @@ export const RelatorioSemanalDivisaoAba = () => {
   const { hasAccess, loading: loadingAccess } = useScreenAccess('/relatorios/semanal-divisao', user?.id);
   const { regionais } = useRegionais();
 
-  // Calcular semana atual para pré-seleção
-  const semanaAtual = useMemo(() => calcularSemanaOperacional(), []);
+  // Calcular período atual para pré-seleção (Relatório CMD - 10 dias)
+  const periodoAtual = useMemo(() => calcularPeriodoAtual(), []);
 
   const [regionalSelecionada, setRegionalSelecionada] = useState<string>('');
-  const [mesSelecionado, setMesSelecionado] = useState(semanaAtual.mes_referencia);
-  const [anoSelecionado, setAnoSelecionado] = useState(semanaAtual.ano_referencia);
-  const [semanaSelecionada, setSemanaSelecionada] = useState(semanaAtual.semana_no_mes);
+  const [mesSelecionado, setMesSelecionado] = useState(periodoAtual.mes_referencia);
+  const [anoSelecionado, setAnoSelecionado] = useState(periodoAtual.ano_referencia);
+  const [semanaSelecionada, setSemanaSelecionada] = useState(periodoAtual.semana_no_mes);
   
   const [divisoesStatus, setDivisoesStatus] = useState<DivisaoStatus[]>([]);
   const [loading, setLoading] = useState(false);
@@ -182,13 +182,13 @@ export const RelatorioSemanalDivisaoAba = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Relatorio_CMD_${anoSelecionado}_${mesSelecionado}_Sem${semanaSelecionada}.xlsx`;
+      a.download = `Relatorio_CMD_${anoSelecionado}_${mesSelecionado}_P${semanaSelecionada}.xlsx`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      toast.success('Relatório exportado com sucesso!');
+      toast.success('Relatório CMD exportado com sucesso!');
     } catch (error) {
       console.error('[Export] Erro ao exportar:', error);
       toast.error('Erro ao exportar relatório. Verifique os logs.');
@@ -263,19 +263,19 @@ export const RelatorioSemanalDivisaoAba = () => {
               />
             </div>
 
-            {/* Combo Semana */}
+            {/* Combo Período (3 períodos por mês: 01-10, 11-20, 21-fim) */}
             <div>
               <Select 
                 value={semanaSelecionada.toString()}
                 onValueChange={(v) => setSemanaSelecionada(parseInt(v))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Semana" />
+                  <SelectValue placeholder="Período" />
                 </SelectTrigger>
                 <SelectContent>
-                  {[1, 2, 3, 4, 5].map(s => (
-                    <SelectItem key={s} value={s.toString()}>Semana {s}</SelectItem>
-                  ))}
+                  <SelectItem value="1">Período 1 (01–10)</SelectItem>
+                  <SelectItem value="2">Período 2 (11–20)</SelectItem>
+                  <SelectItem value="3">Período 3 (21–fim do mês)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

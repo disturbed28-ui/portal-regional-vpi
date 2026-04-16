@@ -247,15 +247,22 @@ async function fetchDadosRelatorio(
 function adicionarCabecalhoRegional(wsData: any[][], dados: DadosRelatorio, row: number): number {
   wsData[row++] = ['COMANDO REGIONAL V'];
   wsData[row++] = [`REGIONAL ${dados.regional_nome.toUpperCase()}`];
-  wsData[row++] = ['RELATÓRIO SEMANAL DE ATIVIDADES'];
+  wsData[row++] = ['RELATÓRIO CMD'];
   wsData[row++] = [];
   return row;
 }
 
-// Bloco 2: Período
+// Bloco 2: Período (label do range conforme número do período: 01-10, 11-20, 21-fim)
 function adicionarPeriodo(wsData: any[][], dados: DadosRelatorio, row: number): number {
+  // Calcular range a partir do mes/ano/semana
+  const ultimoDiaMes = new Date(dados.ano, dados.mes, 0).getDate();
+  let labelRange = '';
+  if (dados.semana === 1) labelRange = '01–10';
+  else if (dados.semana === 2) labelRange = '11–20';
+  else labelRange = `21–${String(ultimoDiaMes).padStart(2, '0')}`;
+
   wsData[row++] = ['PERÍODO'];
-  wsData[row++] = [`Ano: ${dados.ano} | Mês: ${dados.mes} | Semana: ${dados.semana}`];
+  wsData[row++] = [`Ano: ${dados.ano} | Mês: ${dados.mes} | Período ${dados.semana} (${labelRange})`];
   wsData[row++] = [];
   return row;
 }
@@ -405,10 +412,10 @@ function adicionarBlocoAcoesInadimplencia(wsData: any[][], dados: DadosRelatorio
 // Bloco 8: Entradas e Saídas Detalhado
 function adicionarBlocoEntradasSaidas(wsData: any[][], dados: DadosRelatorio, row: number): number {
   wsData[row++] = ['ENTRADAS E SAÍDAS DETALHADO'];
-  wsData[row++] = ['Tipo', 'Divisão', 'Nome', 'Data', 'Motivo'];
-  
+  wsData[row++] = ['Tipo', 'Divisão', 'Nome', 'ID Integrante', 'Data', 'Motivo'];
+
   let temMovimentacoes = false;
-  
+
   dados.divisoes.forEach(div => {
     // Entradas
     const entradas = div.relatorio?.entradas_json || [];
@@ -417,12 +424,13 @@ function adicionarBlocoEntradasSaidas(wsData: any[][], dados: DadosRelatorio, ro
         'ENTRADA',
         div.divisao_nome,
         entrada.nome_colete || '',
+        entrada.integrante_id || '',
         entrada.data_entrada || '',
         entrada.motivo_entrada || ''
       ];
       temMovimentacoes = true;
     });
-    
+
     // Saídas
     const saidas = div.relatorio?.saidas_json || [];
     saidas.forEach((saida: any) => {
@@ -430,17 +438,18 @@ function adicionarBlocoEntradasSaidas(wsData: any[][], dados: DadosRelatorio, ro
         'SAÍDA',
         div.divisao_nome,
         saida.nome_colete || '',
+        saida.integrante_id || '',
         saida.data_saida || '',
         saida.justificativa || saida.motivo_codigo || ''
       ];
       temMovimentacoes = true;
     });
   });
-  
+
   if (!temMovimentacoes) {
     wsData[row++] = ['Sem movimentações'];
   }
-  
+
   wsData[row++] = [];
   return row;
 }
@@ -720,7 +729,7 @@ Deno.serve(async (req) => {
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="Relatorio_CMD_${ano}_${mes}_Sem${semana}.xlsx"`
+        'Content-Disposition': `attachment; filename="Relatorio_CMD_${ano}_${mes}_P${semana}.xlsx"`
       }
     });
 

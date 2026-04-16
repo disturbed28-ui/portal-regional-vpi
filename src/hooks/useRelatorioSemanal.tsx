@@ -98,9 +98,9 @@ export const useSubmitRelatorioSemanal = () => {
     },
     onSuccess: (_, variables) => {
       const isUpdate = !!variables.existingReportId;
-      toast({ 
-        title: isUpdate ? "Relatório atualizado com sucesso!" : "Relatório enviado com sucesso!",
-        description: isUpdate ? "Suas alterações foram salvas." : "Obrigado por preencher o relatório semanal."
+      toast({
+        title: isUpdate ? "Relatório CMD atualizado com sucesso!" : "Relatório CMD enviado com sucesso!",
+        description: isUpdate ? "Suas alterações foram salvas." : "Obrigado por preencher o relatório CMD."
       });
     },
     onError: (error) => {
