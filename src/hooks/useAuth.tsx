@@ -1,19 +1,26 @@
-import { useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { logSystemEventFromClient } from "@/lib/logSystemEvent";
 
-// Helper to log login access
+interface AuthContextValue {
+  user: User | null;
+  session: Session | null;
+  loading: boolean;
+  signInWithGoogle: () => Promise<void>;
+  signOut: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
 const logLoginAccess = async (userId: string, rota: string) => {
   try {
-    // Update last_access_at in profiles
     await supabase
       .from("profiles")
       .update({ last_access_at: new Date().toISOString() })
       .eq("id", userId);
 
-    // Insert login log
     await supabase.from("user_access_logs").insert({
       user_id: userId,
       tipo_evento: "login",
@@ -28,30 +35,33 @@ const logLoginAccess = async (userId: string, rota: string) => {
   }
 };
 
-export const useAuth = () => {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Get initial session
+    let isMounted = true;
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isMounted) return;
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    // Listen to auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('[useAuth] Auth state changed:', event);
+
+        if (!isMounted) return;
+
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
 
         if (event === 'SIGNED_IN' && session?.user) {
-          // Chamar edge function para criar/atualizar perfil
           setTimeout(async () => {
             try {
               const { data, error } = await supabase.functions.invoke('migrate-user-on-login', {
@@ -76,16 +86,12 @@ export const useAuth = () => {
                     error: error.message
                   }
                 });
-                // Não mostrar toast - edge function já trata casos conhecidos
               } else {
                 console.log('[useAuth] Profile creation result:', data);
-                
-                // Log login access
                 logLoginAccess(session.user.id, window.location.pathname);
-                
-                // Mostrar toast de boas-vindas
+
                 const hasShownWelcomeToast = sessionStorage.getItem('welcome_toast_shown');
-                
+
                 if (!hasShownWelcomeToast) {
                   if (data?.new_user) {
                     toast({
@@ -114,7 +120,6 @@ export const useAuth = () => {
                   error: error.message
                 }
               });
-              // Não mostrar toast - edge function já trata casos conhecidos
             }
           }, 500);
         } else if (event === 'SIGNED_OUT') {
@@ -128,6 +133,7 @@ export const useAuth = () => {
     );
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, [toast]);
@@ -165,34 +171,28 @@ export const useAuth = () => {
 
   const signOut = async () => {
     try {
-      // Update status to offline before signing out
       if (user) {
         await supabase.from('profiles').update({
           status: 'Offline'
         }).eq('id', user.id);
       }
-      
+
       const { error } = await supabase.auth.signOut();
-      
-      // Tratar erro 403 de forma especial (comum em iframes)
+
       if (error) {
-        // Se for erro de sessão não encontrada, limpar estado local mesmo assim
         if (error.message?.includes('session') || error.status === 403) {
           console.warn('[useAuth] Sessão não encontrada no servidor, limpando estado local');
-          
-          // Forçar limpeza local
           setSession(null);
           setUser(null);
           sessionStorage.removeItem('welcome_toast_shown');
-          
+
           toast({
             title: "Desconectado",
             description: "Você foi desconectado com sucesso.",
           });
-          return; // Não lançar erro
+          return;
         }
-        
-        // Para outros erros, lançar normalmente
+
         throw error;
       }
     } catch (error: any) {
@@ -202,9 +202,9 @@ export const useAuth = () => {
         origem: 'frontend:useAuth',
         rota: window.location.pathname,
         mensagem: 'Erro ao fazer logout',
-        detalhes: { 
+        detalhes: {
           userId: user?.id,
-          error: error.message 
+          error: error.message
         }
       });
       toast({
@@ -215,11 +215,23 @@ export const useAuth = () => {
     }
   };
 
-  return {
+  const value = useMemo<AuthContextValue>(() => ({
     user,
     session,
     loading,
     signInWithGoogle,
     signOut,
-  };
+  }), [user, session, loading]);
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+
+  if (!context) {
+    throw new Error("useAuth must be used within AuthProvider");
+  }
+
+  return context;
 };

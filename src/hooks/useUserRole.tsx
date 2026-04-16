@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 type AppRole = 'admin' | 'moderator' | 'user' | 'diretor_divisao' | 'diretor_regional' | 'regional' | 'social_divisao' | 'adm_divisao' | 'adm_regional' | 'comando';
 
@@ -11,19 +12,24 @@ export const useUserRole = (userId: string | undefined) => {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
+  const { loading: authLoading } = useAuth();
 
   useEffect(() => {
-    console.log('[useUserRole] Hook iniciado com userId:', userId);
+    console.log('[useUserRole] Hook iniciado com userId:', userId, 'authLoading:', authLoading);
+
+    if (authLoading) {
+      setLoading(true);
+      return;
+    }
 
     if (!userId) {
-      console.log('[useUserRole] userId ausente, limpando roles');
+      console.log('[useUserRole] userId ausente após auth resolvida, limpando roles');
       setRoles([]);
       setResolvedUserId(null);
       setLoading(false);
       return;
     }
 
-    // Só limpar roles se mudou de usuário (evita "flash de sem permissão" em refetch)
     if (resolvedUserId !== userId) {
       setRoles([]);
       setLoading(true);
@@ -39,12 +45,10 @@ export const useUserRole = (userId: string | undefined) => {
 
       if (error) {
         console.error('[useUserRole] ERRO ao buscar roles:', error);
-        // Em refetch, manter roles anteriores em caso de erro transitório
         if (!isRefetch) setRoles([]);
       } else {
         const mappedRoles = (data as UserRole[]).map(r => r.role);
         console.log('[useUserRole] Roles mapeadas:', mappedRoles);
-        // Só atualizar se realmente mudou (evita re-renders desnecessários)
         setRoles(prev => {
           if (prev.length === mappedRoles.length && prev.every(r => mappedRoles.includes(r))) {
             return prev;
@@ -78,13 +82,13 @@ export const useUserRole = (userId: string | undefined) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId]);
+  }, [userId, authLoading]);
 
   const hasRole = (role: AppRole): boolean => {
     return roles.includes(role);
   };
 
-  const effectiveLoading = !!userId && (loading || resolvedUserId !== userId);
+  const effectiveLoading = authLoading || (!!userId && (loading || resolvedUserId !== userId));
 
   return { roles, loading: effectiveLoading, hasRole };
 };

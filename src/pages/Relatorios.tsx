@@ -31,42 +31,33 @@ import { getNivelAcesso } from '@/lib/grauUtils';
 
 const Relatorios = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading } = useProfile(user?.id);
   const { hasRole, loading: rolesLoading } = useUserRole(user?.id);
   const { hasAccess, loading: loadingAccess } = useScreenAccess("/relatorios", user?.id);
   const { hasAccess: hasAccessSemanalAba, loading: loadingAccessSemanalAba } = useScreenAccess('/relatorios/semanal-divisao', user?.id);
   const { hasAccess: hasAccessIntegrantes } = useScreenAccess('/relatorios/integrantes', user?.id);
 
-  // Determinar o filtro de regional baseado em role admin ou grau
   const isAdmin = hasRole('admin');
   const grau = profile?.integrante?.grau || profile?.grau;
   const nivel = getNivelAcesso(grau);
 
-  // REGRA: Escopo de dados é determinado pela regional do usuário, NÃO pela role admin
-  // Admin dá acesso às telas/funcionalidades, mas não expande escopo de dados
   const regionalTextoFiltro: string | undefined = useMemo(() => {
-    if (rolesLoading || profileLoading) return undefined; // Aguardar carregamento
-    
-    // Apenas Comando (Grau I-IV) vê todas as regionais
+    if (authLoading || rolesLoading || profileLoading) return undefined;
+
     if (nivel === 'comando') {
       return undefined;
     }
-    
-    // Todos os demais (incluindo admin) veem apenas sua regional
+
     return profile?.integrante?.regional_texto || undefined;
-  }, [nivel, profile?.integrante?.regional_texto, rolesLoading, profileLoading]);
+  }, [nivel, profile?.integrante?.regional_texto, rolesLoading, profileLoading, authLoading]);
 
-  // Determinar regionalId para filtro de histórico (Evolução)
   const regionalIdHistorico = useMemo(() => {
-    if (rolesLoading || profileLoading) return undefined;
-    // Apenas Comando vê todas as regionais
+    if (authLoading || rolesLoading || profileLoading) return undefined;
     if (nivel === 'comando') return undefined;
-    // Todos os demais (incluindo admin) veem apenas sua regional
     return profile?.regional_id || undefined;
-  }, [nivel, profile?.regional_id, rolesLoading, profileLoading]);
+  }, [nivel, profile?.regional_id, rolesLoading, profileLoading, authLoading]);
 
-  // Texto de escopo para exibição
   const escopoTexto = useMemo(() => {
     if (nivel === 'comando') {
       return 'Escopo do dashboard: Comando (todas as regionais)';
@@ -76,26 +67,21 @@ const Relatorios = () => {
 
   const { data: relatorioData, isLoading } = useRelatorioData(regionalTextoFiltro);
   const { data: historicoData, isLoading: isLoadingHistorico } = useHistoricoCargas({
-    enabled: !!user?.id && hasAccess && !loadingAccess,
+    enabled: !!user?.id && hasAccess && !loadingAccess && !authLoading,
     regionalId: regionalIdHistorico
   });
 
-  // Buscar divisões para filtrar afastamentos por regional
   const { divisoes } = useDivisoes();
 
-  // Calcular filtros de afastados baseado no nível de acesso
   const afastadosFiltros: AfastadosFiltros | undefined = useMemo(() => {
-    // Comando: vê tudo (sem filtros)
     if (nivel === 'comando') {
       return undefined;
     }
-    
-    // Divisão (Grau VI+): filtra pela sua divisão
+
     if (nivel === 'divisao' && profile?.divisao_id) {
       return { divisaoId: profile.divisao_id };
     }
-    
-    // Regional (Grau V): filtra pelas divisões da sua regional
+
     if (nivel === 'regional' && profile?.regional_id && divisoes && divisoes.length > 0) {
       const divisoesRegional = divisoes
         .filter(d => d.regional_id === profile.regional_id)
@@ -104,20 +90,20 @@ const Relatorios = () => {
         return { divisaoIds: divisoesRegional };
       }
     }
-    
+
     return undefined;
   }, [nivel, profile?.divisao_id, profile?.regional_id, divisoes]);
 
-  // Hooks para afastamentos com filtros aplicados
   const { afastados: ativos, loading: loadingAtivos, refetch: refetchAtivos } = useAfastadosAtivos(afastadosFiltros);
   const { afastados: historico, loading: loadingHistorico } = useAfastadosHistorico(afastadosFiltros);
   const { afastados: proximos7, loading: loadingProximos7 } = useRetornosProximos(7, afastadosFiltros);
   const { afastados: proximos30, loading: loadingProximos30 } = useRetornosProximos(30, afastadosFiltros);
   const { registrarRetorno } = useRegistrarRetorno();
-  
-  // Redirecionamento em caso de acesso negado
+
   useEffect(() => {
-    if (!loadingAccess && !hasAccess) {
+    if (authLoading || loadingAccess) return;
+
+    if (!user || !hasAccess) {
       toast({
         title: "Acesso negado",
         description: "Você não tem permissão para acessar esta página.",
@@ -125,10 +111,11 @@ const Relatorios = () => {
       });
       navigate("/");
     }
-  }, [loadingAccess, hasAccess, navigate, toast]);
+  }, [authLoading, loadingAccess, hasAccess, navigate, toast, user]);
 
-  // Redirecionar para perfil se usuário não tiver nome_colete
   useEffect(() => {
+    if (authLoading) return;
+
     if (user && !profileLoading && profile && !profile.nome_colete) {
       toast({
         title: "Complete seu cadastro",
@@ -136,7 +123,7 @@ const Relatorios = () => {
       });
       navigate("/perfil");
     }
-  }, [user, profileLoading, profile, navigate]);
+  }, [authLoading, user, profileLoading, profile, navigate]);
 
   // Estado para modal de baixa de afastado
   const [modalBaixaOpen, setModalBaixaOpen] = useState(false);
