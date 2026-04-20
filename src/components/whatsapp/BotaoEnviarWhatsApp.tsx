@@ -53,7 +53,7 @@ export function BotaoEnviarWhatsApp({
   fullWidth = false,
 }: BotaoEnviarWhatsAppProps) {
   const { user } = useAuth();
-  const { profile } = useProfile();
+  const { profile } = useProfile(user?.id);
 
   const phoneFormatted = formatPhoneBR(telefone || "");
   const link = phoneFormatted ? buildWaMeLink(phoneFormatted, mensagem) : null;

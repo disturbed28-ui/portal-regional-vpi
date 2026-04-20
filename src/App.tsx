@@ -20,6 +20,7 @@ import AdminConfiguracaoDeltas from "./pages/AdminConfiguracaoDeltas";
 import AdminLogs from "./pages/AdminLogs";
 import AdminGestaoAcoesSociais from "./pages/AdminGestaoAcoesSociais";
 import AdminHistoricoConexoes from "./pages/AdminHistoricoConexoes";
+import AdminNotificacoesWhatsApp from "./pages/AdminNotificacoesWhatsApp";
 import Agenda from "./pages/Agenda";
 import Relatorios from "./pages/Relatorios";
 import Organograma from "./pages/Organograma";
@@ -62,6 +63,7 @@ const App = () => (
                 <Route path="/admin/acoes-sociais" element={<AdminGestaoAcoesSociais />} />
                 <Route path="/admin/logs" element={<AdminLogs />} />
                 <Route path="/admin/historico-conexoes" element={<AdminHistoricoConexoes />} />
+                <Route path="/admin/notificacoes-whatsapp" element={<AdminNotificacoesWhatsApp />} />
                 <Route path="/admin/eventos-agenda-pendentes" element={<AdminEventosAgendaPendentes />} />
                 <Route path="/agenda" element={<Agenda />} />
                 <Route path="/relatorios" element={<Relatorios />} />
