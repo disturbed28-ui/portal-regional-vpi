@@ -18,6 +18,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useScreenAccess } from "@/hooks/useScreenAccess";
+import { useAuth } from "@/hooks/useAuth";
 import {
   useWhatsAppTemplates, useWhatsAppLogs, type WhatsAppTemplate, type NewWhatsAppTemplate,
 } from "@/hooks/useWhatsAppTemplates";
@@ -37,7 +38,8 @@ const emptyTemplate: NewWhatsAppTemplate = {
 };
 
 const AdminNotificacoesWhatsApp = () => {
-  const { hasAccess, loading: accessLoading } = useScreenAccess("/admin/notificacoes-whatsapp");
+  const { user } = useAuth();
+  const { hasAccess, loading: accessLoading } = useScreenAccess("/admin/notificacoes-whatsapp", user?.id);
   const { data: templates = [], isLoading, create, update, remove } = useWhatsAppTemplates();
   const { data: logs = [] } = useWhatsAppLogs(50);
 
