@@ -1713,6 +1713,96 @@ export type Database = {
           },
         ]
       }
+      notificacoes_whatsapp_log: {
+        Row: {
+          created_at: string
+          destinatario_nome: string
+          destinatario_profile_id: string | null
+          destinatario_telefone: string
+          divisao_id: string | null
+          id: string
+          mensagem_renderizada: string
+          modulo_origem: string
+          payload: Json | null
+          regional_id: string | null
+          remetente_nome: string | null
+          remetente_profile_id: string
+          template_chave: string
+          template_titulo: string | null
+        }
+        Insert: {
+          created_at?: string
+          destinatario_nome: string
+          destinatario_profile_id?: string | null
+          destinatario_telefone: string
+          divisao_id?: string | null
+          id?: string
+          mensagem_renderizada: string
+          modulo_origem?: string
+          payload?: Json | null
+          regional_id?: string | null
+          remetente_nome?: string | null
+          remetente_profile_id: string
+          template_chave: string
+          template_titulo?: string | null
+        }
+        Update: {
+          created_at?: string
+          destinatario_nome?: string
+          destinatario_profile_id?: string | null
+          destinatario_telefone?: string
+          divisao_id?: string | null
+          id?: string
+          mensagem_renderizada?: string
+          modulo_origem?: string
+          payload?: Json | null
+          regional_id?: string | null
+          remetente_nome?: string | null
+          remetente_profile_id?: string
+          template_chave?: string
+          template_titulo?: string | null
+        }
+        Relationships: []
+      }
+      notificacoes_whatsapp_templates: {
+        Row: {
+          ativo: boolean
+          chave: string
+          corpo: string
+          created_at: string
+          descricao: string | null
+          escopo: string
+          id: string
+          titulo: string
+          updated_at: string
+          variaveis_disponiveis: string[] | null
+        }
+        Insert: {
+          ativo?: boolean
+          chave: string
+          corpo: string
+          created_at?: string
+          descricao?: string | null
+          escopo?: string
+          id?: string
+          titulo: string
+          updated_at?: string
+          variaveis_disponiveis?: string[] | null
+        }
+        Update: {
+          ativo?: boolean
+          chave?: string
+          corpo?: string
+          created_at?: string
+          descricao?: string | null
+          escopo?: string
+          id?: string
+          titulo?: string
+          updated_at?: string
+          variaveis_disponiveis?: string[] | null
+        }
+        Relationships: []
+      }
       pendencias_ajuste_roles: {
         Row: {
           alterado_por: string

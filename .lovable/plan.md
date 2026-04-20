@@ -1,36 +1,49 @@
+# Roadmap — Notificações WhatsApp via wa.me
 
+> Estratégia: links `wa.me` (sem custo, sem API Meta). O sistema detecta pendências, gera mensagem pronta a partir de template parametrizável, abre WhatsApp para o usuário revisar e enviar manualmente. Tudo logado para auditoria.
+>
+> **Mobile-first 9:18** em todas as telas/modais. Permissões via matriz `screen_permissions` + `system_screens`.
+>
+> Telefone do destinatário: `profiles.telefone` (já existe).
 
-User clarified: only Pontes should remain inactive. The others (Gordex, Cristian, Tilt, Cursino, Magrão) are all active now, just with stale `data_inativacao`/`motivo_inativacao` fields polluting the record.
+---
 
-Need to verify current state via query before acting, but plan is clear.
+## ✅ Módulo 0 — Fundação (em andamento)
+Infra reutilizada por todos os módulos.
 
-## Plano de correção
+- [ ] Tabela `notificacoes_whatsapp_templates` (chave única, título, corpo com `{{variaveis}}`, escopo, ativo)
+- [ ] Tabela `notificacoes_whatsapp_log` (remetente, destinatário, telefone, template, payload, quando)
+- [ ] RLS: admin gerencia templates; authenticated lê; log inserível pelo authenticated, leitura por admin/regional
+- [ ] Seeds: `relatorios_cobranca`, `mensalidade_adm_divisao`, `mensalidade_integrante`, `evento_lembrete_hoje`, `evento_lembrete_amanha`, `evento_lembrete_semana`, `generico`
+- [ ] Helper `src/lib/whatsapp.ts`: `formatPhoneBR()`, `renderTemplate()`, `buildWaMeLink()`, `logEnvioWhatsApp()`
+- [ ] Hook `useWhatsAppTemplates()` (lista/cria/edita/remove)
+- [ ] Componente `<BotaoEnviarWhatsApp>` reutilizável (mobile-first 9:18, registra log ao clicar)
+- [ ] Tela admin `/admin/notificacoes-whatsapp` com CRUD de templates + log de envios
+- [ ] Entrada em `system_screens` + permissões padrão
+- [ ] QA manual em mobile 9:18
 
-### 1. Limpar marcações de inativação indevidas (5 integrantes)
+## ⏳ Módulo 1 — Cobrança de Relatórios (8/18/28)
+- [ ] Detecção: divisões da regional sem relatório do período (1-10, 11-20, 21-fim)
+- [ ] Pendência na 🔔 do Diretor Regional / ADM Regional após dia 8/18/28
+- [ ] Modal lista divisões pendentes + diretor + telefone + botão WhatsApp por linha
+- [ ] Template `relatorios_cobranca` com `{{nome}}`, `{{divisao}}`, `{{periodo}}`
 
-Para **Gordex, Cristian, Tilt, Cursino e Magrão**:
-- `UPDATE integrantes_portal SET data_inativacao = NULL, motivo_inativacao = NULL WHERE id IN (...)`
-- Manter `ativo = true` (já estão ativos)
-- Magrão: confirmar se `regional_id`/`divisao_id` já refletem Litoral Norte; se não, sincronizar com a carga atual
+## ⏳ Módulo 2 — Cobrança de Mensalidades
+- [ ] Pendência na 🔔 do ADM Regional quando há inadimplentes
+- [ ] Modal com 2 opções: ADMs de divisão (agrupado) OU integrantes devedores
+- [ ] Templates `mensalidade_adm_divisao` e `mensalidade_integrante`
 
-### 2. Finalizar inativação do Pontes
+## ⏳ Módulo 3 — Lembretes de Eventos
+- [ ] Tela `/lembretes-eventos` com lista de eventos próximos
+- [ ] Modal com escopo hierárquico (regional → toda regional/selecionar; divisão → toda divisão/selecionar)
+- [ ] Texto dinâmico por proximidade (hoje / amanhã / próxima semana)
+- [ ] Lista de destinatários com botão WhatsApp por linha
 
-- `UPDATE integrantes_portal SET ativo = false WHERE id = '<pontes>'`
-- Manter `data_inativacao` e `motivo_inativacao = 'desligado'`
+## ⏳ Módulo 4 — Extras (futuro)
+- [ ] Botão WhatsApp em aniversariantes
+- [ ] Botão WhatsApp genérico em cards de integrante (gestão/organograma)
 
-### 3. Trigger de proteção no banco
+---
 
-Criar trigger `trg_sync_ativo_inativacao` em `integrantes_portal` que:
-- Se `data_inativacao` e `motivo_inativacao` forem preenchidos com motivos terminais (`desligado`, `transferido`, `outro`) → força `ativo = false`
-- Se `motivo_inativacao = 'afastado'` ou `NULL` → mantém `ativo = true`
-- Evita futuros estados inconsistentes vindos de qualquer fluxo (UI, edge function, importação)
-
-### 4. Verificação pós-correção
-
-Rodar query de auditoria novamente para confirmar que não há mais registros com `ativo = true AND data_inativacao IS NOT NULL` (exceto casos legítimos de afastamento).
-
-## Arquivos/recursos afetados
-
-- **Migration SQL** (novo): limpeza de dados + criação do trigger
-- **Nenhuma alteração de UI** necessária — o problema é apenas de dados + proteção no banco
-
+## Como retomar
+> "Continuar plano WhatsApp — módulo X"
