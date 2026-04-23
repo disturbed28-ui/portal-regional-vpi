@@ -238,7 +238,15 @@ const Relatorios = () => {
 
         {/* Conteúdo Principal */}
         {relatorioData && (
-        <Tabs defaultValue={hasAccessIntegrantes ? "integrantes" : "evolucao"} className="w-full">
+        <Tabs
+          value={
+            tabFromUrl === 'cobranca' && hasAccessCobranca
+              ? 'cobranca'
+              : (tabFromUrl ?? (hasAccessIntegrantes ? 'integrantes' : 'evolucao'))
+          }
+          onValueChange={(v) => setSearchParams(v === (hasAccessIntegrantes ? 'integrantes' : 'evolucao') ? {} : { tab: v })}
+          className="w-full"
+        >
           <div className="overflow-x-auto -mx-4 px-4 pb-2">
             <TabsList className="inline-flex w-max min-w-full h-auto bg-muted/50 p-1 gap-1">
               {hasAccessIntegrantes && (
@@ -259,6 +267,16 @@ const Relatorios = () => {
                 <ArrowRightLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                 Movimentações
               </TabsTrigger>
+              {hasAccessCobranca && (
+                <TabsTrigger value="cobranca" className="flex-shrink-0 px-3 py-1.5 text-xs sm:text-sm whitespace-nowrap">
+                  Cobrança
+                  {cobrancaCount > 0 && (
+                    <span className="ml-1 inline-flex items-center justify-center rounded-full bg-red-600 text-white text-[10px] font-bold h-4 min-w-4 px-1">
+                      {cobrancaCount}
+                    </span>
+                  )}
+                </TabsTrigger>
+              )}
               {hasAccessSemanalAba && (
                 <TabsTrigger value="semanal" className="flex-shrink-0 px-3 py-1.5 text-xs sm:text-sm whitespace-nowrap">
                   Rel. Semanal
@@ -266,7 +284,13 @@ const Relatorios = () => {
               )}
             </TabsList>
           </div>
-          
+
+          {hasAccessCobranca && (
+            <TabsContent value="cobranca" className="mt-3 sm:mt-6">
+              <CobrancaRelatoriosTab />
+            </TabsContent>
+          )}
+
           {hasAccessIntegrantes && (
             <TabsContent value="integrantes" className="mt-3 sm:mt-6">
               <IntegrantesTab />
