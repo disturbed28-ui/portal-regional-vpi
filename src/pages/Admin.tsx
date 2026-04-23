@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronDown, ArrowLeft, Building2, Database, Users, ShieldCheck, Bell, Link as LinkIcon, FileCheck, Settings, Activity, Heart, Calendar, History, RefreshCw } from "lucide-react";
+import { ChevronDown, ArrowLeft, Building2, Database, Users, ShieldCheck, Bell, Link as LinkIcon, FileCheck, Settings, Activity, Heart, Calendar, History, RefreshCw, MessageSquare } from "lucide-react";
 import { LimparRolesIncorretas } from "@/components/admin/LimparRolesIncorretas";
 import {
   Select,
@@ -635,6 +635,15 @@ const Admin = () => {
   >
     <Settings className="h-4 w-4 mr-2" />
     Configuracao de Deltas
+  </Button>
+
+  <Button
+    onClick={() => navigate("/admin/notificacoes-whatsapp")}
+    variant="outline"
+    className="w-full justify-start h-9 px-2 py-2 text-sm"
+  >
+    <MessageSquare className="h-4 w-4 mr-2" />
+    Notificações WhatsApp
   </Button>
 
             <Button
