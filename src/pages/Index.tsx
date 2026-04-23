@@ -27,7 +27,7 @@ const Index = () => {
   const { links: linksAtivos } = useLinksUteis(true);
   
   // Batch único para todas as permissões de tela - elimina race conditions no refresh
-  const permissionRoutes = ['/acoes-sociais', '/listas-presenca', '/relatorios', '/organograma', '/admin', '/gestao-adm', '/cobranca-relatorios'];
+  const permissionRoutes = ['/acoes-sociais', '/listas-presenca', '/relatorios', '/organograma', '/admin', '/gestao-adm'];
   const { permissions, loading: loadingPermissions } = useScreenPermissionsBatch(permissionRoutes, '/', user?.id);
   
   const hasAcessoAcoesSociais = permissions['/acoes-sociais']?.hasAccess ?? false;
@@ -36,7 +36,6 @@ const Index = () => {
   const canSeeOrganograma = permissions['/organograma']?.hasAccess ?? false;
   const canSeeAdmin = permissions['/admin']?.hasAccess ?? false;
   const hasAcessoGestaoADM = permissions['/gestao-adm']?.hasAccess ?? false;
-  const canSeeCobrancaRelatorios = permissions['/cobranca-relatorios']?.hasAccess ?? false;
   const [showQRCode, setShowQRCode] = useState(false);
 
   // Sincronização automática da Agenda para admins (detecta eventos cancelados/removidos)
