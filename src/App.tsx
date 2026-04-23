@@ -37,7 +37,6 @@ import AcoesSociais from "./pages/AcoesSociais";
 import AdminEventosAgendaPendentes from "./pages/AdminEventosAgendaPendentes";
 import GestaoADM from "./pages/GestaoADM";
 import Instalar from "./pages/Instalar";
-import CobrancaRelatorios from "./pages/CobrancaRelatorios";
 
 const queryClient = new QueryClient();
 
