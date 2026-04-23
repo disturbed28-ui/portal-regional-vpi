@@ -39,6 +39,9 @@ const Relatorios = () => {
   const { hasAccess, loading: loadingAccess } = useScreenAccess("/relatorios", user?.id);
   const { hasAccess: hasAccessSemanalAba, loading: loadingAccessSemanalAba } = useScreenAccess('/relatorios/semanal-divisao', user?.id);
   const { hasAccess: hasAccessIntegrantes } = useScreenAccess('/relatorios/integrantes', user?.id);
+  const { hasAccess: hasAccessCobranca } = useScreenAccess('/relatorios/cobranca', user?.id);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get('tab');
 
   const isAdmin = hasRole('admin');
   const grau = profile?.integrante?.grau || profile?.grau;
