@@ -22,11 +22,14 @@ Infra reutilizada por todos os módulos.
 - [ ] Entrada em `system_screens` + permissões padrão
 - [ ] QA manual em mobile 9:18
 
-## ⏳ Módulo 1 — Cobrança de Relatórios (8/18/28)
-- [ ] Detecção: divisões da regional sem relatório do período (1-10, 11-20, 21-fim)
-- [ ] Pendência na 🔔 do Diretor Regional / ADM Regional após dia 8/18/28
-- [ ] Modal lista divisões pendentes + diretor + telefone + botão WhatsApp por linha
-- [ ] Template `relatorios_cobranca` com `{{nome}}`, `{{divisao}}`, `{{periodo}}`
+## ✅ Módulo 1 — Cobrança de Relatórios (8/18/28)
+- [x] Detecção: divisões da regional sem relatório do período (1-10, 11-20, 21-fim)
+- [x] Tela `/cobranca-relatorios` (acesso: admin, comando, regional, diretor_regional, adm_regional)
+- [x] Seletor de período (mostra os 3 últimos com data de cobrança já atingida — dia 8/18/28)
+- [x] Lista divisões pendentes + diretor + telefone + botão WhatsApp por linha
+- [x] Marca "Já notificado" se houver log no período corrente
+- [x] Template `relatorios_cobranca` com `{{nome}}`, `{{divisao}}`, `{{periodo}}`
+- [x] Botão "Cobranca de Relatorios" no Dashboard (visível só para quem tem acesso)
 
 ## ⏳ Módulo 2 — Cobrança de Mensalidades
 - [ ] Pendência na 🔔 do ADM Regional quando há inadimplentes
