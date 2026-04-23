@@ -46,8 +46,8 @@ const CobrancaRelatorios = () => {
     [periodos, periodoLabel],
   );
 
-  const { templates } = useWhatsAppTemplates();
-  const template = templates.find((t) => t.chave === "relatorios_cobranca");
+  const { list } = useWhatsAppTemplates();
+  const template = (list.data ?? []).find((t) => t.chave === "relatorios_cobranca");
 
   const { divisoes, totalPendentes, loading, refetch } = useCobrancaRelatorios(
     profile?.regional_id ?? undefined,
