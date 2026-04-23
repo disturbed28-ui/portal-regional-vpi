@@ -71,6 +71,7 @@ const Relatorios = () => {
   }, [nivel, profile?.regional]);
 
   const { data: relatorioData, isLoading } = useRelatorioData(regionalTextoFiltro);
+  const { count: cobrancaCount } = useRelatoriosPendentesCount(profile?.regional_id ?? undefined);
   const { data: historicoData, isLoading: isLoadingHistorico } = useHistoricoCargas({
     enabled: !!user?.id && hasAccess && !loadingAccess && !authLoading,
     regionalId: regionalIdHistorico
