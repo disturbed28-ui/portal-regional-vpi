@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft } from 'lucide-react';
@@ -16,6 +16,8 @@ import { TabelaComparativa } from '@/components/relatorios/TabelaComparativa';
 import { RelatorioSemanalDivisaoAba } from '@/components/relatorios/RelatorioSemanalDivisaoAba';
 import { IntegrantesTab } from '@/components/relatorios/IntegrantesTab';
 import { HistoricoMovimentacoes } from '@/components/relatorios/HistoricoMovimentacoes';
+import { CobrancaRelatoriosTab } from '@/components/relatorios/CobrancaRelatoriosTab';
+import { useRelatoriosPendentesCount } from '@/hooks/useRelatoriosPendentesCount';
 import { formatarDataBrasil } from '@/lib/timezone';
 import { toast } from '@/hooks/use-toast';
 import { useAfastadosAtivos, useAfastadosHistorico, useRetornosProximos, useRegistrarRetorno, type IntegranteAfastado, type AfastadosFiltros } from '@/hooks/useAfastados';
@@ -37,6 +39,9 @@ const Relatorios = () => {
   const { hasAccess, loading: loadingAccess } = useScreenAccess("/relatorios", user?.id);
   const { hasAccess: hasAccessSemanalAba, loading: loadingAccessSemanalAba } = useScreenAccess('/relatorios/semanal-divisao', user?.id);
   const { hasAccess: hasAccessIntegrantes } = useScreenAccess('/relatorios/integrantes', user?.id);
+  const { hasAccess: hasAccessCobranca } = useScreenAccess('/relatorios/cobranca', user?.id);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get('tab');
 
   const isAdmin = hasRole('admin');
   const grau = profile?.integrante?.grau || profile?.grau;
@@ -66,6 +71,7 @@ const Relatorios = () => {
   }, [nivel, profile?.regional]);
 
   const { data: relatorioData, isLoading } = useRelatorioData(regionalTextoFiltro);
+  const { count: cobrancaCount } = useRelatoriosPendentesCount(profile?.regional_id ?? undefined);
   const { data: historicoData, isLoading: isLoadingHistorico } = useHistoricoCargas({
     enabled: !!user?.id && hasAccess && !loadingAccess && !authLoading,
     regionalId: regionalIdHistorico
@@ -232,7 +238,15 @@ const Relatorios = () => {
 
         {/* Conteúdo Principal */}
         {relatorioData && (
-        <Tabs defaultValue={hasAccessIntegrantes ? "integrantes" : "evolucao"} className="w-full">
+        <Tabs
+          value={
+            tabFromUrl === 'cobranca' && hasAccessCobranca
+              ? 'cobranca'
+              : (tabFromUrl ?? (hasAccessIntegrantes ? 'integrantes' : 'evolucao'))
+          }
+          onValueChange={(v) => setSearchParams(v === (hasAccessIntegrantes ? 'integrantes' : 'evolucao') ? {} : { tab: v })}
+          className="w-full"
+        >
           <div className="overflow-x-auto -mx-4 px-4 pb-2">
             <TabsList className="inline-flex w-max min-w-full h-auto bg-muted/50 p-1 gap-1">
               {hasAccessIntegrantes && (
@@ -253,6 +267,16 @@ const Relatorios = () => {
                 <ArrowRightLeft className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                 Movimentações
               </TabsTrigger>
+              {hasAccessCobranca && (
+                <TabsTrigger value="cobranca" className="flex-shrink-0 px-3 py-1.5 text-xs sm:text-sm whitespace-nowrap">
+                  Cobrança
+                  {cobrancaCount > 0 && (
+                    <span className="ml-1 inline-flex items-center justify-center rounded-full bg-red-600 text-white text-[10px] font-bold h-4 min-w-4 px-1">
+                      {cobrancaCount}
+                    </span>
+                  )}
+                </TabsTrigger>
+              )}
               {hasAccessSemanalAba && (
                 <TabsTrigger value="semanal" className="flex-shrink-0 px-3 py-1.5 text-xs sm:text-sm whitespace-nowrap">
                   Rel. Semanal
@@ -260,7 +284,13 @@ const Relatorios = () => {
               )}
             </TabsList>
           </div>
-          
+
+          {hasAccessCobranca && (
+            <TabsContent value="cobranca" className="mt-3 sm:mt-6">
+              <CobrancaRelatoriosTab />
+            </TabsContent>
+          )}
+
           {hasAccessIntegrantes && (
             <TabsContent value="integrantes" className="mt-3 sm:mt-6">
               <IntegrantesTab />
