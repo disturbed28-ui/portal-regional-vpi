@@ -16,6 +16,8 @@ import { TabelaComparativa } from '@/components/relatorios/TabelaComparativa';
 import { RelatorioSemanalDivisaoAba } from '@/components/relatorios/RelatorioSemanalDivisaoAba';
 import { IntegrantesTab } from '@/components/relatorios/IntegrantesTab';
 import { HistoricoMovimentacoes } from '@/components/relatorios/HistoricoMovimentacoes';
+import { CobrancaRelatoriosTab } from '@/components/relatorios/CobrancaRelatoriosTab';
+import { useRelatoriosPendentesCount } from '@/hooks/useRelatoriosPendentesCount';
 import { formatarDataBrasil } from '@/lib/timezone';
 import { toast } from '@/hooks/use-toast';
 import { useAfastadosAtivos, useAfastadosHistorico, useRetornosProximos, useRegistrarRetorno, type IntegranteAfastado, type AfastadosFiltros } from '@/hooks/useAfastados';
