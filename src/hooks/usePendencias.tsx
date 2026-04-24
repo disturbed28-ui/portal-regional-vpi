@@ -169,7 +169,7 @@ export const usePendencias = (
   // Cache de 5 minutos (ao invés de diário)
   const getCacheKey = () => {
     const cacheTime = Math.floor(Date.now() / (5 * 60 * 1000)); // 5 minutos
-    return `pendencias_v7_${userId}_${userRole}_${regionalId || 'no_reg'}_${divisaoId || 'no_div'}_${registroId || 'all'}_${cacheTime}`;
+      return `pendencias_v8_${userId}_${userRole}_${regionalId || 'no_reg'}_${divisaoId || 'no_div'}_${registroId || 'all'}_${cacheTime}`;
   };
 
   useEffect(() => {
@@ -202,9 +202,9 @@ export const usePendencias = (
       });
     }
 
-    // Limpar caches antigos (versões anteriores a v7)
+    // Limpar caches antigos (versões anteriores a v8)
     Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('pendencias_') && !key.includes('_v7_')) {
+      if (key.startsWith('pendencias_') && !key.includes('_v8_')) {
         console.log('[usePendencias] Removendo cache antigo:', key);
         localStorage.removeItem(key);
       }
@@ -264,6 +264,18 @@ export const usePendencias = (
     const fetchPendencias = async () => {
       const hoje = new Date().toISOString().split('T')[0];
       const todasPendencias: Pendencia[] = [];
+      const aplicaEscopoRegional = !!regionalId && (userRole === 'admin' || userRole === 'diretor_regional' || userRole === 'regional');
+
+      let nomesDivisoesRegional: string[] = [];
+      if (aplicaEscopoRegional) {
+        const { data: divisoesRegional } = await supabase
+          .from('divisoes')
+          .select('nome')
+          .eq('regional_id', regionalId);
+
+        nomesDivisoesRegional = divisoesRegional?.map(d => d.nome).filter(Boolean) || [];
+        console.log('[usePendencias] Divisões válidas da regional:', nomesDivisoesRegional);
+      }
 
       // 1. Mensalidades atrasadas
       let queryMensalidades = supabase
@@ -440,14 +452,8 @@ export const usePendencias = (
       // REGRA: admin com regionalId é tratado como regional
       if (userRole === 'admin' || userRole === 'diretor_regional' || userRole === 'regional') {
         if (regionalId) {
-          const { data: divisoes } = await supabase
-            .from('divisoes')
-            .select('nome')
-            .eq('regional_id', regionalId);
-
-          const nomeDivisoes = divisoes?.map(d => d.nome) || [];
-          if (nomeDivisoes.length > 0) {
-            queryAfastados = queryAfastados.in('divisao_texto', nomeDivisoes);
+          if (nomesDivisoesRegional.length > 0) {
+            queryAfastados = queryAfastados.in('divisao_texto', nomesDivisoesRegional);
           } else {
             queryAfastados = queryAfastados.eq('registro_id', -1);
           }
@@ -528,14 +534,8 @@ export const usePendencias = (
       // REGRA: admin com regionalId é tratado como regional
       if (userRole === 'admin' || userRole === 'diretor_regional' || userRole === 'regional') {
         if (regionalId) {
-          const { data: divisoes } = await supabase
-            .from('divisoes')
-            .select('nome')
-            .eq('regional_id', regionalId);
-
-          const nomeDivisoes = divisoes?.map(d => d.nome) || [];
-          if (nomeDivisoes.length > 0) {
-            queryDeltas = queryDeltas.in('divisao_texto', nomeDivisoes);
+          if (nomesDivisoesRegional.length > 0) {
+            queryDeltas = queryDeltas.in('divisao_texto', nomesDivisoesRegional);
           } else {
             queryDeltas = queryDeltas.eq('registro_id', -1);
           }
@@ -904,7 +904,7 @@ export const usePendencias = (
             .eq('status', 'Em Estagio')
             .in('status_flyer', statusFlyerFiltro);
 
-          if (userRole === 'regional' && regionalId) {
+          if (regionalId) {
             queryFlyers = queryFlyers.eq('regional_id', regionalId);
           }
 
@@ -1023,6 +1023,35 @@ export const usePendencias = (
 
         console.log('[usePendencias] Pendências de ajuste de roles encontradas:', 
           todasPendencias.filter(p => p.tipo === 'ajuste_roles').length);
+      }
+
+      if (aplicaEscopoRegional && nomesDivisoesRegional.length > 0) {
+        const tiposComEscopoPorDivisao = new Set<Pendencia['tipo']>([
+          'mensalidade',
+          'desligamento_compulsorio',
+          'afastamento',
+          'delta',
+          'treinamento_aprovador',
+          'treinamento_integrante',
+          'estagio_aprovador',
+          'estagio_integrante',
+          'flyer_pendente',
+        ]);
+
+        const antesFiltroFinal = todasPendencias.length;
+        const pendenciasFiltradas = todasPendencias.filter((pendencia) => {
+          if (!tiposComEscopoPorDivisao.has(pendencia.tipo)) return true;
+          return nomesDivisoesRegional.includes(pendencia.divisao_texto);
+        });
+
+        console.log('[usePendencias] Filtro final regional aplicado:', {
+          antes: antesFiltroFinal,
+          depois: pendenciasFiltradas.length,
+          removidas: antesFiltroFinal - pendenciasFiltradas.length,
+        });
+
+        todasPendencias.length = 0;
+        todasPendencias.push(...pendenciasFiltradas);
       }
 
       // 8. Verificar dados desatualizados (> 7 dias)
