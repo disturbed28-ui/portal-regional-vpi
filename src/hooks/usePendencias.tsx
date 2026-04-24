@@ -202,9 +202,9 @@ export const usePendencias = (
       });
     }
 
-    // Limpar caches antigos (versões v1, v2, v3 e v4)
+    // Limpar caches antigos (versões anteriores a v6)
     Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('pendencias_') && !key.includes('_v5_')) {
+      if (key.startsWith('pendencias_') && !key.includes('_v6_')) {
         console.log('[usePendencias] Removendo cache antigo:', key);
         localStorage.removeItem(key);
       }
