@@ -169,7 +169,7 @@ export const usePendencias = (
   // Cache de 5 minutos (ao invés de diário)
   const getCacheKey = () => {
     const cacheTime = Math.floor(Date.now() / (5 * 60 * 1000)); // 5 minutos
-    return `pendencias_v7_${userId}_${userRole}_${regionalId || 'no_reg'}_${divisaoId || 'no_div'}_${registroId || 'all'}_${cacheTime}`;
+      return `pendencias_v8_${userId}_${userRole}_${regionalId || 'no_reg'}_${divisaoId || 'no_div'}_${registroId || 'all'}_${cacheTime}`;
   };
 
   useEffect(() => {
@@ -202,9 +202,9 @@ export const usePendencias = (
       });
     }
 
-    // Limpar caches antigos (versões anteriores a v7)
+    // Limpar caches antigos (versões anteriores a v8)
     Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('pendencias_') && !key.includes('_v7_')) {
+      if (key.startsWith('pendencias_') && !key.includes('_v8_')) {
         console.log('[usePendencias] Removendo cache antigo:', key);
         localStorage.removeItem(key);
       }
