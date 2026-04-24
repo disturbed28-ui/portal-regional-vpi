@@ -631,16 +631,23 @@ export const usePendencias = (
       });
 
       // 4. Eventos cancelados/removidos pendentes de tratamento (apenas para admins)
+      // REGRA: admin com regionalId vê apenas eventos da própria regional
       if (userRole === 'admin') {
         console.log('[usePendencias] Buscando eventos cancelados/removidos...');
-        
-        const { data: eventosProblematicos, error: errorEventos } = await supabase
+
+        let queryEventos = supabase
           .from('eventos_agenda')
           .select(`
             id, evento_id, titulo, data_evento, status,
             divisoes:divisao_id (nome)
           `)
           .in('status', ['cancelled', 'removed']);
+
+        if (regionalId) {
+          queryEventos = queryEventos.eq('regional_id', regionalId);
+        }
+
+        const { data: eventosProblematicos, error: errorEventos } = await queryEventos;
 
         if (!errorEventos && eventosProblematicos) {
           // Filtrar apenas os que têm presenças
