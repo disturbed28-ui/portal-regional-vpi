@@ -126,13 +126,16 @@ export function useCobrancaRelatorios(
         }
         const divIds = divList.map((d) => d.id);
 
-        // 2. Relatórios já entregues no período para essas divisões
+        // 2. Relatórios já entregues que SE SOBREPÕEM ao período (overlap)
+        // Os relatórios são semanais e podem cruzar a fronteira do bloco
+        // (ex.: bloco 11-20, relatório 11-21 ainda cobre o período).
+        // Overlap: rel.semana_inicio <= periodo.fim AND rel.semana_fim >= periodo.inicio
         const { data: rels, error: errRels } = await supabase
           .from("relatorios_semanais_divisao")
           .select("divisao_relatorio_id, semana_inicio, semana_fim")
           .in("divisao_relatorio_id", divIds)
-          .gte("semana_inicio", periodo.inicio)
-          .lte("semana_fim", periodo.fim);
+          .lte("semana_inicio", periodo.fim)
+          .gte("semana_fim", periodo.inicio);
         if (errRels) throw errRels;
 
         const divisoesEntregues = new Set(

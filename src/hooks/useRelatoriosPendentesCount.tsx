@@ -31,12 +31,13 @@ export function useRelatoriosPendentesCount(regionalId: string | undefined) {
           if (!cancelled) setCount(0);
           return;
         }
+        // Overlap: relatório semanal cobre o período se houver sobreposição
         const { data: rels } = await supabase
           .from("relatorios_semanais_divisao")
           .select("divisao_relatorio_id")
           .in("divisao_relatorio_id", divIds)
-          .gte("semana_inicio", periodo.inicio)
-          .lte("semana_fim", periodo.fim);
+          .lte("semana_inicio", periodo.fim)
+          .gte("semana_fim", periodo.inicio);
         const entregues = new Set(
           (rels ?? []).map((r) => r.divisao_relatorio_id).filter(Boolean) as string[],
         );
