@@ -12,6 +12,12 @@ export interface PeriodoRelatorio {
   fim: string;
   /** Data limite a partir da qual a cobrança é exibida (YYYY-MM-DD). */
   dataCobranca: string;
+  /** Ano de referência salvo no relatório. */
+  anoReferencia: number;
+  /** Mês de referência salvo no relatório (1-12). */
+  mesReferencia: number;
+  /** Número do período no mês (1, 2, 3). */
+  periodoNoMes: 1 | 2 | 3;
 }
 
 export interface DivisaoPendente {
@@ -53,10 +59,10 @@ export function calcularPeriodosCobraveis(hoje = new Date()): PeriodoRelatorio[]
     const mes = ref.getMonth(); // 0-based
     const ultimoDiaMes = new Date(ano, mes + 1, 0).getDate();
 
-    const blocos = [
-      { inicio: 1, fim: 10, cobra: 8 },
-      { inicio: 11, fim: 20, cobra: 18 },
-      { inicio: 21, fim: ultimoDiaMes, cobra: 28 },
+    const blocos: Array<{ inicio: number; fim: number; cobra: number; periodoNoMes: 1 | 2 | 3 }> = [
+      { inicio: 1, fim: 10, cobra: 8, periodoNoMes: 1 },
+      { inicio: 11, fim: 20, cobra: 18, periodoNoMes: 2 },
+      { inicio: 21, fim: ultimoDiaMes, cobra: 28, periodoNoMes: 3 },
     ];
 
     for (const b of blocos) {
@@ -77,6 +83,9 @@ export function calcularPeriodosCobraveis(hoje = new Date()): PeriodoRelatorio[]
         inicio: inicioStr,
         fim: fimStr,
         dataCobranca: dataCobStr,
+        anoReferencia: ano,
+        mesReferencia: mes + 1,
+        periodoNoMes: b.periodoNoMes,
       });
     }
   }
@@ -126,16 +135,17 @@ export function useCobrancaRelatorios(
         }
         const divIds = divList.map((d) => d.id);
 
-        // 2. Relatórios já entregues que SE SOBREPÕEM ao período (overlap)
-        // Os relatórios são semanais e podem cruzar a fronteira do bloco
-        // (ex.: bloco 11-20, relatório 11-21 ainda cobre o período).
-        // Overlap: rel.semana_inicio <= periodo.fim AND rel.semana_fim >= periodo.inicio
+        // 2. Relatórios já entregues para o MESMO período operacional.
+        // Usamos os campos oficiais salvos pelo formulário (ano/mês/período)
+        // para não considerar relatórios do bloco anterior que apenas encostam
+        // na data inicial do próximo período (ex.: 11-21 não quita 21-fim).
         const { data: rels, error: errRels } = await supabase
           .from("relatorios_semanais_divisao")
-          .select("divisao_relatorio_id, semana_inicio, semana_fim")
+          .select("divisao_relatorio_id")
           .in("divisao_relatorio_id", divIds)
-          .lte("semana_inicio", periodo.fim)
-          .gte("semana_fim", periodo.inicio);
+          .eq("ano_referencia", periodo.anoReferencia)
+          .eq("mes_referencia", periodo.mesReferencia)
+          .eq("semana_no_mes", periodo.periodoNoMes);
         if (errRels) throw errRels;
 
         const divisoesEntregues = new Set(
