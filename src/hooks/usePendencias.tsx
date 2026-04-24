@@ -169,7 +169,7 @@ export const usePendencias = (
   // Cache de 5 minutos (ao invés de diário)
   const getCacheKey = () => {
     const cacheTime = Math.floor(Date.now() / (5 * 60 * 1000)); // 5 minutos
-    return `pendencias_v6_${userId}_${userRole}_${regionalId || 'no_reg'}_${divisaoId || 'no_div'}_${registroId || 'all'}_${cacheTime}`;
+    return `pendencias_v7_${userId}_${userRole}_${regionalId || 'no_reg'}_${divisaoId || 'no_div'}_${registroId || 'all'}_${cacheTime}`;
   };
 
   useEffect(() => {
@@ -202,9 +202,9 @@ export const usePendencias = (
       });
     }
 
-    // Limpar caches antigos (versões anteriores a v6)
+    // Limpar caches antigos (versões anteriores a v7)
     Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('pendencias_') && !key.includes('_v6_')) {
+      if (key.startsWith('pendencias_') && !key.includes('_v7_')) {
         console.log('[usePendencias] Removendo cache antigo:', key);
         localStorage.removeItem(key);
       }
@@ -277,17 +277,8 @@ export const usePendencias = (
       // REGRA: mesmo admin enxerga apenas pendências da sua regional (escopo regional sempre)
       if (userRole === 'admin' || userRole === 'diretor_regional' || userRole === 'regional') {
         if (regionalId) {
-          const { data: divisoes } = await supabase
-            .from('divisoes')
-            .select('nome')
-            .eq('regional_id', regionalId);
-
-          const nomeDivisoes = divisoes?.map(d => d.nome) || [];
-          if (nomeDivisoes.length > 0) {
-            queryMensalidades = queryMensalidades.in('divisao_texto', nomeDivisoes);
-          } else {
-            queryMensalidades = queryMensalidades.eq('registro_id', -1);
-          }
+          // Filtro robusto: usa regional_id (coluna populada via trigger) ao invés de match por nome
+          queryMensalidades = queryMensalidades.eq('regional_id', regionalId);
         }
         // Admin sem regionalId (comando puro): vê tudo
       } else if (userRole === 'diretor_divisao') {
