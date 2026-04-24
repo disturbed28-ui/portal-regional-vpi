@@ -974,14 +974,22 @@ export const usePendencias = (
       }
 
       // 6. Pendências de Ajuste de Roles (apenas para admin)
+      // REGRA: admin com regionalId vê apenas integrantes da própria regional
       if (userRole === 'admin') {
         console.log('[usePendencias] Buscando pendências de ajuste de roles...');
-        
-        const { data: pendenciasRoles, error: errorRoles } = await supabase
+
+        let queryRoles = supabase
           .from('pendencias_ajuste_roles')
-          .select('*')
+          .select('*, integrantes_portal:integrante_id(regional_id)')
           .eq('status', 'pendente')
           .order('created_at', { ascending: false });
+
+        const { data: pendenciasRolesRaw, error: errorRoles } = await queryRoles;
+        const pendenciasRoles = regionalId
+          ? (pendenciasRolesRaw ?? []).filter(
+              (p: any) => p.integrantes_portal?.regional_id === regionalId,
+            )
+          : pendenciasRolesRaw;
 
         if (!errorRoles && pendenciasRoles) {
           // Buscar nomes dos usuários que fizeram as alterações
