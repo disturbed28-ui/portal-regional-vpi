@@ -904,7 +904,7 @@ export const usePendencias = (
             .eq('status', 'Em Estagio')
             .in('status_flyer', statusFlyerFiltro);
 
-          if (userRole === 'regional' && regionalId) {
+          if (regionalId) {
             queryFlyers = queryFlyers.eq('regional_id', regionalId);
           }
 
@@ -1023,6 +1023,35 @@ export const usePendencias = (
 
         console.log('[usePendencias] Pendências de ajuste de roles encontradas:', 
           todasPendencias.filter(p => p.tipo === 'ajuste_roles').length);
+      }
+
+      if (aplicaEscopoRegional && nomesDivisoesRegional.length > 0) {
+        const tiposComEscopoPorDivisao = new Set<Pendencia['tipo']>([
+          'mensalidade',
+          'desligamento_compulsorio',
+          'afastamento',
+          'delta',
+          'treinamento_aprovador',
+          'treinamento_integrante',
+          'estagio_aprovador',
+          'estagio_integrante',
+          'flyer_pendente',
+        ]);
+
+        const antesFiltroFinal = todasPendencias.length;
+        const pendenciasFiltradas = todasPendencias.filter((pendencia) => {
+          if (!tiposComEscopoPorDivisao.has(pendencia.tipo)) return true;
+          return nomesDivisoesRegional.includes(pendencia.divisao_texto);
+        });
+
+        console.log('[usePendencias] Filtro final regional aplicado:', {
+          antes: antesFiltroFinal,
+          depois: pendenciasFiltradas.length,
+          removidas: antesFiltroFinal - pendenciasFiltradas.length,
+        });
+
+        todasPendencias.length = 0;
+        todasPendencias.push(...pendenciasFiltradas);
       }
 
       // 8. Verificar dados desatualizados (> 7 dias)
