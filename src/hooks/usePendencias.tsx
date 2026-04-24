@@ -169,7 +169,7 @@ export const usePendencias = (
   // Cache de 5 minutos (ao invés de diário)
   const getCacheKey = () => {
     const cacheTime = Math.floor(Date.now() / (5 * 60 * 1000)); // 5 minutos
-    return `pendencias_v5_${userId}_${userRole}_${divisaoId || 'no_div'}_${registroId || 'all'}_${cacheTime}`;
+    return `pendencias_v6_${userId}_${userRole}_${regionalId || 'no_reg'}_${divisaoId || 'no_div'}_${registroId || 'all'}_${cacheTime}`;
   };
 
   useEffect(() => {
@@ -202,9 +202,9 @@ export const usePendencias = (
       });
     }
 
-    // Limpar caches antigos (versões v1, v2, v3 e v4)
+    // Limpar caches antigos (versões anteriores a v6)
     Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('pendencias_') && !key.includes('_v5_')) {
+      if (key.startsWith('pendencias_') && !key.includes('_v6_')) {
         console.log('[usePendencias] Removendo cache antigo:', key);
         localStorage.removeItem(key);
       }
@@ -274,35 +274,36 @@ export const usePendencias = (
         .lt('data_vencimento', hoje);
 
       // Aplicar filtro de escopo
-      if (userRole === 'admin') {
-        // Admin vê todas (não aplica filtro)
-      } else if (userRole === 'diretor_regional' || userRole === 'regional') {
-        // Diretor Regional vê sua regional
+      // REGRA: mesmo admin enxerga apenas pendências da sua regional (escopo regional sempre)
+      if (userRole === 'admin' || userRole === 'diretor_regional' || userRole === 'regional') {
         if (regionalId) {
           const { data: divisoes } = await supabase
             .from('divisoes')
             .select('nome')
             .eq('regional_id', regionalId);
-          
+
           const nomeDivisoes = divisoes?.map(d => d.nome) || [];
           if (nomeDivisoes.length > 0) {
             queryMensalidades = queryMensalidades.in('divisao_texto', nomeDivisoes);
+          } else {
+            queryMensalidades = queryMensalidades.eq('registro_id', -1);
           }
         }
+        // Admin sem regionalId (comando puro): vê tudo
       } else if (userRole === 'diretor_divisao') {
         if (!divisaoId) {
           console.error('[usePendencias] ❌ ERRO CRÍTICO: diretor_divisao sem divisaoId no fetchPendencias');
           setLoading(false);
           return;
         }
-        
+
         // Buscar nome da divisão para filtrar por divisao_texto (mais confiável que divisao_id)
         const { data: divisaoData } = await supabase
           .from('divisoes')
           .select('nome')
           .eq('id', divisaoId)
           .single();
-        
+
         if (divisaoData?.nome) {
           console.log('[usePendencias] 🎯 Filtro diretor_divisao por divisao_texto:', divisaoData.nome);
           queryMensalidades = queryMensalidades.eq('divisao_texto', divisaoData.nome);
@@ -445,18 +446,19 @@ export const usePendencias = (
         .lt('data_retorno_prevista', hoje);
 
       // Aplicar filtro de escopo para afastamentos
-      if (userRole === 'admin') {
-        // Admin vê todos
-      } else if (userRole === 'diretor_regional' || userRole === 'regional') {
+      // REGRA: admin com regionalId é tratado como regional
+      if (userRole === 'admin' || userRole === 'diretor_regional' || userRole === 'regional') {
         if (regionalId) {
           const { data: divisoes } = await supabase
             .from('divisoes')
             .select('nome')
             .eq('regional_id', regionalId);
-          
+
           const nomeDivisoes = divisoes?.map(d => d.nome) || [];
           if (nomeDivisoes.length > 0) {
             queryAfastados = queryAfastados.in('divisao_texto', nomeDivisoes);
+          } else {
+            queryAfastados = queryAfastados.eq('registro_id', -1);
           }
         }
       } else if (userRole === 'diretor_divisao') {
@@ -532,18 +534,19 @@ export const usePendencias = (
         .order('created_at', { ascending: true });
 
       // Aplicar filtro de escopo
-      if (userRole === 'admin') {
-        // Admin vê todos
-      } else if (userRole === 'diretor_regional' || userRole === 'regional') {
+      // REGRA: admin com regionalId é tratado como regional
+      if (userRole === 'admin' || userRole === 'diretor_regional' || userRole === 'regional') {
         if (regionalId) {
           const { data: divisoes } = await supabase
             .from('divisoes')
             .select('nome')
             .eq('regional_id', regionalId);
-          
+
           const nomeDivisoes = divisoes?.map(d => d.nome) || [];
           if (nomeDivisoes.length > 0) {
             queryDeltas = queryDeltas.in('divisao_texto', nomeDivisoes);
+          } else {
+            queryDeltas = queryDeltas.eq('registro_id', -1);
           }
         }
       } else if (userRole === 'diretor_divisao') {
@@ -628,16 +631,23 @@ export const usePendencias = (
       });
 
       // 4. Eventos cancelados/removidos pendentes de tratamento (apenas para admins)
+      // REGRA: admin com regionalId vê apenas eventos da própria regional
       if (userRole === 'admin') {
         console.log('[usePendencias] Buscando eventos cancelados/removidos...');
-        
-        const { data: eventosProblematicos, error: errorEventos } = await supabase
+
+        let queryEventos = supabase
           .from('eventos_agenda')
           .select(`
             id, evento_id, titulo, data_evento, status,
             divisoes:divisao_id (nome)
           `)
           .in('status', ['cancelled', 'removed']);
+
+        if (regionalId) {
+          queryEventos = queryEventos.eq('regional_id', regionalId);
+        }
+
+        const { data: eventosProblematicos, error: errorEventos } = await queryEventos;
 
         if (!errorEventos && eventosProblematicos) {
           // Filtrar apenas os que têm presenças
@@ -964,14 +974,22 @@ export const usePendencias = (
       }
 
       // 6. Pendências de Ajuste de Roles (apenas para admin)
+      // REGRA: admin com regionalId vê apenas integrantes da própria regional
       if (userRole === 'admin') {
         console.log('[usePendencias] Buscando pendências de ajuste de roles...');
-        
-        const { data: pendenciasRoles, error: errorRoles } = await supabase
+
+        let queryRoles = supabase
           .from('pendencias_ajuste_roles')
-          .select('*')
+          .select('*, integrantes_portal:integrante_id(regional_id)')
           .eq('status', 'pendente')
           .order('created_at', { ascending: false });
+
+        const { data: pendenciasRolesRaw, error: errorRoles } = await queryRoles;
+        const pendenciasRoles = regionalId
+          ? (pendenciasRolesRaw ?? []).filter(
+              (p: any) => p.integrantes_portal?.regional_id === regionalId,
+            )
+          : pendenciasRolesRaw;
 
         if (!errorRoles && pendenciasRoles) {
           // Buscar nomes dos usuários que fizeram as alterações
