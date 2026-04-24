@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,15 @@ import { ReadOnlyBanner } from '@/components/ui/read-only-banner';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
+import { useProfile } from '@/hooks/useProfile';
+import { useWhatsAppTemplates } from '@/hooks/useWhatsAppTemplates';
+import {
+  useDiretoresDivisaoRegional,
+  useTelefonesIntegrantes,
+} from '@/hooks/useContatosInadimplencia';
+import { BotaoEnviarWhatsApp } from '@/components/whatsapp/BotaoEnviarWhatsApp';
+import { renderTemplate } from '@/lib/whatsapp';
+import { normalizeText } from '@/lib/normalizeText';
 
 interface DashboardInadimplenciaProps {
   userId: string | undefined;
