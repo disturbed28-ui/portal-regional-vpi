@@ -25,9 +25,36 @@ interface DashboardInadimplenciaProps {
 }
 
 export const DashboardInadimplencia = ({ userId, readOnly = false }: DashboardInadimplenciaProps) => {
-  const { ultimaCargaInfo, devedoresAtivos, devedoresCronicos } = useInadimplenciaFiltrada(userId);
+  const { ultimaCargaInfo, devedoresAtivos, devedoresCronicos, nivelAcesso } = useInadimplenciaFiltrada(userId);
+  const { profile } = useProfile(userId);
   const [liquidando, setLiquidando] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  // === WhatsApp / Cobrança ===
+  const { data: templates } = useWhatsAppTemplates();
+  const tplDivisao = (templates ?? []).find((t) => t.chave === 'mensalidade_adm_divisao');
+  const tplIntegrante = (templates ?? []).find((t) => t.chave === 'mensalidade_integrante');
+
+  // Para Grau V (regional): contatos dos diretores das divisões da regional
+  const { diretores } = useDiretoresDivisaoRegional(
+    nivelAcesso === 'regional' ? profile?.regional_id ?? null : null,
+  );
+  const diretorPorDivisao = useMemo(() => {
+    const map: Record<string, typeof diretores[number]> = {};
+    diretores.forEach((d) => {
+      map[normalizeText(d.divisao_nome)] = d;
+    });
+    return map;
+  }, [diretores]);
+
+  // Para Grau VI (divisão): telefone direto dos devedores da própria divisão
+  const registroIdsVisiveis = useMemo(
+    () => devedoresAtivos.map((d) => d.registro_id).filter((v): v is number => Boolean(v)),
+    [devedoresAtivos],
+  );
+  const { contatos: contatosIntegrantes } = useTelefonesIntegrantes(
+    nivelAcesso === 'divisao' ? registroIdsVisiveis : [],
+  );
 
   // Calcular totais a partir da view vw_devedores_ativos
   const totalDevedores = devedoresAtivos.length;
