@@ -290,20 +290,20 @@ export const usePendencias = (
           }
         }
         // Admin sem regionalId (comando puro): vê tudo
-      }
+      } else if (userRole === 'diretor_divisao') {
         if (!divisaoId) {
           console.error('[usePendencias] ❌ ERRO CRÍTICO: diretor_divisao sem divisaoId no fetchPendencias');
           setLoading(false);
           return;
         }
-        
+
         // Buscar nome da divisão para filtrar por divisao_texto (mais confiável que divisao_id)
         const { data: divisaoData } = await supabase
           .from('divisoes')
           .select('nome')
           .eq('id', divisaoId)
           .single();
-        
+
         if (divisaoData?.nome) {
           console.log('[usePendencias] 🎯 Filtro diretor_divisao por divisao_texto:', divisaoData.nome);
           queryMensalidades = queryMensalidades.eq('divisao_texto', divisaoData.nome);
