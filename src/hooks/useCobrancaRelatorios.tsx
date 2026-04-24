@@ -150,19 +150,35 @@ export function useCobrancaRelatorios(
         >();
 
         if (divPendIds.length > 0) {
+          // Busca tanto Diretor de Divisão quanto Diretor Regional
+          // (divisões cujo nome começa com "REGIONAL" são responsabilidade do Diretor Regional)
           const { data: diretores, error: errDir } = await supabase
             .from("integrantes_portal")
             .select("divisao_id, nome_colete, cargo_grau_texto, profile_id")
             .in("divisao_id", divPendIds)
             .eq("ativo", true)
-            .ilike("cargo_grau_texto", "%Diretor%Divis%")
+            .or("cargo_grau_texto.ilike.%Diretor%Divis%,cargo_grau_texto.ilike.%Diretor Regional%")
             .not("cargo_grau_texto", "ilike", "%Sub%");
           if (errDir) throw errDir;
 
-          // Pega o primeiro diretor por divisão
+          // Mapa auxiliar: divisao_id -> nome da divisão (para saber se é "REGIONAL ...")
+          const nomeDivPorId = new Map(divList.map((d) => [d.id, d.nome]));
+
+          // Para cada divisão pendente escolhe o diretor adequado:
+          //  - Divisão cujo nome começa com "REGIONAL" → Diretor Regional
+          //  - Demais divisões                         → Diretor de Divisão (não Sub)
           const profileIds: string[] = [];
           (diretores ?? []).forEach((d) => {
             if (!d.divisao_id) return;
+            const nomeDiv = (nomeDivPorId.get(d.divisao_id) ?? "").toUpperCase();
+            const ehDivisaoRegional = nomeDiv.startsWith("REGIONAL");
+            const cargo = (d.cargo_grau_texto ?? "").toLowerCase();
+            const ehDiretorRegional = cargo.includes("diretor regional");
+            const ehDiretorDivisao = /diretor.*divis/.test(cargo);
+
+            const cargoEsperadoOk = ehDivisaoRegional ? ehDiretorRegional : ehDiretorDivisao;
+            if (!cargoEsperadoOk) return;
+
             if (!diretoresMap.has(d.divisao_id)) {
               diretoresMap.set(d.divisao_id, {
                 nome: d.nome_colete,
