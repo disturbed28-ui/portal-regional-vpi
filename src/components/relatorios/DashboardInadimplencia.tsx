@@ -221,12 +221,23 @@ export const DashboardInadimplencia = ({ userId, readOnly = false }: DashboardIn
                   const diretor = nivelAcesso === 'regional'
                     ? diretorPorDivisao[normalizeText(divisao)]
                     : null;
+                  const listaDevedoresTxt = devedores
+                    .slice()
+                    .sort((a, b) => (b.meses_devendo ?? 0) - (a.meses_devendo ?? 0))
+                    .map((d) => {
+                      const meses = d.meses_devendo ?? d.total_parcelas ?? 0;
+                      const sufixo = meses === 1 ? 'mês' : 'meses';
+                      const valor = (d.total_devido ?? 0).toFixed(2).replace('.', ',');
+                      return `• ${d.nome_colete} — ${meses} ${sufixo} (R$ ${valor})`;
+                    })
+                    .join('\n');
                   const msgDivisao = diretor && tplDivisao
                     ? renderTemplate(tplDivisao.corpo, {
                         nome: diretor.diretor_nome ?? 'diretor(a)',
                         divisao,
                         qtd_devedores: devedores.length,
                         valor_total: totalDivisao.toFixed(2).replace('.', ','),
+                        lista_devedores: listaDevedoresTxt,
                       })
                     : '';
                   return (
