@@ -264,6 +264,18 @@ export const usePendencias = (
     const fetchPendencias = async () => {
       const hoje = new Date().toISOString().split('T')[0];
       const todasPendencias: Pendencia[] = [];
+      const aplicaEscopoRegional = !!regionalId && (userRole === 'admin' || userRole === 'diretor_regional' || userRole === 'regional');
+
+      let nomesDivisoesRegional: string[] = [];
+      if (aplicaEscopoRegional) {
+        const { data: divisoesRegional } = await supabase
+          .from('divisoes')
+          .select('nome')
+          .eq('regional_id', regionalId);
+
+        nomesDivisoesRegional = divisoesRegional?.map(d => d.nome).filter(Boolean) || [];
+        console.log('[usePendencias] Divisões válidas da regional:', nomesDivisoesRegional);
+      }
 
       // 1. Mensalidades atrasadas
       let queryMensalidades = supabase
@@ -440,14 +452,8 @@ export const usePendencias = (
       // REGRA: admin com regionalId é tratado como regional
       if (userRole === 'admin' || userRole === 'diretor_regional' || userRole === 'regional') {
         if (regionalId) {
-          const { data: divisoes } = await supabase
-            .from('divisoes')
-            .select('nome')
-            .eq('regional_id', regionalId);
-
-          const nomeDivisoes = divisoes?.map(d => d.nome) || [];
-          if (nomeDivisoes.length > 0) {
-            queryAfastados = queryAfastados.in('divisao_texto', nomeDivisoes);
+          if (nomesDivisoesRegional.length > 0) {
+            queryAfastados = queryAfastados.in('divisao_texto', nomesDivisoesRegional);
           } else {
             queryAfastados = queryAfastados.eq('registro_id', -1);
           }
@@ -528,14 +534,8 @@ export const usePendencias = (
       // REGRA: admin com regionalId é tratado como regional
       if (userRole === 'admin' || userRole === 'diretor_regional' || userRole === 'regional') {
         if (regionalId) {
-          const { data: divisoes } = await supabase
-            .from('divisoes')
-            .select('nome')
-            .eq('regional_id', regionalId);
-
-          const nomeDivisoes = divisoes?.map(d => d.nome) || [];
-          if (nomeDivisoes.length > 0) {
-            queryDeltas = queryDeltas.in('divisao_texto', nomeDivisoes);
+          if (nomesDivisoesRegional.length > 0) {
+            queryDeltas = queryDeltas.in('divisao_texto', nomesDivisoesRegional);
           } else {
             queryDeltas = queryDeltas.eq('registro_id', -1);
           }
