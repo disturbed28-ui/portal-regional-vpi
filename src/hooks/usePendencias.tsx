@@ -446,18 +446,19 @@ export const usePendencias = (
         .lt('data_retorno_prevista', hoje);
 
       // Aplicar filtro de escopo para afastamentos
-      if (userRole === 'admin') {
-        // Admin vê todos
-      } else if (userRole === 'diretor_regional' || userRole === 'regional') {
+      // REGRA: admin com regionalId é tratado como regional
+      if (userRole === 'admin' || userRole === 'diretor_regional' || userRole === 'regional') {
         if (regionalId) {
           const { data: divisoes } = await supabase
             .from('divisoes')
             .select('nome')
             .eq('regional_id', regionalId);
-          
+
           const nomeDivisoes = divisoes?.map(d => d.nome) || [];
           if (nomeDivisoes.length > 0) {
             queryAfastados = queryAfastados.in('divisao_texto', nomeDivisoes);
+          } else {
+            queryAfastados = queryAfastados.eq('registro_id', -1);
           }
         }
       } else if (userRole === 'diretor_divisao') {
