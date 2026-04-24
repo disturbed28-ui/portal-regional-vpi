@@ -534,18 +534,19 @@ export const usePendencias = (
         .order('created_at', { ascending: true });
 
       // Aplicar filtro de escopo
-      if (userRole === 'admin') {
-        // Admin vê todos
-      } else if (userRole === 'diretor_regional' || userRole === 'regional') {
+      // REGRA: admin com regionalId é tratado como regional
+      if (userRole === 'admin' || userRole === 'diretor_regional' || userRole === 'regional') {
         if (regionalId) {
           const { data: divisoes } = await supabase
             .from('divisoes')
             .select('nome')
             .eq('regional_id', regionalId);
-          
+
           const nomeDivisoes = divisoes?.map(d => d.nome) || [];
           if (nomeDivisoes.length > 0) {
             queryDeltas = queryDeltas.in('divisao_texto', nomeDivisoes);
+          } else {
+            queryDeltas = queryDeltas.eq('registro_id', -1);
           }
         }
       } else if (userRole === 'diretor_divisao') {
