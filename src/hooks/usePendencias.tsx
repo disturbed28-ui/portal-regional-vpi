@@ -274,22 +274,23 @@ export const usePendencias = (
         .lt('data_vencimento', hoje);
 
       // Aplicar filtro de escopo
-      if (userRole === 'admin') {
-        // Admin vê todas (não aplica filtro)
-      } else if (userRole === 'diretor_regional' || userRole === 'regional') {
-        // Diretor Regional vê sua regional
+      // REGRA: mesmo admin enxerga apenas pendências da sua regional (escopo regional sempre)
+      if (userRole === 'admin' || userRole === 'diretor_regional' || userRole === 'regional') {
         if (regionalId) {
           const { data: divisoes } = await supabase
             .from('divisoes')
             .select('nome')
             .eq('regional_id', regionalId);
-          
+
           const nomeDivisoes = divisoes?.map(d => d.nome) || [];
           if (nomeDivisoes.length > 0) {
             queryMensalidades = queryMensalidades.in('divisao_texto', nomeDivisoes);
+          } else {
+            queryMensalidades = queryMensalidades.eq('registro_id', -1);
           }
         }
-      } else if (userRole === 'diretor_divisao') {
+        // Admin sem regionalId (comando puro): vê tudo
+      }
         if (!divisaoId) {
           console.error('[usePendencias] ❌ ERRO CRÍTICO: diretor_divisao sem divisaoId no fetchPendencias');
           setLoading(false);
