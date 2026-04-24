@@ -216,26 +216,86 @@ export const DashboardInadimplencia = ({ userId, readOnly = false }: DashboardIn
 
               return Object.entries(devedoresPorDivisao)
                 .sort((a, b) => b[1].length - a[1].length)
-                .map(([divisao, devedores]) => (
+                .map(([divisao, devedores]) => {
+                  const totalDivisao = devedores.reduce((s, d) => s + (d.total_devido || 0), 0);
+                  const diretor = nivelAcesso === 'regional'
+                    ? diretorPorDivisao[normalizeText(divisao)]
+                    : null;
+                  const msgDivisao = diretor && tplDivisao
+                    ? renderTemplate(tplDivisao.corpo, {
+                        nome: diretor.diretor_nome ?? 'diretor(a)',
+                        divisao,
+                        qtd_devedores: devedores.length,
+                        valor_total: totalDivisao.toFixed(2).replace('.', ','),
+                      })
+                    : '';
+                  return (
                   <Collapsible key={divisao}>
                     <div className="border rounded-lg overflow-hidden">
-                      <CollapsibleTrigger className="w-full hover:bg-muted/50 transition-colors">
-                        <div className="flex items-center justify-between p-2 sm:p-3 border-l-4 border-orange-500">
-                          <div className="flex items-center gap-2">
-                            <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 transition-transform data-[state=open]:rotate-180" />
-                            <span className="text-xs sm:text-sm font-medium truncate">{divisao}</span>
+                      <div className="flex items-center gap-1 border-l-4 border-orange-500 hover:bg-muted/50 transition-colors">
+                        <CollapsibleTrigger className="flex-1 min-w-0 text-left">
+                          <div className="flex items-center justify-between p-2 sm:p-3 gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 transition-transform data-[state=open]:rotate-180 flex-shrink-0" />
+                              <span className="text-xs sm:text-sm font-medium truncate">{divisao}</span>
+                            </div>
+                            <Badge variant="secondary" className="text-[10px] sm:text-xs flex-shrink-0">
+                              {devedores.length}
+                            </Badge>
                           </div>
-                          <Badge variant="secondary" className="text-[10px] sm:text-xs">
-                            {devedores.length}
-                          </Badge>
-                        </div>
-                      </CollapsibleTrigger>
-                      
+                        </CollapsibleTrigger>
+                        {!readOnly && nivelAcesso === 'regional' && tplDivisao && (
+                          <div className="pr-2 flex-shrink-0">
+                            <BotaoEnviarWhatsApp
+                              telefone={diretor?.diretor_telefone ?? null}
+                              destinatarioNome={diretor?.diretor_nome ?? divisao}
+                              destinatarioProfileId={diretor?.diretor_profile_id ?? null}
+                              mensagem={msgDivisao}
+                              templateChave="mensalidade_adm_divisao"
+                              templateTitulo={tplDivisao.titulo ?? null}
+                              moduloOrigem="relatorios-inadimplencia"
+                              regionalId={profile?.regional_id ?? null}
+                              divisaoId={diretor?.divisao_id ?? null}
+                              payload={{
+                                divisao,
+                                qtd_devedores: devedores.length,
+                                valor_total: totalDivisao,
+                              }}
+                              label=""
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2"
+                            />
+                          </div>
+                        )}
+                      </div>
+
                       <CollapsibleContent>
                         <div className="px-2 sm:px-4 py-2 sm:py-3 space-y-2 bg-muted/20 border-t">
-                          {devedores.map((devedor) => (
-                            <div 
-                              key={devedor.registro_id} 
+                          {devedores.map((devedor) => {
+                            const contato = contatosIntegrantes[devedor.registro_id];
+                            const diasAtraso = devedor.ultimo_vencimento
+                              ? Math.max(
+                                  0,
+                                  Math.floor(
+                                    (Date.now() - new Date(devedor.ultimo_vencimento).getTime()) /
+                                      (1000 * 60 * 60 * 24),
+                                  ),
+                                )
+                              : 0;
+                            const msgIntegrante = tplIntegrante
+                              ? renderTemplate(tplIntegrante.corpo, {
+                                  nome: devedor.nome_colete,
+                                  qtd_parcelas: devedor.total_parcelas ?? devedor.meses_devendo ?? 0,
+                                  valor_total: (devedor.total_devido ?? 0)
+                                    .toFixed(2)
+                                    .replace('.', ','),
+                                  dias_atraso: diasAtraso,
+                                })
+                              : '';
+                            return (
+                            <div
+                              key={devedor.registro_id}
                               className="flex items-center justify-between p-2 bg-background rounded border gap-2"
                             >
                               <div className="flex flex-col min-w-0 flex-1">
@@ -253,6 +313,29 @@ export const DashboardInadimplencia = ({ userId, readOnly = false }: DashboardIn
                                     {devedor.meses_devendo}m
                                   </div>
                                 </div>
+                                {!readOnly && nivelAcesso === 'divisao' && tplIntegrante && (
+                                  <BotaoEnviarWhatsApp
+                                    telefone={contato?.telefone ?? null}
+                                    destinatarioNome={devedor.nome_colete}
+                                    destinatarioProfileId={contato?.profile_id ?? null}
+                                    mensagem={msgIntegrante}
+                                    templateChave="mensalidade_integrante"
+                                    templateTitulo={tplIntegrante.titulo ?? null}
+                                    moduloOrigem="relatorios-inadimplencia"
+                                    regionalId={profile?.regional_id ?? null}
+                                    divisaoId={profile?.divisao_id ?? null}
+                                    payload={{
+                                      registro_id: devedor.registro_id,
+                                      qtd_parcelas: devedor.total_parcelas,
+                                      valor_total: devedor.total_devido,
+                                      dias_atraso: diasAtraso,
+                                    }}
+                                    label=""
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 px-2"
+                                  />
+                                )}
                                 {!readOnly && (
                                   <Button
                                     size="sm"
@@ -273,12 +356,14 @@ export const DashboardInadimplencia = ({ userId, readOnly = false }: DashboardIn
                                 )}
                               </div>
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </CollapsibleContent>
                     </div>
                   </Collapsible>
-                ));
+                  );
+                });
             })()}
             {devedoresAtivos.length === 0 && (
               <p className="text-center text-muted-foreground py-8">
