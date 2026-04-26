@@ -100,12 +100,13 @@ export function useDestinatariosEvento({ event, enabled = true }: UseDestinatari
           if (r) regionalId = r.id;
         }
 
-        // 2) Fallback: extrair sigla do texto da divisão (ex.: "Regional VP1")
-        if (!regionalId && event.division) {
-          const m = event.division.match(/\b(VP\d+|LN|CMD)\b/i);
-          if (m) {
-            const siglaUp = m[1].toUpperCase();
-            const r = regionais?.find((x) => (x.sigla || "").toUpperCase() === siglaUp);
+        // 2) Fallback: extrair sigla do texto da divisão OU do título (ex.: "[VP1] ...", "Regional VP1")
+        if (!regionalId) {
+          const sigla =
+            extrairSiglaRegional(event.division) ||
+            extrairSiglaRegional(event.title);
+          if (sigla) {
+            const r = regionais?.find((x) => (x.sigla || "").toUpperCase() === sigla);
             if (r) regionalId = r.id;
           }
         }
