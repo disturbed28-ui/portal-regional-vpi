@@ -29,10 +29,19 @@ export function detectarEscopoEvento(event: CalendarEvent | null): EscopoEvento 
   ) {
     return "cmd";
   }
-  if (division.includes("REGIONAL") && !division.includes("DIVISAO")) {
-    return "regional";
-  }
+  // Regional: marca "REGIONAL" em division OU title (ex.: "[VP1] Reuniao - Regional VP1")
+  const isRegional =
+    (division.includes("REGIONAL") && !division.includes("DIVISAO")) ||
+    /\bREGIONAL\b/.test(titulo);
+  if (isRegional) return "regional";
   return "divisao";
+}
+
+// Tenta extrair sigla regional (VP1, VP2, VP3, LN, CMD) de qualquer texto
+function extrairSiglaRegional(texto: string | undefined | null): string | null {
+  if (!texto) return null;
+  const m = texto.match(/\b(VP\d+|LN|CMD)\b/i);
+  return m ? m[1].toUpperCase() : null;
 }
 
 export function isEventoCaveira(event: CalendarEvent | null): boolean {
