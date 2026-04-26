@@ -80,9 +80,13 @@ export function useDestinatariosEvento({ event, enabled = true }: UseDestinatari
 
         let regionalId: string | null = null;
 
-        // 1) Match por sigla (mais confiável)
-        if (event.regionalSigla) {
-          const siglaUp = event.regionalSigla.toUpperCase();
+        // 1) Match por sigla detectada nos componentes normalizados (mais confiável)
+        const siglaDetectada =
+          (event as any).normalizedComponents?.regionalSigla ||
+          (event as any).regionalSigla ||
+          null;
+        if (siglaDetectada) {
+          const siglaUp = String(siglaDetectada).toUpperCase();
           const r = regionais?.find((x) => (x.sigla || "").toUpperCase() === siglaUp);
           if (r) regionalId = r.id;
         }
