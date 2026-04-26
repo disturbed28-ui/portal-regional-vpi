@@ -781,11 +781,21 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="w-[98vw] max-w-4xl sm:w-auto max-h-[95vh] sm:max-h-[90vh] overflow-y-auto px-3 sm:px-6">
           <DialogHeader>
-            <DialogTitle className="text-lg sm:text-2xl flex items-center gap-2 flex-wrap">
+            <DialogTitle className="text-lg sm:text-2xl flex items-center gap-2 flex-wrap pr-8">
               {event.title}
               {isRegional && <Badge variant="secondary" className="text-xs">Regional</Badge>}
               {isCMD && <Badge variant="outline" className="text-xs">CMD</Badge>}
             </DialogTitle>
+            {canManage && (
+              <Button
+                onClick={() => setNotificarOpen(true)}
+                size="sm"
+                className="bg-[#25D366] hover:bg-[#25D366]/90 text-white gap-2 mt-2 w-full sm:w-auto sm:self-start"
+              >
+                <MessageCircle className="h-4 w-4" />
+                Notificar via WhatsApp
+              </Button>
+            )}
           </DialogHeader>
 
           <div className="space-y-4 sm:space-y-6">
