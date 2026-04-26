@@ -66,28 +66,49 @@ export function useDestinatariosEvento({ event, enabled = true }: UseDestinatari
       if (escopo === "divisao" && event.divisao_id) {
         query = query.eq("divisao_id", event.divisao_id);
       } else if (escopo === "regional") {
-        // Resolver regional pelo texto da divisão do evento
-        if (event.division) {
-          const { data: regionais } = await supabase.from("regionais").select("id, nome");
-          const norm = (s: string) =>
-            s
-              .normalize("NFD")
-              .replace(/[\u0300-\u036f]/g, "")
-              .toLowerCase()
-              .trim();
-          const divNorm = norm(event.division);
-          const regional = regionais?.find((r) => {
-            const n = norm(r.nome);
-            return divNorm.includes(n) || n.includes(divNorm);
-          });
-          if (regional) {
-            query = query.eq("regional_id", regional.id);
-          } else {
-            return [];
-          }
-        } else {
-          return [];
+        // Resolver regional priorizando a sigla detectada no evento (VP1, VP2, LN, etc.)
+        const { data: regionais } = await supabase
+          .from("regionais")
+          .select("id, nome, sigla");
+
+        const norm = (s: string) =>
+          s
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase()
+            .trim();
+
+        let regionalId: string | null = null;
+
+        // 1) Match por sigla (mais confiável)
+        if (event.regionalSigla) {
+          const siglaUp = event.regionalSigla.toUpperCase();
+          const r = regionais?.find((x) => (x.sigla || "").toUpperCase() === siglaUp);
+          if (r) regionalId = r.id;
         }
+
+        // 2) Fallback: extrair sigla do texto da divisão (ex.: "Regional VP1")
+        if (!regionalId && event.division) {
+          const m = event.division.match(/\b(VP\d+|LN|CMD)\b/i);
+          if (m) {
+            const siglaUp = m[1].toUpperCase();
+            const r = regionais?.find((x) => (x.sigla || "").toUpperCase() === siglaUp);
+            if (r) regionalId = r.id;
+          }
+        }
+
+        // 3) Fallback: match fuzzy por nome
+        if (!regionalId && event.division) {
+          const divNorm = norm(event.division.replace(/^regional\s*/i, ""));
+          const r = regionais?.find((x) => {
+            const n = norm(x.nome.replace(/\s*-\s*sp\s*$/i, ""));
+            return n && (divNorm.includes(n) || n.includes(divNorm));
+          });
+          if (r) regionalId = r.id;
+        }
+
+        if (!regionalId) return [];
+        query = query.eq("regional_id", regionalId);
       }
       // CMD: sem filtro de escopo (todos ativos)
 
