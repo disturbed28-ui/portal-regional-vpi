@@ -29,10 +29,19 @@ export function detectarEscopoEvento(event: CalendarEvent | null): EscopoEvento 
   ) {
     return "cmd";
   }
-  if (division.includes("REGIONAL") && !division.includes("DIVISAO")) {
-    return "regional";
-  }
+  // Regional: marca "REGIONAL" em division OU title (ex.: "[VP1] Reuniao - Regional VP1")
+  const isRegional =
+    (division.includes("REGIONAL") && !division.includes("DIVISAO")) ||
+    /\bREGIONAL\b/.test(titulo);
+  if (isRegional) return "regional";
   return "divisao";
+}
+
+// Tenta extrair sigla regional (VP1, VP2, VP3, LN, CMD) de qualquer texto
+function extrairSiglaRegional(texto: string | undefined | null): string | null {
+  if (!texto) return null;
+  const m = texto.match(/\b(VP\d+|LN|CMD)\b/i);
+  return m ? m[1].toUpperCase() : null;
 }
 
 export function isEventoCaveira(event: CalendarEvent | null): boolean {
@@ -91,12 +100,13 @@ export function useDestinatariosEvento({ event, enabled = true }: UseDestinatari
           if (r) regionalId = r.id;
         }
 
-        // 2) Fallback: extrair sigla do texto da divisão (ex.: "Regional VP1")
-        if (!regionalId && event.division) {
-          const m = event.division.match(/\b(VP\d+|LN|CMD)\b/i);
-          if (m) {
-            const siglaUp = m[1].toUpperCase();
-            const r = regionais?.find((x) => (x.sigla || "").toUpperCase() === siglaUp);
+        // 2) Fallback: extrair sigla do texto da divisão OU do título (ex.: "[VP1] ...", "Regional VP1")
+        if (!regionalId) {
+          const sigla =
+            extrairSiglaRegional(event.division) ||
+            extrairSiglaRegional(event.title);
+          if (sigla) {
+            const r = regionais?.find((x) => (x.sigla || "").toUpperCase() === sigla);
             if (r) regionalId = r.id;
           }
         }
