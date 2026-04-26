@@ -1310,6 +1310,13 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Painel de Notificação WhatsApp do Evento */}
+      <PainelNotificarEvento
+        event={event}
+        open={notificarOpen}
+        onOpenChange={setNotificarOpen}
+      />
     </>
   );
 }
