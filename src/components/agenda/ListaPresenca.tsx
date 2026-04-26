@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar, Clock, MapPin, Camera, X, UserCheck, Heart, Briefcase, Users, Search, ChevronDown, ChevronRight, Filter } from "lucide-react";
+import { Calendar, Clock, MapPin, Camera, X, UserCheck, Heart, Briefcase, Users, Search, ChevronDown, ChevronRight, Filter, MessageCircle } from "lucide-react";
+import { PainelNotificarEvento } from "./PainelNotificarEvento";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -146,6 +147,9 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
   // Estado para filtro por divisão
   const [filtroDivisao, setFiltroDivisao] = useState<string>("todas");
   const [divisoesExpandidas, setDivisoesExpandidas] = useState<Set<string>>(new Set());
+
+  // Painel de notificação WhatsApp do evento
+  const [notificarOpen, setNotificarOpen] = useState(false);
 
   const { canManage, loading: loadingPermissions } = useCanManagePresenca();
   const { 
