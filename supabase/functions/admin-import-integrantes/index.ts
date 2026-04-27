@@ -364,7 +364,7 @@ afastados_ignorados: z.array(z.object({
     });
 
     const parsedBody = await req.json();
-    const { admin_user_id, novos, atualizados, removidos, promovidos, afastados_ignorados, transferencias_internas, user_grau, user_regional_id, user_divisao_id } = requestSchema.parse(parsedBody);
+    let { admin_user_id, novos, atualizados, removidos, promovidos, afastados_ignorados, transferencias_internas, user_grau, user_regional_id, user_divisao_id } = requestSchema.parse(parsedBody);
     const skipDeltas = parsedBody.skip_deltas === true;
 
     // Resolver escopo (lança se Grau V/VI sem ID)
