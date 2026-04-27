@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+import { resolverEscopo } from '../_shared/escopo-grau.ts';
 
 interface AfastadoInput {
   registro_id: number;
@@ -65,18 +66,50 @@ Deno.serve(async (req) => {
       throw new Error('Permissão negada. Você não tem acesso para importar afastados.');
     }
 
-    const { afastados, observacoes, permitir_vazio, skip_deltas } = await req.json() as {
+    const { afastados, observacoes, permitir_vazio, skip_deltas, user_grau, user_regional_id, user_divisao_id } = await req.json() as {
       afastados: AfastadoInput[],
       observacoes?: string,
       permitir_vazio?: boolean,
       skip_deltas?: boolean,
+      user_grau?: string | null,
+      user_regional_id?: string | null,
+      user_divisao_id?: string | null,
     };
 
-    // Buscar afastados ativos atuais
-    const { data: afastadosAtuais } = await supabase
+    // Resolver escopo (lança se Grau V/VI sem ID)
+    let escopo;
+    try {
+      escopo = resolverEscopo({ user_grau, user_regional_id, user_divisao_id });
+    } catch (e: any) {
+      return new Response(
+        JSON.stringify({ sucesso: false, error: e.message }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    console.log(`[admin-import-afastados] Escopo resolvido:`, escopo);
+
+    // Buscar afastados ativos atuais (FILTRADOS POR ESCOPO)
+    let queryAtuais = supabase
       .from('integrantes_afastados')
-      .select('id, registro_id, nome_colete, divisao_texto, cargo_grau_texto')
+      .select('id, registro_id, nome_colete, divisao_texto, cargo_grau_texto, divisao_id')
       .eq('ativo', true);
+
+    if (escopo.tipo === 'divisao' && escopo.divisao_id) {
+      queryAtuais = queryAtuais.eq('divisao_id', escopo.divisao_id);
+    } else if (escopo.tipo === 'regional' && escopo.regional_id) {
+      // Para Grau V: pegar divisões da regional e filtrar
+      const { data: divisoesRegional } = await supabase
+        .from('divisoes')
+        .select('id')
+        .eq('regional_id', escopo.regional_id);
+      const divisaoIds = (divisoesRegional || []).map(d => d.id);
+      if (divisaoIds.length > 0) {
+        queryAtuais = queryAtuais.in('divisao_id', divisaoIds);
+      }
+    }
+
+    const { data: afastadosAtuais } = await queryAtuais;
+    console.log(`[admin-import-afastados] Afastados ativos no escopo: ${afastadosAtuais?.length || 0}`);
 
     // Arquivo vazio com permitir_vazio = baixa em todos
     if ((!afastados || afastados.length === 0) && permitir_vazio) {
@@ -137,13 +170,41 @@ Deno.serve(async (req) => {
 
     console.log(`[admin-import-afastados] Iniciando importação de ${afastados.length} afastados`);
 
+    // FILTRO POR ESCOPO: para Grau V/VI, restringir lista de afastados ao escopo do usuário.
+    let afastadosNoEscopo = afastados;
+    let afastadosForaEscopo: AfastadoInput[] = [];
+    if (escopo.tipo !== 'comando') {
+      const registroIds = afastados.map(a => a.registro_id);
+      const { data: integrantesScope } = await supabase
+        .from('integrantes_portal')
+        .select('registro_id, divisao_id, regional_id')
+        .in('registro_id', registroIds);
+      const mapaRegistro = new Map<number, { divisao_id: string | null; regional_id: string | null }>();
+      (integrantesScope || []).forEach(i => mapaRegistro.set(i.registro_id, {
+        divisao_id: i.divisao_id, regional_id: i.regional_id
+      }));
+
+      afastadosNoEscopo = [];
+      for (const a of afastados) {
+        const m = mapaRegistro.get(a.registro_id);
+        const dentro = escopo.tipo === 'divisao'
+          ? m?.divisao_id === escopo.divisao_id
+          : m?.regional_id === escopo.regional_id;
+        if (dentro) afastadosNoEscopo.push(a);
+        else afastadosForaEscopo.push(a);
+      }
+      console.log(`[admin-import-afastados] Afastados no escopo: ${afastadosNoEscopo.length} | fora: ${afastadosForaEscopo.length}`);
+    }
+
     let novos = 0;
     let atualizados = 0;
     let baixasAutomaticas = 0;
-    const avisos: string[] = [];
+    const avisos: string[] = afastadosForaEscopo.map(a =>
+      `Ignorado por escopo (${escopo.tipo}): ${a.nome_colete} (${a.registro_id})`
+    );
     const deltasPendentes: any[] = [];
 
-    const registrosNovaPlanilha = new Set(afastados.map(a => a.registro_id));
+    const registrosNovaPlanilha = new Set(afastadosNoEscopo.map(a => a.registro_id));
     const registrosAtuais = new Set(afastadosAtuais?.map(a => a.registro_id) || []);
     const hoje = new Date().toISOString().split('T')[0];
 
@@ -189,7 +250,7 @@ Deno.serve(async (req) => {
     }
 
     // Detectar novos afastados (para deltas)
-    afastados.forEach(novo => {
+    afastadosNoEscopo.forEach(novo => {
       if (!registrosAtuais.has(novo.registro_id)) {
         deltasPendentes.push({
           registro_id: novo.registro_id,
@@ -207,7 +268,7 @@ Deno.serve(async (req) => {
     });
 
     // Processar cada afastado (inserir/atualizar)
-    for (const afastado of afastados) {
+    for (const afastado of afastadosNoEscopo) {
       try {
         const { data: existente } = await supabase
           .from('integrantes_afastados')
@@ -302,7 +363,7 @@ Deno.serve(async (req) => {
 
     const resultado = {
       sucesso: true,
-      total: afastados.length,
+      total: afastadosNoEscopo.length,
       novos,
       atualizados,
       baixas_automaticas: baixasAutomaticas,

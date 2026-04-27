@@ -34,6 +34,7 @@ import { ProfileDetailDialog } from "@/components/admin/ProfileDetailDialog";
 import { containsNormalized } from "@/lib/utils";
 import { useRegionais } from "@/hooks/useRegionais";
 import { useCargosGrau4 } from "@/hooks/useCargosGrau4";
+import { buildEscopoCargaPayload } from "@/lib/escopoCarga";
 
 const AdminIntegrantes = () => {
   const navigate = useNavigate();
@@ -463,6 +464,7 @@ const { ultimaCargaInfo, devedoresAtivos } = useMensalidades();
           promovidos: removidosParaPromover.length > 0 ? removidosParaPromover : undefined,
           afastados_ignorados: removidosAfastados.length > 0 ? removidosAfastados : undefined,
           transferencias_internas: transferenciasInternas.length > 0 ? transferenciasInternas : undefined,
+          ...buildEscopoCargaPayload(profile),
         },
       });
 
@@ -547,7 +549,8 @@ const { ultimaCargaInfo, devedoresAtivos } = useMensalidades();
         body: {
           user_id: user.id,
           mensalidades: mensalidadesPreview.mensalidades,
-          realizado_por: user.user_metadata?.full_name || user.email || 'Admin'
+          realizado_por: user.user_metadata?.full_name || user.email || 'Admin',
+          ...buildEscopoCargaPayload(profile),
         }
       });
 

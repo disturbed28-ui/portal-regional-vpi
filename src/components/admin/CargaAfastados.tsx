@@ -9,8 +9,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
+import { buildEscopoCargaPayload } from "@/lib/escopoCarga";
 
 export const CargaAfastados = () => {
+  const { user } = useAuth();
+  const { profile } = useProfile(user?.id);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<AfastadoExcel[]>([]);
   const [erros, setErros] = useState<string[]>([]);
@@ -59,6 +64,7 @@ export const CargaAfastados = () => {
         body: {
           afastados: preview,
           observacoes: `Carga via Excel - ${file?.name}`,
+          ...buildEscopoCargaPayload(profile),
         },
       });
 

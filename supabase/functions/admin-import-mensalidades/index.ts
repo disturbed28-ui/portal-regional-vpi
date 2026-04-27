@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { handleDatabaseError, logError } from '../_shared/error-handler.ts';
+import { resolverEscopo, grauToNum } from '../_shared/escopo-grau.ts';
 
 interface MensalidadeImport {
   registro_id: number;
@@ -81,13 +82,26 @@ const requestSchema = z.object({
       })).min(1, 'Pelo menos uma mensalidade é necessária'),
       realizado_por: z.string().max(100).optional(),
       user_grau: z.string().nullable().optional(),
-      user_divisao_id: z.string().uuid().nullable().optional()
+      user_divisao_id: z.string().uuid().nullable().optional(),
+      user_regional_id: z.string().uuid().nullable().optional()
     });
 
-    const { user_id, mensalidades, realizado_por, user_grau, user_divisao_id } = requestSchema.parse(await req.json());
+    const { user_id, mensalidades, realizado_por, user_grau, user_divisao_id, user_regional_id } = requestSchema.parse(await req.json());
+
+    // Resolver escopo (lança se Grau V/VI sem ID)
+    let escopo;
+    try {
+      escopo = resolverEscopo({ user_grau, user_regional_id, user_divisao_id });
+    } catch (e: any) {
+      return new Response(
+        JSON.stringify({ error: e.message }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     console.log(`[admin-import-mensalidades] Validating admin: ${user_id}`);
     console.log(`[admin-import-mensalidades] Mensalidades count: ${mensalidades.length}`);
+    console.log(`[admin-import-mensalidades] Escopo resolvido:`, escopo);
 
     // Initialize Supabase client with SERVICE_ROLE_KEY to bypass RLS
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -112,16 +126,16 @@ const requestSchema = z.object({
     console.log('[admin-import-mensalidades] User authenticated:', userData.nome_colete || user_id);
 
     // ==========================================
-    // ESCOPO: Determinar se processa por REGIONAL ou DIVISAO
+    // ESCOPO: comando | regional (Grau V) | divisao (Grau VI)
     // ==========================================
-    const isGrauVI = user_grau === 'VI';
-    const escopoDivisao = isGrauVI && user_divisao_id;
-    
-    console.log(`[admin-import-mensalidades] User grau: ${user_grau || 'N/A'}`);
-    console.log(`[admin-import-mensalidades] Scope: ${escopoDivisao ? 'DIVISAO' : 'REGIONAL'}`);
-    if (escopoDivisao) {
-      console.log(`[admin-import-mensalidades] User divisao_id: ${user_divisao_id}`);
-    }
+    const escopoDivisao = escopo.tipo === 'divisao';
+    const escopoRegional = escopo.tipo === 'regional';
+    const escopoUserDivisaoId = escopoDivisao ? escopo.divisao_id : null;
+    const escopoUserRegionalId = escopoRegional ? escopo.regional_id : null;
+
+    console.log(`[admin-import-mensalidades] Scope tipo: ${escopo.tipo}`);
+    if (escopoDivisao) console.log(`[admin-import-mensalidades] Restrito à divisao_id: ${escopoUserDivisaoId}`);
+    if (escopoRegional) console.log(`[admin-import-mensalidades] Restrito à regional_id: ${escopoUserRegionalId}`);
 
     // ==========================================
     // MULTI-REGIONAL: Inferir regional de cada registro
@@ -200,9 +214,20 @@ const requestSchema = z.object({
       }
     });
 
-    const regionaisArray = Array.from(regionaisNaCarga);
+    let regionaisArray = Array.from(regionaisNaCarga);
     console.log(`[admin-import-mensalidades] Regionais detected in load: ${regionaisArray.length}`);
     console.log(`[admin-import-mensalidades] Regional IDs: ${regionaisArray.join(', ')}`);
+
+    // Restrição de escopo: Grau V/VI só podem operar na sua regional, mesmo que o arquivo
+    // tenha registros de outras regionais (esses serão ignorados nas operações destrutivas).
+    if (escopoRegional && escopoUserRegionalId) {
+      regionaisArray = regionaisArray.filter(r => r === escopoUserRegionalId);
+      if (!regionaisArray.includes(escopoUserRegionalId)) regionaisArray.push(escopoUserRegionalId);
+    }
+    if (escopoDivisao && escopo.regional_id) {
+      regionaisArray = regionaisArray.filter(r => r === escopo.regional_id);
+      if (regionaisArray.length === 0) regionaisArray.push(escopo.regional_id);
+    }
 
     if (regionaisArray.length === 0) {
       console.error('[admin-import-mensalidades] No regional could be inferred from data');

@@ -22,6 +22,7 @@ import { ModalBaixaAfastado } from "@/components/admin/ModalBaixaAfastado";
 import type { IntegranteAfastado, MotivoBaixa } from "@/hooks/useAfastados";
 import { useProfile } from "@/hooks/useProfile";
 import { getNivelAcessoAdmin } from "@/lib/grauUtils";
+import { buildEscopoCargaPayload } from "@/lib/escopoCarga";
 
 interface AfastadosGestaoTabProps {
   userId?: string;
@@ -126,6 +127,7 @@ export const AfastadosGestaoTab = ({ userId, readOnly = false }: AfastadosGestao
           observacoes: `Baixa total via arquivo vazio - ${file?.name}`,
           permitir_vazio: true,
           skip_deltas: true,
+          ...buildEscopoCargaPayload(profile),
         },
       });
 
@@ -163,6 +165,7 @@ export const AfastadosGestaoTab = ({ userId, readOnly = false }: AfastadosGestao
           afastados: preview,
           observacoes: `Carga via Excel - ${file?.name}`,
           skip_deltas: true,
+          ...buildEscopoCargaPayload(profile),
         },
       });
 
