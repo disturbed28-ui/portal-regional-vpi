@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
+import { resolverEscopo } from '../_shared/escopo-grau.ts';
 
 interface AfastadoInput {
   registro_id: number;
