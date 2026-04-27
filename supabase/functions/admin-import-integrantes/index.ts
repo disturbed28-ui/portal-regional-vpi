@@ -455,17 +455,119 @@ afastados_ignorados: z.array(z.object({
 
     console.log('[admin-import-integrantes] Usuário validado:', { isSystemAdmin, userRoles });
 
+    // ==========================================
+    // FILTRO POR ESCOPO (Grau V/VI)
+    // ==========================================
+    let novosFiltrados = novos;
+    let atualizadosFiltrados = atualizados;
+    let removidosFiltrados = removidos;
+    let promovidosFiltrados = promovidos;
+    let afastadosIgnoradosFiltrados = afastados_ignorados;
+    let transferenciasFiltradas = transferencias_internas;
+    const ignoradosPorEscopo: string[] = [];
+
+    if (escopo.tipo !== 'comando') {
+      // Para registros já existentes: lookup por registro_id em integrantes_portal
+      const allRegistroIds = new Set<number>();
+      atualizados?.forEach((a: any) => a.registro_id && allRegistroIds.add(a.registro_id));
+      removidos?.forEach((r: any) => r.registro_id && allRegistroIds.add(r.registro_id));
+      promovidos?.forEach((p: any) => p.registro_id && allRegistroIds.add(p.registro_id));
+      afastados_ignorados?.forEach((a: any) => a.registro_id && allRegistroIds.add(a.registro_id));
+      transferencias_internas?.forEach((t: any) => t.registro_id && allRegistroIds.add(t.registro_id));
+
+      const mapaHierarquia = new Map<number, { divisao_id: string | null; regional_id: string | null }>();
+      if (allRegistroIds.size > 0) {
+        const { data: hierarquias } = await supabase
+          .from('integrantes_portal')
+          .select('registro_id, divisao_id, regional_id')
+          .in('registro_id', Array.from(allRegistroIds));
+        (hierarquias || []).forEach(h => mapaHierarquia.set(h.registro_id, {
+          divisao_id: h.divisao_id, regional_id: h.regional_id
+        }));
+      }
+
+      const dentroDoEscopo = (registroId: number): boolean => {
+        const h = mapaHierarquia.get(registroId);
+        if (!h) return false;
+        return escopo.tipo === 'divisao'
+          ? h.divisao_id === escopo.divisao_id
+          : h.regional_id === escopo.regional_id;
+      };
+
+      // Para "novos": resolver via texto (não estão no portal ainda)
+      const dentroDoEscopoPorTexto = async (divisao_texto: string, regional_texto: string): Promise<boolean> => {
+        const hier = await buscarIdsHierarquia(supabase, divisao_texto, regional_texto);
+        if (escopo.tipo === 'divisao') return hier.divisao_id === escopo.divisao_id;
+        return hier.regional_id === escopo.regional_id;
+      };
+
+      // Filtrar novos (resolução assíncrona)
+      if (novos && novos.length > 0) {
+        const filtrados: typeof novos = [];
+        for (const n of novos) {
+          if (await dentroDoEscopoPorTexto(n.divisao_texto, n.regional_texto)) {
+            filtrados.push(n);
+          } else {
+            ignoradosPorEscopo.push(`Novo: ${n.nome_colete} (${n.registro_id})`);
+          }
+        }
+        novosFiltrados = filtrados;
+      }
+
+      atualizadosFiltrados = atualizados?.filter((a: any) => {
+        const ok = dentroDoEscopo(a.registro_id);
+        if (!ok) ignoradosPorEscopo.push(`Atualizado: ${a.nome_colete || a.registro_id}`);
+        return ok;
+      });
+      removidosFiltrados = removidos?.filter((r: any) => {
+        const ok = dentroDoEscopo(r.registro_id);
+        if (!ok) ignoradosPorEscopo.push(`Removido: ${r.nome_colete}`);
+        return ok;
+      });
+      promovidosFiltrados = promovidos?.filter((p: any) => {
+        const ok = dentroDoEscopo(p.registro_id);
+        if (!ok) ignoradosPorEscopo.push(`Promovido: ${p.nome_colete}`);
+        return ok;
+      });
+      afastadosIgnoradosFiltrados = afastados_ignorados?.filter((a: any) => {
+        const ok = dentroDoEscopo(a.registro_id);
+        if (!ok) ignoradosPorEscopo.push(`Afastado: ${a.nome_colete}`);
+        return ok;
+      });
+      transferenciasFiltradas = transferencias_internas?.filter((t: any) => {
+        const ok = dentroDoEscopo(t.registro_id);
+        if (!ok) ignoradosPorEscopo.push(`Transferência: ${t.nome_colete}`);
+        return ok;
+      });
+
+      console.log(`[admin-import-integrantes] Escopo aplicado: ${ignoradosPorEscopo.length} registros ignorados fora do escopo`);
+    }
+
+    // Reatribuir aos nomes originais para o restante da função funcionar sem mudanças
+    novos = novosFiltrados;
+    atualizados = atualizadosFiltrados;
+    removidos = removidosFiltrados;
+    promovidos = promovidosFiltrados;
+    afastados_ignorados = afastadosIgnoradosFiltrados;
+    transferencias_internas = transferenciasFiltradas;
+
     let insertedCount = 0;
     let updatedCount = 0;
     let inativadosCount = 0;
     const deltasPendentes: any[] = [];
 
-    // Detectar novos ativos
-    const { data: ativosAtuais } = await supabase
+    // Detectar novos ativos (também filtrar por escopo)
+    let queryAtivos = supabase
       .from('integrantes_portal')
-      .select('registro_id')
+      .select('registro_id, divisao_id, regional_id')
       .eq('ativo', true);
-    
+    if (escopo.tipo === 'divisao' && escopo.divisao_id) {
+      queryAtivos = queryAtivos.eq('divisao_id', escopo.divisao_id);
+    } else if (escopo.tipo === 'regional' && escopo.regional_id) {
+      queryAtivos = queryAtivos.eq('regional_id', escopo.regional_id);
+    }
+    const { data: ativosAtuais } = await queryAtivos;
+
     const registrosAtuais = new Set(ativosAtuais?.map(a => a.registro_id) || []);
 
     novos?.forEach(novo => {
