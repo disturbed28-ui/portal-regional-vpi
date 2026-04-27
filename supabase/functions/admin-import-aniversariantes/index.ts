@@ -98,10 +98,11 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body: RequestBody = await req.json();
-    const { user_id, aniversariantes } = body;
+    const { user_id, aniversariantes, user_grau, user_regional_id, user_divisao_id } = body;
 
     console.log(`[admin-import-aniversariantes] Iniciando importação para user ${user_id}`);
     console.log(`[admin-import-aniversariantes] Total de registros recebidos: ${aniversariantes.length}`);
+    console.log(`[admin-import-aniversariantes] Escopo: grau=${user_grau} regional=${user_regional_id} divisao=${user_divisao_id}`);
 
     if (!user_id || !aniversariantes || !Array.isArray(aniversariantes)) {
       return new Response(
@@ -120,11 +121,31 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Buscar todos os integrantes ativos para fazer matching
-    const { data: integrantes, error: intError } = await supabase
+    // Resolver escopo do usuário (Grau V = regional, Grau VI = divisão)
+    let escopo;
+    try {
+      escopo = resolverEscopo({ user_grau, user_regional_id, user_divisao_id });
+    } catch (e: any) {
+      return new Response(
+        JSON.stringify({ success: false, error: e.message }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    console.log(`[admin-import-aniversariantes] Escopo resolvido: ${escopo.tipo}`);
+
+    // Buscar integrantes ativos restritos ao escopo
+    let integrantesQuery = supabase
       .from('integrantes_portal')
-      .select('id, nome_colete, nome_colete_ascii, divisao_texto, registro_id')
+      .select('id, nome_colete, nome_colete_ascii, divisao_texto, registro_id, divisao_id, regional_id')
       .eq('ativo', true);
+
+    if (escopo.tipo === 'regional' && escopo.regional_id) {
+      integrantesQuery = integrantesQuery.eq('regional_id', escopo.regional_id);
+    } else if (escopo.tipo === 'divisao' && escopo.divisao_id) {
+      integrantesQuery = integrantesQuery.eq('divisao_id', escopo.divisao_id);
+    }
+
+    const { data: integrantes, error: intError } = await integrantesQuery;
 
     if (intError) {
       console.error('[admin-import-aniversariantes] Erro ao buscar integrantes:', intError);
@@ -134,7 +155,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[admin-import-aniversariantes] Total de integrantes ativos no banco: ${integrantes?.length || 0}`);
+    console.log(`[admin-import-aniversariantes] Total de integrantes ativos no escopo: ${integrantes?.length || 0}`);
 
     // Criar mapa E lista para busca (map para exato, lista para parcial)
     const integrantesMap = new Map<string, { id: string; registro_id: number }>();
@@ -149,7 +170,9 @@ Deno.serve(async (req) => {
         id: int.id,
         nome_norm: nomeNorm,
         divisao_norm: divisaoNorm,
-        registro_id: int.registro_id
+        registro_id: int.registro_id,
+        divisao_id: int.divisao_id,
+        regional_id: int.regional_id,
       });
       
       // Manter map para match exato (mais rápido)
