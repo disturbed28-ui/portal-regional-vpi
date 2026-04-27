@@ -36,7 +36,7 @@ const normalizarDivisaoParaSalvar = (texto: string): string => {
   return normalizado;
 };
 
-const ALLOWED_ROLES = ['admin', 'comando', 'adm_regional', 'adm_divisao', 'diretor_regional', 'diretor_divisao'];
+const ROTA_OPERACAO = '/gestao-adm-afastamentos';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -55,15 +55,35 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) throw new Error('Usuário não autenticado');
 
-    // Verificar se tem alguma role permitida
+    // Validar acesso via matriz de permissões da tela
     const { data: roles } = await supabase
       .from('user_roles')
       .select('role')
-      .eq('user_id', user.id)
-      .in('role', ALLOWED_ROLES);
+      .eq('user_id', user.id);
+    const userRoles = (roles || []).map((r: any) => r.role);
+    const isSystemAdmin = userRoles.includes('admin');
 
-    if (!roles || roles.length === 0) {
-      throw new Error('Permissão negada. Você não tem acesso para importar afastados.');
+    const { data: screen } = await supabase
+      .from('system_screens')
+      .select('id')
+      .eq('rota', ROTA_OPERACAO)
+      .eq('ativo', true)
+      .maybeSingle();
+
+    if (screen) {
+      const { data: permissions } = await supabase
+        .from('screen_permissions')
+        .select('role')
+        .eq('screen_id', screen.id);
+      const allowedRoles = (permissions || []).map((p: any) => p.role);
+      const hasAccess = isSystemAdmin || userRoles.some((r: string) => allowedRoles.includes(r));
+      if (!hasAccess) {
+        console.warn('[admin-import-afastados] Acesso negado via matriz', { userRoles, allowedRoles });
+        throw new Error('Permissão negada. Você não tem acesso para importar afastados.');
+      }
+      console.log('[admin-import-afastados] Acesso validado via matriz', { userRoles, allowedRoles });
+    } else if (!isSystemAdmin) {
+      throw new Error('Acesso negado - tela não configurada');
     }
 
     const { afastados, observacoes, permitir_vazio, skip_deltas, user_grau, user_regional_id, user_divisao_id } = await req.json() as {
