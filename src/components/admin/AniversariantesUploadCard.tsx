@@ -7,6 +7,8 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { parseAniversariantesExcel, AniversariantesParseResult } from '@/lib/aniversariantesParser';
 import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
+import { buildEscopoCargaPayload } from '@/lib/escopoCarga';
 import { ReadOnlyBanner } from '@/components/ui/read-only-banner';
 
 interface AniversariantesUploadCardProps {
