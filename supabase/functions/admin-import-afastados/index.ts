@@ -250,7 +250,7 @@ Deno.serve(async (req) => {
     }
 
     // Detectar novos afastados (para deltas)
-    afastados.forEach(novo => {
+    afastadosNoEscopo.forEach(novo => {
       if (!registrosAtuais.has(novo.registro_id)) {
         deltasPendentes.push({
           registro_id: novo.registro_id,
@@ -268,7 +268,7 @@ Deno.serve(async (req) => {
     });
 
     // Processar cada afastado (inserir/atualizar)
-    for (const afastado of afastados) {
+    for (const afastado of afastadosNoEscopo) {
       try {
         const { data: existente } = await supabase
           .from('integrantes_afastados')
@@ -363,7 +363,7 @@ Deno.serve(async (req) => {
 
     const resultado = {
       sucesso: true,
-      total: afastados.length,
+      total: afastadosNoEscopo.length,
       novos,
       atualizados,
       baixas_automaticas: baixasAutomaticas,
