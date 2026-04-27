@@ -65,7 +65,8 @@ export function AniversariantesUploadCard({ readOnly = false }: AniversariantesU
       const { data, error } = await supabase.functions.invoke('admin-import-aniversariantes', {
         body: {
           user_id: user.id,
-          aniversariantes: parseResult.aniversariantes
+          aniversariantes: parseResult.aniversariantes,
+          ...buildEscopoCargaPayload(profile),
         }
       });
 
