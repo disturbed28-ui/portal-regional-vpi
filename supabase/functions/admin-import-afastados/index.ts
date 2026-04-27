@@ -170,13 +170,41 @@ Deno.serve(async (req) => {
 
     console.log(`[admin-import-afastados] Iniciando importação de ${afastados.length} afastados`);
 
+    // FILTRO POR ESCOPO: para Grau V/VI, restringir lista de afastados ao escopo do usuário.
+    let afastadosNoEscopo = afastados;
+    let afastadosForaEscopo: AfastadoInput[] = [];
+    if (escopo.tipo !== 'comando') {
+      const registroIds = afastados.map(a => a.registro_id);
+      const { data: integrantesScope } = await supabase
+        .from('integrantes_portal')
+        .select('registro_id, divisao_id, regional_id')
+        .in('registro_id', registroIds);
+      const mapaRegistro = new Map<number, { divisao_id: string | null; regional_id: string | null }>();
+      (integrantesScope || []).forEach(i => mapaRegistro.set(i.registro_id, {
+        divisao_id: i.divisao_id, regional_id: i.regional_id
+      }));
+
+      afastadosNoEscopo = [];
+      for (const a of afastados) {
+        const m = mapaRegistro.get(a.registro_id);
+        const dentro = escopo.tipo === 'divisao'
+          ? m?.divisao_id === escopo.divisao_id
+          : m?.regional_id === escopo.regional_id;
+        if (dentro) afastadosNoEscopo.push(a);
+        else afastadosForaEscopo.push(a);
+      }
+      console.log(`[admin-import-afastados] Afastados no escopo: ${afastadosNoEscopo.length} | fora: ${afastadosForaEscopo.length}`);
+    }
+
     let novos = 0;
     let atualizados = 0;
     let baixasAutomaticas = 0;
-    const avisos: string[] = [];
+    const avisos: string[] = afastadosForaEscopo.map(a =>
+      `Ignorado por escopo (${escopo.tipo}): ${a.nome_colete} (${a.registro_id})`
+    );
     const deltasPendentes: any[] = [];
 
-    const registrosNovaPlanilha = new Set(afastados.map(a => a.registro_id));
+    const registrosNovaPlanilha = new Set(afastadosNoEscopo.map(a => a.registro_id));
     const registrosAtuais = new Set(afastadosAtuais?.map(a => a.registro_id) || []);
     const hoje = new Date().toISOString().split('T')[0];
 
