@@ -214,9 +214,20 @@ const requestSchema = z.object({
       }
     });
 
-    const regionaisArray = Array.from(regionaisNaCarga);
+    let regionaisArray = Array.from(regionaisNaCarga);
     console.log(`[admin-import-mensalidades] Regionais detected in load: ${regionaisArray.length}`);
     console.log(`[admin-import-mensalidades] Regional IDs: ${regionaisArray.join(', ')}`);
+
+    // Restrição de escopo: Grau V/VI só podem operar na sua regional, mesmo que o arquivo
+    // tenha registros de outras regionais (esses serão ignorados nas operações destrutivas).
+    if (escopoRegional && escopoUserRegionalId) {
+      regionaisArray = regionaisArray.filter(r => r === escopoUserRegionalId);
+      if (!regionaisArray.includes(escopoUserRegionalId)) regionaisArray.push(escopoUserRegionalId);
+    }
+    if (escopoDivisao && escopo.regional_id) {
+      regionaisArray = regionaisArray.filter(r => r === escopo.regional_id);
+      if (regionaisArray.length === 0) regionaisArray.push(escopo.regional_id);
+    }
 
     if (regionaisArray.length === 0) {
       console.error('[admin-import-mensalidades] No regional could be inferred from data');
