@@ -426,6 +426,13 @@ export function useConsolidacaoIntegrantes(userId?: string) {
       });
       
       // Chamar edge function
+      // Buscar escopo do usuário (Grau/regional/divisão) para passar à edge function
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('grau, regional_id, divisao_id')
+        .eq('id', userId)
+        .maybeSingle();
+
       const { data, error } = await supabase.functions.invoke('admin-import-integrantes', {
         body: {
           admin_user_id: userId,
@@ -435,7 +442,10 @@ export function useConsolidacaoIntegrantes(userId?: string) {
           promovidos: removidosParaPromover,
           afastados_ignorados: removidosAfastados,
           lote_id: lote.id,
-          skip_deltas: true
+          skip_deltas: true,
+          user_grau: profileData?.grau || null,
+          user_regional_id: profileData?.regional_id || null,
+          user_divisao_id: profileData?.divisao_id || null,
         }
       });
       
