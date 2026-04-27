@@ -36,7 +36,7 @@ const normalizarDivisaoParaSalvar = (texto: string): string => {
   return normalizado;
 };
 
-const ALLOWED_ROLES = ['admin', 'comando', 'adm_regional', 'diretor_regional', 'diretor_divisao'];
+const ALLOWED_ROLES = ['admin', 'comando', 'adm_regional', 'adm_divisao', 'diretor_regional', 'diretor_divisao'];
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
