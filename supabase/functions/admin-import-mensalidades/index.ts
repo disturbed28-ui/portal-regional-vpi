@@ -82,13 +82,26 @@ const requestSchema = z.object({
       })).min(1, 'Pelo menos uma mensalidade é necessária'),
       realizado_por: z.string().max(100).optional(),
       user_grau: z.string().nullable().optional(),
-      user_divisao_id: z.string().uuid().nullable().optional()
+      user_divisao_id: z.string().uuid().nullable().optional(),
+      user_regional_id: z.string().uuid().nullable().optional()
     });
 
-    const { user_id, mensalidades, realizado_por, user_grau, user_divisao_id } = requestSchema.parse(await req.json());
+    const { user_id, mensalidades, realizado_por, user_grau, user_divisao_id, user_regional_id } = requestSchema.parse(await req.json());
+
+    // Resolver escopo (lança se Grau V/VI sem ID)
+    let escopo;
+    try {
+      escopo = resolverEscopo({ user_grau, user_regional_id, user_divisao_id });
+    } catch (e: any) {
+      return new Response(
+        JSON.stringify({ error: e.message }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     console.log(`[admin-import-mensalidades] Validating admin: ${user_id}`);
     console.log(`[admin-import-mensalidades] Mensalidades count: ${mensalidades.length}`);
+    console.log(`[admin-import-mensalidades] Escopo resolvido:`, escopo);
 
     // Initialize Supabase client with SERVICE_ROLE_KEY to bypass RLS
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
