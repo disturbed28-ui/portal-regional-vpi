@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { handleDatabaseError, logError } from '../_shared/error-handler.ts';
+import { resolverEscopo, grauToNum } from '../_shared/escopo-grau.ts';
 
 interface MensalidadeImport {
   registro_id: number;
