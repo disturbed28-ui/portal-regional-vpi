@@ -126,16 +126,16 @@ const requestSchema = z.object({
     console.log('[admin-import-mensalidades] User authenticated:', userData.nome_colete || user_id);
 
     // ==========================================
-    // ESCOPO: Determinar se processa por REGIONAL ou DIVISAO
+    // ESCOPO: comando | regional (Grau V) | divisao (Grau VI)
     // ==========================================
-    const isGrauVI = user_grau === 'VI';
-    const escopoDivisao = isGrauVI && user_divisao_id;
-    
-    console.log(`[admin-import-mensalidades] User grau: ${user_grau || 'N/A'}`);
-    console.log(`[admin-import-mensalidades] Scope: ${escopoDivisao ? 'DIVISAO' : 'REGIONAL'}`);
-    if (escopoDivisao) {
-      console.log(`[admin-import-mensalidades] User divisao_id: ${user_divisao_id}`);
-    }
+    const escopoDivisao = escopo.tipo === 'divisao';
+    const escopoRegional = escopo.tipo === 'regional';
+    const escopoUserDivisaoId = escopoDivisao ? escopo.divisao_id : null;
+    const escopoUserRegionalId = escopoRegional ? escopo.regional_id : null;
+
+    console.log(`[admin-import-mensalidades] Scope tipo: ${escopo.tipo}`);
+    if (escopoDivisao) console.log(`[admin-import-mensalidades] Restrito à divisao_id: ${escopoUserDivisaoId}`);
+    if (escopoRegional) console.log(`[admin-import-mensalidades] Restrito à regional_id: ${escopoUserRegionalId}`);
 
     // ==========================================
     // MULTI-REGIONAL: Inferir regional de cada registro
