@@ -17,6 +17,7 @@ interface AniversariantesUploadCardProps {
 
 export function AniversariantesUploadCard({ readOnly = false }: AniversariantesUploadCardProps) {
   const { user } = useAuth();
+  const { profile } = useProfile(user?.id);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [parseResult, setParseResult] = useState<AniversariantesParseResult | null>(null);
