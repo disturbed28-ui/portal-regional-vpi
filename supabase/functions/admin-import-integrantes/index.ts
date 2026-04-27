@@ -357,12 +357,27 @@ afastados_ignorados: z.array(z.object({
         nova_divisao_id: z.string().uuid().optional(),
         nova_divisao_texto: z.string().optional(),
         observacao: z.string().optional()
-      })).optional()
+      })).optional(),
+      user_grau: z.string().nullable().optional(),
+      user_regional_id: z.string().uuid().nullable().optional(),
+      user_divisao_id: z.string().uuid().nullable().optional()
     });
 
     const parsedBody = await req.json();
-    const { admin_user_id, novos, atualizados, removidos, promovidos, afastados_ignorados, transferencias_internas } = requestSchema.parse(parsedBody);
+    const { admin_user_id, novos, atualizados, removidos, promovidos, afastados_ignorados, transferencias_internas, user_grau, user_regional_id, user_divisao_id } = requestSchema.parse(parsedBody);
     const skipDeltas = parsedBody.skip_deltas === true;
+
+    // Resolver escopo (lança se Grau V/VI sem ID)
+    let escopo;
+    try {
+      escopo = resolverEscopo({ user_grau, user_regional_id, user_divisao_id });
+    } catch (e: any) {
+      return new Response(
+        JSON.stringify({ error: e.message }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    console.log('[admin-import-integrantes] Escopo resolvido:', escopo);
 
     console.log('[admin-import-integrantes] Validating admin:', admin_user_id);
     console.log('[admin-import-integrantes] Novos:', novos?.length || 0);
