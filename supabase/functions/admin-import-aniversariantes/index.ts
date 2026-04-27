@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { resolverEscopo } from '../_shared/escopo-grau.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,6 +17,9 @@ interface AniversariantePayload {
 interface RequestBody {
   user_id: string;
   aniversariantes: AniversariantePayload[];
+  user_grau?: string | null;
+  user_regional_id?: string | null;
+  user_divisao_id?: string | null;
 }
 
 interface IntegranteRecord {
@@ -23,6 +27,8 @@ interface IntegranteRecord {
   nome_norm: string;
   divisao_norm: string;
   registro_id: number;
+  divisao_id: string | null;
+  regional_id: string | null;
 }
 
 /**
