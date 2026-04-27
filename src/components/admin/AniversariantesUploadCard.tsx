@@ -7,6 +7,8 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { parseAniversariantesExcel, AniversariantesParseResult } from '@/lib/aniversariantesParser';
 import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
+import { buildEscopoCargaPayload } from '@/lib/escopoCarga';
 import { ReadOnlyBanner } from '@/components/ui/read-only-banner';
 
 interface AniversariantesUploadCardProps {
@@ -15,6 +17,7 @@ interface AniversariantesUploadCardProps {
 
 export function AniversariantesUploadCard({ readOnly = false }: AniversariantesUploadCardProps) {
   const { user } = useAuth();
+  const { profile } = useProfile(user?.id);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [parseResult, setParseResult] = useState<AniversariantesParseResult | null>(null);
@@ -62,7 +65,8 @@ export function AniversariantesUploadCard({ readOnly = false }: AniversariantesU
       const { data, error } = await supabase.functions.invoke('admin-import-aniversariantes', {
         body: {
           user_id: user.id,
-          aniversariantes: parseResult.aniversariantes
+          aniversariantes: parseResult.aniversariantes,
+          ...buildEscopoCargaPayload(profile),
         }
       });
 
