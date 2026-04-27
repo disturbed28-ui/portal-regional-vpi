@@ -66,18 +66,50 @@ Deno.serve(async (req) => {
       throw new Error('Permissão negada. Você não tem acesso para importar afastados.');
     }
 
-    const { afastados, observacoes, permitir_vazio, skip_deltas } = await req.json() as {
+    const { afastados, observacoes, permitir_vazio, skip_deltas, user_grau, user_regional_id, user_divisao_id } = await req.json() as {
       afastados: AfastadoInput[],
       observacoes?: string,
       permitir_vazio?: boolean,
       skip_deltas?: boolean,
+      user_grau?: string | null,
+      user_regional_id?: string | null,
+      user_divisao_id?: string | null,
     };
 
-    // Buscar afastados ativos atuais
-    const { data: afastadosAtuais } = await supabase
+    // Resolver escopo (lança se Grau V/VI sem ID)
+    let escopo;
+    try {
+      escopo = resolverEscopo({ user_grau, user_regional_id, user_divisao_id });
+    } catch (e: any) {
+      return new Response(
+        JSON.stringify({ sucesso: false, error: e.message }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    console.log(`[admin-import-afastados] Escopo resolvido:`, escopo);
+
+    // Buscar afastados ativos atuais (FILTRADOS POR ESCOPO)
+    let queryAtuais = supabase
       .from('integrantes_afastados')
-      .select('id, registro_id, nome_colete, divisao_texto, cargo_grau_texto')
+      .select('id, registro_id, nome_colete, divisao_texto, cargo_grau_texto, divisao_id')
       .eq('ativo', true);
+
+    if (escopo.tipo === 'divisao' && escopo.divisao_id) {
+      queryAtuais = queryAtuais.eq('divisao_id', escopo.divisao_id);
+    } else if (escopo.tipo === 'regional' && escopo.regional_id) {
+      // Para Grau V: pegar divisões da regional e filtrar
+      const { data: divisoesRegional } = await supabase
+        .from('divisoes')
+        .select('id')
+        .eq('regional_id', escopo.regional_id);
+      const divisaoIds = (divisoesRegional || []).map(d => d.id);
+      if (divisaoIds.length > 0) {
+        queryAtuais = queryAtuais.in('divisao_id', divisaoIds);
+      }
+    }
+
+    const { data: afastadosAtuais } = await queryAtuais;
+    console.log(`[admin-import-afastados] Afastados ativos no escopo: ${afastadosAtuais?.length || 0}`);
 
     // Arquivo vazio com permitir_vazio = baixa em todos
     if ((!afastados || afastados.length === 0) && permitir_vazio) {
