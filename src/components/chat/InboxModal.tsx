@@ -1,9 +1,19 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Mail, MessageCircle, Search, UserPlus } from "lucide-react";
-import { useConversations, startConversationWith } from "@/hooks/useChat";
+import { Mail, MessageCircle, Search, Trash2, UserPlus } from "lucide-react";
+import { useConversations, startConversationWith, deleteConversation } from "@/hooks/useChat";
 import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { removeAccents, normalizeSearchTerm } from "@/lib/utils";
@@ -32,11 +42,13 @@ const formatWhen = (iso: string | null) => {
 };
 
 export const InboxModal = ({ open, onOpenChange, userId, onSelectConversation }: InboxModalProps) => {
-  const { conversations, loading } = useConversations(userId);
+  const { conversations, loading, refresh } = useConversations(userId);
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Reset busca quando modal fecha
   useEffect(() => {
@@ -169,47 +181,103 @@ export const InboxModal = ({ open, onOpenChange, userId, onSelectConversation }:
                   ? removeAccents(c.other_nome_colete)
                   : "Usuário";
                 return (
-                  <button
+                  <div
                     key={c.id}
-                    onClick={() => {
-                      onSelectConversation(c.id, name);
-                      onOpenChange(false);
-                    }}
-                    className="w-full text-left flex items-center gap-3 p-3 rounded-lg bg-secondary/40 hover:bg-secondary transition-colors"
+                    className="group relative flex items-center gap-3 p-3 rounded-lg bg-secondary/40 hover:bg-secondary transition-colors"
                   >
-                    <div
-                      className="w-10 h-10 rounded-full bg-secondary border border-border bg-cover bg-center shrink-0"
-                      style={{
-                        backgroundImage: c.other_photo_url
-                          ? `url(${c.other_photo_url})`
-                          : `url('/images/skull.png')`,
+                    <button
+                      onClick={() => {
+                        onSelectConversation(c.id, name);
+                        onOpenChange(false);
                       }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium truncate">{name}</span>
-                        <span className="text-[10px] text-muted-foreground shrink-0">
-                          {formatWhen(c.last_message_at)}
-                        </span>
+                      className="flex-1 text-left flex items-center gap-3 min-w-0"
+                    >
+                      <div
+                        className="w-10 h-10 rounded-full bg-secondary border border-border bg-cover bg-center shrink-0"
+                        style={{
+                          backgroundImage: c.other_photo_url
+                            ? `url(${c.other_photo_url})`
+                            : `url('/images/skull.png')`,
+                        }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium truncate">{name}</span>
+                          <span className="text-[10px] text-muted-foreground shrink-0">
+                            {formatWhen(c.last_message_at)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs text-muted-foreground truncate">
+                            {c.last_message_preview || "Sem mensagens"}
+                          </p>
+                          {c.unread_count > 0 && (
+                            <Badge className="h-5 min-w-5 px-1.5 text-[10px] shrink-0">
+                              {c.unread_count}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-xs text-muted-foreground truncate">
-                          {c.last_message_preview || "Sem mensagens"}
-                        </p>
-                        {c.unread_count > 0 && (
-                          <Badge className="h-5 min-w-5 px-1.5 text-[10px] shrink-0">
-                            {c.unread_count}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </button>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setConfirmDelete({ id: c.id, name });
+                      }}
+                      className="shrink-0 p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                      title="Excluir conversa"
+                      aria-label="Excluir conversa"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 );
               })}
             </>
           )}
         </div>
       </DialogContent>
+
+      <AlertDialog
+        open={!!confirmDelete}
+        onOpenChange={(o) => !o && !deleting && setConfirmDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir conversa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A conversa com <strong>{confirmDelete?.name}</strong> e todas as mensagens
+              serão removidas permanentemente para os dois lados. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              onClick={async (e) => {
+                e.preventDefault();
+                if (!confirmDelete) return;
+                setDeleting(true);
+                const ok = await deleteConversation(confirmDelete.id);
+                setDeleting(false);
+                if (ok) {
+                  toast({ title: "Conversa excluída" });
+                  setConfirmDelete(null);
+                  refresh();
+                } else {
+                  toast({
+                    title: "Erro ao excluir conversa",
+                    variant: "destructive",
+                  });
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };

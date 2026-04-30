@@ -3142,6 +3142,10 @@ export type Database = {
     }
     Functions: {
       cargo_normalize: { Args: { cargo_texto: string }; Returns: string }
+      delete_conversation: {
+        Args: { _conversation_id: string }
+        Returns: boolean
+      }
       get_or_create_conversation: {
         Args: { _other_user_id: string }
         Returns: string
