@@ -201,8 +201,18 @@ const Index = () => {
             <div className="flex items-center justify-between mb-2">
               <div className="flex-1" />
               <h1 className="text-2xl font-bold text-foreground tracking-wider">PORTAL REGIONAL</h1>
-              <div className="flex-1 flex justify-end">
-                {isLoggedIn && totalOnline > 0 && <OnlineUsersModal users={onlineUsers} totalOnline={totalOnline} />}
+              <div className="flex-1 flex justify-end items-center gap-1">
+                {isLoggedIn && totalOnline > 0 && (
+                  <OnlineUsersModal
+                    users={onlineUsers}
+                    totalOnline={totalOnline}
+                    currentUserId={user?.id}
+                    onStartChat={(uid, name) => setPendingChatWith({ userId: uid, name })}
+                  />
+                )}
+                {isLoggedIn && isActive && (
+                  <MessagesIcon unreadCount={unreadCount} onClick={() => setInboxOpen(true)} />
+                )}
               </div>
             </div>
           <h2 className="text-lg text-muted-foreground tracking-wide">
