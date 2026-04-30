@@ -715,6 +715,36 @@ export type Database = {
         }
         Relationships: []
       }
+      conversations: {
+        Row: {
+          created_at: string
+          id: string
+          last_message_at: string | null
+          last_message_preview: string | null
+          participant_a: string
+          participant_b: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          participant_a: string
+          participant_b: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          participant_a?: string
+          participant_b?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       dados_atualizacao_dispensa: {
         Row: {
           created_at: string
@@ -1710,6 +1740,41 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_estrutura_completa"
             referencedColumns: ["regional_id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          read_at: string | null
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -3077,6 +3142,11 @@ export type Database = {
     }
     Functions: {
       cargo_normalize: { Args: { cargo_texto: string }; Returns: string }
+      get_or_create_conversation: {
+        Args: { _other_user_id: string }
+        Returns: string
+      }
+      get_unread_messages_count: { Args: never; Returns: number }
       has_permission: {
         Args: {
           _divisao_id?: string
@@ -3091,6 +3161,14 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      is_conversation_participant: {
+        Args: { _conversation_id: string }
+        Returns: boolean
+      }
+      mark_conversation_read: {
+        Args: { _conversation_id: string }
+        Returns: number
       }
       normalizar_divisao_texto: { Args: { texto: string }; Returns: string }
       normalize_divisao_text: { Args: { texto: string }; Returns: string }
