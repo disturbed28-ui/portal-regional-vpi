@@ -430,6 +430,16 @@ const Index = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {isLoggedIn && (
+        <ChatManager
+          userId={user?.id}
+          inboxOpen={inboxOpen}
+          setInboxOpen={setInboxOpen}
+          pendingOpenWith={pendingChatWith}
+          clearPendingOpen={() => setPendingChatWith(null)}
+        />
+      )}
     </div>
   );
 };
