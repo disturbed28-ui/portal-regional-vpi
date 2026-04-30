@@ -27,6 +27,9 @@ const Index = () => {
   const { profile, loading: profileLoading } = useProfile(user?.id);
   const { hasRole, loading: roleLoading } = useUserRole(user?.id);
   const { onlineUsers, totalOnline } = usePresence(user?.id, profile?.nome_colete);
+  const { unreadCount } = useUnreadMessages(user?.id);
+  const [inboxOpen, setInboxOpen] = useState(false);
+  const [pendingChatWith, setPendingChatWith] = useState<{ userId: string; name: string } | null>(null);
   const { links: linksAtivos } = useLinksUteis(true);
   
   // Batch único para todas as permissões de tela - elimina race conditions no refresh
