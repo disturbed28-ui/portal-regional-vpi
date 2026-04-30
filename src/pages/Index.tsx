@@ -27,7 +27,7 @@ const Index = () => {
   const { profile, loading: profileLoading } = useProfile(user?.id);
   const { hasRole, loading: roleLoading } = useUserRole(user?.id);
   const { onlineUsers, totalOnline } = usePresence(user?.id, profile?.nome_colete);
-  const { unreadCount } = useUnreadMessages(user?.id);
+  const { unreadCount, highlight: msgHighlight } = useUnreadMessages(user?.id);
   const [inboxOpen, setInboxOpen] = useState(false);
   const [pendingChatWith, setPendingChatWith] = useState<{ userId: string; name: string } | null>(null);
   const { links: linksAtivos } = useLinksUteis(true);
@@ -211,7 +211,7 @@ const Index = () => {
                   />
                 )}
                 {isLoggedIn && isActive && (
-                  <MessagesIcon unreadCount={unreadCount} onClick={() => setInboxOpen(true)} />
+                  <MessagesIcon unreadCount={unreadCount} onClick={() => setInboxOpen(true)} pulse={msgHighlight} />
                 )}
               </div>
             </div>
