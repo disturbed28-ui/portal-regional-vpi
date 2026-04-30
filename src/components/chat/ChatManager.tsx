@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { InboxModal } from "./InboxModal";
 import { ChatWindow } from "./ChatWindow";
 import { startConversationWith } from "@/hooks/useChat";
 import { useToast } from "@/hooks/use-toast";
