@@ -15,6 +15,7 @@ import { format } from "date-fns";
 import { HistoricoDevedores } from "@/components/admin/HistoricoDevedores";
 import { useQueryClient } from "@tanstack/react-query";
 import { ReadOnlyBanner } from "@/components/ui/read-only-banner";
+import { buildEscopoCargaPayload } from "@/lib/escopoCarga";
 
 interface MensalidadesUploadCardProps {
   showTitle?: boolean;
@@ -66,23 +67,21 @@ export const MensalidadesUploadCard = ({ showTitle = true, readOnly = false }: M
   };
 
   const handleUploadMensalidades = async () => {
-    if (!mensalidadesPreview || !user) return;
+    if (!mensalidadesPreview || !user || !profile) return;
 
     try {
       setProcessing(true);
 
-      // Determinar grau do usuário (prioridade: integrante > profile)
-      const userGrau = profile?.integrante?.grau || profile?.grau || null;
-      const userDivisaoId = profile?.divisao_id || null;
-      
-      console.log('[MensalidadesUpload] Sending with scope:', { userGrau, userDivisaoId });
+      const escopoPayload = buildEscopoCargaPayload(profile);
+
+      console.log('[MensalidadesUpload] Sending with scope:', escopoPayload);
       
       const { data, error } = await supabase.functions.invoke('admin-import-mensalidades', {
         body: {
           user_id: user.id,
           mensalidades: mensalidadesPreview.mensalidades,
-          user_grau: userGrau,
-          user_divisao_id: userDivisaoId,
+          realizado_por: user.user_metadata?.full_name || user.email || 'Admin',
+          ...escopoPayload,
         },
       });
 
