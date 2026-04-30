@@ -22,17 +22,71 @@ export interface ConversationSummary {
   unread_count: number;
 }
 
+// Som de notificação (gerado via Web Audio — sem dependência de arquivo)
+let _audioCtx: AudioContext | null = null;
+const playNotificationSound = () => {
+  try {
+    if (typeof window === "undefined") return;
+    const Ctx = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext | undefined;
+    if (!Ctx) return;
+    if (!_audioCtx) _audioCtx = new Ctx();
+    const ctx = _audioCtx;
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+    const now = ctx.currentTime;
+    // Dois bips curtos — agradáveis
+    [0, 0.18].forEach((delay, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(i === 0 ? 880 : 1175, now + delay);
+      gain.gain.setValueAtTime(0, now + delay);
+      gain.gain.linearRampToValueAtTime(0.18, now + delay + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.18);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now + delay);
+      osc.stop(now + delay + 0.2);
+    });
+  } catch {
+    /* silencioso */
+  }
+};
+
 /**
  * Hook: contagem global de mensagens não lidas + assinatura realtime para incrementar.
+ * Toca som e ativa flag `highlight` quando uma nova mensagem chega com a aba em foco.
  */
 export const useUnreadMessages = (userId: string | undefined) => {
   const [count, setCount] = useState(0);
+  const [highlight, setHighlight] = useState(false);
+  const prevCountRef = useRef<number>(0);
+  const initializedRef = useRef(false);
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const triggerHighlight = useCallback(() => {
+    setHighlight(true);
+    if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+    highlightTimerRef.current = setTimeout(() => setHighlight(false), 4000);
+  }, []);
 
   const refresh = useCallback(async () => {
     if (!userId) return;
     const { data, error } = await supabase.rpc("get_unread_messages_count");
-    if (!error && typeof data === "number") setCount(data);
-  }, [userId]);
+    if (!error && typeof data === "number") {
+      const next = data;
+      const prev = prevCountRef.current;
+      // Só toca/destaca se subiu (nova mensagem) e já tínhamos baseline
+      if (initializedRef.current && next > prev) {
+        const tabVisible = typeof document !== "undefined" && !document.hidden;
+        if (tabVisible) {
+          playNotificationSound();
+          triggerHighlight();
+        }
+      }
+      prevCountRef.current = next;
+      initializedRef.current = true;
+      setCount(next);
+    }
+  }, [userId, triggerHighlight]);
 
   useEffect(() => {
     if (!userId) return;
@@ -55,10 +109,25 @@ export const useUnreadMessages = (userId: string | undefined) => {
 
     return () => {
       supabase.removeChannel(channel);
+      if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
     };
   }, [userId, refresh]);
 
-  return { unreadCount: count, refresh };
+  return { unreadCount: count, refresh, highlight };
+};
+
+/**
+ * Exclui uma conversa (mensagens + registro). Apenas participantes.
+ */
+export const deleteConversation = async (conversationId: string): Promise<boolean> => {
+  const { data, error } = await supabase.rpc("delete_conversation", {
+    _conversation_id: conversationId,
+  });
+  if (error) {
+    console.error("Erro ao excluir conversa:", error);
+    return false;
+  }
+  return data === true;
 };
 
 /**
