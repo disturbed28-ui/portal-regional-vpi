@@ -44,11 +44,12 @@ export const ChatManager = ({
   );
 
   // Atender pedido pendente (clique em usuário online)
-  if (pendingOpenWith) {
+  useEffect(() => {
+    if (!pendingOpenWith) return;
     const req = pendingOpenWith;
     clearPendingOpen();
     openConversationWithUser(req.userId, req.name);
-  }
+  }, [pendingOpenWith, clearPendingOpen, openConversationWithUser]);
 
   return (
     <>
