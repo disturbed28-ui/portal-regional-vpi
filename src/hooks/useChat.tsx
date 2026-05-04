@@ -268,8 +268,17 @@ export const useConversationMessages = (
       .then(({ data }) => {
         setMessages((data as ChatMessage[]) ?? []);
         setLoading(false);
-        // Marcar como lidas
-        supabase.rpc("mark_conversation_read", { _conversation_id: conversationId });
+        // Marcar como lidas e notificar listeners locais
+        supabase
+          .rpc("mark_conversation_read", { _conversation_id: conversationId })
+          .then(({ data: updated }) => {
+            if (typeof updated === "number" && updated > 0) {
+              window.dispatchEvent(new CustomEvent("messages:read"));
+            } else {
+              // Mesmo sem updates, dispara para sincronizar UI
+              window.dispatchEvent(new CustomEvent("messages:read"));
+            }
+          });
       });
   }, [conversationId, userId]);
 
