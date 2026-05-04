@@ -304,7 +304,9 @@ export const useConversationMessages = (
           });
           // Se eu sou destinatário, marca como lida
           if (msg.sender_id !== userId) {
-            supabase.rpc("mark_conversation_read", { _conversation_id: conversationId });
+            supabase
+              .rpc("mark_conversation_read", { _conversation_id: conversationId })
+              .then(() => window.dispatchEvent(new CustomEvent("messages:read")));
           }
         }
       )
