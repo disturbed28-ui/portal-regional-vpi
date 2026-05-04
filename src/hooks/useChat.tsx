@@ -107,8 +107,19 @@ export const useUnreadMessages = (userId: string | undefined) => {
       )
       .subscribe();
 
+    // Refresh quando outras partes do app marcam mensagens como lidas
+    const onLocalRead = () => refresh();
+    window.addEventListener("messages:read", onLocalRead);
+    // Refresh ao voltar foco da aba (garantia extra)
+    const onVisible = () => {
+      if (!document.hidden) refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
     return () => {
       supabase.removeChannel(channel);
+      window.removeEventListener("messages:read", onLocalRead);
+      document.removeEventListener("visibilitychange", onVisible);
       if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
     };
   }, [userId, refresh]);
