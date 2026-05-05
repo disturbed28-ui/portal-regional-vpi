@@ -33,6 +33,8 @@ interface SearchResult {
   photo_url: string | null;
   regional: string | null;
   divisao: string | null;
+  regionais?: { nome: string | null } | null;
+  divisoes?: { nome: string | null } | null;
 }
 
 const formatWhen = (iso: string | null) => {
