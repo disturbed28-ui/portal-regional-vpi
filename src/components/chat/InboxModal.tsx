@@ -74,15 +74,20 @@ export const InboxModal = ({ open, onOpenChange, userId, onSelectConversation }:
       const ascii = normalizeSearchTerm(term);
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, nome_colete, photo_url, regional, divisao")
+        .select("id, nome_colete, photo_url, regional, divisao, regionais:regional_id(nome), divisoes:divisao_id(nome)")
         .eq("profile_status", "Ativo")
         .ilike("nome_colete", `%${ascii}%`)
         .order("nome_colete")
         .limit(20);
       if (!error && data) {
-        setResults(
-          (data as SearchResult[]).filter((r) => r.id !== userId)
-        );
+        const mapped = (data as any[])
+          .filter((r) => r.id !== userId)
+          .map((r) => ({
+            ...r,
+            regional: r.regional || r.regionais?.nome || null,
+            divisao: r.divisao || r.divisoes?.nome || null,
+          })) as SearchResult[];
+        setResults(mapped);
       }
       setSearching(false);
     }, 300);
