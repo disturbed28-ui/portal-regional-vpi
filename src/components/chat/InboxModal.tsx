@@ -253,8 +253,9 @@ export const InboxModal = ({ open, onOpenChange, userId, onSelectConversation }:
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir conversa?</AlertDialogTitle>
             <AlertDialogDescription>
-              A conversa com <strong>{confirmDelete?.name}</strong> e todas as mensagens
-              serão removidas permanentemente para os dois lados. Esta ação não pode ser desfeita.
+              A conversa com <strong>{confirmDelete?.name}</strong> será removida apenas
+              da sua caixa. O outro participante continuará vendo o histórico, e a conversa
+              voltará a aparecer pra você se ele enviar uma nova mensagem.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
