@@ -220,7 +220,7 @@ export const useConversations = (userId: string | undefined) => {
       unreadMap.set(r.conversation_id, (unreadMap.get(r.conversation_id) ?? 0) + 1);
     });
 
-    const summaries: ConversationSummary[] = convs.map((c) => {
+    const summaries: ConversationSummary[] = visibleConvs.map((c: any) => {
       const otherId = c.participant_a === userId ? c.participant_b : c.participant_a;
       const prof = profileMap.get(otherId);
       return {
