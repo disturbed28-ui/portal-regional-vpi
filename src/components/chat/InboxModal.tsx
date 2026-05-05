@@ -31,6 +31,8 @@ interface SearchResult {
   id: string;
   nome_colete: string;
   photo_url: string | null;
+  regional: string | null;
+  divisao: string | null;
 }
 
 const formatWhen = (iso: string | null) => {
@@ -70,7 +72,7 @@ export const InboxModal = ({ open, onOpenChange, userId, onSelectConversation }:
       const ascii = normalizeSearchTerm(term);
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, nome_colete, photo_url")
+        .select("id, nome_colete, photo_url, regional, divisao")
         .eq("profile_status", "Ativo")
         .ilike("nome_colete", `%${ascii}%`)
         .order("nome_colete")
@@ -150,7 +152,12 @@ export const InboxModal = ({ open, onOpenChange, userId, onSelectConversation }:
                     />
                     <div className="flex-1 min-w-0">
                       <span className="font-medium truncate block">{name}</span>
-                      <span className="text-xs text-muted-foreground">Iniciar conversa</span>
+                      {(r.regional || r.divisao) && (
+                        <span className="text-xs text-muted-foreground truncate block">
+                          {[r.divisao, r.regional].filter(Boolean).map(removeAccents).join(" • ")}
+                        </span>
+                      )}
+                      <span className="text-[10px] text-muted-foreground/70">Iniciar conversa</span>
                     </div>
                     <UserPlus className="h-4 w-4 text-primary shrink-0" />
                   </button>
