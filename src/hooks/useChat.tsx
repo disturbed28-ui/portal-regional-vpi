@@ -163,8 +163,24 @@ export const useConversations = (userId: string | undefined) => {
       return;
     }
 
+    // Filtrar conversas ocultadas (exclusão unilateral): só mostrar se ainda não excluiu
+    // OU se chegou mensagem nova após a exclusão (last_message_at > deleted_at do usuário)
+    const visibleConvs = convs.filter((c: any) => {
+      const myDeletedAt =
+        c.participant_a === userId ? c.deleted_at_a : c.deleted_at_b;
+      if (!myDeletedAt) return true;
+      if (!c.last_message_at) return false;
+      return new Date(c.last_message_at) > new Date(myDeletedAt);
+    });
+
+    if (visibleConvs.length === 0) {
+      setConversations([]);
+      setLoading(false);
+      return;
+    }
+
     // Coletar IDs dos outros participantes
-    const otherIds = convs.map((c) =>
+    const otherIds = visibleConvs.map((c) =>
       c.participant_a === userId ? c.participant_b : c.participant_a
     );
 
@@ -181,20 +197,30 @@ export const useConversations = (userId: string | undefined) => {
     // Buscar contagem não lida por conversa
     const { data: unreadRows } = await supabase
       .from("messages")
-      .select("conversation_id")
+      .select("conversation_id, created_at")
       .is("read_at", null)
       .neq("sender_id", userId)
       .in(
         "conversation_id",
-        convs.map((c) => c.id)
+        visibleConvs.map((c) => c.id)
       );
 
+    // Mapear cutoff de exclusão por conversa
+    const cutoffMap = new Map<string, Date | null>();
+    visibleConvs.forEach((c: any) => {
+      const myDeletedAt =
+        c.participant_a === userId ? c.deleted_at_a : c.deleted_at_b;
+      cutoffMap.set(c.id, myDeletedAt ? new Date(myDeletedAt) : null);
+    });
+
     const unreadMap = new Map<string, number>();
-    (unreadRows ?? []).forEach((r) => {
+    (unreadRows ?? []).forEach((r: any) => {
+      const cutoff = cutoffMap.get(r.conversation_id);
+      if (cutoff && new Date(r.created_at) <= cutoff) return;
       unreadMap.set(r.conversation_id, (unreadMap.get(r.conversation_id) ?? 0) + 1);
     });
 
-    const summaries: ConversationSummary[] = convs.map((c) => {
+    const summaries: ConversationSummary[] = visibleConvs.map((c: any) => {
       const otherId = c.participant_a === userId ? c.participant_b : c.participant_a;
       const prof = profileMap.get(otherId);
       return {
