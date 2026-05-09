@@ -346,6 +346,40 @@ const Perfil = () => {
                       className="mt-1"
                     />
                   </div>
+
+                  {/* Instagram (com botão de salvar próprio) */}
+                  <div>
+                    <Label htmlFor="instagram" className="text-sm font-medium flex items-center gap-1.5">
+                      <Instagram className="h-4 w-4" />
+                      Instagram
+                      {instagramPendente && (
+                        <Badge variant="destructive" className="ml-1 text-[10px] h-4 px-1.5">
+                          Pendente
+                        </Badge>
+                      )}
+                    </Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        id="instagram"
+                        type="text"
+                        placeholder="@seuusuario  ou  N/A"
+                        value={instagram}
+                        onChange={(e) => setInstagram(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleSalvarInstagram}
+                        disabled={savingInstagram || !instagram.trim()}
+                        size="sm"
+                      >
+                        {savingInstagram ? "Salvando..." : "Salvar"}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Informe seu @ do Instagram. Se não possuir conta, digite <strong>N/A</strong>.
+                    </p>
+                  </div>
                   
                   {/* Status (somente leitura) */}
                   <div>
