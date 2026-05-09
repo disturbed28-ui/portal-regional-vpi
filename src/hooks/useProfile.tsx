@@ -10,6 +10,7 @@ interface Profile {
   profile_status: string;
   observacao: string | null;
   telefone: string | null;
+  instagram: string | null;
   regional_id: string | null;
   divisao_id: string | null;
   cargo_id: string | null;
