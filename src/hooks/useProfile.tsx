@@ -152,7 +152,7 @@ export const useProfile = (userId: string | undefined) => {
 
     // Subscribe to profile changes
     const channel = supabase
-      .channel(`profile-changes-${userId}`)
+      .channel(`profile-changes-${userId}-${Math.random().toString(36).slice(2, 10)}`)
       .on(
         'postgres_changes',
         {
