@@ -242,7 +242,7 @@ export const useProfile = (userId: string | undefined) => {
 
     // Subscribe to integrantes_portal changes
     const integranteChannel = supabase
-      .channel(`integrante-changes-${userId}`)
+      .channel(`integrante-changes-${userId}-${Math.random().toString(36).slice(2, 10)}`)
       .on(
         'postgres_changes',
         {
