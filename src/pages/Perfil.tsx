@@ -16,7 +16,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useScreenAccess } from "@/hooks/useScreenAccess";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Instagram, AlertTriangle } from "lucide-react";
+import { validateInstagram, isInstagramPendente } from "@/lib/instagramUtils";
 
 const Perfil = () => {
   const navigate = useNavigate();
@@ -26,8 +27,10 @@ const Perfil = () => {
   const { hasAccess, loading: loadingAccess } = useScreenAccess('/perfil', user?.id);
   const [nomeColete, setNomeColete] = useState("");
   const [telefone, setTelefone] = useState("");
-  
-  // Carregar nome_colete existente do perfil
+  const [instagram, setInstagram] = useState("");
+  const [savingInstagram, setSavingInstagram] = useState(false);
+
+  // Carregar dados existentes do perfil
   useEffect(() => {
     if (profile?.nome_colete) {
       setNomeColete(profile.nome_colete);
@@ -35,7 +38,12 @@ const Perfil = () => {
     if (profile?.telefone) {
       setTelefone(profile.telefone);
     }
+    if ((profile as any)?.instagram) {
+      setInstagram((profile as any).instagram);
+    }
   }, [profile]);
+
+  const instagramPendente = isInstagramPendente((profile as any)?.instagram);
 
   const getStatusMessage = () => {
     switch (profile?.profile_status) {
