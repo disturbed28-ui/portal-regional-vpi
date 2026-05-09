@@ -287,6 +287,24 @@ const Perfil = () => {
           </Card>
         )}
 
+        {/* Alerta de Instagram pendente */}
+        {instagramPendente && (
+          <Card className="border-yellow-500 bg-yellow-500/10">
+            <CardContent className="p-4 flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-yellow-700 dark:text-yellow-300">
+                  Preencha seu @ do Instagram
+                </p>
+                <p className="text-xs text-yellow-700/90 dark:text-yellow-300/90">
+                  Para continuar utilizando o sistema, informe o seu @ do Instagram no campo abaixo.
+                  Caso não possua, digite <strong>N/A</strong>.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Accordion com seções */}
         <Accordion type="multiple" defaultValue={["basicos", "estrutura"]} className="space-y-2">
           
