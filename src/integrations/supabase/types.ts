@@ -2099,6 +2099,7 @@ export type Database = {
           funcao_id: string | null
           grau: string | null
           id: string
+          instagram: string | null
           last_access_at: string | null
           name: string
           nome_colete: string | null
@@ -2124,6 +2125,7 @@ export type Database = {
           funcao_id?: string | null
           grau?: string | null
           id: string
+          instagram?: string | null
           last_access_at?: string | null
           name?: string
           nome_colete?: string | null
@@ -2149,6 +2151,7 @@ export type Database = {
           funcao_id?: string | null
           grau?: string | null
           id?: string
+          instagram?: string | null
           last_access_at?: string | null
           name?: string
           nome_colete?: string | null

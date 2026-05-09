@@ -16,7 +16,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useScreenAccess } from "@/hooks/useScreenAccess";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Instagram, AlertTriangle } from "lucide-react";
+import { validateInstagram, isInstagramPendente } from "@/lib/instagramUtils";
 
 const Perfil = () => {
   const navigate = useNavigate();
@@ -26,8 +27,10 @@ const Perfil = () => {
   const { hasAccess, loading: loadingAccess } = useScreenAccess('/perfil', user?.id);
   const [nomeColete, setNomeColete] = useState("");
   const [telefone, setTelefone] = useState("");
-  
-  // Carregar nome_colete existente do perfil
+  const [instagram, setInstagram] = useState("");
+  const [savingInstagram, setSavingInstagram] = useState(false);
+
+  // Carregar dados existentes do perfil
   useEffect(() => {
     if (profile?.nome_colete) {
       setNomeColete(profile.nome_colete);
@@ -35,7 +38,12 @@ const Perfil = () => {
     if (profile?.telefone) {
       setTelefone(profile.telefone);
     }
+    if ((profile as any)?.instagram) {
+      setInstagram((profile as any).instagram);
+    }
   }, [profile]);
+
+  const instagramPendente = isInstagramPendente((profile as any)?.instagram);
 
   const getStatusMessage = () => {
     switch (profile?.profile_status) {
@@ -163,6 +171,45 @@ const Perfil = () => {
     }
   };
 
+  const handleSalvarInstagram = async () => {
+    const result = validateInstagram(instagram);
+    if (!result.valid || !result.normalized) {
+      toast({
+        title: "Instagram inválido",
+        description: result.error || "Informe um @ válido ou N/A.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!user?.id) return;
+
+    setSavingInstagram(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ instagram: result.normalized })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      setInstagram(result.normalized);
+      toast({
+        title: "Instagram salvo",
+        description: "Obrigado! Você já pode continuar usando o sistema.",
+      });
+    } catch (error) {
+      console.error('Erro ao salvar Instagram:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar o Instagram. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingInstagram(false);
+    }
+  };
+
   const integrante = profile?.integrante;
 
   // Loading de autenticacao ou permissoes
@@ -240,6 +287,24 @@ const Perfil = () => {
           </Card>
         )}
 
+        {/* Alerta de Instagram pendente */}
+        {instagramPendente && (
+          <Card className="border-yellow-500 bg-yellow-500/10">
+            <CardContent className="p-4 flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-yellow-700 dark:text-yellow-300">
+                  Preencha seu @ do Instagram
+                </p>
+                <p className="text-xs text-yellow-700/90 dark:text-yellow-300/90">
+                  Para continuar utilizando o sistema, informe o seu @ do Instagram no campo abaixo.
+                  Caso não possua, digite <strong>N/A</strong>.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Accordion com seções */}
         <Accordion type="multiple" defaultValue={["basicos", "estrutura"]} className="space-y-2">
           
@@ -280,6 +345,40 @@ const Perfil = () => {
                       onChange={(e) => setTelefone(e.target.value)}
                       className="mt-1"
                     />
+                  </div>
+
+                  {/* Instagram (com botão de salvar próprio) */}
+                  <div>
+                    <Label htmlFor="instagram" className="text-sm font-medium flex items-center gap-1.5">
+                      <Instagram className="h-4 w-4" />
+                      Instagram
+                      {instagramPendente && (
+                        <Badge variant="destructive" className="ml-1 text-[10px] h-4 px-1.5">
+                          Pendente
+                        </Badge>
+                      )}
+                    </Label>
+                    <div className="flex gap-2 mt-1">
+                      <Input
+                        id="instagram"
+                        type="text"
+                        placeholder="@seuusuario  ou  N/A"
+                        value={instagram}
+                        onChange={(e) => setInstagram(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleSalvarInstagram}
+                        disabled={savingInstagram || !instagram.trim()}
+                        size="sm"
+                      >
+                        {savingInstagram ? "Salvando..." : "Salvar"}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Informe seu @ do Instagram. Se não possuir conta, digite <strong>N/A</strong>.
+                    </p>
                   </div>
                   
                   {/* Status (somente leitura) */}

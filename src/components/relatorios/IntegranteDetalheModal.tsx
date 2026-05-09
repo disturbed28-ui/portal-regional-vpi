@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Check, X, Mail, Phone } from 'lucide-react';
+import { Check, X, Mail, Phone, Instagram } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -36,6 +36,7 @@ interface IntegranteDetalheModalProps {
     // Dados de contato (vindos do profile vinculado)
     email?: string | null;
     telefone?: string | null;
+    instagram?: string | null;
   } | null;
 }
 
@@ -157,7 +158,7 @@ export const IntegranteDetalheModal = ({ open, onOpenChange, integrante }: Integ
           </section>
 
           {/* Contato - Apenas se vinculado e tiver dados */}
-          {integrante.vinculado && (integrante.email || integrante.telefone) && (
+          {integrante.vinculado && (integrante.email || integrante.telefone || integrante.instagram) && (
             <>
               <Separator />
               <section>
@@ -189,6 +190,26 @@ export const IntegranteDetalheModal = ({ open, onOpenChange, integrante }: Integ
                       >
                         {integrante.telefone}
                       </a>
+                    </div>
+                  )}
+                  {integrante.instagram && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground flex items-center gap-1">
+                        <Instagram className="h-3 w-3" />
+                        Instagram:
+                      </span>
+                      {integrante.instagram.startsWith('@') ? (
+                        <a
+                          href={`https://instagram.com/${integrante.instagram.replace(/^@/, '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {integrante.instagram}
+                        </a>
+                      ) : (
+                        <span className="font-medium">{integrante.instagram}</span>
+                      )}
                     </div>
                   )}
                 </div>

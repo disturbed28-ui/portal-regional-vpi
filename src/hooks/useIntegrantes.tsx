@@ -36,6 +36,7 @@ export interface IntegrantePortal {
   // Dados de contato (vindos do profile vinculado)
   email?: string | null;
   telefone?: string | null;
+  instagram?: string | null;
 }
 
 interface UseIntegrantesOptions {
@@ -107,7 +108,8 @@ export const useIntegrantes = (options?: UseIntegrantesOptions) => {
         *,
         profiles:profile_id (
           email,
-          telefone
+          telefone,
+          instagram
         )
       `)
       .order('nome_colete');
@@ -135,6 +137,7 @@ export const useIntegrantes = (options?: UseIntegrantesOptions) => {
         ...integrante,
         email: integrante.profiles?.email || null,
         telefone: integrante.profiles?.telefone || null,
+        instagram: integrante.profiles?.instagram || null,
       }));
       
       setIntegrantes(integrantesComContato);

@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AccessLogProvider } from "@/components/AccessLogProvider";
 import { AutoImportProvider } from "@/components/AutoImportProvider";
+import { InstagramGuard } from "@/components/InstagramGuard";
 import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Perfil from "./pages/Perfil";
@@ -49,6 +50,7 @@ const App = () => (
         <BrowserRouter>
           <AccessLogProvider>
             <AutoImportProvider>
+              <InstagramGuard>
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/perfil" element={<Perfil />} />
@@ -82,6 +84,7 @@ const App = () => (
                 <Route path="/termos-servico" element={<TermosServico />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              </InstagramGuard>
             </AutoImportProvider>
           </AccessLogProvider>
         </BrowserRouter>
