@@ -171,6 +171,45 @@ const Perfil = () => {
     }
   };
 
+  const handleSalvarInstagram = async () => {
+    const result = validateInstagram(instagram);
+    if (!result.valid || !result.normalized) {
+      toast({
+        title: "Instagram inválido",
+        description: result.error || "Informe um @ válido ou N/A.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!user?.id) return;
+
+    setSavingInstagram(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ instagram: result.normalized })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      setInstagram(result.normalized);
+      toast({
+        title: "Instagram salvo",
+        description: "Obrigado! Você já pode continuar usando o sistema.",
+      });
+    } catch (error) {
+      console.error('Erro ao salvar Instagram:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar o Instagram. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingInstagram(false);
+    }
+  };
+
   const integrante = profile?.integrante;
 
   // Loading de autenticacao ou permissoes
