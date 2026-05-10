@@ -275,7 +275,9 @@ async function fetchDadosRelatorio(
     dados_mes_anterior: dadosMesAnterior,
     dados_integrantes_ativos: dadosIntegrantesAtivos,
     total_integrantes_ativos: totalGeralAtivos,
-    mapNomeParaNomeAscii: mapNomeParaNomeAscii // Retornar mapa para uso nos blocos
+    mapNomeParaNomeAscii: mapNomeParaNomeAscii, // Retornar mapa para uso nos blocos
+    mapIntegranteIdToRegistro,
+    mapNomeColeteToRegistro
   };
 }
 
