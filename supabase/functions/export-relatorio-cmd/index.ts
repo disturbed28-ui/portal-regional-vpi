@@ -778,6 +778,8 @@ function generateXlsxReport(dados: DadosRelatorio): ArrayBuffer {
   row = adicionarBlocoCaveiras(wsData, dados, row);
   row = adicionarBlocoSgtArmas(wsData, dados, row);
   row = adicionarBlocoCombateInsano(wsData, dados, row);
+  row = adicionarBlocoLobos(wsData, dados, row);
+  row = adicionarBlocoUrsinhos(wsData, dados, row);
   
   // Criar worksheet
   const ws = XLSX.utils.aoa_to_sheet(wsData);
