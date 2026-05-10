@@ -423,30 +423,45 @@ function adicionarBlocoInadimplencia(wsData: any[][], dados: DadosRelatorio, row
   return row;
 }
 
+// Helper: resolve número do integrante (registro_id)
+function resolverRegistro(dados: DadosRelatorio, integrante_id?: string, nome_colete?: string): string {
+  if (integrante_id && dados.mapIntegranteIdToRegistro.has(integrante_id)) {
+    return String(dados.mapIntegranteIdToRegistro.get(integrante_id));
+  }
+  if (nome_colete) {
+    const key = String(nome_colete).trim().toUpperCase();
+    if (dados.mapNomeColeteToRegistro.has(key)) {
+      return String(dados.mapNomeColeteToRegistro.get(key));
+    }
+  }
+  return '';
+}
+
 // Bloco 7: Ações de Inadimplência
 function adicionarBlocoAcoesInadimplencia(wsData: any[][], dados: DadosRelatorio, row: number): number {
   wsData[row++] = ['AÇÕES DE INADIMPLÊNCIA'];
-  wsData[row++] = ['Divisão', 'Nome', 'Ação de Cobrança'];
-  
+  wsData[row++] = ['Divisão', 'Nº Integrante', 'Nome', 'Ação de Cobrança'];
+
   let temAcoes = false;
-  
+
   dados.divisoes.forEach(div => {
     const inadimplencias = div.relatorio?.inadimplencias_json || [];
     inadimplencias.forEach((inad: any) => {
-      // Exportar TODAS as inadimplências, mesmo sem ação descrita
+      const numero = resolverRegistro(dados, inad.integrante_id, inad.nome_colete);
       wsData[row++] = [
         div.divisao_nome,
+        numero,
         inad.nome_colete || '',
-        inad.acao_cobranca || '-'  // Usar "-" quando não tem ação
+        inad.acao_cobranca || '-'
       ];
       temAcoes = true;
     });
   });
-  
+
   if (!temAcoes) {
     wsData[row++] = ['Sem ações de inadimplência'];
   }
-  
+
   wsData[row++] = [];
   return row;
 }
@@ -454,33 +469,31 @@ function adicionarBlocoAcoesInadimplencia(wsData: any[][], dados: DadosRelatorio
 // Bloco 8: Entradas e Saídas Detalhado
 function adicionarBlocoEntradasSaidas(wsData: any[][], dados: DadosRelatorio, row: number): number {
   wsData[row++] = ['ENTRADAS E SAÍDAS DETALHADO'];
-  wsData[row++] = ['Tipo', 'Divisão', 'Nome', 'ID Integrante', 'Data', 'Motivo'];
+  wsData[row++] = ['Tipo', 'Divisão', 'Nº Integrante', 'Nome', 'Data', 'Motivo'];
 
   let temMovimentacoes = false;
 
   dados.divisoes.forEach(div => {
-    // Entradas
     const entradas = div.relatorio?.entradas_json || [];
     entradas.forEach((entrada: any) => {
       wsData[row++] = [
         'ENTRADA',
         div.divisao_nome,
+        resolverRegistro(dados, entrada.integrante_id, entrada.nome_colete),
         entrada.nome_colete || '',
-        entrada.integrante_id || '',
         entrada.data_entrada || '',
         entrada.motivo_entrada || ''
       ];
       temMovimentacoes = true;
     });
 
-    // Saídas
     const saidas = div.relatorio?.saidas_json || [];
     saidas.forEach((saida: any) => {
       wsData[row++] = [
         'SAÍDA',
         div.divisao_nome,
+        resolverRegistro(dados, saida.integrante_id, saida.nome_colete),
         saida.nome_colete || '',
-        saida.integrante_id || '',
         saida.data_saida || '',
         saida.justificativa || saida.motivo_codigo || ''
       ];
