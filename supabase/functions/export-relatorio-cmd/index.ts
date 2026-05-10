@@ -37,6 +37,12 @@ interface DadosIntegrantesAtivos {
     batedores: number;
     caveiras: number;
     caveiras_suplentes: number;
+    lobos: number;
+    ursinhos: number;
+    nomes_caveiras: string[];
+    nomes_caveiras_suplentes: string[];
+    nomes_lobos: string[];
+    nomes_ursinhos: string[];
   };
 }
 
@@ -52,6 +58,10 @@ interface DadosRelatorio {
   dados_integrantes_ativos: DadosIntegrantesAtivos;
   total_integrantes_ativos: number;
   mapNomeParaNomeAscii: Map<string, string>;
+  /** Map UUID integrante_portal -> registro_id (numero) */
+  mapIntegranteIdToRegistro: Map<string, number>;
+  /** Map nome_colete (upper) -> registro_id (numero) */
+  mapNomeColeteToRegistro: Map<string, number>;
 }
 
 // Extrai número romano do nome da regional
@@ -166,11 +176,36 @@ async function fetchDadosRelatorio(
   // 5. Buscar integrantes ATIVOS da regional (dados em tempo real)
   const { data: integrantesAtivos, error: integrantesError } = await supabase
     .from('integrantes_portal')
-    .select('divisao_texto, tem_moto, tem_carro, sgt_armas, combate_insano, batedor, caveira, caveira_suplente')
+    .select('id, registro_id, nome_colete, divisao_texto, tem_moto, tem_carro, sgt_armas, combate_insano, batedor, caveira, caveira_suplente, lobo, ursinho')
     .eq('ativo', true)
     .eq('regional_id', regional_id);
 
   if (integrantesError) throw new Error(`Erro ao buscar integrantes: ${integrantesError.message}`);
+
+  // Mapas auxiliares para resolução de número de integrante (registro_id)
+  const mapIntegranteIdToRegistro = new Map<string, number>();
+  const mapNomeColeteToRegistro = new Map<string, number>();
+  (integrantesAtivos || []).forEach((i: any) => {
+    if (i.id && i.registro_id != null) mapIntegranteIdToRegistro.set(i.id, i.registro_id);
+    if (i.nome_colete && i.registro_id != null) {
+      mapNomeColeteToRegistro.set(String(i.nome_colete).trim().toUpperCase(), i.registro_id);
+    }
+  });
+
+  // Também buscar inativos para resolver registro_id de saídas/inadimplência
+  const { data: integrantesTodos } = await supabase
+    .from('integrantes_portal')
+    .select('id, registro_id, nome_colete')
+    .eq('regional_id', regional_id);
+  (integrantesTodos || []).forEach((i: any) => {
+    if (i.id && i.registro_id != null && !mapIntegranteIdToRegistro.has(i.id)) {
+      mapIntegranteIdToRegistro.set(i.id, i.registro_id);
+    }
+    if (i.nome_colete && i.registro_id != null) {
+      const key = String(i.nome_colete).trim().toUpperCase();
+      if (!mapNomeColeteToRegistro.has(key)) mapNomeColeteToRegistro.set(key, i.registro_id);
+    }
+  });
 
   // Processar dados por divisão
   // IMPORTANTE: usar divisao_texto como chave (já está MAIÚSCULO sem acentos)
@@ -183,7 +218,10 @@ async function fetchDadosRelatorio(
       dadosIntegrantesAtivos[divisaoChave] = {
         total: 0, moto: 0, carro: 0, sem_veiculo: 0,
         sgt_armas: 0, combate_insano: 0, batedores: 0,
-        caveiras: 0, caveiras_suplentes: 0
+        caveiras: 0, caveiras_suplentes: 0,
+        lobos: 0, ursinhos: 0,
+        nomes_caveiras: [], nomes_caveiras_suplentes: [],
+        nomes_lobos: [], nomes_ursinhos: [],
       };
     }
     
@@ -200,8 +238,10 @@ async function fetchDadosRelatorio(
     if (integrante.sgt_armas) stats.sgt_armas++;
     if (integrante.combate_insano) stats.combate_insano++;
     if (integrante.batedor) stats.batedores++;
-    if (integrante.caveira) stats.caveiras++;
-    if (integrante.caveira_suplente) stats.caveiras_suplentes++;
+    if (integrante.caveira) { stats.caveiras++; stats.nomes_caveiras.push(integrante.nome_colete); }
+    if (integrante.caveira_suplente) { stats.caveiras_suplentes++; stats.nomes_caveiras_suplentes.push(integrante.nome_colete); }
+    if (integrante.lobo) { stats.lobos++; stats.nomes_lobos.push(integrante.nome_colete); }
+    if (integrante.ursinho) { stats.ursinhos++; stats.nomes_ursinhos.push(integrante.nome_colete); }
   });
 
   console.log('[Fetch Dados] Total integrantes ativos:', totalGeralAtivos);
@@ -235,7 +275,9 @@ async function fetchDadosRelatorio(
     dados_mes_anterior: dadosMesAnterior,
     dados_integrantes_ativos: dadosIntegrantesAtivos,
     total_integrantes_ativos: totalGeralAtivos,
-    mapNomeParaNomeAscii: mapNomeParaNomeAscii // Retornar mapa para uso nos blocos
+    mapNomeParaNomeAscii: mapNomeParaNomeAscii, // Retornar mapa para uso nos blocos
+    mapIntegranteIdToRegistro,
+    mapNomeColeteToRegistro
   };
 }
 
@@ -381,30 +423,45 @@ function adicionarBlocoInadimplencia(wsData: any[][], dados: DadosRelatorio, row
   return row;
 }
 
+// Helper: resolve número do integrante (registro_id)
+function resolverRegistro(dados: DadosRelatorio, integrante_id?: string, nome_colete?: string): string {
+  if (integrante_id && dados.mapIntegranteIdToRegistro.has(integrante_id)) {
+    return String(dados.mapIntegranteIdToRegistro.get(integrante_id));
+  }
+  if (nome_colete) {
+    const key = String(nome_colete).trim().toUpperCase();
+    if (dados.mapNomeColeteToRegistro.has(key)) {
+      return String(dados.mapNomeColeteToRegistro.get(key));
+    }
+  }
+  return '';
+}
+
 // Bloco 7: Ações de Inadimplência
 function adicionarBlocoAcoesInadimplencia(wsData: any[][], dados: DadosRelatorio, row: number): number {
   wsData[row++] = ['AÇÕES DE INADIMPLÊNCIA'];
-  wsData[row++] = ['Divisão', 'Nome', 'Ação de Cobrança'];
-  
+  wsData[row++] = ['Divisão', 'Nº Integrante', 'Nome', 'Ação de Cobrança'];
+
   let temAcoes = false;
-  
+
   dados.divisoes.forEach(div => {
     const inadimplencias = div.relatorio?.inadimplencias_json || [];
     inadimplencias.forEach((inad: any) => {
-      // Exportar TODAS as inadimplências, mesmo sem ação descrita
+      const numero = resolverRegistro(dados, inad.integrante_id, inad.nome_colete);
       wsData[row++] = [
         div.divisao_nome,
+        numero,
         inad.nome_colete || '',
-        inad.acao_cobranca || '-'  // Usar "-" quando não tem ação
+        inad.acao_cobranca || '-'
       ];
       temAcoes = true;
     });
   });
-  
+
   if (!temAcoes) {
     wsData[row++] = ['Sem ações de inadimplência'];
   }
-  
+
   wsData[row++] = [];
   return row;
 }
@@ -412,33 +469,31 @@ function adicionarBlocoAcoesInadimplencia(wsData: any[][], dados: DadosRelatorio
 // Bloco 8: Entradas e Saídas Detalhado
 function adicionarBlocoEntradasSaidas(wsData: any[][], dados: DadosRelatorio, row: number): number {
   wsData[row++] = ['ENTRADAS E SAÍDAS DETALHADO'];
-  wsData[row++] = ['Tipo', 'Divisão', 'Nome', 'ID Integrante', 'Data', 'Motivo'];
+  wsData[row++] = ['Tipo', 'Divisão', 'Nº Integrante', 'Nome', 'Data', 'Motivo'];
 
   let temMovimentacoes = false;
 
   dados.divisoes.forEach(div => {
-    // Entradas
     const entradas = div.relatorio?.entradas_json || [];
     entradas.forEach((entrada: any) => {
       wsData[row++] = [
         'ENTRADA',
         div.divisao_nome,
+        resolverRegistro(dados, entrada.integrante_id, entrada.nome_colete),
         entrada.nome_colete || '',
-        entrada.integrante_id || '',
         entrada.data_entrada || '',
         entrada.motivo_entrada || ''
       ];
       temMovimentacoes = true;
     });
 
-    // Saídas
     const saidas = div.relatorio?.saidas_json || [];
     saidas.forEach((saida: any) => {
       wsData[row++] = [
         'SAÍDA',
         div.divisao_nome,
+        resolverRegistro(dados, saida.integrante_id, saida.nome_colete),
         saida.nome_colete || '',
-        saida.integrante_id || '',
         saida.data_saida || '',
         saida.justificativa || saida.motivo_codigo || ''
       ];
@@ -644,6 +699,62 @@ function adicionarBlocoCombateInsano(wsData: any[][], dados: DadosRelatorio, row
   return row;
 }
 
+// Bloco 16: Lobos (com nomes por divisão)
+function adicionarBlocoLobos(wsData: any[][], dados: DadosRelatorio, row: number): number {
+  wsData[row++] = ['LOBOS'];
+  wsData[row++] = ['Divisão', 'Nome', 'Subtotal'];
+
+  let totalGeral = 0;
+
+  dados.divisoes.forEach(div => {
+    const nomeAscii = dados.mapNomeParaNomeAscii.get(div.divisao_nome) || div.divisao_nome.toUpperCase();
+    const chaveAtivos = nomeAscii.toUpperCase();
+    const stats = dados.dados_integrantes_ativos[chaveAtivos];
+    const nomes = stats?.nomes_lobos || [];
+
+    if (nomes.length === 0) {
+      wsData[row++] = [div.divisao_nome, '-', 0];
+    } else {
+      nomes.forEach((nome, idx) => {
+        wsData[row++] = [div.divisao_nome, nome, idx === nomes.length - 1 ? nomes.length : ''];
+      });
+    }
+    totalGeral += nomes.length;
+  });
+
+  wsData[row++] = ['TOTAL GERAL', '', totalGeral];
+  wsData[row++] = [];
+  return row;
+}
+
+// Bloco 17: Ursinhos (com nomes por divisão)
+function adicionarBlocoUrsinhos(wsData: any[][], dados: DadosRelatorio, row: number): number {
+  wsData[row++] = ['URSINHOS'];
+  wsData[row++] = ['Divisão', 'Nome', 'Subtotal'];
+
+  let totalGeral = 0;
+
+  dados.divisoes.forEach(div => {
+    const nomeAscii = dados.mapNomeParaNomeAscii.get(div.divisao_nome) || div.divisao_nome.toUpperCase();
+    const chaveAtivos = nomeAscii.toUpperCase();
+    const stats = dados.dados_integrantes_ativos[chaveAtivos];
+    const nomes = stats?.nomes_ursinhos || [];
+
+    if (nomes.length === 0) {
+      wsData[row++] = [div.divisao_nome, '-', 0];
+    } else {
+      nomes.forEach((nome, idx) => {
+        wsData[row++] = [div.divisao_nome, nome, idx === nomes.length - 1 ? nomes.length : ''];
+      });
+    }
+    totalGeral += nomes.length;
+  });
+
+  wsData[row++] = ['TOTAL GERAL', '', totalGeral];
+  wsData[row++] = [];
+  return row;
+}
+
 // ============================================================================
 // GERAÇÃO DO XLSX
 // ============================================================================
@@ -667,6 +778,8 @@ function generateXlsxReport(dados: DadosRelatorio): ArrayBuffer {
   row = adicionarBlocoCaveiras(wsData, dados, row);
   row = adicionarBlocoSgtArmas(wsData, dados, row);
   row = adicionarBlocoCombateInsano(wsData, dados, row);
+  row = adicionarBlocoLobos(wsData, dados, row);
+  row = adicionarBlocoUrsinhos(wsData, dados, row);
   
   // Criar worksheet
   const ws = XLSX.utils.aoa_to_sheet(wsData);
