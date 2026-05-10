@@ -702,7 +702,7 @@ function adicionarBlocoCombateInsano(wsData: any[][], dados: DadosRelatorio, row
 // Bloco 16: Lobos (com nomes por divisão)
 function adicionarBlocoLobos(wsData: any[][], dados: DadosRelatorio, row: number): number {
   wsData[row++] = ['LOBOS'];
-  wsData[row++] = ['Divisão', 'Nome', 'Subtotal'];
+  wsData[row++] = ['Divisão', 'Nomes', 'Subtotal'];
 
   let totalGeral = 0;
 
@@ -712,13 +712,7 @@ function adicionarBlocoLobos(wsData: any[][], dados: DadosRelatorio, row: number
     const stats = dados.dados_integrantes_ativos[chaveAtivos];
     const nomes = stats?.nomes_lobos || [];
 
-    if (nomes.length === 0) {
-      wsData[row++] = [div.divisao_nome, '-', 0];
-    } else {
-      nomes.forEach((nome, idx) => {
-        wsData[row++] = [div.divisao_nome, nome, idx === nomes.length - 1 ? nomes.length : ''];
-      });
-    }
+    wsData[row++] = [div.divisao_nome, nomes.length === 0 ? '-' : nomes.join(', '), nomes.length];
     totalGeral += nomes.length;
   });
 
@@ -730,7 +724,7 @@ function adicionarBlocoLobos(wsData: any[][], dados: DadosRelatorio, row: number
 // Bloco 17: Ursinhos (com nomes por divisão)
 function adicionarBlocoUrsinhos(wsData: any[][], dados: DadosRelatorio, row: number): number {
   wsData[row++] = ['URSINHOS'];
-  wsData[row++] = ['Divisão', 'Nome', 'Subtotal'];
+  wsData[row++] = ['Divisão', 'Nomes', 'Subtotal'];
 
   let totalGeral = 0;
 
@@ -740,13 +734,7 @@ function adicionarBlocoUrsinhos(wsData: any[][], dados: DadosRelatorio, row: num
     const stats = dados.dados_integrantes_ativos[chaveAtivos];
     const nomes = stats?.nomes_ursinhos || [];
 
-    if (nomes.length === 0) {
-      wsData[row++] = [div.divisao_nome, '-', 0];
-    } else {
-      nomes.forEach((nome, idx) => {
-        wsData[row++] = [div.divisao_nome, nome, idx === nomes.length - 1 ? nomes.length : ''];
-      });
-    }
+    wsData[row++] = [div.divisao_nome, nomes.length === 0 ? '-' : nomes.join(', '), nomes.length];
     totalGeral += nomes.length;
   });
 
