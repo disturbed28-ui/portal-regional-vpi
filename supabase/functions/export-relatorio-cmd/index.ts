@@ -699,6 +699,62 @@ function adicionarBlocoCombateInsano(wsData: any[][], dados: DadosRelatorio, row
   return row;
 }
 
+// Bloco 16: Lobos (com nomes por divisão)
+function adicionarBlocoLobos(wsData: any[][], dados: DadosRelatorio, row: number): number {
+  wsData[row++] = ['LOBOS'];
+  wsData[row++] = ['Divisão', 'Nome', 'Subtotal'];
+
+  let totalGeral = 0;
+
+  dados.divisoes.forEach(div => {
+    const nomeAscii = dados.mapNomeParaNomeAscii.get(div.divisao_nome) || div.divisao_nome.toUpperCase();
+    const chaveAtivos = nomeAscii.toUpperCase();
+    const stats = dados.dados_integrantes_ativos[chaveAtivos];
+    const nomes = stats?.nomes_lobos || [];
+
+    if (nomes.length === 0) {
+      wsData[row++] = [div.divisao_nome, '-', 0];
+    } else {
+      nomes.forEach((nome, idx) => {
+        wsData[row++] = [div.divisao_nome, nome, idx === nomes.length - 1 ? nomes.length : ''];
+      });
+    }
+    totalGeral += nomes.length;
+  });
+
+  wsData[row++] = ['TOTAL GERAL', '', totalGeral];
+  wsData[row++] = [];
+  return row;
+}
+
+// Bloco 17: Ursinhos (com nomes por divisão)
+function adicionarBlocoUrsinhos(wsData: any[][], dados: DadosRelatorio, row: number): number {
+  wsData[row++] = ['URSINHOS'];
+  wsData[row++] = ['Divisão', 'Nome', 'Subtotal'];
+
+  let totalGeral = 0;
+
+  dados.divisoes.forEach(div => {
+    const nomeAscii = dados.mapNomeParaNomeAscii.get(div.divisao_nome) || div.divisao_nome.toUpperCase();
+    const chaveAtivos = nomeAscii.toUpperCase();
+    const stats = dados.dados_integrantes_ativos[chaveAtivos];
+    const nomes = stats?.nomes_ursinhos || [];
+
+    if (nomes.length === 0) {
+      wsData[row++] = [div.divisao_nome, '-', 0];
+    } else {
+      nomes.forEach((nome, idx) => {
+        wsData[row++] = [div.divisao_nome, nome, idx === nomes.length - 1 ? nomes.length : ''];
+      });
+    }
+    totalGeral += nomes.length;
+  });
+
+  wsData[row++] = ['TOTAL GERAL', '', totalGeral];
+  wsData[row++] = [];
+  return row;
+}
+
 // ============================================================================
 // GERAÇÃO DO XLSX
 // ============================================================================
