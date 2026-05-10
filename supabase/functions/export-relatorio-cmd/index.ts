@@ -58,6 +58,10 @@ interface DadosRelatorio {
   dados_integrantes_ativos: DadosIntegrantesAtivos;
   total_integrantes_ativos: number;
   mapNomeParaNomeAscii: Map<string, string>;
+  /** Map UUID integrante_portal -> registro_id (numero) */
+  mapIntegranteIdToRegistro: Map<string, number>;
+  /** Map nome_colete (upper) -> registro_id (numero) */
+  mapNomeColeteToRegistro: Map<string, number>;
 }
 
 // Extrai número romano do nome da regional
