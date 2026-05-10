@@ -37,6 +37,12 @@ interface DadosIntegrantesAtivos {
     batedores: number;
     caveiras: number;
     caveiras_suplentes: number;
+    lobos: number;
+    ursinhos: number;
+    nomes_caveiras: string[];
+    nomes_caveiras_suplentes: string[];
+    nomes_lobos: string[];
+    nomes_ursinhos: string[];
   };
 }
 
