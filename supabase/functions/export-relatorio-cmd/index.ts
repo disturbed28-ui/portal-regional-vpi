@@ -176,11 +176,36 @@ async function fetchDadosRelatorio(
   // 5. Buscar integrantes ATIVOS da regional (dados em tempo real)
   const { data: integrantesAtivos, error: integrantesError } = await supabase
     .from('integrantes_portal')
-    .select('divisao_texto, tem_moto, tem_carro, sgt_armas, combate_insano, batedor, caveira, caveira_suplente')
+    .select('id, registro_id, nome_colete, divisao_texto, tem_moto, tem_carro, sgt_armas, combate_insano, batedor, caveira, caveira_suplente, lobo, ursinho')
     .eq('ativo', true)
     .eq('regional_id', regional_id);
 
   if (integrantesError) throw new Error(`Erro ao buscar integrantes: ${integrantesError.message}`);
+
+  // Mapas auxiliares para resolução de número de integrante (registro_id)
+  const mapIntegranteIdToRegistro = new Map<string, number>();
+  const mapNomeColeteToRegistro = new Map<string, number>();
+  (integrantesAtivos || []).forEach((i: any) => {
+    if (i.id && i.registro_id != null) mapIntegranteIdToRegistro.set(i.id, i.registro_id);
+    if (i.nome_colete && i.registro_id != null) {
+      mapNomeColeteToRegistro.set(String(i.nome_colete).trim().toUpperCase(), i.registro_id);
+    }
+  });
+
+  // Também buscar inativos para resolver registro_id de saídas/inadimplência
+  const { data: integrantesTodos } = await supabase
+    .from('integrantes_portal')
+    .select('id, registro_id, nome_colete')
+    .eq('regional_id', regional_id);
+  (integrantesTodos || []).forEach((i: any) => {
+    if (i.id && i.registro_id != null && !mapIntegranteIdToRegistro.has(i.id)) {
+      mapIntegranteIdToRegistro.set(i.id, i.registro_id);
+    }
+    if (i.nome_colete && i.registro_id != null) {
+      const key = String(i.nome_colete).trim().toUpperCase();
+      if (!mapNomeColeteToRegistro.has(key)) mapNomeColeteToRegistro.set(key, i.registro_id);
+    }
+  });
 
   // Processar dados por divisão
   // IMPORTANTE: usar divisao_texto como chave (já está MAIÚSCULO sem acentos)
@@ -193,7 +218,10 @@ async function fetchDadosRelatorio(
       dadosIntegrantesAtivos[divisaoChave] = {
         total: 0, moto: 0, carro: 0, sem_veiculo: 0,
         sgt_armas: 0, combate_insano: 0, batedores: 0,
-        caveiras: 0, caveiras_suplentes: 0
+        caveiras: 0, caveiras_suplentes: 0,
+        lobos: 0, ursinhos: 0,
+        nomes_caveiras: [], nomes_caveiras_suplentes: [],
+        nomes_lobos: [], nomes_ursinhos: [],
       };
     }
     
@@ -210,8 +238,10 @@ async function fetchDadosRelatorio(
     if (integrante.sgt_armas) stats.sgt_armas++;
     if (integrante.combate_insano) stats.combate_insano++;
     if (integrante.batedor) stats.batedores++;
-    if (integrante.caveira) stats.caveiras++;
-    if (integrante.caveira_suplente) stats.caveiras_suplentes++;
+    if (integrante.caveira) { stats.caveiras++; stats.nomes_caveiras.push(integrante.nome_colete); }
+    if (integrante.caveira_suplente) { stats.caveiras_suplentes++; stats.nomes_caveiras_suplentes.push(integrante.nome_colete); }
+    if (integrante.lobo) { stats.lobos++; stats.nomes_lobos.push(integrante.nome_colete); }
+    if (integrante.ursinho) { stats.ursinhos++; stats.nomes_ursinhos.push(integrante.nome_colete); }
   });
 
   console.log('[Fetch Dados] Total integrantes ativos:', totalGeralAtivos);
