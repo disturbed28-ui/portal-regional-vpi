@@ -1,4 +1,4 @@
-import * as XLSX from 'https://esm.sh/xlsx@0.18.5';
+import ExcelJS from 'npm:exceljs@4.4.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
