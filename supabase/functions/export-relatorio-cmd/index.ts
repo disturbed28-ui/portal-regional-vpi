@@ -788,9 +788,52 @@ async function generateXlsxReport(dados: DadosRelatorio): Promise<ArrayBuffer> {
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Portal Regional V';
   wb.created = new Date();
-  const ws = wb.addWorksheet('Relatório CMD', {
-    views: [{ state: 'frozen', ySplit: 0 }],
-  });
+  const ws = wb.addWorksheet('Relatório CMD');
+
+  // ===== Pós-processar wsData: reestruturar AÇÕES SOCIAIS e ENTRADAS para mesclagens =====
+  // AÇÕES SOCIAIS: A=Divisão, B:C=Título, D:G=Descrição, H=Data
+  // ENTRADAS E SAÍDAS DETALHADO: A=Tipo, B=Divisão, C=Nº, D=Nome, E=Data, F:H=Motivo
+  const merges: string[] = [];
+  for (let i = 0; i < wsData.length; i++) {
+    const linha = wsData[i];
+    if (!linha || !linha[0]) continue;
+    const titulo = String(linha[0]).trim().toUpperCase();
+
+    if (titulo === 'AÇÕES SOCIAIS') {
+      // Reescreve linhas seguintes até linha vazia / próximo título
+      let j = i + 1;
+      while (j < wsData.length) {
+        const r = wsData[j];
+        if (!r || r.length === 0 || (r[0] === undefined || r[0] === null || (typeof r[0] === 'string' && r[0].trim() === ''))) break;
+        const t0 = String(r[0]).trim().toUpperCase();
+        if (j > i + 1 && isBlockTitle(r[0])) break;
+        if (t0 === 'SEM AÇÕES SOCIAIS') { j++; break; }
+        // Esperado: [div, titulo, descricao, data] (cabeçalho ou dados)
+        const div = r[0] ?? '';
+        const tit = r[1] ?? '';
+        const desc = r[2] ?? '';
+        const data = r[3] ?? '';
+        wsData[j] = [div, tit, '', desc, '', '', '', data];
+        // Excel rows são 1-indexed
+        const excelRow = j + 1;
+        merges.push(`B${excelRow}:C${excelRow}`);
+        merges.push(`D${excelRow}:G${excelRow}`);
+        j++;
+      }
+    } else if (titulo === 'ENTRADAS E SAÍDAS DETALHADO') {
+      let j = i + 1;
+      while (j < wsData.length) {
+        const r = wsData[j];
+        if (!r || r.length === 0 || (r[0] === undefined || r[0] === null || (typeof r[0] === 'string' && r[0].trim() === ''))) break;
+        if (j > i + 1 && isBlockTitle(r[0])) break;
+        const t0 = String(r[0]).trim().toUpperCase();
+        if (t0 === 'SEM MOVIMENTAÇÕES') { j++; break; }
+        const excelRow = j + 1;
+        merges.push(`F${excelRow}:H${excelRow}`);
+        j++;
+      }
+    }
+  }
 
   // Larguras de coluna (A=50, B-H=15) — igual ao VBA
   ws.columns = [
@@ -894,6 +937,11 @@ async function generateXlsxReport(dados: DadosRelatorio): Promise<ArrayBuffer> {
       }
     }
     r++;
+  }
+
+  // Aplicar merges (AÇÕES SOCIAIS e ENTRADAS/SAÍDAS DETALHADO)
+  for (const range of merges) {
+    try { ws.mergeCells(range); } catch (_e) { /* ignora overlaps */ }
   }
 
   // Gerar buffer
