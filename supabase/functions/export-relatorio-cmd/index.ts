@@ -934,7 +934,7 @@ Deno.serve(async (req) => {
 
     // Gerar XLSX em memória
     console.log('[Export CMD] Gerando XLSX...');
-    const xlsxBuffer = generateXlsxReport(dados);
+    const xlsxBuffer = await generateXlsxReport(dados);
 
     console.log('[Export CMD] Sucesso! Tamanho:', xlsxBuffer.byteLength, 'bytes');
 
