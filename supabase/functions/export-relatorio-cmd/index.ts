@@ -939,6 +939,11 @@ async function generateXlsxReport(dados: DadosRelatorio): Promise<ArrayBuffer> {
     r++;
   }
 
+  // Aplicar merges (AÇÕES SOCIAIS e ENTRADAS/SAÍDAS DETALHADO)
+  for (const range of merges) {
+    try { ws.mergeCells(range); } catch (_e) { /* ignora overlaps */ }
+  }
+
   // Gerar buffer
   const buffer = await wb.xlsx.writeBuffer();
   return buffer as ArrayBuffer;
