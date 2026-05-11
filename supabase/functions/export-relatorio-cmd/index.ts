@@ -747,20 +747,35 @@ function adicionarBlocoUrsinhos(wsData: any[][], dados: DadosRelatorio, row: num
 // GERAÇÃO DO XLSX
 // ============================================================================
 
-function generateXlsxReport(dados: DadosRelatorio): ArrayBuffer {
+// Palavras que identificam um título de bloco (mesma lista da macro VBA)
+const BLOCK_TITLE_KEYWORDS = [
+  'MOVIMENTAÇÃO', 'CRESCIMENTO', 'EFETIVO', 'INADIMPLÊNCIA',
+  'AÇÕES DE', 'AÇÕES SOCIAIS', 'ENTRADAS', 'CONFLITOS',
+  'BATEDORES', 'CAVEIRAS', 'SGT ARMAS', 'COMBATE', 'LOBOS', 'URSINHOS',
+  'PERÍODO',
+];
+
+function isBlockTitle(value: any): boolean {
+  if (typeof value !== 'string') return false;
+  const upper = value.trim().toUpperCase();
+  if (!upper) return false;
+  return BLOCK_TITLE_KEYWORDS.some(kw => upper.includes(kw));
+}
+
+async function generateXlsxReport(dados: DadosRelatorio): Promise<ArrayBuffer> {
   const wsData: any[][] = [];
-  
+
   let row = 0;
   row = adicionarCabecalhoRegional(wsData, dados, row);
   row = adicionarPeriodo(wsData, dados, row);
   row = adicionarBlocoMovimentacao(wsData, dados, row);
-  row = adicionarBlocoCrescimentoAtual(wsData, dados, row); // NOVO
+  row = adicionarBlocoCrescimentoAtual(wsData, dados, row);
   row = adicionarBlocoEfetivo(wsData, dados, row);
   row = adicionarBlocoInadimplencia(wsData, dados, row);
   row = adicionarBlocoAcoesInadimplencia(wsData, dados, row);
   row = adicionarBlocoEntradasSaidas(wsData, dados, row);
   row = adicionarBlocoConflitosInternos(wsData, dados, row);
-  row = adicionarBlocoConflitosExternos(wsData, dados, row); // NOVO
+  row = adicionarBlocoConflitosExternos(wsData, dados, row);
   row = adicionarBlocoAcoesSociais(wsData, dados, row);
   row = adicionarBlocoBatedores(wsData, dados, row);
   row = adicionarBlocoCaveiras(wsData, dados, row);
@@ -768,29 +783,127 @@ function generateXlsxReport(dados: DadosRelatorio): ArrayBuffer {
   row = adicionarBlocoCombateInsano(wsData, dados, row);
   row = adicionarBlocoLobos(wsData, dados, row);
   row = adicionarBlocoUrsinhos(wsData, dados, row);
-  
-  // Criar worksheet
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-  
-  // Configurar largura das colunas (A=45, B-E=15)
-  ws['!cols'] = [
-    { wch: 45 }, // A - Divisão/Nomes
-    { wch: 15 }, // B
-    { wch: 15 }, // C
-    { wch: 15 }, // D
-    { wch: 15 }, // E
-    { wch: 15 }, // F
-    { wch: 15 }, // G
-    { wch: 15 }, // H
+
+  // Criar workbook ExcelJS com formatação completa (equivalente à macro VBA)
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Portal Regional V';
+  wb.created = new Date();
+  const ws = wb.addWorksheet('Relatório CMD', {
+    views: [{ state: 'frozen', ySplit: 0 }],
+  });
+
+  // Larguras de coluna (A=50, B-H=15) — igual ao VBA
+  ws.columns = [
+    { width: 50 }, { width: 15 }, { width: 15 }, { width: 15 },
+    { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 },
   ];
-  
-  // Criar workbook
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Relatório CMD');
-  
-  // Gerar buffer usando type: 'array' para compatibilidade com Deno
-  const uint8Array = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
-  return new Uint8Array(uint8Array).buffer;
+
+  // Adicionar todas as linhas
+  wsData.forEach(rowData => {
+    ws.addRow(rowData || []);
+  });
+
+  // Estilos reutilizáveis
+  const fillTituloBloco: ExcelJS.Fill = {
+    type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' },
+  };
+  const fillCabecalho: ExcelJS.Fill = {
+    type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFBDD7EE' },
+  };
+  const thinBorder: Partial<ExcelJS.Borders> = {
+    top: { style: 'thin' }, bottom: { style: 'thin' },
+    left: { style: 'thin' }, right: { style: 'thin' },
+  };
+
+  // ===== Cabeçalho do relatório (linhas 1-3): negrito, fonte 14, centralizado =====
+  for (let r = 1; r <= 3; r++) {
+    const cell = ws.getCell(r, 1);
+    cell.font = { bold: true, size: 14 };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+  }
+
+  // ===== Identificar e formatar blocos =====
+  const totalLinhas = ws.rowCount;
+  let r = 5; // depois do cabeçalho
+  while (r <= totalLinhas) {
+    const cellA = ws.getCell(r, 1);
+    if (isBlockTitle(cellA.value)) {
+      // Título do bloco: negrito, fundo cinza
+      cellA.font = { bold: true, size: 11 };
+      cellA.fill = fillTituloBloco;
+      cellA.border = { bottom: { style: 'thin' } };
+
+      const linhaCabecalho = r + 1;
+      if (linhaCabecalho <= totalLinhas) {
+        // Detectar quantas colunas o cabeçalho usa
+        const cabecalhoRow = ws.getRow(linhaCabecalho);
+        let ultimaCol = 1;
+        cabecalhoRow.eachCell({ includeEmpty: false }, (_c, colNumber) => {
+          if (colNumber > ultimaCol) ultimaCol = colNumber;
+        });
+        if (ultimaCol < 2) ultimaCol = 2;
+
+        // Formatar cabeçalho (linha r+1): negrito, fundo azul, bordas
+        for (let c = 1; c <= ultimaCol; c++) {
+          const cell = ws.getCell(linhaCabecalho, c);
+          cell.font = { bold: true };
+          cell.fill = fillCabecalho;
+          cell.border = thinBorder;
+          cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        }
+
+        // Encontrar fim do bloco (linha vazia ou próximo título)
+        let linhaFim = linhaCabecalho + 1;
+        while (linhaFim <= totalLinhas) {
+          const v = ws.getCell(linhaFim, 1).value;
+          const isEmpty = v === null || v === undefined || (typeof v === 'string' && v.trim() === '');
+          if (isEmpty) { linhaFim--; break; }
+          if (linhaFim > linhaCabecalho + 1 && isBlockTitle(v)) { linhaFim--; break; }
+          linhaFim++;
+        }
+        if (linhaFim > totalLinhas) linhaFim = totalLinhas;
+
+        // Aplicar bordas nos dados do bloco
+        if (linhaFim >= linhaCabecalho + 1) {
+          for (let rr = linhaCabecalho + 1; rr <= linhaFim; rr++) {
+            for (let cc = 1; cc <= ultimaCol; cc++) {
+              const cell = ws.getCell(rr, cc);
+              cell.border = thinBorder;
+              if (cc >= 2) {
+                cell.alignment = { horizontal: 'center', vertical: 'middle' };
+              }
+            }
+          }
+
+          // Linha TOTAL (última linha do bloco): negrito + borda superior média
+          const ultimoTexto = String(ws.getCell(linhaFim, 1).value || '').trim().toUpperCase();
+          if (ultimoTexto === 'TOTAL' || ultimoTexto === 'TOTAL GERAL' || ultimoTexto.startsWith('SEM ')) {
+            for (let cc = 1; cc <= ultimoCol(ws, linhaFim, ultimaCol); cc++) {
+              const cell = ws.getCell(linhaFim, cc);
+              cell.font = { bold: true };
+              cell.border = {
+                ...thinBorder,
+                top: { style: 'medium' },
+              };
+            }
+          }
+        }
+
+        r = linhaFim + 2;
+        continue;
+      }
+    }
+    r++;
+  }
+
+  // Gerar buffer
+  const buffer = await wb.xlsx.writeBuffer();
+  return buffer as ArrayBuffer;
+}
+
+// Helper: garante mínimo de colunas para a linha total
+function ultimoCol(_ws: ExcelJS.Worksheet, _row: number, ultimaCol: number): number {
+  return ultimaCol;
 }
 
 // ============================================================================
