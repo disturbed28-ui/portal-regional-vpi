@@ -251,61 +251,67 @@ const GestaoADM = () => {
         <Tabs defaultValue={initialMainTab} className="w-full">
           <div className="overflow-x-auto -mx-4 px-4 pb-2">
             <TabsList className="inline-flex w-max min-w-full h-auto bg-muted/50 p-1 gap-1">
-              <TooltipProvider delayDuration={300}>
-                {visibleTabs.map((tab) => {
-                  // Mapear valor da aba para o tipo de atualização
-                  const tipoMap: Record<string, string> = {
-                    integrantes: 'integrantes',
-                    inadimplencia: 'inadimplencia',
-                    aniversariantes: 'aniversariantes',
-                    afastamentos: 'afastados',
-                  };
-                  const atualizacao = atualizacoes?.find(a => a.tipo === tipoMap[tab.value]);
-                  const isDesatualizado = atualizacao?.desatualizado ?? false;
-                  const diasStr = atualizacao?.diasDesdeAtualizacao !== null && atualizacao?.diasDesdeAtualizacao !== undefined
-                    ? `${atualizacao.diasDesdeAtualizacao} dia(s)`
-                    : null;
-                  const dataFormatada = atualizacao?.ultimaAtualizacao
-                    ? format(new Date(atualizacao.ultimaAtualizacao), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
-                    : null;
-                  const tooltipMsg = atualizacao
-                    ? isDesatualizado
-                      ? `⚠️ Última atualização há ${diasStr} (${dataFormatada}). Necessário atualizar!`
-                      : `✅ Atualizado há ${diasStr} (${dataFormatada})`
-                    : null;
+              {visibleTabs.map((tab) => {
+                // Mapear valor da aba para o tipo de atualização
+                const tipoMap: Record<string, string> = {
+                  integrantes: 'integrantes',
+                  inadimplencia: 'inadimplencia',
+                  aniversariantes: 'aniversariantes',
+                  afastamentos: 'afastados',
+                };
+                const atualizacao = atualizacoes?.find(a => a.tipo === tipoMap[tab.value]);
+                const isDesatualizado = atualizacao?.desatualizado ?? false;
+                const diasStr = atualizacao?.diasDesdeAtualizacao !== null && atualizacao?.diasDesdeAtualizacao !== undefined
+                  ? `${atualizacao.diasDesdeAtualizacao}d`
+                  : null;
+                const dataFormatada = atualizacao?.ultimaAtualizacao
+                  ? format(new Date(atualizacao.ultimaAtualizacao), "dd/MM/yy", { locale: ptBR })
+                  : null;
+                const tempoTexto = diasStr ? `há ${diasStr}` : dataFormatada;
+                const tooltipMsg = atualizacao
+                  ? isDesatualizado
+                    ? `⚠️ Última atualização há ${atualizacao.diasDesdeAtualizacao} dia(s) (${dataFormatada}). Necessário atualizar!`
+                    : `✅ Atualizado há ${atualizacao.diasDesdeAtualizacao} dia(s) (${dataFormatada})`
+                  : null;
 
-                  const tabTrigger = (
-                    <TabsTrigger
-                      key={tab.value}
-                      value={tab.value}
-                      className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm ${
-                        isDesatualizado ? 'text-amber-600 dark:text-amber-400 border border-amber-400/50' : ''
-                      }`}
-                    >
+                const tabTrigger = (
+                  <TabsTrigger
+                    key={tab.value}
+                    value={tab.value}
+                    className={`flex-shrink-0 flex flex-col items-center gap-0.5 px-3 py-2 text-xs sm:text-sm whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm ${
+                      isDesatualizado ? 'text-amber-600 dark:text-amber-400 border border-amber-400/50' : ''
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5">
                       <tab.icon className="h-4 w-4 shrink-0" />
                       <span>{tab.label}</span>
                       {isDesatualizado && (
                         <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                       )}
-                    </TabsTrigger>
+                    </div>
+                    {tempoTexto && (
+                      <span className={`text-[10px] leading-none ${isDesatualizado ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-muted-foreground'}`}>
+                        {tempoTexto}
+                      </span>
+                    )}
+                  </TabsTrigger>
+                );
+
+                if (tooltipMsg) {
+                  return (
+                    <Tooltip key={tab.value}>
+                      <TooltipTrigger asChild>
+                        {tabTrigger}
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="max-w-xs text-xs">
+                        {tooltipMsg}
+                      </TooltipContent>
+                    </Tooltip>
                   );
+                }
 
-                  if (tooltipMsg) {
-                    return (
-                      <Tooltip key={tab.value}>
-                        <TooltipTrigger asChild>
-                          {tabTrigger}
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="max-w-xs text-xs">
-                          {tooltipMsg}
-                        </TooltipContent>
-                      </Tooltip>
-                    );
-                  }
-
-                  return tabTrigger;
-                })}
-              </TooltipProvider>
+                return tabTrigger;
+              })}
             </TabsList>
           </div>
 
