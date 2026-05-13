@@ -13,7 +13,7 @@ import { removeAccents } from "@/lib/utils";
 import { getNivelAcesso } from "@/lib/grauUtils";
 import { useDivisoesPorRegional } from "@/hooks/useDivisoesPorRegional";
 import { ordenarIntegrantes } from "@/lib/integranteOrdering";
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 interface ListasConsultaProps {
   grau?: string | null;
