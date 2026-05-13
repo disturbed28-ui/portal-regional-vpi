@@ -13,7 +13,7 @@ import { removeAccents } from "@/lib/utils";
 import { getNivelAcesso } from "@/lib/grauUtils";
 import { useDivisoesPorRegional } from "@/hooks/useDivisoesPorRegional";
 import { ordenarIntegrantes } from "@/lib/integranteOrdering";
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 interface ListasConsultaProps {
   grau?: string | null;
@@ -279,43 +279,149 @@ export const ListasConsulta = ({
     ausentes: presencasOrdenadas.filter(p => getStatusExibicao(p.status, p.justificativa_ausencia) === 'ausente').length
   } : null;
 
-  const handleExportarExcel = () => {
+  const handleExportarExcel = async () => {
     if (!eventoAtual || !presencasOrdenadas) return;
-    
-    const dadosExcel = presencasOrdenadas.map(p => {
-      const statusExibicao = getStatusExibicao(p.status, p.justificativa_ausencia);
-      const isVisitanteExterno = p.visitante_tipo === 'externo';
-      
-      return {
-        'Nome': p.integrantes_portal?.nome_colete 
-          ? removeAccents(p.integrantes_portal.nome_colete)
-          : p.visitante_nome 
-            ? removeAccents(p.visitante_nome)
+
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Lista de Presença');
+
+    // Estilos reutilizáveis (padrão do Relatório CMD)
+    const fillTituloBloco: ExcelJS.Fill = {
+      type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' },
+    };
+    const fillCabecalho: ExcelJS.Fill = {
+      type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFBDD7EE' },
+    };
+    const thinBorder: Partial<ExcelJS.Borders> = {
+      top: { style: 'thin' }, bottom: { style: 'thin' },
+      left: { style: 'thin' }, right: { style: 'thin' },
+    };
+
+    // Estilos por status (fundo + fonte)
+    const statusStyles: Record<string, { fill: string; font: string }> = {
+      presente:    { fill: 'FFC6EFCE', font: 'FF006100' }, // verde
+      visitante:   { fill: 'FFBDD7EE', font: 'FF1F4E78' }, // azul
+      justificado: { fill: 'FFFFEB9C', font: 'FF9C5700' }, // âmbar
+      ausente:     { fill: 'FFFFC7CE', font: 'FF9C0006' }, // vermelho
+    };
+
+    // Cabeçalho do relatório
+    ws.addRow(['LISTA DE PRESENÇA']);
+    ws.addRow([removeAccents(eventoAtual.titulo)]);
+    ws.addRow([format(new Date(eventoAtual.data_evento), "dd/MM/yyyy HH:mm", { locale: ptBR })]);
+    ws.addRow([]);
+
+    for (let r = 1; r <= 3; r++) {
+      const cell = ws.getCell(r, 1);
+      cell.font = { bold: true, size: 14 };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      ws.mergeCells(r, 1, r, 8);
+    }
+
+    // Larguras
+    ws.columns = [
+      { width: 32 }, { width: 28 }, { width: 24 }, { width: 8 },
+      { width: 14 }, { width: 22 }, { width: 18 }, { width: 36 },
+    ];
+
+    const headers = ['Nome', 'Divisão', 'Cargo', 'Grau', 'Status', 'Confirmado Por', 'Data/Hora', 'Justificativa'];
+
+    // Para cada divisão, gerar bloco
+    divisoesOrdenadas.forEach(divisao => {
+      const integrantes = presencasAgrupadasPorDivisao.get(divisao) || [];
+      if (integrantes.length === 0) return;
+
+      // Título do bloco (divisão)
+      const tituloRow = ws.addRow([`${removeAccents(divisao)} (${integrantes.length})`]);
+      ws.mergeCells(tituloRow.number, 1, tituloRow.number, 8);
+      const tituloCell = ws.getCell(tituloRow.number, 1);
+      tituloCell.font = { bold: true, size: 11 };
+      tituloCell.fill = fillTituloBloco;
+      tituloCell.border = { bottom: { style: 'thin' } };
+      tituloCell.alignment = { horizontal: 'left', vertical: 'middle' };
+
+      // Cabeçalho de colunas
+      const headerRow = ws.addRow(headers);
+      headerRow.eachCell((cell) => {
+        cell.font = { bold: true };
+        cell.fill = fillCabecalho;
+        cell.border = thinBorder;
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      });
+
+      // Linhas de dados
+      integrantes.forEach(p => {
+        const statusExibicao = getStatusExibicao(p.status, p.justificativa_ausencia);
+        const isVisitanteExterno = p.visitante_tipo === 'externo';
+        const justificativa = statusExibicao === 'presente' || statusExibicao === 'visitante'
+          ? '-'
+          : (p.justificativa_ausencia || 'Não justificado');
+
+        const row = ws.addRow([
+          p.integrantes_portal?.nome_colete
+            ? removeAccents(p.integrantes_portal.nome_colete)
+            : p.visitante_nome ? removeAccents(p.visitante_nome) : '-',
+          p.integrantes_portal?.divisao_texto
+            ? removeAccents(p.integrantes_portal.divisao_texto)
+            : isVisitanteExterno ? 'Externo' : '-',
+          p.integrantes_portal?.cargo_nome
+            ? removeAccents(p.integrantes_portal.cargo_nome)
+            : isVisitanteExterno ? 'Visitante Externo' : '-',
+          p.integrantes_portal?.grau || '-',
+          statusExibicao.charAt(0).toUpperCase() + statusExibicao.slice(1),
+          p.confirmado_por || '-',
+          p.confirmado_em
+            ? format(new Date(p.confirmado_em), "dd/MM/yyyy HH:mm", { locale: ptBR })
             : '-',
-        'Divisão': p.integrantes_portal?.divisao_texto 
-          ? removeAccents(p.integrantes_portal.divisao_texto)
-          : isVisitanteExterno ? 'Externo' : '-',
-        'Cargo': p.integrantes_portal?.cargo_nome 
-          ? removeAccents(p.integrantes_portal.cargo_nome)
-          : isVisitanteExterno ? 'Visitante Externo' : '-',
-        'Grau': p.integrantes_portal?.grau || '-',
-        'Status': statusExibicao.charAt(0).toUpperCase() + statusExibicao.slice(1),
-        'Confirmado Por': p.confirmado_por || '-',
-        'Data/Hora': p.confirmado_em 
-          ? format(new Date(p.confirmado_em), "dd/MM/yyyy HH:mm", { locale: ptBR })
-          : '-',
-        'Justificativa': statusExibicao === 'presente' || statusExibicao === 'visitante'
-          ? '-' 
-          : (p.justificativa_ausencia || 'Não justificado')
-      };
+          justificativa,
+        ]);
+
+        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+          cell.border = thinBorder;
+          if (colNumber !== 1) {
+            cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+          } else {
+            cell.alignment = { vertical: 'middle' };
+          }
+        });
+
+        // Cor do Status (coluna 5)
+        const style = statusStyles[statusExibicao];
+        if (style) {
+          const statusCell = row.getCell(5);
+          statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.fill } };
+          statusCell.font = { bold: true, color: { argb: style.font } };
+        }
+
+        // Cor da Justificativa (coluna 8)
+        const justCell = row.getCell(8);
+        if (statusExibicao === 'justificado') {
+          justCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF2CC' } };
+          justCell.font = { color: { argb: 'FF9C5700' }, italic: true };
+        } else if (statusExibicao === 'ausente') {
+          justCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFCE4E4' } };
+          justCell.font = { color: { argb: 'FF9C0006' }, italic: true };
+        } else {
+          justCell.font = { color: { argb: 'FF808080' } };
+        }
+      });
+
+      // Linha em branco entre blocos
+      ws.addRow([]);
     });
-    
-    const ws = XLSX.utils.json_to_sheet(dadosExcel);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Lista de Presença');
-    
+
+    // Gerar arquivo
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
     const nomeArquivo = `lista_presenca_${format(new Date(eventoAtual.data_evento), 'yyyy-MM-dd')}_${removeAccents(eventoAtual.titulo).replace(/\s+/g, '_')}.xlsx`;
-    XLSX.writeFile(wb, nomeArquivo);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nomeArquivo;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   return (
