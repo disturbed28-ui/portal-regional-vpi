@@ -51,10 +51,15 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
   const { avaliacoes, refetch } = useAvaliacoesIntegrantes(periodoId, integranteIds);
   const promocoesMap = useUltimaPromocaoGrau(grausPorRegistro);
 
-  // Frequência: usa janela do período de avaliação ou últimos 6 meses
+  // Frequência: usa exatamente a janela do período de avaliação selecionado.
+  // Parse YYYY-MM-DD como data local para evitar shift de timezone.
+  const parseLocalDate = (s: string) => {
+    const [y, m, d] = s.split('-').map(Number);
+    return new Date(y, (m || 1) - 1, d || 1);
+  };
   const [freqInicio, freqFim] = useMemo<[Date, Date]>(() => {
     if (periodo?.data_inicio && periodo?.data_fim) {
-      return [startOfDay(new Date(periodo.data_inicio)), endOfDay(new Date(periodo.data_fim))];
+      return [startOfDay(parseLocalDate(periodo.data_inicio)), endOfDay(parseLocalDate(periodo.data_fim))];
     }
     return [startOfDay(subMonths(new Date(), 6)), endOfDay(new Date())];
   }, [periodo?.data_inicio, periodo?.data_fim]);
