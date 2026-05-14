@@ -523,6 +523,18 @@ const GestaoADM = () => {
                 <AfastadosGestaoTab userId={user?.id} readOnly={afastamentosP.isReadOnly} />
               </TabsContent>
             )}
+
+            {criteriosAvalP.hasAnyAccess && (
+              <TabsContent value="criterios-avaliacao" className="m-0">
+                <CriteriosAvaliacaoTab regionalId={regionalId} readOnly={criteriosAvalP.isReadOnly} />
+              </TabsContent>
+            )}
+
+            {periodosAvalP.hasAnyAccess && (
+              <TabsContent value="periodos-avaliacao" className="m-0">
+                <PeriodosAvaliacaoTab userId={user?.id} regionalId={regionalId} readOnly={periodosAvalP.isReadOnly} />
+              </TabsContent>
+            )}
           </div>
         </Tabs>
       </div>
