@@ -53,6 +53,8 @@ const ALL_ROUTES = [
   '/gestao-adm-estagio-flyers',
   '/gestao-adm-aniversariantes',
   '/gestao-adm-afastamentos',
+  '/gestao-adm/criterios-avaliacao',
+  '/gestao-adm/periodos-avaliacao',
 ];
 
 const GestaoADM = () => {
