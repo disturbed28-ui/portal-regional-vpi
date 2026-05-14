@@ -159,6 +159,22 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
               const recente = dataPromocao && differenceInMonths(new Date(), new Date(dataPromocao)) < 6;
               const minhasAvalsInt = avaliacoes.filter(a => a.integrante_id === int.id);
               const totalRespondidos = new Set(minhasAvalsInt.map(a => a.criterio_id)).size;
+              const freq: any = freqMap.get(int.id);
+              const pct = freq ? Math.round(freq.percentual) : null;
+              // Breakdown de justificativas / ausências
+              const breakdown: Record<string, number> = {};
+              if (freq) {
+                for (const ev of freq.eventos) {
+                  if (ev.status === 'ausente') {
+                    const key = ev.justificativa || 'Não justificou';
+                    breakdown[key] = (breakdown[key] || 0) + 1;
+                  }
+                }
+              }
+              const pctColor = pct === null ? 'bg-muted text-muted-foreground'
+                : pct >= 70 ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40'
+                : pct >= 50 ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/40'
+                : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40';
               return (
                 <AccordionItem key={int.id} value={int.id} className="border rounded-md bg-card">
                   <AccordionTrigger className="px-3 py-2 hover:no-underline">
@@ -175,6 +191,11 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
                               <Sparkles className="h-3 w-3" />Promoção recente
                             </Badge>
                           )}
+                          {pct !== null && (
+                            <Badge variant="outline" className={`text-[10px] gap-1 ${pctColor}`}>
+                              <TrendingUp className="h-3 w-3" />{pct}%
+                            </Badge>
+                          )}
                         </div>
                         <div className="text-[11px] text-muted-foreground truncate">
                           {int.cargo_grau_texto}
@@ -186,7 +207,31 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
                       </Badge>
                     </div>
                   </AccordionTrigger>
-                  <AccordionContent className="px-3 pb-3 space-y-2">
+                  <AccordionContent className="px-3 pb-3 space-y-3">
+                    {freq && (
+                      <div className="rounded-md border bg-muted/20 p-2 space-y-2">
+                        <div className="flex items-center justify-between gap-2 text-xs">
+                          <span className="font-medium flex items-center gap-1">
+                            <TrendingUp className="h-3.5 w-3.5" />Participação no período
+                          </span>
+                          <span className="font-semibold">{pct}% · {freq.totalEventos} evento{freq.totalEventos === 1 ? '' : 's'}</span>
+                        </div>
+                        <Progress value={pct ?? 0} className="h-1.5" />
+                        {Object.keys(breakdown).length > 0 && (
+                          <div className="flex flex-wrap gap-1 pt-1">
+                            {Object.entries(breakdown).sort((a,b) => b[1]-a[1]).map(([j, n]) => (
+                              <Badge key={j} variant="outline" className={`text-[10px] ${
+                                j === 'Não justificou'
+                                  ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/40'
+                                  : 'bg-muted/50'
+                              }`}>
+                                {j}: {n}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                     {criterios.map(c => {
                       const ava = minhasAvalsInt.find(a => a.criterio_id === c.id);
                       return (
