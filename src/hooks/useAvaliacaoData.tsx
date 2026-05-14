@@ -147,38 +147,63 @@ export const upsertAvaliacao = async (input: {
   return true;
 };
 
+export interface MensalidadesAvaliacaoInfo {
+  pagasAtraso: number;
+  abertas: number;
+}
+
 /**
- * Conta mensalidades pagas com atraso (liquidadas) no período por registro_id.
+ * Para cada registro_id, retorna:
+ *  - pagasAtraso: mensalidades liquidadas (pagas com atraso) cuja liquidação ocorreu dentro do período
+ *  - abertas: mensalidades ainda não liquidadas (ativo=true, liquidado=false) com vencimento até o fim do período
  */
 export const useMensalidadesAtrasoPeriodo = (
   registroIds: number[],
   dataInicio: Date | null,
   dataFim: Date | null,
 ) => {
-  const [map, setMap] = useState<Record<number, number>>({});
+  const [map, setMap] = useState<Record<number, MensalidadesAvaliacaoInfo>>({});
   const key = registroIds.join(',') + '|' + (dataInicio?.toISOString() || '') + '|' + (dataFim?.toISOString() || '');
   useEffect(() => {
     if (registroIds.length === 0 || !dataInicio || !dataFim) { setMap({}); return; }
     (async () => {
-      let all: any[] = [];
-      let from = 0;
-      const pageSize = 1000;
-      while (true) {
-        const { data, error } = await supabase
-          .from('mensalidades_atraso')
-          .select('registro_id')
-          .in('registro_id', registroIds)
+      const fetchAll = async (apply: (q: any) => any) => {
+        let all: any[] = [];
+        let from = 0;
+        const pageSize = 1000;
+        while (true) {
+          const base = supabase
+            .from('mensalidades_atraso')
+            .select('registro_id')
+            .in('registro_id', registroIds)
+            .range(from, from + pageSize - 1);
+          const { data, error } = await apply(base);
+          if (error) { console.error('[useMensalidadesAtrasoPeriodo]', error); break; }
+          all = all.concat(data || []);
+          if (!data || data.length < pageSize) break;
+          from += pageSize;
+        }
+        return all;
+      };
+      const fimISO = dataFim.toISOString();
+      const inicioISO = dataInicio.toISOString();
+      const fimDate = dataFim.toISOString().slice(0, 10);
+
+      const [pagas, abertas] = await Promise.all([
+        fetchAll((q: any) => q
           .eq('liquidado', true)
-          .gte('data_liquidacao', dataInicio.toISOString())
-          .lte('data_liquidacao', dataFim.toISOString())
-          .range(from, from + pageSize - 1);
-        if (error) { console.error('[useMensalidadesAtrasoPeriodo]', error); break; }
-        all = all.concat(data || []);
-        if (!data || data.length < pageSize) break;
-        from += pageSize;
-      }
-      const m: Record<number, number> = {};
-      for (const r of all) m[r.registro_id] = (m[r.registro_id] || 0) + 1;
+          .gte('data_liquidacao', inicioISO)
+          .lte('data_liquidacao', fimISO)),
+        fetchAll((q: any) => q
+          .eq('ativo', true)
+          .eq('liquidado', false)
+          .lte('data_vencimento', fimDate)),
+      ]);
+
+      const m: Record<number, MensalidadesAvaliacaoInfo> = {};
+      const ensure = (id: number) => (m[id] = m[id] || { pagasAtraso: 0, abertas: 0 });
+      for (const r of pagas) ensure(r.registro_id).pagasAtraso += 1;
+      for (const r of abertas) ensure(r.registro_id).abertas += 1;
       setMap(m);
     })();
   }, [key]); // eslint-disable-line
