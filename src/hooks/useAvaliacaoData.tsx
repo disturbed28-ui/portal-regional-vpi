@@ -145,10 +145,18 @@ export const upsertAvaliacao = async (input: {
   return true;
 };
 
-/** Busca data da última promoção (mudança de grau) por registro_id de integrante. */
-export const useUltimaPromocaoGrau = (registroIds: number[]) => {
+/**
+ * Busca data REAL da última promoção por integrante.
+ * Considera promoção apenas quando, no histórico de `atualizacoes_carga`,
+ * existe um registro com `valor_novo` igual ao grau atual e `valor_anterior`
+ * diferente e não vazio (mudança real, não artefato de carga).
+ */
+export const useUltimaPromocaoGrau = (
+  grausPorRegistro: Record<number, string | null | undefined>
+) => {
   const [map, setMap] = useState<Record<number, string>>({});
-  const key = registroIds.join(',');
+  const registroIds = Object.keys(grausPorRegistro).map(Number);
+  const key = registroIds.join(',') + '|' + Object.values(grausPorRegistro).join(',');
   useEffect(() => {
     if (registroIds.length === 0) { setMap({}); return; }
     (async () => {
@@ -158,7 +166,7 @@ export const useUltimaPromocaoGrau = (registroIds: number[]) => {
       while (true) {
         const { data, error } = await supabase
           .from('atualizacoes_carga')
-          .select('registro_id, created_at, campo_alterado')
+          .select('registro_id, created_at, valor_anterior, valor_novo')
           .in('registro_id', registroIds)
           .eq('campo_alterado', 'grau')
           .order('created_at', { ascending: false })
@@ -169,8 +177,17 @@ export const useUltimaPromocaoGrau = (registroIds: number[]) => {
         from += pageSize;
       }
       const m: Record<number, string> = {};
+      const norm = (s: string | null | undefined) => (s || '').trim().toUpperCase();
       for (const r of all) {
-        if (!m[r.registro_id]) m[r.registro_id] = r.created_at;
+        if (m[r.registro_id]) continue;
+        const grauAtual = norm(grausPorRegistro[r.registro_id]);
+        const novo = norm(r.valor_novo);
+        const anterior = norm(r.valor_anterior);
+        if (!grauAtual) continue;
+        // Só conta como promoção real: virou o grau atual a partir de outro grau não vazio
+        if (novo === grauAtual && anterior && anterior !== grauAtual) {
+          m[r.registro_id] = r.created_at;
+        }
       }
       setMap(m);
     })();
