@@ -868,6 +868,8 @@ export type Database = {
           id: string
           nome: string
           ordem: number
+          peso: number
+          peso_manual: boolean
           regional_id: string
           updated_at: string
         }
@@ -878,6 +880,8 @@ export type Database = {
           id?: string
           nome: string
           ordem?: number
+          peso?: number
+          peso_manual?: boolean
           regional_id: string
           updated_at?: string
         }
@@ -888,6 +892,8 @@ export type Database = {
           id?: string
           nome?: string
           ordem?: number
+          peso?: number
+          peso_manual?: boolean
           regional_id?: string
           updated_at?: string
         }
