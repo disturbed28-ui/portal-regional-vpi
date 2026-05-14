@@ -1,52 +1,77 @@
-# Roadmap — Notificações WhatsApp via wa.me
+# Módulo Avaliação de Integrantes — Plano de Implementação
 
-> Estratégia: links `wa.me` (sem custo, sem API Meta). O sistema detecta pendências, gera mensagem pronta a partir de template parametrizável, abre WhatsApp para o usuário revisar e enviar manualmente. Tudo logado para auditoria.
->
-> **Mobile-first 9:18** em todas as telas/modais. Permissões via matriz `screen_permissions` + `system_screens`.
->
-> Telefone do destinatário: `profiles.telefone` (já existe).
-
----
-
-## ✅ Módulo 0 — Fundação (em andamento)
-Infra reutilizada por todos os módulos.
-
-- [ ] Tabela `notificacoes_whatsapp_templates` (chave única, título, corpo com `{{variaveis}}`, escopo, ativo)
-- [ ] Tabela `notificacoes_whatsapp_log` (remetente, destinatário, telefone, template, payload, quando)
-- [ ] RLS: admin gerencia templates; authenticated lê; log inserível pelo authenticated, leitura por admin/regional
-- [ ] Seeds: `relatorios_cobranca`, `mensalidade_adm_divisao`, `mensalidade_integrante`, `evento_lembrete_hoje`, `evento_lembrete_amanha`, `evento_lembrete_semana`, `generico`
-- [ ] Helper `src/lib/whatsapp.ts`: `formatPhoneBR()`, `renderTemplate()`, `buildWaMeLink()`, `logEnvioWhatsApp()`
-- [ ] Hook `useWhatsAppTemplates()` (lista/cria/edita/remove)
-- [ ] Componente `<BotaoEnviarWhatsApp>` reutilizável (mobile-first 9:18, registra log ao clicar)
-- [ ] Tela admin `/admin/notificacoes-whatsapp` com CRUD de templates + log de envios
-- [ ] Entrada em `system_screens` + permissões padrão
-- [ ] QA manual em mobile 9:18
-
-## ✅ Módulo 1 — Cobrança de Relatórios (8/18/28)
-- [x] Detecção: divisões da regional sem relatório do período (1-10, 11-20, 21-fim)
-- [x] Tela `/cobranca-relatorios` (acesso: admin, comando, regional, diretor_regional, adm_regional)
-- [x] Seletor de período (mostra os 3 últimos com data de cobrança já atingida — dia 8/18/28)
-- [x] Lista divisões pendentes + diretor + telefone + botão WhatsApp por linha
-- [x] Marca "Já notificado" se houver log no período corrente
-- [x] Template `relatorios_cobranca` com `{{nome}}`, `{{divisao}}`, `{{periodo}}`
-- [x] Botão "Cobranca de Relatorios" no Dashboard (visível só para quem tem acesso)
-
-## ⏳ Módulo 2 — Cobrança de Mensalidades
-- [ ] Pendência na 🔔 do ADM Regional quando há inadimplentes
-- [ ] Modal com 2 opções: ADMs de divisão (agrupado) OU integrantes devedores
-- [ ] Templates `mensalidade_adm_divisao` e `mensalidade_integrante`
-
-## ⏳ Módulo 3 — Lembretes de Eventos
-- [ ] Tela `/lembretes-eventos` com lista de eventos próximos
-- [ ] Modal com escopo hierárquico (regional → toda regional/selecionar; divisão → toda divisão/selecionar)
-- [ ] Texto dinâmico por proximidade (hoje / amanhã / próxima semana)
-- [ ] Lista de destinatários com botão WhatsApp por linha
-
-## ⏳ Módulo 4 — Extras (futuro)
-- [ ] Botão WhatsApp em aniversariantes
-- [ ] Botão WhatsApp genérico em cards de integrante (gestão/organograma)
+## Premissas confirmadas
+1. **Histórico de grau**: usar `atualizacoes_carga` filtrando `campo_alterado = 'grau'` para obter a última promoção de cada integrante (origem oficial das cargas, já alimentado).
+2. **Gestão de períodos**: nova aba dentro de `/gestao-adm`, ao lado de "Critérios de Avaliação".
+3. **Critérios**: por regional (campo `regional_id NOT NULL`).
+4. **Acesso**: 100% via `system_screens` + `screen_permissions`. Grau define apenas escopo de dados (V = regional, VI+ = divisão, I-IV = tudo).
 
 ---
 
-## Como retomar
-> "Continuar plano WhatsApp — módulo X"
+## 1. Banco de dados (uma migração)
+
+### Tabelas
+- **`avaliacao_periodos`**: `id, nome, ano (int), semestre (1|2), regional_id (FK), status ('aberto'|'encerrado'), data_inicio, data_fim, criado_por, encerrado_por, encerrado_em, created_at, updated_at`
+  - UNIQUE `(regional_id, ano, semestre)`
+- **`criterios_avaliacao`**: `id, regional_id, nome, descricao, ativo, ordem, created_at, updated_at`
+  - Soft delete via `ativo=false`. Sem DELETE físico.
+- **`avaliacoes_integrantes`**: `id, periodo_id, integrante_id, criterio_id, avaliador_id (text), avaliador_nome, status ('sim'|'nao'), observacao, created_at, updated_at`
+  - UNIQUE `(periodo_id, integrante_id, criterio_id)` para upsert
+  - Trigger bloqueia INSERT/UPDATE quando `periodo.status='encerrado'`
+
+### RLS (todas baseadas em `screen_permissions` + escopo por grau)
+- SELECT: usuário com permissão na tela `/avaliacao-integrantes`, restrito ao escopo (Grau V → mesma `regional_id`, Grau VI+ → mesma `divisao_id` do integrante avaliado).
+- INSERT/UPDATE de `avaliacoes_integrantes`: mesmo escopo + período aberto.
+- Critérios e períodos: gerenciados por quem tem permissão na tela `/gestao-adm` (subitens "Critérios de Avaliação" e "Gestão de Períodos de Avaliação").
+
+### `system_screens` (novas entradas)
+- `/avaliacao-integrantes` (rota principal)
+- `/gestao-adm/criterios-avaliacao` (subtela)
+- `/gestao-adm/periodos-avaliacao` (subtela)
+
+Permissões iniciais: `admin`, `comando`, `diretor_regional`, `adm_regional` para gestão; mais `diretor_divisao` para a tela de avaliação.
+
+---
+
+## 2. Frontend
+
+### Nova rota `/avaliacao-integrantes` (`src/pages/AvaliacaoIntegrantes.tsx`)
+Duas abas:
+
+**Aba "Avaliação"**
+- Selector de período: pré-seleciona o período atual aberto (jan-jun → semestre 1, jul-dez → semestre 2). Sem período aberto → alerta bloqueante.
+- Lista integrantes ativos (`ativo = true`) do escopo, agrupados por divisão (ordem do organograma) e ordenados por hierarquia (`integranteOrdering`).
+- Cada integrante = accordion (1 aberto por vez). Card mostra: foto, nome completo, nome de colete, divisão, regional, grau, cargo, data de entrada.
+  - **Destaque visual** quando a última promoção (de `atualizacoes_carga` campo `grau`) tem < 6 meses — badge "Promoção recente" para reforçar regra dos 6 meses.
+- Para cada critério ativo da regional: botões Sim/Não, com upsert imediato e feedback visual (cor verde/vermelho).
+
+**Aba "Histórico"**
+- Filtros: período (obrigatório), divisão (se escopo permitir), integrante (opcional).
+- Tabela com avaliação por critério.
+- Exportar Excel reaproveitando ExcelJS (cores do CMD, mesmo padrão do `ListasConsulta`).
+
+### `/gestao-adm` — duas novas abas
+- **Critérios de Avaliação**: CRUD (criar, ativar/desativar, reordenar). Ativos primeiro, inativos depois.
+- **Gestão de Períodos de Avaliação**: criar período (auto-preenche nome `<ANO>/<SEMESTRE>`), ver status (Aberto/Encerrado/Pendências), contadores (total no escopo, avaliados, pendentes).
+  - Botão "Encerrar": só permite quando todos os integrantes ativos da regional têm pelo menos 1 avaliação no período. Caso contrário, mostra resumo de pendências por divisão.
+
+### Hooks novos
+- `usePeriodosAvaliacao`, `useCriteriosAvaliacao`, `useAvaliacoesIntegrantes`, `useUltimaPromocaoGrau` (consulta `atualizacoes_carga`).
+
+### App.tsx
+Adicionar `<Route path="/avaliacao-integrantes" element={<AvaliacaoIntegrantes />} />`.
+
+### Padrões reutilizados
+`useScreenPermissionsBatch`, `useUserRole`, `useIntegrantesGestao`, `normalizarTextoHierarquia`, `integranteOrdering`, `escopoCarga`. Mobile 9:18 (cards no lugar de tabelas), toasts Sonner 6000ms não-dismissíveis, datas `.toISOString()`, paginação `.range()` se >1000 linhas.
+
+---
+
+## Ordem de execução
+1. Migração (3 tabelas + RLS + triggers + entradas em `system_screens` + permissões iniciais).
+2. Hooks de dados.
+3. Página `/avaliacao-integrantes` (abas Avaliação + Histórico).
+4. Abas em `/gestao-adm` (Critérios + Períodos).
+5. Export Excel formatado.
+6. QA mobile + verificação de permissões.
+
+Posso começar pela migração?

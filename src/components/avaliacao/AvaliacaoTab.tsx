@@ -1,0 +1,245 @@
+import { useMemo, useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, Check, X, AlertCircle, Sparkles } from "lucide-react";
+import { format, differenceInMonths } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
+import { useIntegrantesGestao } from "@/hooks/useIntegrantesGestao";
+import {
+  usePeriodosAvaliacao,
+  useCriteriosAvaliacao,
+  useAvaliacoesIntegrantes,
+  useUltimaPromocaoGrau,
+  upsertAvaliacao,
+} from "@/hooks/useAvaliacaoData";
+
+interface Props {
+  userId: string | undefined;
+  regionalId: string | null;
+  avaliadorNome: string | null;
+  readOnly?: boolean;
+}
+
+export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Props) {
+  const { integrantesPorDivisao, loading: loadingInt } = useIntegrantesGestao(userId);
+  const { periodos, periodoAtualAberto, loading: loadingPer } = usePeriodosAvaliacao(regionalId);
+  const { criterios, loading: loadingCrit } = useCriteriosAvaliacao(regionalId, true);
+
+  const [periodoSelecionadoId, setPeriodoSelecionadoId] = useState<string>("");
+  const periodoId = periodoSelecionadoId || periodoAtualAberto?.id || periodos[0]?.id || "";
+  const periodo = periodos.find(p => p.id === periodoId);
+
+  const todosIntegrantes = useMemo(
+    () => integrantesPorDivisao.flatMap(d => d.integrantes),
+    [integrantesPorDivisao]
+  );
+  const integranteIds = useMemo(() => todosIntegrantes.map(i => i.id), [todosIntegrantes]);
+  const registroIds = useMemo(() => todosIntegrantes.map(i => i.registro_id), [todosIntegrantes]);
+
+  const { avaliacoes, refetch } = useAvaliacoesIntegrantes(periodoId, integranteIds);
+  const promocoesMap = useUltimaPromocaoGrau(registroIds);
+
+  const isPeriodoAberto = periodo?.status === 'aberto';
+  const podeAvaliar = !readOnly && isPeriodoAberto;
+
+  if (loadingInt || loadingPer || loadingCrit) {
+    return <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  }
+
+  if (!regionalId) {
+    return <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">Sem regional definida no perfil.</CardContent></Card>;
+  }
+
+  if (periodos.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center space-y-2">
+          <AlertCircle className="h-10 w-10 mx-auto text-amber-500" />
+          <p className="text-sm font-medium">Nenhum período de avaliação cadastrado</p>
+          <p className="text-xs text-muted-foreground">Solicite à coordenação a criação de um período em Gestão ADM.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const handleAvaliar = async (integranteId: string, criterioId: string, status: 'sim' | 'nao', observacao?: string) => {
+    if (!userId || !periodoId) return;
+    const ok = await upsertAvaliacao({
+      periodo_id: periodoId,
+      integrante_id: integranteId,
+      criterio_id: criterioId,
+      status,
+      observacao: observacao ?? null,
+      avaliador_id: userId,
+      avaliador_nome: avaliadorNome ?? null,
+    });
+    if (ok) {
+      toast.success('Avaliação registrada', { duration: 6000 });
+      refetch();
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardContent className="p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="text-xs text-muted-foreground mb-1">Período de avaliação</div>
+            <Select value={periodoId} onValueChange={setPeriodoSelecionadoId}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {periodos.map(p => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.nome} {p.status === 'encerrado' ? '(encerrado)' : '(aberto)'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {todosIntegrantes.length} integrantes no escopo · {criterios.length} critérios
+          </div>
+        </CardContent>
+      </Card>
+
+      {!isPeriodoAberto && (
+        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300 flex gap-2">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          Período encerrado — visualização apenas.
+        </div>
+      )}
+
+      {criterios.length === 0 && (
+        <Card>
+          <CardContent className="py-6 text-center text-sm text-muted-foreground">
+            Nenhum critério ativo. Cadastre critérios em Gestão ADM → Critérios de Avaliação.
+          </CardContent>
+        </Card>
+      )}
+
+      {integrantesPorDivisao.map(grupo => (
+        <div key={grupo.divisaoId || 'sem'} className="space-y-2">
+          <h3 className="text-sm font-semibold text-foreground px-1">
+            {grupo.divisaoNome} <span className="text-xs text-muted-foreground font-normal">({grupo.integrantes.length})</span>
+          </h3>
+          <Accordion type="single" collapsible className="space-y-2">
+            {grupo.integrantes.map(int => {
+              const dataPromocao = promocoesMap[int.registro_id];
+              const recente = dataPromocao && differenceInMonths(new Date(), new Date(dataPromocao)) < 6;
+              const minhasAvalsInt = avaliacoes.filter(a => a.integrante_id === int.id);
+              const totalRespondidos = new Set(minhasAvalsInt.map(a => a.criterio_id)).size;
+              return (
+                <AccordionItem key={int.id} value={int.id} className="border rounded-md bg-card">
+                  <AccordionTrigger className="px-3 py-2 hover:no-underline">
+                    <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
+                      <Avatar className="h-9 w-9 shrink-0">
+                        <AvatarFallback className="text-xs">{int.nome_colete?.[0]}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-sm truncate">{int.nome_colete}</span>
+                          <Badge variant="outline" className="text-[10px]">Grau {int.grau}</Badge>
+                          {recente && (
+                            <Badge className="text-[10px] bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/40 gap-1">
+                              <Sparkles className="h-3 w-3" />Promoção recente
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground truncate">
+                          {int.cargo_grau_texto}
+                          {dataPromocao && ` · promoção ${format(new Date(dataPromocao), 'dd/MM/yy', { locale: ptBR })}`}
+                        </div>
+                      </div>
+                      <Badge variant="secondary" className="text-[10px] shrink-0">
+                        {totalRespondidos}/{criterios.length}
+                      </Badge>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-3 pb-3 space-y-2">
+                    {criterios.map(c => {
+                      const ava = minhasAvalsInt.find(a => a.criterio_id === c.id);
+                      return (
+                        <CriterioRow
+                          key={c.id}
+                          criterio={c}
+                          atual={ava}
+                          podeEditar={podeAvaliar}
+                          onSalvar={(status, obs) => handleAvaliar(int.id, c.id, status, obs)}
+                        />
+                      );
+                    })}
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            })}
+          </Accordion>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CriterioRow({
+  criterio, atual, podeEditar, onSalvar,
+}: {
+  criterio: { id: string; nome: string; descricao: string | null };
+  atual?: { status: 'sim' | 'nao'; observacao: string | null };
+  podeEditar: boolean;
+  onSalvar: (status: 'sim' | 'nao', obs?: string) => void;
+}) {
+  const [obs, setObs] = useState(atual?.observacao || '');
+  const [editandoObs, setEditandoObs] = useState(false);
+  return (
+    <div className="rounded-md border bg-muted/30 p-2 space-y-2">
+      <div className="flex items-start gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium">{criterio.nome}</div>
+          {criterio.descricao && <div className="text-[11px] text-muted-foreground">{criterio.descricao}</div>}
+        </div>
+        <div className="flex gap-1 shrink-0">
+          <Button
+            size="sm"
+            variant={atual?.status === 'sim' ? 'default' : 'outline'}
+            className={atual?.status === 'sim' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}
+            disabled={!podeEditar}
+            onClick={() => onSalvar('sim', obs)}
+          ><Check className="h-4 w-4" /></Button>
+          <Button
+            size="sm"
+            variant={atual?.status === 'nao' ? 'default' : 'outline'}
+            className={atual?.status === 'nao' ? 'bg-rose-600 hover:bg-rose-700 text-white' : ''}
+            disabled={!podeEditar}
+            onClick={() => onSalvar('nao', obs)}
+          ><X className="h-4 w-4" /></Button>
+        </div>
+      </div>
+      {(editandoObs || atual?.observacao) && (
+        <div className="space-y-1">
+          <Textarea
+            value={obs}
+            onChange={(e) => setObs(e.target.value)}
+            placeholder="Observação (opcional)"
+            disabled={!podeEditar}
+            className="text-xs min-h-[60px]"
+          />
+          {podeEditar && atual && (
+            <Button size="sm" variant="ghost" className="h-7 text-xs"
+              onClick={() => onSalvar(atual.status, obs)}>
+              Atualizar observação
+            </Button>
+          )}
+        </div>
+      )}
+      {!editandoObs && !atual?.observacao && podeEditar && (
+        <Button size="sm" variant="ghost" className="h-6 text-xs text-muted-foreground"
+          onClick={() => setEditandoObs(true)}>+ adicionar observação</Button>
+      )}
+    </div>
+  );
+}

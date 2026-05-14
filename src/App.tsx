@@ -37,6 +37,7 @@ import FormularioAcoesSociais from "./pages/FormularioAcoesSociais";
 import AcoesSociais from "./pages/AcoesSociais";
 import AdminEventosAgendaPendentes from "./pages/AdminEventosAgendaPendentes";
 import GestaoADM from "./pages/GestaoADM";
+import AvaliacaoIntegrantes from "./pages/AvaliacaoIntegrantes";
 import Instalar from "./pages/Instalar";
 
 const queryClient = new QueryClient();
@@ -78,6 +79,7 @@ const App = () => (
                 <Route path="/formularios/acoes_sociais" element={<FormularioAcoesSociais />} />
                 <Route path="/acoes-sociais" element={<AcoesSociais />} />
                 <Route path="/gestao-adm" element={<GestaoADM />} />
+                <Route path="/avaliacao-integrantes" element={<AvaliacaoIntegrantes />} />
                 <Route path="/instalar" element={<Instalar />} />
                 <Route path="/cobranca-relatorios" element={<Navigate to="/relatorios?tab=cobranca" replace />} />
                 <Route path="/politica-privacidade" element={<PoliticaPrivacidade />} />

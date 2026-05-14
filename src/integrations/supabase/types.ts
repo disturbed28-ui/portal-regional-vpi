@@ -574,6 +574,115 @@ export type Database = {
           },
         ]
       }
+      avaliacao_periodos: {
+        Row: {
+          ano: number
+          created_at: string
+          criado_por: string | null
+          data_fim: string
+          data_inicio: string
+          encerrado_em: string | null
+          encerrado_por: string | null
+          id: string
+          nome: string
+          regional_id: string
+          semestre: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ano: number
+          created_at?: string
+          criado_por?: string | null
+          data_fim: string
+          data_inicio: string
+          encerrado_em?: string | null
+          encerrado_por?: string | null
+          id?: string
+          nome: string
+          regional_id: string
+          semestre: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ano?: number
+          created_at?: string
+          criado_por?: string | null
+          data_fim?: string
+          data_inicio?: string
+          encerrado_em?: string | null
+          encerrado_por?: string | null
+          id?: string
+          nome?: string
+          regional_id?: string
+          semestre?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      avaliacoes_integrantes: {
+        Row: {
+          avaliador_id: string
+          avaliador_nome: string | null
+          created_at: string
+          criterio_id: string
+          id: string
+          integrante_id: string
+          observacao: string | null
+          periodo_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          avaliador_id: string
+          avaliador_nome?: string | null
+          created_at?: string
+          criterio_id: string
+          id?: string
+          integrante_id: string
+          observacao?: string | null
+          periodo_id: string
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          avaliador_id?: string
+          avaliador_nome?: string | null
+          created_at?: string
+          criterio_id?: string
+          id?: string
+          integrante_id?: string
+          observacao?: string | null
+          periodo_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avaliacoes_integrantes_criterio_id_fkey"
+            columns: ["criterio_id"]
+            isOneToOne: false
+            referencedRelation: "criterios_avaliacao"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_integrantes_integrante_id_fkey"
+            columns: ["integrante_id"]
+            isOneToOne: false
+            referencedRelation: "integrantes_portal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avaliacoes_integrantes_periodo_id_fkey"
+            columns: ["periodo_id"]
+            isOneToOne: false
+            referencedRelation: "avaliacao_periodos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cargas_historico: {
         Row: {
           created_at: string | null
@@ -747,6 +856,39 @@ export type Database = {
           last_message_preview?: string | null
           participant_a?: string
           participant_b?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      criterios_avaliacao: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          ordem: number
+          regional_id: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          ordem?: number
+          regional_id: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          ordem?: number
+          regional_id?: string
           updated_at?: string
         }
         Relationships: []
@@ -3186,6 +3328,11 @@ export type Database = {
       normalizar_divisao_texto: { Args: { texto: string }; Returns: string }
       normalize_divisao_text: { Args: { texto: string }; Returns: string }
       unaccent: { Args: { "": string }; Returns: string }
+      user_grau_num: { Args: { _user_id: string }; Returns: number }
+      user_has_screen_permission: {
+        Args: { _rota: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role:
