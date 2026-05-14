@@ -18,6 +18,7 @@ import {
   useCriteriosAvaliacao,
   useAvaliacoesIntegrantes,
   useUltimaPromocaoGrau,
+  useMensalidadesAtrasoPeriodo,
   upsertAvaliacao,
 } from "@/hooks/useAvaliacaoData";
 
