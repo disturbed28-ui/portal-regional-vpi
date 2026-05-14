@@ -258,6 +258,44 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
                             ))}
                           </div>
                         )}
+                        {freq.eventos && freq.eventos.length > 0 && (
+                          <Collapsible>
+                            <CollapsibleTrigger className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground pt-1 group">
+                              <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
+                              Ver eventos do período ({freq.eventos.length})
+                            </CollapsibleTrigger>
+                            <CollapsibleContent className="pt-1">
+                              <div className="space-y-1 max-h-60 overflow-auto pr-1">
+                                {[...freq.eventos]
+                                  .sort((a: any, b: any) => new Date(b.data).getTime() - new Date(a.data).getTime())
+                                  .map((ev: any, idx: number) => {
+                                    const isAusente = ev.status === 'ausente';
+                                    const isPresente = ev.status === 'presente';
+                                    const naoJust = isAusente && (!ev.justificativa || ev.justificativa === 'Não justificou');
+                                    const dotColor = isPresente
+                                      ? 'bg-emerald-500'
+                                      : naoJust
+                                      ? 'bg-rose-500'
+                                      : 'bg-amber-500';
+                                    return (
+                                      <div key={idx} className="flex items-start gap-2 text-[11px] border-l-2 pl-2 py-0.5"
+                                        style={{ borderColor: 'hsl(var(--border))' }}>
+                                        <span className={`h-1.5 w-1.5 rounded-full mt-1.5 shrink-0 ${dotColor}`} />
+                                        <div className="flex-1 min-w-0">
+                                          <div className="truncate font-medium">{ev.titulo}</div>
+                                          <div className="text-muted-foreground">
+                                            {format(new Date(ev.data), "dd/MM/yy", { locale: ptBR })}
+                                            {' · '}
+                                            {isPresente ? 'Presente' : isAusente ? (ev.justificativa || 'Não justificou') : ev.status}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                              </div>
+                            </CollapsibleContent>
+                          </Collapsible>
+                        )}
                       </div>
                     )}
                     {criterios.map(c => {
