@@ -61,6 +61,8 @@ const GestaoADM = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const { profile } = useProfile(user?.id);
+  const regionalId = profile?.regional_id || null;
   
   // Buscar todas as permissões em lote (2-3 queries em vez de 72+)
   const { permissions, loading } = useScreenPermissionsBatch(ALL_ROUTES, '/gestao-adm', user?.id);
