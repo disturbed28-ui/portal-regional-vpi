@@ -99,11 +99,27 @@ export function CriteriosAvaliacaoTab({ regionalId, readOnly }: Props) {
       return;
     }
     const valor = Math.round(n * 100) / 100;
+    // Validar que a soma dos manuais ativos (incluindo este) não passa de 100
+    const somaManuaisOutros = criterios
+      .filter(x => x.ativo && x.peso_manual && x.id !== c.id)
+      .reduce((s, x) => s + Number(x.peso || 0), 0);
+    if (somaManuaisOutros + valor > 100.001) {
+      toast.error('Peso ultrapassa 100%', {
+        description: `Outros pesos manuais somam ${Math.round(somaManuaisOutros * 100) / 100}%. Máximo permitido aqui: ${Math.round((100 - somaManuaisOutros) * 100) / 100}%.`,
+        duration: 6000,
+      });
+      return;
+    }
     const { error } = await supabase.from('criterios_avaliacao')
       .update({ peso: valor, peso_manual: true }).eq('id', c.id);
     if (error) { toast.error('Erro', { description: error.message, duration: 6000 }); return; }
+    // Recalcular automáticos para fechar 100%
+    const novaLista = criterios.map(x =>
+      x.id === c.id ? { ...x, peso: valor, peso_manual: true } : x
+    );
+    await aplicarAutoSugestao(novaLista);
     setPesoEdit(s => { const n = { ...s }; delete n[c.id]; return n; });
-    toast.success('Peso salvo', { duration: 6000 });
+    toast.success('Peso salvo e demais recalculados', { duration: 6000 });
     refetch();
   };
 
