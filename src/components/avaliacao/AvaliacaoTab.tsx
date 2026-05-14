@@ -205,6 +205,11 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
                               <TrendingUp className="h-3 w-3" />{pct}%
                             </Badge>
                           )}
+                          {(mensalidadesAtrasoMap[int.registro_id] || 0) > 0 && (
+                            <Badge variant="outline" className="text-[10px] gap-1 bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/40">
+                              {mensalidadesAtrasoMap[int.registro_id]} mens. em atraso
+                            </Badge>
+                          )}
                         </div>
                         <div className="text-[11px] text-muted-foreground truncate">
                           {int.cargo_grau_texto}
