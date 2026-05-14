@@ -42,6 +42,7 @@ const Index = () => {
   const canSeeOrganograma = permissions['/organograma']?.hasAccess ?? false;
   const canSeeAdmin = permissions['/admin']?.hasAccess ?? false;
   const hasAcessoGestaoADM = permissions['/gestao-adm']?.hasAccess ?? false;
+  const hasAcessoAvaliacao = permissions['/avaliacao-integrantes']?.hasAccess ?? false;
   const [showQRCode, setShowQRCode] = useState(false);
 
   // Sincronização automática da Agenda para admins (detecta eventos cancelados/removidos)
