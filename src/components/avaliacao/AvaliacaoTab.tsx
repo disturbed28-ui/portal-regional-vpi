@@ -18,6 +18,7 @@ import {
   useCriteriosAvaliacao,
   useAvaliacoesIntegrantes,
   useUltimaPromocaoGrau,
+  useMensalidadesAtrasoPeriodo,
   upsertAvaliacao,
 } from "@/hooks/useAvaliacaoData";
 
@@ -74,6 +75,9 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
     (frequenciaData || []).forEach((f: any) => m.set(f.integrante_id, f));
     return m;
   }, [frequenciaData]);
+
+  const registroIds = useMemo(() => todosIntegrantes.map(i => i.registro_id), [todosIntegrantes]);
+  const mensalidadesAtrasoMap = useMensalidadesAtrasoPeriodo(registroIds, freqInicio, freqFim);
 
   const isPeriodoAberto = periodo?.status === 'aberto';
   const podeAvaliar = !readOnly && isPeriodoAberto;
@@ -199,6 +203,11 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
                           {pct !== null && (
                             <Badge variant="outline" className={`text-[10px] gap-1 ${pctColor}`}>
                               <TrendingUp className="h-3 w-3" />{pct}%
+                            </Badge>
+                          )}
+                          {(mensalidadesAtrasoMap[int.registro_id] || 0) > 0 && (
+                            <Badge variant="outline" className="text-[10px] gap-1 bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/40">
+                              {mensalidadesAtrasoMap[int.registro_id]} mens. em atraso
                             </Badge>
                           )}
                         </div>

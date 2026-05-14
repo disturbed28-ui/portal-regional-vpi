@@ -146,6 +146,44 @@ export const upsertAvaliacao = async (input: {
 };
 
 /**
+ * Conta mensalidades pagas com atraso (liquidadas) no período por registro_id.
+ */
+export const useMensalidadesAtrasoPeriodo = (
+  registroIds: number[],
+  dataInicio: Date | null,
+  dataFim: Date | null,
+) => {
+  const [map, setMap] = useState<Record<number, number>>({});
+  const key = registroIds.join(',') + '|' + (dataInicio?.toISOString() || '') + '|' + (dataFim?.toISOString() || '');
+  useEffect(() => {
+    if (registroIds.length === 0 || !dataInicio || !dataFim) { setMap({}); return; }
+    (async () => {
+      let all: any[] = [];
+      let from = 0;
+      const pageSize = 1000;
+      while (true) {
+        const { data, error } = await supabase
+          .from('mensalidades_atraso')
+          .select('registro_id')
+          .in('registro_id', registroIds)
+          .eq('liquidado', true)
+          .gte('data_liquidacao', dataInicio.toISOString())
+          .lte('data_liquidacao', dataFim.toISOString())
+          .range(from, from + pageSize - 1);
+        if (error) { console.error('[useMensalidadesAtrasoPeriodo]', error); break; }
+        all = all.concat(data || []);
+        if (!data || data.length < pageSize) break;
+        from += pageSize;
+      }
+      const m: Record<number, number> = {};
+      for (const r of all) m[r.registro_id] = (m[r.registro_id] || 0) + 1;
+      setMap(m);
+    })();
+  }, [key]); // eslint-disable-line
+  return map;
+};
+
+/**
  * Busca data REAL da última promoção por integrante.
  * Considera promoção apenas quando, no histórico de `atualizacoes_carga`,
  * existe um registro com `valor_novo` igual ao grau atual e `valor_anterior`
