@@ -76,6 +76,9 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
     return m;
   }, [frequenciaData]);
 
+  const registroIds = useMemo(() => todosIntegrantes.map(i => i.registro_id), [todosIntegrantes]);
+  const mensalidadesAtrasoMap = useMensalidadesAtrasoPeriodo(registroIds, freqInicio, freqFim);
+
   const isPeriodoAberto = periodo?.status === 'aberto';
   const podeAvaliar = !readOnly && isPeriodoAberto;
 
