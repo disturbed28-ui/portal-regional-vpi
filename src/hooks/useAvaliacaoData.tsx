@@ -23,6 +23,8 @@ export interface CriterioAvaliacao {
   descricao: string | null;
   ativo: boolean;
   ordem: number;
+  peso: number;
+  peso_manual: boolean;
 }
 
 export interface AvaliacaoIntegrante {
