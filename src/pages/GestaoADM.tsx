@@ -114,9 +114,11 @@ const GestaoADM = () => {
       { value: "estagio", label: "Estágio", icon: Award, hasAccess: estagioP.hasAnyAccess },
       { value: "aniversariantes", label: "Aniversários", icon: Cake, hasAccess: aniversariantesP.hasAnyAccess },
       { value: "afastamentos", label: "Afastados", icon: UserMinus, hasAccess: afastamentosP.hasAnyAccess },
+      { value: "criterios-avaliacao", label: "Critérios de Avaliação", icon: ListChecks, hasAccess: criteriosAvalP.hasAnyAccess },
+      { value: "periodos-avaliacao", label: "Períodos de Avaliação", icon: CalendarRange, hasAccess: periodosAvalP.hasAnyAccess },
     ];
     return allTabs.filter(tab => tab.hasAccess);
-  }, [integrantesP.hasAnyAccess, inadimplenciaP.hasAnyAccess, treinamentoP.hasAnyAccess, estagioP.hasAnyAccess, aniversariantesP.hasAnyAccess, afastamentosP.hasAnyAccess]);
+  }, [integrantesP.hasAnyAccess, inadimplenciaP.hasAnyAccess, treinamentoP.hasAnyAccess, estagioP.hasAnyAccess, aniversariantesP.hasAnyAccess, afastamentosP.hasAnyAccess, criteriosAvalP.hasAnyAccess, periodosAvalP.hasAnyAccess]);
 
   // Montar lista de sub-abas de Integrantes visíveis
   const visibleIntegrantesSubTabs = useMemo(() => {
