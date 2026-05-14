@@ -33,7 +33,7 @@ const Index = () => {
   const { links: linksAtivos } = useLinksUteis(true);
   
   // Batch único para todas as permissões de tela - elimina race conditions no refresh
-  const permissionRoutes = ['/acoes-sociais', '/listas-presenca', '/relatorios', '/organograma', '/admin', '/gestao-adm'];
+  const permissionRoutes = ['/acoes-sociais', '/listas-presenca', '/relatorios', '/organograma', '/admin', '/gestao-adm', '/avaliacao-integrantes'];
   const { permissions, loading: loadingPermissions } = useScreenPermissionsBatch(permissionRoutes, '/', user?.id);
   
   const hasAcessoAcoesSociais = permissions['/acoes-sociais']?.hasAccess ?? false;
