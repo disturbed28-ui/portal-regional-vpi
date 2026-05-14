@@ -2,15 +2,17 @@ import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Check, X, AlertCircle, Sparkles } from "lucide-react";
-import { format, differenceInMonths } from "date-fns";
+import { Progress } from "@/components/ui/progress";
+import { Loader2, Check, X, AlertCircle, Sparkles, TrendingUp } from "lucide-react";
+import { format, differenceInMonths, startOfDay, endOfDay, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { useIntegrantesGestao } from "@/hooks/useIntegrantesGestao";
+import { useFrequenciaPonderada } from "@/hooks/useFrequenciaPonderada";
 import {
   usePeriodosAvaliacao,
   useCriteriosAvaliacao,
