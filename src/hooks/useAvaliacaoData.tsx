@@ -174,7 +174,7 @@ export const useMensalidadesAtrasoPeriodo = (
         while (true) {
           const base = supabase
             .from('mensalidades_atraso')
-            .select('registro_id')
+            .select('registro_id, data_vencimento, data_liquidacao, liquidado, ativo')
             .in('registro_id', registroIds)
             .range(from, from + pageSize - 1);
           const { data, error } = await apply(base);
@@ -185,15 +185,16 @@ export const useMensalidadesAtrasoPeriodo = (
         }
         return all;
       };
-      const fimISO = dataFim.toISOString();
-      const inicioISO = dataInicio.toISOString();
+      const inicioDate = dataInicio.toISOString().slice(0, 10);
       const fimDate = dataFim.toISOString().slice(0, 10);
 
-      const [pagas, abertas] = await Promise.all([
+      // Pagas em atraso: vencimento dentro do período E liquidação posterior ao vencimento
+      // (independente de quando a liquidação foi importada)
+      const [liquidadasNoPeriodo, abertas] = await Promise.all([
         fetchAll((q: any) => q
           .eq('liquidado', true)
-          .gte('data_liquidacao', inicioISO)
-          .lte('data_liquidacao', fimISO)),
+          .gte('data_vencimento', inicioDate)
+          .lte('data_vencimento', fimDate)),
         fetchAll((q: any) => q
           .eq('ativo', true)
           .eq('liquidado', false)
@@ -202,7 +203,13 @@ export const useMensalidadesAtrasoPeriodo = (
 
       const m: Record<number, MensalidadesAvaliacaoInfo> = {};
       const ensure = (id: number) => (m[id] = m[id] || { pagasAtraso: 0, abertas: 0 });
-      for (const r of pagas) ensure(r.registro_id).pagasAtraso += 1;
+      for (const r of liquidadasNoPeriodo) {
+        // Considerar paga em atraso somente se liquidação > vencimento
+        if (!r.data_liquidacao || !r.data_vencimento) continue;
+        const liq = new Date(r.data_liquidacao);
+        const venc = new Date(r.data_vencimento + 'T23:59:59');
+        if (liq > venc) ensure(r.registro_id).pagasAtraso += 1;
+      }
       for (const r of abertas) ensure(r.registro_id).abertas += 1;
       setMap(m);
     })();
