@@ -42,10 +42,33 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
     [integrantesPorDivisao]
   );
   const integranteIds = useMemo(() => todosIntegrantes.map(i => i.id), [todosIntegrantes]);
-  const registroIds = useMemo(() => todosIntegrantes.map(i => i.registro_id), [todosIntegrantes]);
+  const grausPorRegistro = useMemo(() => {
+    const m: Record<number, string | null> = {};
+    todosIntegrantes.forEach(i => { m[i.registro_id] = i.grau ?? null; });
+    return m;
+  }, [todosIntegrantes]);
 
   const { avaliacoes, refetch } = useAvaliacoesIntegrantes(periodoId, integranteIds);
-  const promocoesMap = useUltimaPromocaoGrau(registroIds);
+  const promocoesMap = useUltimaPromocaoGrau(grausPorRegistro);
+
+  // Frequência: usa janela do período de avaliação ou últimos 6 meses
+  const [freqInicio, freqFim] = useMemo<[Date, Date]>(() => {
+    if (periodo?.data_inicio && periodo?.data_fim) {
+      return [startOfDay(new Date(periodo.data_inicio)), endOfDay(new Date(periodo.data_fim))];
+    }
+    return [startOfDay(subMonths(new Date(), 6)), endOfDay(new Date())];
+  }, [periodo?.data_inicio, periodo?.data_fim]);
+
+  const { data: frequenciaData } = useFrequenciaPonderada({
+    dataInicio: freqInicio,
+    dataFim: freqFim,
+    regionalId: regionalId || undefined,
+  });
+  const freqMap = useMemo(() => {
+    const m = new Map<string, typeof frequenciaData extends (infer U)[] | undefined ? U : never>();
+    (frequenciaData || []).forEach((f: any) => m.set(f.integrante_id, f));
+    return m;
+  }, [frequenciaData]);
 
   const isPeriodoAberto = periodo?.status === 'aberto';
   const podeAvaliar = !readOnly && isPeriodoAberto;
