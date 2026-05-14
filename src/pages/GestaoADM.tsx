@@ -53,12 +53,16 @@ const ALL_ROUTES = [
   '/gestao-adm-estagio-flyers',
   '/gestao-adm-aniversariantes',
   '/gestao-adm-afastamentos',
+  '/gestao-adm/criterios-avaliacao',
+  '/gestao-adm/periodos-avaliacao',
 ];
 
 const GestaoADM = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const { profile } = useProfile(user?.id);
+  const regionalId = profile?.regional_id || null;
   
   // Buscar todas as permissões em lote (2-3 queries em vez de 72+)
   const { permissions, loading } = useScreenPermissionsBatch(ALL_ROUTES, '/gestao-adm', user?.id);
@@ -79,6 +83,8 @@ const GestaoADM = () => {
   const estagioP = getPerm('/gestao-adm-estagio');
   const aniversariantesP = getPerm('/gestao-adm-aniversariantes');
   const afastamentosP = getPerm('/gestao-adm-afastamentos');
+  const criteriosAvalP = getPerm('/gestao-adm/criterios-avaliacao');
+  const periodosAvalP = getPerm('/gestao-adm/periodos-avaliacao');
 
   // Permissões das sub-abas de Integrantes
   const listaP = getPerm('/gestao-adm-integrantes-lista');
@@ -108,9 +114,11 @@ const GestaoADM = () => {
       { value: "estagio", label: "Estágio", icon: Award, hasAccess: estagioP.hasAnyAccess },
       { value: "aniversariantes", label: "Aniversários", icon: Cake, hasAccess: aniversariantesP.hasAnyAccess },
       { value: "afastamentos", label: "Afastados", icon: UserMinus, hasAccess: afastamentosP.hasAnyAccess },
+      { value: "criterios-avaliacao", label: "Critérios de Avaliação", icon: ListChecks, hasAccess: criteriosAvalP.hasAnyAccess },
+      { value: "periodos-avaliacao", label: "Períodos de Avaliação", icon: CalendarRange, hasAccess: periodosAvalP.hasAnyAccess },
     ];
     return allTabs.filter(tab => tab.hasAccess);
-  }, [integrantesP.hasAnyAccess, inadimplenciaP.hasAnyAccess, treinamentoP.hasAnyAccess, estagioP.hasAnyAccess, aniversariantesP.hasAnyAccess, afastamentosP.hasAnyAccess]);
+  }, [integrantesP.hasAnyAccess, inadimplenciaP.hasAnyAccess, treinamentoP.hasAnyAccess, estagioP.hasAnyAccess, aniversariantesP.hasAnyAccess, afastamentosP.hasAnyAccess, criteriosAvalP.hasAnyAccess, periodosAvalP.hasAnyAccess]);
 
   // Montar lista de sub-abas de Integrantes visíveis
   const visibleIntegrantesSubTabs = useMemo(() => {
@@ -513,6 +521,18 @@ const GestaoADM = () => {
             {afastamentosP.hasAnyAccess && (
               <TabsContent value="afastamentos" className="m-0">
                 <AfastadosGestaoTab userId={user?.id} readOnly={afastamentosP.isReadOnly} />
+              </TabsContent>
+            )}
+
+            {criteriosAvalP.hasAnyAccess && (
+              <TabsContent value="criterios-avaliacao" className="m-0">
+                <CriteriosAvaliacaoTab regionalId={regionalId} readOnly={criteriosAvalP.isReadOnly} />
+              </TabsContent>
+            )}
+
+            {periodosAvalP.hasAnyAccess && (
+              <TabsContent value="periodos-avaliacao" className="m-0">
+                <PeriodosAvaliacaoTab userId={user?.id} regionalId={regionalId} readOnly={periodosAvalP.isReadOnly} />
               </TabsContent>
             )}
           </div>
