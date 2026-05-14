@@ -83,6 +83,8 @@ const GestaoADM = () => {
   const estagioP = getPerm('/gestao-adm-estagio');
   const aniversariantesP = getPerm('/gestao-adm-aniversariantes');
   const afastamentosP = getPerm('/gestao-adm-afastamentos');
+  const criteriosAvalP = getPerm('/gestao-adm/criterios-avaliacao');
+  const periodosAvalP = getPerm('/gestao-adm/periodos-avaliacao');
 
   // Permissões das sub-abas de Integrantes
   const listaP = getPerm('/gestao-adm-integrantes-lista');
