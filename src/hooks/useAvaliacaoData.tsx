@@ -223,6 +223,84 @@ export const useMensalidadesAtrasoPeriodo = (
  * existe um registro com `valor_novo` igual ao grau atual e `valor_anterior`
  * diferente e não vazio (mudança real, não artefato de carga).
  */
+export interface DecisaoAvaliacao {
+  id: string;
+  periodo_id: string;
+  integrante_id: string;
+  etapa: 'divisao' | 'regional';
+  decisao: 'aprovado' | 'reprovado';
+  justificativa: string | null;
+  nota_calculada: number;
+  decidido_por: string;
+  decidido_por_nome: string | null;
+  decidido_em: string;
+}
+
+export interface DecisoesIntegrante {
+  divisao?: DecisaoAvaliacao;
+  regional?: DecisaoAvaliacao;
+}
+
+export const useDecisoesAvaliacao = (
+  periodoId: string | null | undefined,
+  integranteIds: string[],
+) => {
+  const [map, setMap] = useState<Record<string, DecisoesIntegrante>>({});
+  const [loading, setLoading] = useState(false);
+  const idsKey = integranteIds.join(',');
+
+  const fetchData = useCallback(async () => {
+    if (!periodoId || integranteIds.length === 0) { setMap({}); return; }
+    setLoading(true);
+    let all: DecisaoAvaliacao[] = [];
+    let from = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data, error } = await supabase
+        .from('avaliacoes_decisao_final' as any)
+        .select('*')
+        .eq('periodo_id', periodoId)
+        .in('integrante_id', integranteIds)
+        .range(from, from + pageSize - 1);
+      if (error) { console.error('[useDecisoesAvaliacao]', error); break; }
+      all = all.concat((data || []) as any);
+      if (!data || data.length < pageSize) break;
+      from += pageSize;
+    }
+    const m: Record<string, DecisoesIntegrante> = {};
+    for (const d of all) {
+      m[d.integrante_id] = m[d.integrante_id] || {};
+      m[d.integrante_id][d.etapa] = d;
+    }
+    setMap(m);
+    setLoading(false);
+  }, [periodoId, idsKey]); // eslint-disable-line
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  return { decisoesMap: map, loading, refetch: fetchData };
+};
+
+export const upsertDecisaoAvaliacao = async (input: {
+  periodo_id: string;
+  integrante_id: string;
+  etapa: 'divisao' | 'regional';
+  decisao: 'aprovado' | 'reprovado';
+  justificativa: string | null;
+  nota_calculada: number;
+  decidido_por: string;
+  decidido_por_nome: string | null;
+}) => {
+  const { error } = await supabase
+    .from('avaliacoes_decisao_final' as any)
+    .upsert(input, { onConflict: 'periodo_id,integrante_id,etapa' });
+  if (error) {
+    toast.error('Erro ao salvar decisão', { description: error.message, duration: 6000 });
+    return false;
+  }
+  return true;
+};
+
 export const useUltimaPromocaoGrau = (
   grausPorRegistro: Record<number, string | null | undefined>
 ) => {
