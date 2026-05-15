@@ -8,11 +8,14 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Check, X, AlertCircle, Sparkles, TrendingUp, ChevronDown } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Loader2, Check, X, AlertCircle, Sparkles, TrendingUp, ChevronDown, ShieldCheck, ShieldX, Lock } from "lucide-react";
 import { format, differenceInMonths, startOfDay, endOfDay, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { useIntegrantesGestao } from "@/hooks/useIntegrantesGestao";
+import { useProfile } from "@/hooks/useProfile";
+import { useUserRole } from "@/hooks/useUserRole";
 import { useFrequenciaPonderada } from "@/hooks/useFrequenciaPonderada";
 import {
   usePeriodosAvaliacao,
@@ -20,7 +23,10 @@ import {
   useAvaliacoesIntegrantes,
   useUltimaPromocaoGrau,
   useMensalidadesAtrasoPeriodo,
+  useDecisoesAvaliacao,
   upsertAvaliacao,
+  upsertDecisaoAvaliacao,
+  type DecisoesIntegrante,
 } from "@/hooks/useAvaliacaoData";
 
 interface Props {
@@ -30,8 +36,20 @@ interface Props {
   readOnly?: boolean;
 }
 
+type DecisionDialogState = {
+  integranteId: string;
+  integranteNome: string;
+  etapa: 'divisao' | 'regional';
+  decisao: 'aprovado' | 'reprovado';
+  nota: number;
+  exigeJustificativa: boolean;
+  motivoExigencia?: string;
+} | null;
+
 export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Props) {
   const { integrantesPorDivisao, loading: loadingInt } = useIntegrantesGestao(userId);
+  const { profile } = useProfile(userId);
+  const { hasRole } = useUserRole(userId);
   const { periodos, periodoAtualAberto, loading: loadingPer } = usePeriodosAvaliacao(regionalId);
   const { criterios, loading: loadingCrit } = useCriteriosAvaliacao(regionalId, true);
 
@@ -51,10 +69,9 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
   }, [todosIntegrantes]);
 
   const { avaliacoes, refetch } = useAvaliacoesIntegrantes(periodoId, integranteIds);
+  const { decisoesMap, refetch: refetchDecisoes } = useDecisoesAvaliacao(periodoId, integranteIds);
   const promocoesMap = useUltimaPromocaoGrau(grausPorRegistro);
 
-  // Frequência: usa exatamente a janela do período de avaliação selecionado.
-  // Parse YYYY-MM-DD como data local para evitar shift de timezone.
   const parseLocalDate = (s: string) => {
     const [y, m, d] = s.split('-').map(Number);
     return new Date(y, (m || 1) - 1, d || 1);
@@ -72,7 +89,7 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
     regionalId: regionalId || undefined,
   });
   const freqMap = useMemo(() => {
-    const m = new Map<string, typeof frequenciaData extends (infer U)[] | undefined ? U : never>();
+    const m = new Map<string, any>();
     (frequenciaData || []).forEach((f: any) => m.set(f.integrante_id, f));
     return m;
   }, [frequenciaData]);
@@ -80,8 +97,20 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
   const registroIds = useMemo(() => todosIntegrantes.map(i => i.registro_id), [todosIntegrantes]);
   const mensalidadesAtrasoMap = useMensalidadesAtrasoPeriodo(registroIds, freqInicio, freqFim);
 
+  // Permissões agregadas
+  const isAdminOrComando = hasRole('admin') || hasRole('comando');
+  const isDiretorDivisao = hasRole('diretor_divisao');
+  const isDiretorRegional = hasRole('diretor_regional');
+  const userDivisaoId = profile?.divisao_id || null;
+  const userRegionalId = profile?.regional_id || null;
+
   const isPeriodoAberto = periodo?.status === 'aberto';
   const podeAvaliar = !readOnly && isPeriodoAberto;
+
+  // Estado do modal de decisão
+  const [decisionDialog, setDecisionDialog] = useState<DecisionDialogState>(null);
+  const [justificativa, setJustificativa] = useState('');
+  const [salvandoDecisao, setSalvandoDecisao] = useState(false);
 
   if (loadingInt || loadingPer || loadingCrit) {
     return <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
@@ -103,20 +132,84 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
     );
   }
 
-  const handleAvaliar = async (integranteId: string, criterioId: string, status: 'sim' | 'nao', observacao?: string) => {
-    if (!userId || !periodoId) return;
+  const handleAvaliar = async (
+    integranteId: string,
+    criterioId: string,
+    status: 'sim' | 'nao',
+    observacao: string,
+  ) => {
+    if (!userId || !periodoId) return false;
+    if (status === 'nao' && !observacao.trim()) {
+      toast.error('Observação obrigatória ao reprovar o critério', { duration: 6000 });
+      return false;
+    }
     const ok = await upsertAvaliacao({
       periodo_id: periodoId,
       integrante_id: integranteId,
       criterio_id: criterioId,
       status,
-      observacao: observacao ?? null,
+      observacao: observacao.trim() || null,
       avaliador_id: userId,
       avaliador_nome: avaliadorNome ?? null,
     });
     if (ok) {
       toast.success('Avaliação registrada', { duration: 6000 });
       refetch();
+      // Decisões já foram derrubadas no banco via trigger; refresca pra refletir
+      refetchDecisoes();
+    }
+    return ok;
+  };
+
+  const abrirDecisao = (
+    integrante: typeof todosIntegrantes[number],
+    etapa: 'divisao' | 'regional',
+    decisao: 'aprovado' | 'reprovado',
+    nota: number,
+    decisoesIntegrante: DecisoesIntegrante,
+  ) => {
+    let exigeJust = decisao === 'reprovado';
+    let motivoExig: string | undefined;
+    if (decisao === 'reprovado') motivoExig = 'Reprovação exige justificativa';
+    // DR aprovando contra reprovação do DD: justificativa obrigatória
+    if (etapa === 'regional' && decisao === 'aprovado' && decisoesIntegrante.divisao?.decisao === 'reprovado') {
+      exigeJust = true;
+      motivoExig = 'Você está aprovando contra a reprovação do Diretor de Divisão — justificativa obrigatória';
+    }
+    setJustificativa('');
+    setDecisionDialog({
+      integranteId: integrante.id,
+      integranteNome: integrante.nome_colete,
+      etapa,
+      decisao,
+      nota,
+      exigeJustificativa: exigeJust,
+      motivoExigencia: motivoExig,
+    });
+  };
+
+  const confirmarDecisao = async () => {
+    if (!decisionDialog || !userId || !periodoId) return;
+    if (decisionDialog.exigeJustificativa && !justificativa.trim()) {
+      toast.error('Justificativa obrigatória', { duration: 6000 });
+      return;
+    }
+    setSalvandoDecisao(true);
+    const ok = await upsertDecisaoAvaliacao({
+      periodo_id: periodoId,
+      integrante_id: decisionDialog.integranteId,
+      etapa: decisionDialog.etapa,
+      decisao: decisionDialog.decisao,
+      justificativa: justificativa.trim() || null,
+      nota_calculada: decisionDialog.nota,
+      decidido_por: userId,
+      decidido_por_nome: avaliadorNome ?? null,
+    });
+    setSalvandoDecisao(false);
+    if (ok) {
+      toast.success(`Decisão ${decisionDialog.etapa === 'divisao' ? 'da Divisão' : 'Regional'} registrada`, { duration: 6000 });
+      setDecisionDialog(null);
+      refetchDecisoes();
     }
   };
 
@@ -169,9 +262,28 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
               const recente = dataPromocao && differenceInMonths(new Date(), new Date(dataPromocao)) < 6;
               const minhasAvalsInt = avaliacoes.filter(a => a.integrante_id === int.id);
               const totalRespondidos = new Set(minhasAvalsInt.map(a => a.criterio_id)).size;
+              const todosRespondidos = criterios.length > 0 && totalRespondidos === criterios.length;
+
+              // Cálculo da nota final (sempre sobre o total de critérios ativos)
+              const somaPesosTotal = criterios.reduce((s, c) => s + Number(c.peso || 0), 0);
+              const somaPesosSim = criterios.reduce((s, c) => {
+                const av = minhasAvalsInt.find(a => a.criterio_id === c.id);
+                return av?.status === 'sim' ? s + Number(c.peso || 0) : s;
+              }, 0);
+              const notaFinal = somaPesosTotal > 0 ? Math.round((somaPesosSim / somaPesosTotal) * 100 * 10) / 10 : 0;
+
+              const decs = decisoesMap[int.id] || {};
+              const decDD = decs.divisao;
+              const decDR = decs.regional;
+
+              // Permissões para esta linha
+              const ehMinhaDivisao = !!userDivisaoId && int.divisao_id === userDivisaoId;
+              const ehMinhaRegional = !!userRegionalId && int.regional_id === userRegionalId;
+              const podeDecidirDivisao = podeAvaliar && (isAdminOrComando || (isDiretorDivisao && ehMinhaDivisao));
+              const podeDecidirRegional = podeAvaliar && (isAdminOrComando || (isDiretorRegional && ehMinhaRegional)) && !!decDD;
+
               const freq: any = freqMap.get(int.id);
               const pct = freq ? Math.round(freq.percentual) : null;
-              // Breakdown de justificativas / ausências
               const breakdown: Record<string, number> = {};
               if (freq) {
                 for (const ev of freq.eventos) {
@@ -185,6 +297,18 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
                 : pct >= 70 ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40'
                 : pct >= 50 ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/40'
                 : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40';
+
+              // Status global do integrante para badge no header
+              const statusBadge = decDR
+                ? (decDR.decisao === 'aprovado'
+                    ? <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-600 text-white gap-1"><ShieldCheck className="h-3 w-3" />Aprovado</Badge>
+                    : <Badge className="text-[10px] bg-rose-600 hover:bg-rose-600 text-white gap-1"><ShieldX className="h-3 w-3" />Reprovado</Badge>)
+                : decDD
+                ? (decDD.decisao === 'aprovado'
+                    ? <Badge variant="outline" className="text-[10px] gap-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/40">Aguardando DR</Badge>
+                    : <Badge variant="outline" className="text-[10px] gap-1 bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/40">Reprovado pela DD · Aguardando DR</Badge>)
+                : <Badge variant="outline" className="text-[10px]">Pendente DD</Badge>;
+
               return (
                 <AccordionItem key={int.id} value={int.id} className="border rounded-md bg-card">
                   <AccordionTrigger className="px-3 py-2 hover:no-underline">
@@ -206,6 +330,7 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
                               <TrendingUp className="h-3 w-3" />{pct}%
                             </Badge>
                           )}
+                          {statusBadge}
                           {(() => {
                             const info = mensalidadesAtrasoMap[int.registro_id];
                             if (!info) return null;
@@ -298,6 +423,7 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
                         )}
                       </div>
                     )}
+
                     {criterios.map(c => {
                       const ava = minhasAvalsInt.find(a => a.criterio_id === c.id);
                       return (
@@ -310,6 +436,52 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
                         />
                       );
                     })}
+
+                    {/* Rodapé: nota final + decisões */}
+                    <div className="rounded-md border-2 bg-muted/40 p-3 space-y-3">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">Nota final</span>
+                          <span className="text-2xl font-bold tabular-nums">{notaFinal.toFixed(1)}</span>
+                          <span className="text-xs text-muted-foreground">/ 100</span>
+                        </div>
+                        <Badge variant="outline" className="text-[10px]">
+                          {totalRespondidos} de {criterios.length} critérios respondidos
+                        </Badge>
+                      </div>
+
+                      {/* Etapa 1 — Diretor de Divisão */}
+                      <DecisaoLinha
+                        titulo="1. Diretor de Divisão"
+                        decisao={decDD}
+                        podeAgir={podeDecidirDivisao}
+                        bloqueioMsg={
+                          !podeAvaliar ? null
+                          : !podeDecidirDivisao ? 'Apenas o Diretor de Divisão deste integrante pode concluir esta etapa'
+                          : !todosRespondidos ? `Responda todos os ${criterios.length} critérios para concluir`
+                          : null
+                        }
+                        habilitarBotoes={podeDecidirDivisao && todosRespondidos}
+                        onAprovar={() => abrirDecisao(int, 'divisao', 'aprovado', notaFinal, decs)}
+                        onReprovar={() => abrirDecisao(int, 'divisao', 'reprovado', notaFinal, decs)}
+                      />
+
+                      {/* Etapa 2 — Diretor Regional */}
+                      <DecisaoLinha
+                        titulo="2. Diretor Regional (validação final)"
+                        decisao={decDR}
+                        podeAgir={podeDecidirRegional}
+                        bloqueioMsg={
+                          !podeAvaliar ? null
+                          : !decDD ? 'Aguardando decisão do Diretor de Divisão'
+                          : !podeDecidirRegional ? 'Apenas o Diretor Regional desta regional pode concluir esta etapa'
+                          : null
+                        }
+                        habilitarBotoes={podeDecidirRegional}
+                        onAprovar={() => abrirDecisao(int, 'regional', 'aprovado', notaFinal, decs)}
+                        onReprovar={() => abrirDecisao(int, 'regional', 'reprovado', notaFinal, decs)}
+                      />
+                    </div>
                   </AccordionContent>
                 </AccordionItem>
               );
@@ -317,6 +489,106 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
           </Accordion>
         </div>
       ))}
+
+      {/* Modal de decisão */}
+      <Dialog open={!!decisionDialog} onOpenChange={(open) => !open && setDecisionDialog(null)}>
+        <DialogContent className="sm:max-w-md w-[95vw]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {decisionDialog?.decisao === 'aprovado'
+                ? <ShieldCheck className="h-5 w-5 text-emerald-600" />
+                : <ShieldX className="h-5 w-5 text-rose-600" />}
+              {decisionDialog?.decisao === 'aprovado' ? 'Aprovar' : 'Reprovar'} — {decisionDialog?.etapa === 'divisao' ? 'Divisão' : 'Regional'}
+            </DialogTitle>
+            <DialogDescription>
+              {decisionDialog?.integranteNome} · Nota {decisionDialog?.nota.toFixed(1)} / 100
+            </DialogDescription>
+          </DialogHeader>
+          {decisionDialog?.motivoExigencia && (
+            <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-300 flex gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              {decisionDialog.motivoExigencia}
+            </div>
+          )}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium">
+              Justificativa {decisionDialog?.exigeJustificativa ? <span className="text-rose-600">*</span> : <span className="text-muted-foreground">(opcional)</span>}
+            </label>
+            <Textarea
+              value={justificativa}
+              onChange={(e) => setJustificativa(e.target.value)}
+              placeholder={decisionDialog?.exigeJustificativa ? 'Descreva o motivo da decisão...' : 'Comentário (opcional)'}
+              className="min-h-[100px] text-sm"
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDecisionDialog(null)} disabled={salvandoDecisao}>Cancelar</Button>
+            <Button
+              onClick={confirmarDecisao}
+              disabled={salvandoDecisao}
+              className={decisionDialog?.decisao === 'aprovado' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'}
+            >
+              {salvandoDecisao && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+              Confirmar {decisionDialog?.decisao === 'aprovado' ? 'aprovação' : 'reprovação'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function DecisaoLinha({
+  titulo, decisao, habilitarBotoes, bloqueioMsg, onAprovar, onReprovar,
+}: {
+  titulo: string;
+  decisao?: { decisao: 'aprovado' | 'reprovado'; justificativa: string | null; decidido_por_nome: string | null; decidido_em: string };
+  podeAgir: boolean;
+  habilitarBotoes: boolean;
+  bloqueioMsg: string | null;
+  onAprovar: () => void;
+  onReprovar: () => void;
+}) {
+  return (
+    <div className="rounded-md border bg-background p-2 space-y-1.5">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <span className="text-xs font-semibold">{titulo}</span>
+        {decisao ? (
+          decisao.decisao === 'aprovado'
+            ? <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-600 text-white gap-1"><ShieldCheck className="h-3 w-3" />Aprovado</Badge>
+            : <Badge className="text-[10px] bg-rose-600 hover:bg-rose-600 text-white gap-1"><ShieldX className="h-3 w-3" />Reprovado</Badge>
+        ) : (
+          <Badge variant="outline" className="text-[10px]">Pendente</Badge>
+        )}
+      </div>
+      {decisao && (
+        <div className="text-[11px] text-muted-foreground">
+          Por <span className="font-medium text-foreground">{decisao.decidido_por_nome || '—'}</span>
+          {' · '}{format(new Date(decisao.decidido_em), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}
+        </div>
+      )}
+      {decisao?.justificativa && (
+        <div className="text-[11px] bg-muted/50 rounded p-1.5 italic">"{decisao.justificativa}"</div>
+      )}
+      {bloqueioMsg && !decisao && (
+        <div className="text-[11px] text-muted-foreground flex items-center gap-1">
+          <Lock className="h-3 w-3" />{bloqueioMsg}
+        </div>
+      )}
+      {habilitarBotoes && (
+        <div className="flex gap-2 pt-1">
+          <Button size="sm" variant="outline" className="h-8 text-xs flex-1 border-emerald-500/40 hover:bg-emerald-500/10 hover:text-emerald-700"
+            onClick={onAprovar}>
+            <ShieldCheck className="h-3.5 w-3.5 mr-1" />
+            {decisao ? 'Alterar para Aprovado' : 'Aprovar'}
+          </Button>
+          <Button size="sm" variant="outline" className="h-8 text-xs flex-1 border-rose-500/40 hover:bg-rose-500/10 hover:text-rose-700"
+            onClick={onReprovar}>
+            <ShieldX className="h-3.5 w-3.5 mr-1" />
+            {decisao ? 'Alterar para Reprovado' : 'Reprovar'}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -324,18 +596,31 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
 function CriterioRow({
   criterio, atual, podeEditar, onSalvar,
 }: {
-  criterio: { id: string; nome: string; descricao: string | null };
+  criterio: { id: string; nome: string; descricao: string | null; peso: number };
   atual?: { status: 'sim' | 'nao'; observacao: string | null };
   podeEditar: boolean;
-  onSalvar: (status: 'sim' | 'nao', obs?: string) => void;
+  onSalvar: (status: 'sim' | 'nao', obs: string) => Promise<boolean | void> | void;
 }) {
   const [obs, setObs] = useState(atual?.observacao || '');
   const [editandoObs, setEditandoObs] = useState(false);
+
+  const handleReprovar = async () => {
+    if (!obs.trim()) {
+      setEditandoObs(true);
+      toast.error('Observação obrigatória ao reprovar este critério', { duration: 6000 });
+      return;
+    }
+    await onSalvar('nao', obs);
+  };
+
   return (
     <div className="rounded-md border bg-muted/30 p-2 space-y-2">
       <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium">{criterio.nome}</div>
+          <div className="text-sm font-medium flex items-center gap-2 flex-wrap">
+            {criterio.nome}
+            <Badge variant="outline" className="text-[10px]">peso {Number(criterio.peso || 0).toFixed(1)}</Badge>
+          </div>
           {criterio.descricao && <div className="text-[11px] text-muted-foreground">{criterio.descricao}</div>}
         </div>
         <div className="flex gap-1 shrink-0">
@@ -351,16 +636,16 @@ function CriterioRow({
             variant={atual?.status === 'nao' ? 'default' : 'outline'}
             className={atual?.status === 'nao' ? 'bg-rose-600 hover:bg-rose-700 text-white' : ''}
             disabled={!podeEditar}
-            onClick={() => onSalvar('nao', obs)}
+            onClick={handleReprovar}
           ><X className="h-4 w-4" /></Button>
         </div>
       </div>
-      {(editandoObs || atual?.observacao) && (
+      {(editandoObs || atual?.observacao || atual?.status === 'nao') && (
         <div className="space-y-1">
           <Textarea
             value={obs}
             onChange={(e) => setObs(e.target.value)}
-            placeholder="Observação (opcional)"
+            placeholder={atual?.status === 'nao' ? "Observação (obrigatória ao reprovar)" : "Observação (opcional)"}
             disabled={!podeEditar}
             className="text-xs min-h-[60px]"
           />
@@ -372,7 +657,7 @@ function CriterioRow({
           )}
         </div>
       )}
-      {!editandoObs && !atual?.observacao && podeEditar && (
+      {!editandoObs && !atual?.observacao && atual?.status !== 'nao' && podeEditar && (
         <Button size="sm" variant="ghost" className="h-6 text-xs text-muted-foreground"
           onClick={() => setEditandoObs(true)}>+ adicionar observação</Button>
       )}

@@ -622,6 +622,51 @@ export type Database = {
         }
         Relationships: []
       }
+      avaliacoes_decisao_final: {
+        Row: {
+          created_at: string
+          decidido_em: string
+          decidido_por: string
+          decidido_por_nome: string | null
+          decisao: string
+          etapa: string
+          id: string
+          integrante_id: string
+          justificativa: string | null
+          nota_calculada: number
+          periodo_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          decidido_em?: string
+          decidido_por: string
+          decidido_por_nome?: string | null
+          decisao: string
+          etapa: string
+          id?: string
+          integrante_id: string
+          justificativa?: string | null
+          nota_calculada?: number
+          periodo_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          decidido_em?: string
+          decidido_por?: string
+          decidido_por_nome?: string | null
+          decisao?: string
+          etapa?: string
+          id?: string
+          integrante_id?: string
+          justificativa?: string | null
+          nota_calculada?: number
+          periodo_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       avaliacoes_integrantes: {
         Row: {
           avaliador_id: string
@@ -3325,6 +3370,14 @@ export type Database = {
       }
       is_conversation_participant: {
         Args: { _conversation_id: string }
+        Returns: boolean
+      }
+      is_diretor_divisao_do_integrante: {
+        Args: { _integrante_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_diretor_regional_do_integrante: {
+        Args: { _integrante_id: string; _user_id: string }
         Returns: boolean
       }
       mark_conversation_read: {
