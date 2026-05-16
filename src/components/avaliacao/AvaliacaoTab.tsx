@@ -208,6 +208,20 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
     setSalvandoDecisao(false);
     if (ok) {
       toast.success(`Decisão ${decisionDialog.etapa === 'divisao' ? 'da Divisão' : 'Regional'} registrada`, { duration: 6000 });
+      // Notificar Diretor Regional quando DD concluir
+      if (decisionDialog.etapa === 'divisao') {
+        supabase.functions
+          .invoke('notificar-dr-avaliacao', {
+            body: {
+              periodo_id: periodoId,
+              integrante_id: decisionDialog.integranteId,
+              decisao_dd: decisionDialog.decisao,
+              nota: decisionDialog.nota,
+              decidido_por_nome: avaliadorNome ?? null,
+            },
+          })
+          .catch((e) => console.error('[notificar-dr-avaliacao]', e));
+      }
       setDecisionDialog(null);
       refetchDecisoes();
     }
