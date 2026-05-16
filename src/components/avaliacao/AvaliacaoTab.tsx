@@ -291,11 +291,14 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
               const decDD = decs.divisao;
               const decDR = decs.regional;
 
+              // Integrante é Diretor de Divisão? → avaliação em etapa única feita pelo DR
+              const ehDDIntegrante = /diretor.*divis/i.test(int.cargo_grau_texto || '');
+
               // Permissões para esta linha
               const ehMinhaDivisao = !!userDivisaoId && int.divisao_id === userDivisaoId;
               const ehMinhaRegional = !!userRegionalId && int.regional_id === userRegionalId;
-              const podeDecidirDivisao = podeAvaliar && (isAdminOrComando || (isDiretorDivisao && ehMinhaDivisao));
-              const podeDecidirRegional = podeAvaliar && (isAdminOrComando || (isDiretorRegional && ehMinhaRegional)) && !!decDD;
+              const podeDecidirDivisao = !ehDDIntegrante && podeAvaliar && (isAdminOrComando || (isDiretorDivisao && ehMinhaDivisao));
+              const podeDecidirRegional = podeAvaliar && (isAdminOrComando || (isDiretorRegional && ehMinhaRegional)) && (ehDDIntegrante || !!decDD);
 
               const freq: any = freqMap.get(int.id);
               const pct = freq ? Math.round(freq.percentual) : null;
@@ -318,6 +321,8 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
                 ? (decDR.decisao === 'aprovado'
                     ? <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-600 text-white gap-1"><ShieldCheck className="h-3 w-3" />Aprovado</Badge>
                     : <Badge className="text-[10px] bg-rose-600 hover:bg-rose-600 text-white gap-1"><ShieldX className="h-3 w-3" />Reprovado</Badge>)
+                : ehDDIntegrante
+                ? <Badge variant="outline" className="text-[10px]">Pendente DR</Badge>
                 : decDD
                 ? (decDD.decisao === 'aprovado'
                     ? <Badge variant="outline" className="text-[10px] gap-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/40">Aguardando DR</Badge>
@@ -465,34 +470,37 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
                         </Badge>
                       </div>
 
-                      {/* Etapa 1 — Diretor de Divisão */}
-                      <DecisaoLinha
-                        titulo="1. Diretor de Divisão"
-                        decisao={decDD}
-                        podeAgir={podeDecidirDivisao}
-                        bloqueioMsg={
-                          !podeAvaliar ? null
-                          : !podeDecidirDivisao ? 'Apenas o Diretor de Divisão deste integrante pode concluir esta etapa'
-                          : !todosRespondidos ? `Responda todos os ${criterios.length} critérios para concluir`
-                          : null
-                        }
-                        habilitarBotoes={podeDecidirDivisao && todosRespondidos}
-                        onAprovar={() => abrirDecisao(int, 'divisao', 'aprovado', notaFinal, decs)}
-                        onReprovar={() => abrirDecisao(int, 'divisao', 'reprovado', notaFinal, decs)}
-                      />
+                      {/* Etapa 1 — Diretor de Divisão (oculta quando o avaliado é DD) */}
+                      {!ehDDIntegrante && (
+                        <DecisaoLinha
+                          titulo="1. Diretor de Divisão"
+                          decisao={decDD}
+                          podeAgir={podeDecidirDivisao}
+                          bloqueioMsg={
+                            !podeAvaliar ? null
+                            : !podeDecidirDivisao ? 'Apenas o Diretor de Divisão deste integrante pode concluir esta etapa'
+                            : !todosRespondidos ? `Responda todos os ${criterios.length} critérios para concluir`
+                            : null
+                          }
+                          habilitarBotoes={podeDecidirDivisao && todosRespondidos}
+                          onAprovar={() => abrirDecisao(int, 'divisao', 'aprovado', notaFinal, decs)}
+                          onReprovar={() => abrirDecisao(int, 'divisao', 'reprovado', notaFinal, decs)}
+                        />
+                      )}
 
-                      {/* Etapa 2 — Diretor Regional */}
+                      {/* Etapa final — Diretor Regional */}
                       <DecisaoLinha
-                        titulo="2. Diretor Regional (validação final)"
+                        titulo={ehDDIntegrante ? 'Diretor Regional (avaliação do DD)' : '2. Diretor Regional (validação final)'}
                         decisao={decDR}
                         podeAgir={podeDecidirRegional}
                         bloqueioMsg={
                           !podeAvaliar ? null
-                          : !decDD ? 'Aguardando decisão do Diretor de Divisão'
+                          : ehDDIntegrante && !todosRespondidos ? `Responda todos os ${criterios.length} critérios para concluir`
+                          : !ehDDIntegrante && !decDD ? 'Aguardando decisão do Diretor de Divisão'
                           : !podeDecidirRegional ? 'Apenas o Diretor Regional desta regional pode concluir esta etapa'
                           : null
                         }
-                        habilitarBotoes={podeDecidirRegional}
+                        habilitarBotoes={podeDecidirRegional && (!ehDDIntegrante || todosRespondidos)}
                         onAprovar={() => abrirDecisao(int, 'regional', 'aprovado', notaFinal, decs)}
                         onReprovar={() => abrirDecisao(int, 'regional', 'reprovado', notaFinal, decs)}
                       />
