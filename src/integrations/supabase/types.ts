@@ -3348,6 +3348,10 @@ export type Database = {
         Args: { _conversation_id: string }
         Returns: boolean
       }
+      existe_decisao_divisao: {
+        Args: { _integrante_id: string; _periodo_id: string }
+        Returns: boolean
+      }
       get_or_create_conversation: {
         Args: { _other_user_id: string }
         Returns: string
