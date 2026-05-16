@@ -3380,6 +3380,10 @@ export type Database = {
         Args: { _integrante_id: string; _user_id: string }
         Returns: boolean
       }
+      is_integrante_diretor_divisao: {
+        Args: { _integrante_id: string }
+        Returns: boolean
+      }
       mark_conversation_read: {
         Args: { _conversation_id: string }
         Returns: number
