@@ -494,7 +494,7 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
 
                       {/* Etapa final — Diretor Regional */}
                       <DecisaoLinha
-                        titulo={ehDDIntegrante ? 'Diretor Regional (avaliação do DD)' : '2. Diretor Regional (validação final)'}
+                        titulo={ehDDIntegrante ? 'Diretor Regional (avaliação)' : '2. Diretor Regional (validação final)'}
                         decisao={decDR}
                         podeAgir={podeDecidirRegional}
                         bloqueioMsg={
