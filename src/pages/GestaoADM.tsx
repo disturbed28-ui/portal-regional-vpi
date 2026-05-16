@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ArrowLeft, Users, DollarSign, GraduationCap, Cake, Clock, FileEdit, History, ClipboardCheck, XCircle, List, Award, Image, RefreshCw, AlertTriangle, UserMinus, ListChecks, CalendarRange } from "lucide-react";
+import { ArrowLeft, Users, DollarSign, GraduationCap, Cake, Clock, FileEdit, History, ClipboardCheck, XCircle, List, Award, Image, RefreshCw, AlertTriangle, UserMinus, ListChecks, CalendarRange, ClipboardList } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import { CriteriosAvaliacaoTab } from "@/components/admin/avaliacao/CriteriosAvaliacaoTab";
 import { PeriodosAvaliacaoTab } from "@/components/admin/avaliacao/PeriodosAvaliacaoTab";
