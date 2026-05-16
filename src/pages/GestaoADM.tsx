@@ -541,15 +541,48 @@ const GestaoADM = () => {
               </TabsContent>
             )}
 
-            {criteriosAvalP.hasAnyAccess && (
-              <TabsContent value="criterios-avaliacao" className="m-0">
-                <CriteriosAvaliacaoTab regionalId={regionalId} readOnly={criteriosAvalP.isReadOnly} />
-              </TabsContent>
-            )}
+            {(criteriosAvalP.hasAnyAccess || periodosAvalP.hasAnyAccess) && (
+              <TabsContent value="avaliacao" className="m-0">
+                {visibleAvaliacaoSubTabs.length > 0 ? (
+                  <Tabs defaultValue={initialAvaliacaoSubTab} className="w-full">
+                    <div className="overflow-x-auto -mx-4 px-4 pb-2 mb-4">
+                      <TabsList className="inline-flex w-max min-w-full h-auto bg-muted/30 p-1 gap-1">
+                        {visibleAvaliacaoSubTabs.map((subTab) => (
+                          <TabsTrigger
+                            key={subTab.value}
+                            value={subTab.value}
+                            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs whitespace-nowrap data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                          >
+                            <subTab.icon className="h-3.5 w-3.5 shrink-0" />
+                            <span>{subTab.label}</span>
+                          </TabsTrigger>
+                        ))}
+                      </TabsList>
+                    </div>
 
-            {periodosAvalP.hasAnyAccess && (
-              <TabsContent value="periodos-avaliacao" className="m-0">
-                <PeriodosAvaliacaoTab userId={user?.id} regionalId={regionalId} readOnly={periodosAvalP.isReadOnly} />
+                    {criteriosAvalP.hasAnyAccess && (
+                      <TabsContent value="criterios-avaliacao" className="m-0">
+                        <CriteriosAvaliacaoTab regionalId={regionalId} readOnly={criteriosAvalP.isReadOnly} />
+                      </TabsContent>
+                    )}
+
+                    {periodosAvalP.hasAnyAccess && (
+                      <TabsContent value="periodos-avaliacao" className="m-0">
+                        <PeriodosAvaliacaoTab userId={user?.id} regionalId={regionalId} readOnly={periodosAvalP.isReadOnly} />
+                      </TabsContent>
+                    )}
+                  </Tabs>
+                ) : (
+                  <Card className="border-border/50">
+                    <CardContent className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                      <Clock className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                      <h3 className="text-lg font-medium text-foreground mb-2">Sem permissões</h3>
+                      <p className="text-sm text-muted-foreground max-w-xs">
+                        Você não tem permissão para acessar nenhuma sub-aba de Avaliação.
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
               </TabsContent>
             )}
           </div>
