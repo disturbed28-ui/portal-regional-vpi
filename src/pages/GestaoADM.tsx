@@ -114,11 +114,28 @@ const GestaoADM = () => {
       { value: "estagio", label: "Estágio", icon: Award, hasAccess: estagioP.hasAnyAccess },
       { value: "aniversariantes", label: "Aniversários", icon: Cake, hasAccess: aniversariantesP.hasAnyAccess },
       { value: "afastamentos", label: "Afastados", icon: UserMinus, hasAccess: afastamentosP.hasAnyAccess },
-      { value: "criterios-avaliacao", label: "Critérios de Avaliação", icon: ListChecks, hasAccess: criteriosAvalP.hasAnyAccess },
-      { value: "periodos-avaliacao", label: "Períodos de Avaliação", icon: CalendarRange, hasAccess: periodosAvalP.hasAnyAccess },
+      { value: "avaliacao", label: "Avaliação dos Integrantes", icon: ClipboardList, hasAccess: criteriosAvalP.hasAnyAccess || periodosAvalP.hasAnyAccess },
     ];
     return allTabs.filter(tab => tab.hasAccess);
   }, [integrantesP.hasAnyAccess, inadimplenciaP.hasAnyAccess, treinamentoP.hasAnyAccess, estagioP.hasAnyAccess, aniversariantesP.hasAnyAccess, afastamentosP.hasAnyAccess, criteriosAvalP.hasAnyAccess, periodosAvalP.hasAnyAccess]);
+
+  // Sub-abas de Avaliação dos Integrantes
+  const visibleAvaliacaoSubTabs = useMemo(() => {
+    const allSubTabs = [
+      { value: "criterios-avaliacao", label: "Critérios de Avaliação", icon: ListChecks, hasAccess: criteriosAvalP.hasAnyAccess },
+      { value: "periodos-avaliacao", label: "Períodos de Avaliação", icon: CalendarRange, hasAccess: periodosAvalP.hasAnyAccess },
+    ];
+    return allSubTabs.filter(tab => tab.hasAccess);
+  }, [criteriosAvalP.hasAnyAccess, periodosAvalP.hasAnyAccess]);
+
+  const initialAvaliacaoSubTab = useMemo(() => {
+    const urlMainTab = searchParams.get('mainTab');
+    const urlSubTab = searchParams.get('subTab');
+    if (urlMainTab === 'avaliacao' && urlSubTab && visibleAvaliacaoSubTabs.some(t => t.value === urlSubTab)) {
+      return urlSubTab;
+    }
+    return visibleAvaliacaoSubTabs[0]?.value || 'criterios-avaliacao';
+  }, [searchParams, visibleAvaliacaoSubTabs]);
 
   // Montar lista de sub-abas de Integrantes visíveis
   const visibleIntegrantesSubTabs = useMemo(() => {
