@@ -291,11 +291,14 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
               const decDD = decs.divisao;
               const decDR = decs.regional;
 
+              // Integrante é Diretor de Divisão? → avaliação em etapa única feita pelo DR
+              const ehDDIntegrante = /diretor.*divis/i.test(int.cargo_grau_texto || '');
+
               // Permissões para esta linha
               const ehMinhaDivisao = !!userDivisaoId && int.divisao_id === userDivisaoId;
               const ehMinhaRegional = !!userRegionalId && int.regional_id === userRegionalId;
-              const podeDecidirDivisao = podeAvaliar && (isAdminOrComando || (isDiretorDivisao && ehMinhaDivisao));
-              const podeDecidirRegional = podeAvaliar && (isAdminOrComando || (isDiretorRegional && ehMinhaRegional)) && !!decDD;
+              const podeDecidirDivisao = !ehDDIntegrante && podeAvaliar && (isAdminOrComando || (isDiretorDivisao && ehMinhaDivisao));
+              const podeDecidirRegional = podeAvaliar && (isAdminOrComando || (isDiretorRegional && ehMinhaRegional)) && (ehDDIntegrante || !!decDD);
 
               const freq: any = freqMap.get(int.id);
               const pct = freq ? Math.round(freq.percentual) : null;
