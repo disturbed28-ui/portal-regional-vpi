@@ -13,6 +13,7 @@ import { Loader2, Check, X, AlertCircle, Sparkles, TrendingUp, ChevronDown, Shie
 import { format, differenceInMonths, startOfDay, endOfDay, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { useIntegrantesGestao } from "@/hooks/useIntegrantesGestao";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -208,6 +209,20 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
     setSalvandoDecisao(false);
     if (ok) {
       toast.success(`Decisão ${decisionDialog.etapa === 'divisao' ? 'da Divisão' : 'Regional'} registrada`, { duration: 6000 });
+      // Notificar Diretor Regional quando DD concluir
+      if (decisionDialog.etapa === 'divisao') {
+        supabase.functions
+          .invoke('notificar-dr-avaliacao', {
+            body: {
+              periodo_id: periodoId,
+              integrante_id: decisionDialog.integranteId,
+              decisao_dd: decisionDialog.decisao,
+              nota: decisionDialog.nota,
+              decidido_por_nome: avaliadorNome ?? null,
+            },
+          })
+          .catch((e) => console.error('[notificar-dr-avaliacao]', e));
+      }
       setDecisionDialog(null);
       refetchDecisoes();
     }
