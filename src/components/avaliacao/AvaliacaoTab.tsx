@@ -291,8 +291,12 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
               const decDD = decs.divisao;
               const decDR = decs.regional;
 
-              // Integrante é Diretor de Divisão? → avaliação em etapa única feita pelo DR
-              const ehDDIntegrante = /diretor.*divis/i.test(int.cargo_grau_texto || '');
+              // Integrante avaliado diretamente pelo DR em etapa única:
+              // - Diretores de Divisão (Grau VI)
+              // - Todos os integrantes de Grau V (regionais)
+              const ehDDIntegrante =
+                (int.grau || '').trim().toUpperCase() === 'V' ||
+                /diretor.*divis/i.test(int.cargo_grau_texto || '');
 
               // Permissões para esta linha
               const ehMinhaDivisao = !!userDivisaoId && int.divisao_id === userDivisaoId;
