@@ -321,6 +321,8 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
                 ? (decDR.decisao === 'aprovado'
                     ? <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-600 text-white gap-1"><ShieldCheck className="h-3 w-3" />Aprovado</Badge>
                     : <Badge className="text-[10px] bg-rose-600 hover:bg-rose-600 text-white gap-1"><ShieldX className="h-3 w-3" />Reprovado</Badge>)
+                : ehDDIntegrante
+                ? <Badge variant="outline" className="text-[10px]">Pendente DR</Badge>
                 : decDD
                 ? (decDD.decisao === 'aprovado'
                     ? <Badge variant="outline" className="text-[10px] gap-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/40">Aguardando DR</Badge>
