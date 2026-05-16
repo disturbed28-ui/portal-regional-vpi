@@ -470,34 +470,37 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
                         </Badge>
                       </div>
 
-                      {/* Etapa 1 — Diretor de Divisão */}
-                      <DecisaoLinha
-                        titulo="1. Diretor de Divisão"
-                        decisao={decDD}
-                        podeAgir={podeDecidirDivisao}
-                        bloqueioMsg={
-                          !podeAvaliar ? null
-                          : !podeDecidirDivisao ? 'Apenas o Diretor de Divisão deste integrante pode concluir esta etapa'
-                          : !todosRespondidos ? `Responda todos os ${criterios.length} critérios para concluir`
-                          : null
-                        }
-                        habilitarBotoes={podeDecidirDivisao && todosRespondidos}
-                        onAprovar={() => abrirDecisao(int, 'divisao', 'aprovado', notaFinal, decs)}
-                        onReprovar={() => abrirDecisao(int, 'divisao', 'reprovado', notaFinal, decs)}
-                      />
+                      {/* Etapa 1 — Diretor de Divisão (oculta quando o avaliado é DD) */}
+                      {!ehDDIntegrante && (
+                        <DecisaoLinha
+                          titulo="1. Diretor de Divisão"
+                          decisao={decDD}
+                          podeAgir={podeDecidirDivisao}
+                          bloqueioMsg={
+                            !podeAvaliar ? null
+                            : !podeDecidirDivisao ? 'Apenas o Diretor de Divisão deste integrante pode concluir esta etapa'
+                            : !todosRespondidos ? `Responda todos os ${criterios.length} critérios para concluir`
+                            : null
+                          }
+                          habilitarBotoes={podeDecidirDivisao && todosRespondidos}
+                          onAprovar={() => abrirDecisao(int, 'divisao', 'aprovado', notaFinal, decs)}
+                          onReprovar={() => abrirDecisao(int, 'divisao', 'reprovado', notaFinal, decs)}
+                        />
+                      )}
 
-                      {/* Etapa 2 — Diretor Regional */}
+                      {/* Etapa final — Diretor Regional */}
                       <DecisaoLinha
-                        titulo="2. Diretor Regional (validação final)"
+                        titulo={ehDDIntegrante ? 'Diretor Regional (avaliação do DD)' : '2. Diretor Regional (validação final)'}
                         decisao={decDR}
                         podeAgir={podeDecidirRegional}
                         bloqueioMsg={
                           !podeAvaliar ? null
-                          : !decDD ? 'Aguardando decisão do Diretor de Divisão'
+                          : ehDDIntegrante && !todosRespondidos ? `Responda todos os ${criterios.length} critérios para concluir`
+                          : !ehDDIntegrante && !decDD ? 'Aguardando decisão do Diretor de Divisão'
                           : !podeDecidirRegional ? 'Apenas o Diretor Regional desta regional pode concluir esta etapa'
                           : null
                         }
-                        habilitarBotoes={podeDecidirRegional}
+                        habilitarBotoes={podeDecidirRegional && (!ehDDIntegrante || todosRespondidos)}
                         onAprovar={() => abrirDecisao(int, 'regional', 'aprovado', notaFinal, decs)}
                         onReprovar={() => abrirDecisao(int, 'regional', 'reprovado', notaFinal, decs)}
                       />
