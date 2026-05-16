@@ -54,16 +54,22 @@ const Index = () => {
   const isDiretorRegional = hasRole("diretor_regional") || hasRole("regional") || hasRole("adm_regional");
   const isModerator = hasRole("moderator");
 
-  // Usar grau para determinar role de pendências (Grau V = Diretor Regional)
+  // Usar grau como fonte de verdade para escopo de pendências
+  // Grau VI+ = Diretor de Divisão (escopo apenas da própria divisão)
+  // Grau V   = Regional (escopo da regional)
+  // Grau I-IV = Comando/Admin (escopo total ou regional se tiver regional_id)
   const grau = profile?.integrante?.grau || profile?.grau;
   const isGrauV = grau === 'V' || grau === '5';
+  const isGrauVIOuMaior =
+    isDiretorDivisao ||
+    ['VI', 'VII', 'VIII', 'IX', 'X', '6', '7', '8', '9', '10'].includes(String(grau || '').toUpperCase());
 
-  const pendenciaRole = isAdmin
-    ? "admin"
+  const pendenciaRole = isGrauVIOuMaior
+    ? "diretor_divisao"
     : (isDiretorRegional || isGrauV)
       ? "regional"
-      : isDiretorDivisao
-        ? "diretor_divisao"
+      : isAdmin
+        ? "admin"
         : "user";
 
   // PROTEÇÃO CRÍTICA: Só buscar pendências quando dados essenciais estiverem carregados
