@@ -68,3 +68,6 @@ verify_jwt = false
 
 [functions.auto-import-acoes-sociais]
 verify_jwt = false
+
+[functions.notificar-dr-avaliacao]
+verify_jwt = false
