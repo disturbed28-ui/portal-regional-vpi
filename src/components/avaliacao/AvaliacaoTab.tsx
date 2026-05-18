@@ -14,6 +14,7 @@ import { format, differenceInMonths, startOfDay, endOfDay, subMonths } from "dat
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { buildWaMeLink, renderTemplate, logEnvioWhatsApp, formatPhoneBR } from "@/lib/whatsapp";
 import { useIntegrantesGestao } from "@/hooks/useIntegrantesGestao";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserRole } from "@/hooks/useUserRole";
