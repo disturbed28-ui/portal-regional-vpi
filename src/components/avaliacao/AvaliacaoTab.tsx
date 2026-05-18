@@ -14,6 +14,7 @@ import { format, differenceInMonths, startOfDay, endOfDay, subMonths } from "dat
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { buildWaMeLink, renderTemplate, logEnvioWhatsApp, formatPhoneBR } from "@/lib/whatsapp";
 import { useIntegrantesGestao } from "@/hooks/useIntegrantesGestao";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -189,12 +190,124 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
     });
   };
 
+  const notificarDDViaWhatsApp = async (
+    integranteId: string,
+    integranteNome: string,
+    decisao: 'aprovado' | 'reprovado',
+    observacao: string | null,
+    waWindow: Window | null,
+  ) => {
+    try {
+      // 1) Busca integrante (divisao_id + nome da divisão)
+      const { data: integrante } = await supabase
+        .from('integrantes_portal')
+        .select('divisao_id, divisao_texto')
+        .eq('id', integranteId)
+        .maybeSingle();
+      const divisaoId = integrante?.divisao_id;
+      const divisaoTexto = integrante?.divisao_texto || '';
+      if (!divisaoId) {
+        waWindow?.close();
+        toast.warning('Integrante sem divisão definida — DD não notificado', { duration: 6000 });
+        return;
+      }
+
+      // 2) Busca DD ativo daquela divisão
+      const { data: dds } = await supabase
+        .from('integrantes_portal')
+        .select('id, nome_colete, profile_id, cargo_grau_texto')
+        .eq('divisao_id', divisaoId)
+        .eq('ativo', true)
+        .ilike('cargo_grau_texto', '%diretor%divis%');
+      const dd = (dds || [])[0];
+      if (!dd?.profile_id) {
+        waWindow?.close();
+        toast.warning('Diretor de Divisão não encontrado para notificação', { duration: 6000 });
+        return;
+      }
+
+      // 3) Telefone do DD via profiles
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('telefone')
+        .eq('id', dd.profile_id)
+        .maybeSingle();
+      const telefone = formatPhoneBR(prof?.telefone || '');
+      if (!telefone) {
+        waWindow?.close();
+        toast.warning(`Diretor de Divisão (${dd.nome_colete}) sem telefone cadastrado`, { duration: 6000 });
+        return;
+      }
+
+      // 4) Template
+      const { data: tpl } = await supabase
+        .from('notificacoes_whatsapp_templates')
+        .select('corpo, titulo')
+        .eq('chave', 'avaliacao_dr_decisao')
+        .eq('ativo', true)
+        .maybeSingle();
+      if (!tpl?.corpo) {
+        waWindow?.close();
+        toast.warning('Template "avaliacao_dr_decisao" não configurado', { duration: 6000 });
+        return;
+      }
+
+      const payload = {
+        nome_colete: integranteNome,
+        divisao: divisaoTexto,
+        status: decisao === 'aprovado' ? 'Aprovado' : 'Reprovado',
+        observacao: observacao || '',
+        avaliador: avaliadorNome || '',
+      };
+      const mensagem = renderTemplate(tpl.corpo, payload);
+      const link = buildWaMeLink(telefone, mensagem);
+      if (!link) {
+        waWindow?.close();
+        toast.error('Falha ao montar link do WhatsApp', { duration: 6000 });
+        return;
+      }
+
+      // 5) Log + redireciona janela já aberta (preserva permissão de popup)
+      logEnvioWhatsApp({
+        remetente_profile_id: userId!,
+        remetente_nome: avaliadorNome ?? null,
+        destinatario_profile_id: dd.profile_id,
+        destinatario_nome: dd.nome_colete,
+        destinatario_telefone: telefone,
+        template_chave: 'avaliacao_dr_decisao',
+        template_titulo: tpl.titulo,
+        mensagem_renderizada: mensagem,
+        payload,
+        modulo_origem: 'avaliacao_integrantes',
+        regional_id: regionalId,
+        divisao_id: divisaoId,
+      });
+
+      if (waWindow) {
+        waWindow.location.href = link;
+      } else {
+        // Fallback caso popup tenha sido bloqueado
+        window.open(link, '_blank', 'noopener,noreferrer');
+      }
+    } catch (e) {
+      console.error('[notificarDDViaWhatsApp]', e);
+      waWindow?.close();
+      toast.error('Erro ao notificar Diretor de Divisão', { duration: 6000 });
+    }
+  };
+
   const confirmarDecisao = async () => {
     if (!decisionDialog || !userId || !periodoId) return;
     if (decisionDialog.exigeJustificativa && !justificativa.trim()) {
       toast.error('Justificativa obrigatória', { duration: 6000 });
       return;
     }
+
+    // Abre janela ANTES de qualquer await para preservar a permissão de popup
+    // (apenas para decisões regionais — DR notifica DD)
+    const isRegional = decisionDialog.etapa === 'regional';
+    const waWindow = isRegional ? window.open('about:blank', '_blank') : null;
+
     setSalvandoDecisao(true);
     const ok = await upsertDecisaoAvaliacao({
       periodo_id: periodoId,
@@ -207,25 +320,41 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
       decidido_por_nome: avaliadorNome ?? null,
     });
     setSalvandoDecisao(false);
-    if (ok) {
-      toast.success(`Decisão ${decisionDialog.etapa === 'divisao' ? 'da Divisão' : 'Regional'} registrada`, { duration: 6000 });
-      // Notificar Diretor Regional quando DD concluir
-      if (decisionDialog.etapa === 'divisao') {
-        supabase.functions
-          .invoke('notificar-dr-avaliacao', {
-            body: {
-              periodo_id: periodoId,
-              integrante_id: decisionDialog.integranteId,
-              decisao_dd: decisionDialog.decisao,
-              nota: decisionDialog.nota,
-              decidido_por_nome: avaliadorNome ?? null,
-            },
-          })
-          .catch((e) => console.error('[notificar-dr-avaliacao]', e));
-      }
-      setDecisionDialog(null);
-      refetchDecisoes();
+    if (!ok) {
+      waWindow?.close();
+      return;
     }
+
+    toast.success(`Decisão ${decisionDialog.etapa === 'divisao' ? 'da Divisão' : 'Regional'} registrada`, { duration: 6000 });
+
+    // Notificar Diretor Regional quando DD concluir
+    if (decisionDialog.etapa === 'divisao') {
+      supabase.functions
+        .invoke('notificar-dr-avaliacao', {
+          body: {
+            periodo_id: periodoId,
+            integrante_id: decisionDialog.integranteId,
+            decisao_dd: decisionDialog.decisao,
+            nota: decisionDialog.nota,
+            decidido_por_nome: avaliadorNome ?? null,
+          },
+        })
+        .catch((e) => console.error('[notificar-dr-avaliacao]', e));
+    }
+
+    // DR decidiu → notificar DD via WhatsApp manual (abre wa.me)
+    if (isRegional) {
+      await notificarDDViaWhatsApp(
+        decisionDialog.integranteId,
+        decisionDialog.integranteNome,
+        decisionDialog.decisao,
+        justificativa.trim() || null,
+        waWindow,
+      );
+    }
+
+    setDecisionDialog(null);
+    refetchDecisoes();
   };
 
   return (
