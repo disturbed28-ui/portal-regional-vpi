@@ -157,31 +157,63 @@ export function HistoricoAvaliacaoTab({ userId, regionalId }: Props) {
         <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">Selecione um período para visualizar.</CardContent></Card>
       ) : (
         <div className="space-y-3">
-          {linhas.map(l => (
-            <Card key={l.integrante.id}>
-              <CardContent className="p-3 space-y-2">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div>
-                    <div className="font-medium text-sm">{l.integrante.nome_colete}</div>
-                    <div className="text-[11px] text-muted-foreground">{l.divisao} · {l.integrante.cargo_grau_texto}</div>
+          {linhas.map(l => {
+            const decs = decisoesMap[l.integrante.id] || {};
+            const decDR = decs.regional;
+            return (
+              <Card key={l.integrante.id}>
+                <CardContent className="p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="min-w-0">
+                      <div className="font-medium text-sm flex items-center gap-2 flex-wrap">
+                        <span className="truncate">{l.integrante.nome_colete}</span>
+                        {decDR ? (
+                          decDR.decisao === 'aprovado'
+                            ? <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-600 text-white gap-1"><ShieldCheck className="h-3 w-3" />Aprovado</Badge>
+                            : <Badge className="text-[10px] bg-rose-600 hover:bg-rose-600 text-white gap-1"><ShieldX className="h-3 w-3" />Reprovado</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[10px]">Sem decisão Regional</Badge>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">{l.divisao} · {l.integrante.cargo_grau_texto}</div>
+                      {decDR && (
+                        <div className="text-[11px] text-muted-foreground mt-0.5">
+                          Por <span className="font-medium text-foreground">{decDR.decidido_por_nome || '—'}</span>
+                          {' · '}{format(new Date(decDR.decidido_em), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}
+                        </div>
+                      )}
+                      {decDR?.justificativa && (
+                        <div className="text-[11px] bg-muted/50 rounded p-1.5 italic mt-1">"{decDR.justificativa}"</div>
+                      )}
+                    </div>
+                    {decDR && podeReabrir && periodoAberto && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs"
+                        onClick={() => handleReabrir(l.integrante.id, l.integrante.nome_colete)}
+                      >
+                        <RotateCcw className="h-3.5 w-3.5 mr-1" />Reabrir
+                      </Button>
+                    )}
                   </div>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {criterios.map(c => {
-                    const r = l.respostas[c.id];
-                    const cor = r.status === 'sim' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40'
-                      : r.status === 'nao' ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40'
-                      : 'bg-muted text-muted-foreground border-border';
-                    return (
-                      <span key={c.id} className={`text-[11px] px-2 py-0.5 rounded border ${cor}`} title={r.obs}>
-                        {c.nome}: {r.status === 'sim' ? 'Sim' : r.status === 'nao' ? 'Não' : '—'}
-                      </span>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  <div className="flex flex-wrap gap-1.5">
+                    {criterios.map(c => {
+                      const r = l.respostas[c.id];
+                      const cor = r.status === 'sim' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40'
+                        : r.status === 'nao' ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40'
+                        : 'bg-muted text-muted-foreground border-border';
+                      return (
+                        <span key={c.id} className={`text-[11px] px-2 py-0.5 rounded border ${cor}`} title={r.obs}>
+                          {c.nome}: {r.status === 'sim' ? 'Sim' : r.status === 'nao' ? 'Não' : '—'}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
