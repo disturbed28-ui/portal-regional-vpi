@@ -171,6 +171,7 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly, onDe
     decisao: 'aprovado' | 'reprovado',
     nota: number,
     decisoesIntegrante: DecisoesIntegrante,
+    ehDDIntegrante: boolean,
   ) => {
     let exigeJust = decisao === 'reprovado';
     let motivoExig: string | undefined;
@@ -189,6 +190,7 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly, onDe
       nota,
       exigeJustificativa: exigeJust,
       motivoExigencia: motivoExig,
+      ehDDIntegrante,
     });
   };
 
