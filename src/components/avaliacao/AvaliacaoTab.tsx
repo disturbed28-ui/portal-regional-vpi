@@ -694,7 +694,8 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly, onDe
               </Accordion>
             </AccordionContent>
           </AccordionItem>
-        ))}
+          );
+        })}
       </Accordion>
 
 
