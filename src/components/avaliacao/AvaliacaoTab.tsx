@@ -310,7 +310,9 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly, onDe
     // Abre janela ANTES de qualquer await para preservar a permissão de popup
     // (apenas para decisões regionais — DR notifica DD)
     const isRegional = decisionDialog.etapa === 'regional';
-    const waWindow = isRegional ? window.open('about:blank', '_blank') : null;
+    // Para integrantes Grau V / DD (etapa única) não há DD diferente do próprio integrante para notificar
+    const deveNotificarDD = isRegional && !decisionDialog.ehDDIntegrante;
+    const waWindow = deveNotificarDD ? window.open('about:blank', '_blank') : null;
 
     setSalvandoDecisao(true);
     const ok = await upsertDecisaoAvaliacao({
@@ -346,8 +348,8 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly, onDe
         .catch((e) => console.error('[notificar-dr-avaliacao]', e));
     }
 
-    // DR decidiu → notificar DD via WhatsApp manual (abre wa.me)
-    if (isRegional) {
+    // DR decidiu → notificar DD via WhatsApp manual (apenas quando há DD diferente do integrante)
+    if (deveNotificarDD) {
       await notificarDDViaWhatsApp(
         decisionDialog.integranteId,
         decisionDialog.integranteNome,
@@ -359,6 +361,11 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly, onDe
 
     setDecisionDialog(null);
     refetchDecisoes();
+
+    // Ao concluir etapa regional, redirecionar para o Histórico
+    if (isRegional) {
+      onDecisaoRegionalConcluida?.();
+    }
   };
 
   return (
