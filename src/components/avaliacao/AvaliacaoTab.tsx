@@ -645,8 +645,8 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly, onDe
                           : null
                         }
                         habilitarBotoes={podeDecidirRegional && (!ehDDIntegrante || todosRespondidos)}
-                        onAprovar={() => abrirDecisao(int, 'regional', 'aprovado', notaFinal, decs)}
-                        onReprovar={() => abrirDecisao(int, 'regional', 'reprovado', notaFinal, decs)}
+                        onAprovar={() => abrirDecisao(int, 'regional', 'aprovado', notaFinal, decs, ehDDIntegrante)}
+                        onReprovar={() => abrirDecisao(int, 'regional', 'reprovado', notaFinal, decs, ehDDIntegrante)}
                       />
                     </div>
                   </AccordionContent>
