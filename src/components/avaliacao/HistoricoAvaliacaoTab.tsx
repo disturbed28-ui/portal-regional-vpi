@@ -1,14 +1,20 @@
 import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Download } from "lucide-react";
+import { Loader2, Download, RotateCcw, ShieldCheck, ShieldX } from "lucide-react";
 import ExcelJS from "exceljs";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
 import { useIntegrantesGestao } from "@/hooks/useIntegrantesGestao";
+import { useUserRole } from "@/hooks/useUserRole";
 import {
   usePeriodosAvaliacao,
   useCriteriosAvaliacao,
   useAvaliacoesIntegrantes,
+  useDecisoesAvaliacao,
 } from "@/hooks/useAvaliacaoData";
 import { toast } from "sonner";
 
