@@ -47,9 +47,10 @@ type DecisionDialogState = {
   nota: number;
   exigeJustificativa: boolean;
   motivoExigencia?: string;
+  ehDDIntegrante?: boolean;
 } | null;
 
-export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Props) {
+export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly, onDecisaoRegionalConcluida }: Props) {
   const { integrantesPorDivisao, loading: loadingInt } = useIntegrantesGestao(userId);
   const { profile } = useProfile(userId);
   const { hasRole } = useUserRole(userId);
