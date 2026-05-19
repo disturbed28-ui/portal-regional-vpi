@@ -40,7 +40,24 @@ export function HistoricoAvaliacaoTab({ userId, regionalId }: Props) {
   const periodoSelecionado = periodos.find(p => p.id === periodoId);
   const periodoAberto = periodoSelecionado?.status === 'aberto';
 
-  const periodo = periodos.find(p => p.id === periodoId);
+  const periodo = periodoSelecionado;
+
+  const handleReabrir = async (integranteId: string, integranteNome: string) => {
+    if (!periodoId) return;
+    if (!confirm(`Reabrir a avaliação de ${integranteNome}? A decisão Regional será removida e a avaliação voltará a aparecer como pendente.`)) return;
+    const { error } = await supabase
+      .from('avaliacoes_decisao_final' as any)
+      .delete()
+      .eq('periodo_id', periodoId)
+      .eq('integrante_id', integranteId)
+      .eq('etapa', 'regional');
+    if (error) {
+      toast.error('Erro ao reabrir avaliação', { description: error.message, duration: 6000 });
+      return;
+    }
+    toast.success(`Avaliação de ${integranteNome} reaberta`, { duration: 6000 });
+    refetchDecisoes();
+  };
   const divisoes = useMemo(
     () => Array.from(new Set(integrantesPorDivisao.map(d => d.divisaoNome))).sort(),
     [integrantesPorDivisao]
