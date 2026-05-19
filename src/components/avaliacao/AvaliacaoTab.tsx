@@ -36,6 +36,7 @@ interface Props {
   regionalId: string | null;
   avaliadorNome: string | null;
   readOnly?: boolean;
+  onDecisaoRegionalConcluida?: () => void;
 }
 
 type DecisionDialogState = {
@@ -46,9 +47,10 @@ type DecisionDialogState = {
   nota: number;
   exigeJustificativa: boolean;
   motivoExigencia?: string;
+  ehDDIntegrante?: boolean;
 } | null;
 
-export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Props) {
+export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly, onDecisaoRegionalConcluida }: Props) {
   const { integrantesPorDivisao, loading: loadingInt } = useIntegrantesGestao(userId);
   const { profile } = useProfile(userId);
   const { hasRole } = useUserRole(userId);
@@ -169,6 +171,7 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
     decisao: 'aprovado' | 'reprovado',
     nota: number,
     decisoesIntegrante: DecisoesIntegrante,
+    ehDDIntegrante: boolean,
   ) => {
     let exigeJust = decisao === 'reprovado';
     let motivoExig: string | undefined;
@@ -187,6 +190,7 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
       nota,
       exigeJustificativa: exigeJust,
       motivoExigencia: motivoExig,
+      ehDDIntegrante,
     });
   };
 
@@ -306,7 +310,9 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
     // Abre janela ANTES de qualquer await para preservar a permissão de popup
     // (apenas para decisões regionais — DR notifica DD)
     const isRegional = decisionDialog.etapa === 'regional';
-    const waWindow = isRegional ? window.open('about:blank', '_blank') : null;
+    // Para integrantes Grau V / DD (etapa única) não há DD diferente do próprio integrante para notificar
+    const deveNotificarDD = isRegional && !decisionDialog.ehDDIntegrante;
+    const waWindow = deveNotificarDD ? window.open('about:blank', '_blank') : null;
 
     setSalvandoDecisao(true);
     const ok = await upsertDecisaoAvaliacao({
@@ -342,8 +348,8 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
         .catch((e) => console.error('[notificar-dr-avaliacao]', e));
     }
 
-    // DR decidiu → notificar DD via WhatsApp manual (abre wa.me)
-    if (isRegional) {
+    // DR decidiu → notificar DD via WhatsApp manual (apenas quando há DD diferente do integrante)
+    if (deveNotificarDD) {
       await notificarDDViaWhatsApp(
         decisionDialog.integranteId,
         decisionDialog.integranteNome,
@@ -355,6 +361,11 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
 
     setDecisionDialog(null);
     refetchDecisoes();
+
+    // Ao concluir etapa regional, redirecionar para o Histórico
+    if (isRegional) {
+      onDecisaoRegionalConcluida?.();
+    }
   };
 
   return (
@@ -395,12 +406,24 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
         </Card>
       )}
 
-      {integrantesPorDivisao.map(grupo => (
-        <div key={grupo.divisaoId || 'sem'} className="space-y-2">
-          <h3 className="text-sm font-semibold text-foreground px-1">
-            {grupo.divisaoNome} <span className="text-xs text-muted-foreground font-normal">({grupo.integrantes.length})</span>
-          </h3>
-          <Accordion type="single" collapsible className="space-y-2">
+      <Accordion type="multiple" className="space-y-2">
+        {integrantesPorDivisao.map(grupo => (
+          <AccordionItem
+            key={grupo.divisaoId || 'sem'}
+            value={grupo.divisaoId || 'sem'}
+            className="border rounded-md bg-card overflow-hidden"
+          >
+            <AccordionTrigger className="px-3 py-2 hover:no-underline hover:bg-muted/30">
+              <div className="flex items-center gap-2 text-left">
+                <span className="text-sm font-semibold">{grupo.divisaoNome}</span>
+                <Badge variant="secondary" className="text-[10px]">
+                  {grupo.integrantes.length}
+                </Badge>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-2 pb-2">
+              <Accordion type="single" collapsible className="space-y-2">
+
             {grupo.integrantes.map(int => {
               const dataPromocao = promocoesMap[int.registro_id];
               const recente = dataPromocao && differenceInMonths(new Date(), new Date(dataPromocao)) < 6;
@@ -616,8 +639,8 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
                             : null
                           }
                           habilitarBotoes={podeDecidirDivisao && todosRespondidos}
-                          onAprovar={() => abrirDecisao(int, 'divisao', 'aprovado', notaFinal, decs)}
-                          onReprovar={() => abrirDecisao(int, 'divisao', 'reprovado', notaFinal, decs)}
+                          onAprovar={() => abrirDecisao(int, 'divisao', 'aprovado', notaFinal, decs, ehDDIntegrante)}
+                          onReprovar={() => abrirDecisao(int, 'divisao', 'reprovado', notaFinal, decs, ehDDIntegrante)}
                         />
                       )}
 
@@ -634,17 +657,20 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
                           : null
                         }
                         habilitarBotoes={podeDecidirRegional && (!ehDDIntegrante || todosRespondidos)}
-                        onAprovar={() => abrirDecisao(int, 'regional', 'aprovado', notaFinal, decs)}
-                        onReprovar={() => abrirDecisao(int, 'regional', 'reprovado', notaFinal, decs)}
+                        onAprovar={() => abrirDecisao(int, 'regional', 'aprovado', notaFinal, decs, ehDDIntegrante)}
+                        onReprovar={() => abrirDecisao(int, 'regional', 'reprovado', notaFinal, decs, ehDDIntegrante)}
                       />
                     </div>
                   </AccordionContent>
                 </AccordionItem>
               );
             })}
-          </Accordion>
-        </div>
-      ))}
+              </Accordion>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+
 
       {/* Modal de decisão */}
       <Dialog open={!!decisionDialog} onOpenChange={(open) => !open && setDecisionDialog(null)}>

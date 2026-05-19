@@ -41,21 +41,34 @@ const AvaliacaoIntegrantes = () => {
         </div>
       </div>
       <div className="max-w-7xl mx-auto px-4 py-4">
-        <Tabs defaultValue="avaliacao">
-          <TabsList className="w-full sm:w-auto">
-            <TabsTrigger value="avaliacao" className="gap-1.5"><ClipboardCheck className="h-4 w-4" />Avaliação</TabsTrigger>
-            <TabsTrigger value="historico" className="gap-1.5"><History className="h-4 w-4" />Histórico</TabsTrigger>
-          </TabsList>
-          <TabsContent value="avaliacao" className="mt-4">
-            <AvaliacaoTab userId={user?.id} regionalId={regionalId} avaliadorNome={avaliadorNome} />
-          </TabsContent>
-          <TabsContent value="historico" className="mt-4">
-            <HistoricoAvaliacaoTab userId={user?.id} regionalId={regionalId} />
-          </TabsContent>
-        </Tabs>
+        <AvaliacaoTabsController userId={user?.id} regionalId={regionalId} avaliadorNome={avaliadorNome} />
       </div>
     </div>
   );
 };
 
+function AvaliacaoTabsController({ userId, regionalId, avaliadorNome }: { userId: string | undefined; regionalId: string | null; avaliadorNome: string | null; }) {
+  const [tab, setTab] = useState<'avaliacao' | 'historico'>('avaliacao');
+  return (
+    <Tabs value={tab} onValueChange={(v) => setTab(v as 'avaliacao' | 'historico')}>
+      <TabsList className="w-full sm:w-auto">
+        <TabsTrigger value="avaliacao" className="gap-1.5"><ClipboardCheck className="h-4 w-4" />Avaliação</TabsTrigger>
+        <TabsTrigger value="historico" className="gap-1.5"><History className="h-4 w-4" />Histórico</TabsTrigger>
+      </TabsList>
+      <TabsContent value="avaliacao" className="mt-4">
+        <AvaliacaoTab
+          userId={userId}
+          regionalId={regionalId}
+          avaliadorNome={avaliadorNome}
+          onDecisaoRegionalConcluida={() => setTab('historico')}
+        />
+      </TabsContent>
+      <TabsContent value="historico" className="mt-4">
+        <HistoricoAvaliacaoTab userId={userId} regionalId={regionalId} />
+      </TabsContent>
+    </Tabs>);
+}
+
 export default AvaliacaoIntegrantes;
+
+
