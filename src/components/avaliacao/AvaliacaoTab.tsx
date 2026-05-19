@@ -406,12 +406,24 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly, onDe
         </Card>
       )}
 
-      {integrantesPorDivisao.map(grupo => (
-        <div key={grupo.divisaoId || 'sem'} className="space-y-2">
-          <h3 className="text-sm font-semibold text-foreground px-1">
-            {grupo.divisaoNome} <span className="text-xs text-muted-foreground font-normal">({grupo.integrantes.length})</span>
-          </h3>
-          <Accordion type="single" collapsible className="space-y-2">
+      <Accordion type="multiple" className="space-y-2">
+        {integrantesPorDivisao.map(grupo => (
+          <AccordionItem
+            key={grupo.divisaoId || 'sem'}
+            value={grupo.divisaoId || 'sem'}
+            className="border rounded-md bg-card overflow-hidden"
+          >
+            <AccordionTrigger className="px-3 py-2 hover:no-underline hover:bg-muted/30">
+              <div className="flex items-center gap-2 text-left">
+                <span className="text-sm font-semibold">{grupo.divisaoNome}</span>
+                <Badge variant="secondary" className="text-[10px]">
+                  {grupo.integrantes.length}
+                </Badge>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-2 pb-2">
+              <Accordion type="single" collapsible className="space-y-2">
+
             {grupo.integrantes.map(int => {
               const dataPromocao = promocoesMap[int.registro_id];
               const recente = dataPromocao && differenceInMonths(new Date(), new Date(dataPromocao)) < 6;
