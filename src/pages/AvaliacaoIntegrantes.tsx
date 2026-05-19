@@ -72,4 +72,3 @@ function AvaliacaoTabsController({ userId, regionalId, avaliadorNome }: { userId
 export default AvaliacaoIntegrantes;
 
 
-export default AvaliacaoIntegrantes;
