@@ -222,7 +222,8 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly, onDe
         .select('id, nome_colete, profile_id, cargo_grau_texto')
         .eq('divisao_id', divisaoId)
         .eq('ativo', true)
-        .ilike('cargo_grau_texto', '%diretor%divis%');
+        .ilike('cargo_grau_texto', '%diretor%divis%')
+        .not('cargo_grau_texto', 'ilike', '%sub%');
       const dd = (dds || [])[0];
       if (!dd?.profile_id) {
         waWindow?.close();
