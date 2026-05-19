@@ -68,9 +68,8 @@ function AvaliacaoTabsController({ userId, regionalId, avaliadorNome }: { userId
       </TabsContent>
     </Tabs>);
 }
-      </div>
-    </div>
-  );
-};
+
+export default AvaliacaoIntegrantes;
+
 
 export default AvaliacaoIntegrantes;
