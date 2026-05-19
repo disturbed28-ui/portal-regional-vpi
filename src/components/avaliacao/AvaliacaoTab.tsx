@@ -627,8 +627,8 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly, onDe
                             : null
                           }
                           habilitarBotoes={podeDecidirDivisao && todosRespondidos}
-                          onAprovar={() => abrirDecisao(int, 'divisao', 'aprovado', notaFinal, decs)}
-                          onReprovar={() => abrirDecisao(int, 'divisao', 'reprovado', notaFinal, decs)}
+                          onAprovar={() => abrirDecisao(int, 'divisao', 'aprovado', notaFinal, decs, ehDDIntegrante)}
+                          onReprovar={() => abrirDecisao(int, 'divisao', 'reprovado', notaFinal, decs, ehDDIntegrante)}
                         />
                       )}
 
