@@ -407,18 +407,44 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly, onDe
       )}
 
       <Accordion type="multiple" className="space-y-2">
-        {integrantesPorDivisao.map(grupo => (
+        {integrantesPorDivisao.map(grupo => {
+          let pendentesDR = 0;
+          let totalAbertos = 0;
+          grupo.integrantes.forEach(int => {
+            const decs = decisoesMap[int.id] || {};
+            if (decs.regional) return;
+            totalAbertos++;
+            const ehDD =
+              (int.grau || '').trim().toUpperCase() === 'V' ||
+              /diretor.*divis/i.test(int.cargo_grau_texto || '');
+            const respondidos = new Set(
+              avaliacoes.filter(a => a.integrante_id === int.id).map(a => a.criterio_id)
+            ).size;
+            const todosResp = criterios.length > 0 && respondidos === criterios.length;
+            const prontoParaDR = ehDD ? todosResp : !!decs.divisao;
+            if (prontoParaDR) pendentesDR++;
+          });
+          if (totalAbertos === 0) return null;
+          const temPendenteDR = pendentesDR > 0;
+          return (
           <AccordionItem
             key={grupo.divisaoId || 'sem'}
             value={grupo.divisaoId || 'sem'}
-            className="border rounded-md bg-card overflow-hidden"
+            className={`border rounded-md overflow-hidden ${
+              temPendenteDR ? 'bg-amber-500/10 border-amber-500/50' : 'bg-card'
+            }`}
           >
             <AccordionTrigger className="px-3 py-2 hover:no-underline hover:bg-muted/30">
-              <div className="flex items-center gap-2 text-left">
+              <div className="flex items-center gap-2 text-left flex-wrap">
                 <span className="text-sm font-semibold">{grupo.divisaoNome}</span>
                 <Badge variant="secondary" className="text-[10px]">
-                  {grupo.integrantes.length}
+                  {totalAbertos}
                 </Badge>
+                {temPendenteDR && (
+                  <Badge className="text-[10px] bg-amber-600 hover:bg-amber-600 text-white">
+                    {pendentesDR} pend. DR
+                  </Badge>
+                )}
               </div>
             </AccordionTrigger>
             <AccordionContent className="px-2 pb-2">
@@ -668,7 +694,8 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly, onDe
               </Accordion>
             </AccordionContent>
           </AccordionItem>
-        ))}
+          );
+        })}
       </Accordion>
 
 

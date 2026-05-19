@@ -167,7 +167,7 @@ export function HistoricoAvaliacaoTab({ userId, regionalId }: Props) {
         }, {});
         const divisoesOrdenadas = Object.keys(porDivisao).sort();
         return (
-          <Accordion type="multiple" defaultValue={divisoesOrdenadas} className="space-y-2">
+          <Accordion type="multiple" className="space-y-2">
             {divisoesOrdenadas.map(div => {
               const itens = porDivisao[div];
               const aprov = itens.filter(i => decisoesMap[i.integrante.id]?.regional?.decisao === 'aprovado').length;
