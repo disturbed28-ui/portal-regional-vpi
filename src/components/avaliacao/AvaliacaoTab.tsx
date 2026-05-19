@@ -665,9 +665,12 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly, onDe
                 </AccordionItem>
               );
             })}
-          </Accordion>
-        </div>
-      ))}
+              </Accordion>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+
 
       {/* Modal de decisão */}
       <Dialog open={!!decisionDialog} onOpenChange={(open) => !open && setDecisionDialog(null)}>
