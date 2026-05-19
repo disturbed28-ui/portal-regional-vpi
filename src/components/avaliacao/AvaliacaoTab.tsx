@@ -14,7 +14,7 @@ import { format, differenceInMonths, startOfDay, endOfDay, subMonths } from "dat
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { buildWaMeLink, renderTemplate, logEnvioWhatsApp, formatPhoneBR } from "@/lib/whatsapp";
+import { renderTemplate, logEnvioWhatsApp, formatPhoneBR, openWhatsAppConversation, isMobileWhatsAppEnvironment } from "@/lib/whatsapp";
 import { useIntegrantesGestao } from "@/hooks/useIntegrantesGestao";
 import { useProfile } from "@/hooks/useProfile";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -264,8 +264,12 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly, onDe
         avaliador: avaliadorNome || '',
       };
       const mensagem = renderTemplate(tpl.corpo, payload);
-      const link = buildWaMeLink(telefone, mensagem);
-      if (!link) {
+      const abriuWhatsApp = openWhatsAppConversation({
+        telefone,
+        mensagem,
+        targetWindow: waWindow,
+      });
+      if (!abriuWhatsApp) {
         waWindow?.close();
         toast.error('Falha ao montar link do WhatsApp', { duration: 6000 });
         return;
@@ -287,12 +291,6 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly, onDe
         divisao_id: divisaoId,
       });
 
-      if (waWindow) {
-        waWindow.location.href = link;
-      } else {
-        // Fallback caso popup tenha sido bloqueado
-        window.open(link, '_blank', 'noopener,noreferrer');
-      }
     } catch (e) {
       console.error('[notificarDDViaWhatsApp]', e);
       waWindow?.close();
@@ -312,7 +310,9 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly, onDe
     const isRegional = decisionDialog.etapa === 'regional';
     // Para integrantes Grau V / DD (etapa única) não há DD diferente do próprio integrante para notificar
     const deveNotificarDD = isRegional && !decisionDialog.ehDDIntegrante;
-    const waWindow = deveNotificarDD ? window.open('about:blank', '_blank') : null;
+    const waWindow = deveNotificarDD && !isMobileWhatsAppEnvironment()
+      ? window.open('about:blank', '_blank')
+      : null;
 
     setSalvandoDecisao(true);
     const ok = await upsertDecisaoAvaliacao({
