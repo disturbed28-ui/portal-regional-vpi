@@ -36,6 +36,7 @@ interface Props {
   regionalId: string | null;
   avaliadorNome: string | null;
   readOnly?: boolean;
+  onDecisaoRegionalConcluida?: () => void;
 }
 
 type DecisionDialogState = {
