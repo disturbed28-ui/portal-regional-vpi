@@ -156,67 +156,93 @@ export function HistoricoAvaliacaoTab({ userId, regionalId }: Props) {
 
       {!periodoId ? (
         <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">Selecione um período para visualizar.</CardContent></Card>
-      ) : (
-        <div className="space-y-3">
-          {linhas.map(l => {
-            const decs = decisoesMap[l.integrante.id] || {};
-            const decDR = decs.regional;
-            return (
-              <Card key={l.integrante.id}>
-                <CardContent className="p-3 space-y-2">
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <div className="min-w-0">
-                      <div className="font-medium text-sm flex items-center gap-2 flex-wrap">
-                        <span className="truncate">{l.integrante.nome_colete}</span>
-                        {decDR ? (
-                          decDR.decisao === 'aprovado'
-                            ? <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-600 text-white gap-1"><ShieldCheck className="h-3 w-3" />Aprovado</Badge>
-                            : <Badge className="text-[10px] bg-rose-600 hover:bg-rose-600 text-white gap-1"><ShieldX className="h-3 w-3" />Reprovado</Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-[10px]">Sem decisão Regional</Badge>
-                        )}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground">{l.divisao} · {l.integrante.cargo_grau_texto}</div>
-                      {decDR && (
-                        <div className="text-[11px] text-muted-foreground mt-0.5">
-                          Por <span className="font-medium text-foreground">{decDR.decidido_por_nome || '—'}</span>
-                          {' · '}{format(new Date(decDR.decidido_em), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}
-                        </div>
-                      )}
-                      {decDR?.justificativa && (
-                        <div className="text-[11px] bg-muted/50 rounded p-1.5 italic mt-1">"{decDR.justificativa}"</div>
-                      )}
+      ) : (() => {
+        const linhasConcluidas = linhas.filter(l => !!(decisoesMap[l.integrante.id]?.regional));
+        if (linhasConcluidas.length === 0) {
+          return <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">Nenhuma avaliação concluída pelo Diretor Regional neste período.</CardContent></Card>;
+        }
+        const porDivisao = linhasConcluidas.reduce<Record<string, typeof linhasConcluidas>>((acc, l) => {
+          (acc[l.divisao] ||= []).push(l);
+          return acc;
+        }, {});
+        const divisoesOrdenadas = Object.keys(porDivisao).sort();
+        return (
+          <Accordion type="multiple" defaultValue={divisoesOrdenadas} className="space-y-2">
+            {divisoesOrdenadas.map(div => {
+              const itens = porDivisao[div];
+              const aprov = itens.filter(i => decisoesMap[i.integrante.id]?.regional?.decisao === 'aprovado').length;
+              const repr = itens.length - aprov;
+              return (
+                <AccordionItem key={div} value={div} className="border rounded-lg bg-card">
+                  <AccordionTrigger className="px-3 py-2 hover:no-underline">
+                    <div className="flex items-center gap-2 flex-wrap text-left">
+                      <span className="font-semibold text-sm">{div}</span>
+                      <Badge variant="outline" className="text-[10px]">{itens.length}</Badge>
+                      {aprov > 0 && <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-600 text-white">{aprov} aprov.</Badge>}
+                      {repr > 0 && <Badge className="text-[10px] bg-rose-600 hover:bg-rose-600 text-white">{repr} repr.</Badge>}
                     </div>
-                    {decDR && podeReabrir && periodoAberto && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 text-xs"
-                        onClick={() => handleReabrir(l.integrante.id, l.integrante.nome_colete)}
-                      >
-                        <RotateCcw className="h-3.5 w-3.5 mr-1" />Reabrir
-                      </Button>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {criterios.map(c => {
-                      const r = l.respostas[c.id];
-                      const cor = r.status === 'sim' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40'
-                        : r.status === 'nao' ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40'
-                        : 'bg-muted text-muted-foreground border-border';
-                      return (
-                        <span key={c.id} className={`text-[11px] px-2 py-0.5 rounded border ${cor}`} title={r.obs}>
-                          {c.nome}: {r.status === 'sim' ? 'Sim' : r.status === 'nao' ? 'Não' : '—'}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+                  </AccordionTrigger>
+                  <AccordionContent className="px-3 pb-3">
+                    <div className="space-y-2">
+                      {itens.map(l => {
+                        const decDR = decisoesMap[l.integrante.id]!.regional!;
+                        return (
+                          <Card key={l.integrante.id}>
+                            <CardContent className="p-3 space-y-2">
+                              <div className="flex items-center justify-between gap-2 flex-wrap">
+                                <div className="min-w-0">
+                                  <div className="font-medium text-sm flex items-center gap-2 flex-wrap">
+                                    <span className="truncate">{l.integrante.nome_colete}</span>
+                                    {decDR.decisao === 'aprovado'
+                                      ? <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-600 text-white gap-1"><ShieldCheck className="h-3 w-3" />Aprovado</Badge>
+                                      : <Badge className="text-[10px] bg-rose-600 hover:bg-rose-600 text-white gap-1"><ShieldX className="h-3 w-3" />Reprovado</Badge>}
+                                  </div>
+                                  <div className="text-[11px] text-muted-foreground">{l.integrante.cargo_grau_texto}</div>
+                                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                                    Por <span className="font-medium text-foreground">{decDR.decidido_por_nome || '—'}</span>
+                                    {' · '}{format(new Date(decDR.decidido_em), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}
+                                  </div>
+                                  {decDR.justificativa && (
+                                    <div className="text-[11px] bg-muted/50 rounded p-1.5 italic mt-1">"{decDR.justificativa}"</div>
+                                  )}
+                                </div>
+                                {podeReabrir && periodoAberto && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 text-xs"
+                                    onClick={() => handleReabrir(l.integrante.id, l.integrante.nome_colete)}
+                                  >
+                                    <RotateCcw className="h-3.5 w-3.5 mr-1" />Reabrir
+                                  </Button>
+                                )}
+                              </div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {criterios.map(c => {
+                                  const r = l.respostas[c.id];
+                                  const cor = r.status === 'sim' ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40'
+                                    : r.status === 'nao' ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40'
+                                    : 'bg-muted text-muted-foreground border-border';
+                                  return (
+                                    <span key={c.id} className={`text-[11px] px-2 py-0.5 rounded border ${cor}`} title={r.obs}>
+                                      {c.nome}: {r.status === 'sim' ? 'Sim' : r.status === 'nao' ? 'Não' : '—'}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            })}
+          </Accordion>
+        );
+      })()}
     </div>
   );
 }
+
