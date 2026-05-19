@@ -58,6 +58,73 @@ export function buildWaMeLink(telefone: string, mensagem: string): string | null
   return `https://wa.me/${phone}?text=${text}`;
 }
 
+export function buildWhatsAppAppLink(telefone: string, mensagem: string): string | null {
+  const phone = formatPhoneBR(telefone);
+  if (!phone) return null;
+  const text = encodeURIComponent(mensagem);
+  return `whatsapp://send?phone=${phone}&text=${text}`;
+}
+
+export function buildWhatsAppApiLink(telefone: string, mensagem: string): string | null {
+  const phone = formatPhoneBR(telefone);
+  if (!phone) return null;
+  const text = encodeURIComponent(mensagem);
+  return `https://api.whatsapp.com/send?phone=${phone}&text=${text}`;
+}
+
+export function isMobileWhatsAppEnvironment(): boolean {
+  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent.toLowerCase();
+  return /android|iphone|ipad|ipod/i.test(ua) || window.matchMedia("(max-width: 767px)").matches;
+}
+
+export function openWhatsAppConversation({
+  telefone,
+  mensagem,
+  targetWindow,
+}: {
+  telefone: string;
+  mensagem: string;
+  targetWindow?: Window | null;
+}): boolean {
+  const appLink = buildWhatsAppAppLink(telefone, mensagem);
+  const webLink = buildWhatsAppApiLink(telefone, mensagem);
+
+  if (!appLink || !webLink) return false;
+
+  if (isMobileWhatsAppEnvironment()) {
+    let timeoutId = 0;
+
+    const cleanup = () => {
+      window.clearTimeout(timeoutId);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+
+    const onVisibilityChange = () => {
+      if (document.hidden) cleanup();
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    timeoutId = window.setTimeout(() => {
+      if (!document.hidden) {
+        window.location.assign(webLink);
+      }
+      cleanup();
+    }, 1200);
+
+    window.location.assign(appLink);
+    return true;
+  }
+
+  if (targetWindow) {
+    targetWindow.location.href = webLink;
+    return true;
+  }
+
+  window.open(webLink, "_blank", "noopener,noreferrer");
+  return true;
+}
+
 export interface LogEnvioParams {
   remetente_profile_id: string;
   remetente_nome?: string | null;
