@@ -27,12 +27,18 @@ export function HistoricoAvaliacaoTab({ userId, regionalId }: Props) {
   const { integrantesPorDivisao, loading: loadingInt } = useIntegrantesGestao(userId);
   const { periodos, loading: loadingPer } = usePeriodosAvaliacao(regionalId);
   const { criterios, loading: loadingCrit } = useCriteriosAvaliacao(regionalId, false);
+  const { hasRole } = useUserRole(userId);
 
   const [periodoId, setPeriodoId] = useState<string>("");
   const [divisaoFiltro, setDivisaoFiltro] = useState<string>("");
 
   const todos = useMemo(() => integrantesPorDivisao.flatMap(d => d.integrantes), [integrantesPorDivisao]);
   const { avaliacoes } = useAvaliacoesIntegrantes(periodoId, todos.map(i => i.id));
+  const { decisoesMap, refetch: refetchDecisoes } = useDecisoesAvaliacao(periodoId, todos.map(i => i.id));
+
+  const podeReabrir = hasRole('admin') || hasRole('comando') || hasRole('diretor_regional');
+  const periodoSelecionado = periodos.find(p => p.id === periodoId);
+  const periodoAberto = periodoSelecionado?.status === 'aberto';
 
   const periodo = periodos.find(p => p.id === periodoId);
   const divisoes = useMemo(
