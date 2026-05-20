@@ -8,7 +8,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useLinksUteisGrupos, LinkUtilGrupo } from "@/hooks/useLinksUteis";
 import { ICONES_LINKS_UTEIS, ICONES_LINKS_UTEIS_LISTA, getIconeLink, slugify } from "@/lib/iconesLinksUteis";
 import { Edit, Trash2, Plus, GripVertical } from "lucide-react";
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
@@ -19,17 +19,17 @@ function SortableGrupoRow({ grupo, onEdit, onDelete }: { grupo: LinkUtilGrupo; o
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
 
   return (
-    <div ref={setNodeRef} style={style} className="flex items-center gap-3 p-3 border rounded-md bg-background">
-      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none">
-        <GripVertical className="h-4 w-4 text-muted-foreground" />
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2 sm:gap-3 p-3 border rounded-md bg-background">
+      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none p-2 -m-1 shrink-0" aria-label="Arrastar">
+        <GripVertical className="h-5 w-5 text-muted-foreground" />
       </button>
-      <Icon className="h-5 w-5 text-primary" />
+      <Icon className="h-5 w-5 text-primary shrink-0" />
       <div className="flex-1 min-w-0">
-        <div className="font-medium truncate">{grupo.nome}</div>
+        <div className="font-medium truncate text-sm sm:text-base">{grupo.nome}</div>
         <div className="text-xs text-muted-foreground truncate">/links-uteis/{grupo.slug}{!grupo.ativo && " · inativo"}</div>
       </div>
-      <Button variant="outline" size="sm" onClick={() => onEdit(grupo)}><Edit className="h-4 w-4" /></Button>
-      <Button variant="destructive" size="sm" onClick={() => onDelete(grupo)}><Trash2 className="h-4 w-4" /></Button>
+      <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => onEdit(grupo)}><Edit className="h-4 w-4" /></Button>
+      <Button variant="destructive" size="icon" className="h-9 w-9 shrink-0" onClick={() => onDelete(grupo)}><Trash2 className="h-4 w-4" /></Button>
     </div>
   );
 }
@@ -41,7 +41,11 @@ export function GruposManager() {
   const [deleteTarget, setDeleteTarget] = useState<LinkUtilGrupo | null>(null);
   const [form, setForm] = useState({ nome: "", slug: "", icone: "Link", ativo: true, slugTouched: false });
 
-  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const openCreate = () => {
     setEditing(null);
