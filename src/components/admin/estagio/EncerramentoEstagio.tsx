@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +25,15 @@ interface DadosUsuario {
 
 export function EncerramentoEstagio({ userId, readOnly = false }: EncerramentoEstagioProps) {
   const { estagios, loading, operando, cancelarSolicitacao, encerrarEstagio } = useEncerramentoEstagio(userId);
+
+  // Ordenar por data de término previsto: mais próxima primeiro; sem data (ex: Em Aprovação) por último
+  const estagiosOrdenados = useMemo(() => {
+    return [...estagios].sort((a, b) => {
+      const aTime = a.data_termino_previsto ? new Date(a.data_termino_previsto).getTime() : Number.POSITIVE_INFINITY;
+      const bTime = b.data_termino_previsto ? new Date(b.data_termino_previsto).getTime() : Number.POSITIVE_INFINITY;
+      return aTime - bTime;
+    });
+  }, [estagios]);
   
   const [modalCancelar, setModalCancelar] = useState<EstagioEncerramento | null>(null);
   const [modalEncerrar, setModalEncerrar] = useState<EstagioEncerramento | null>(null);
@@ -129,7 +138,7 @@ export function EncerramentoEstagio({ userId, readOnly = false }: EncerramentoEs
     <div className="space-y-4">
       {readOnly && <ReadOnlyBanner />}
       
-      {estagios.map((e) => (
+      {estagiosOrdenados.map((e) => (
         <Card key={e.id} className="border-border/50">
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between gap-2">
