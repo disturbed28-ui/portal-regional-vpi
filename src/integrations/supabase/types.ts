@@ -1833,6 +1833,7 @@ export type Database = {
         Row: {
           ativo: boolean
           created_at: string
+          grupo_id: string
           id: string
           ordem: number
           titulo: string
@@ -1841,6 +1842,7 @@ export type Database = {
         Insert: {
           ativo?: boolean
           created_at?: string
+          grupo_id: string
           id?: string
           ordem?: number
           titulo: string
@@ -1849,10 +1851,52 @@ export type Database = {
         Update: {
           ativo?: boolean
           created_at?: string
+          grupo_id?: string
           id?: string
           ordem?: number
           titulo?: string
           url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "links_uteis_grupo_id_fkey"
+            columns: ["grupo_id"]
+            isOneToOne: false
+            referencedRelation: "links_uteis_grupos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      links_uteis_grupos: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          icone: string
+          id: string
+          nome: string
+          ordem: number
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          icone?: string
+          id?: string
+          nome: string
+          ordem?: number
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          icone?: string
+          id?: string
+          nome?: string
+          ordem?: number
+          slug?: string
+          updated_at?: string
         }
         Relationships: []
       }
