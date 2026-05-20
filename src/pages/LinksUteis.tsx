@@ -46,13 +46,13 @@ const LinksUteis = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-black p-4 pb-24">
-      <div className="max-w-md mx-auto space-y-4">
-        <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-black p-3 sm:p-4 pb-24">
+      <div className="max-w-md sm:max-w-2xl mx-auto space-y-4">
+        <div className="flex items-center gap-3 mb-4 sm:mb-6">
+          <Button variant="ghost" size="icon" className="text-white hover:bg-white/10" onClick={() => navigate("/")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-2xl font-bold text-white">Links Úteis</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-white">Links Úteis</h1>
         </div>
 
         {isLoading && <div className="text-center py-12 text-white">Carregando links...</div>}
@@ -70,29 +70,25 @@ const LinksUteis = () => {
             {gruposVisiveis.map(({ grupo, links: grupoLinks }) => {
               const Icon = getIconeLink(grupo.icone);
               return (
-                <AccordionItem key={grupo.id} value={grupo.id} className="bg-gray-800/50 border-gray-700 border rounded-lg px-4">
-                  <AccordionTrigger className="hover:no-underline text-white py-4">
-                    <div className="flex items-center gap-3">
-                      <Icon className="h-5 w-5 text-primary" />
-                      <span className="font-semibold">{grupo.nome}</span>
-                      <span className="text-xs text-gray-400">({grupoLinks.length})</span>
+                <AccordionItem key={grupo.id} value={grupo.id} className="bg-gray-800/50 border-gray-700 border rounded-lg px-3 sm:px-4">
+                  <AccordionTrigger className="hover:no-underline text-white py-3 sm:py-4 min-h-[48px]">
+                    <div className="flex items-center gap-3 text-left">
+                      <Icon className="h-5 w-5 text-primary shrink-0" />
+                      <span className="font-semibold text-sm sm:text-base truncate">{grupo.nome}</span>
+                      <span className="text-xs text-gray-400 shrink-0">({grupoLinks.length})</span>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
-                    <div className="space-y-2 pt-1">
+                    <div className="space-y-2 pt-1 pb-2">
                       {grupoLinks.map(link => (
-                        <Card
+                        <button
                           key={link.id}
-                          className="bg-gray-900/60 border-gray-700 hover:bg-gray-900/80 transition-colors cursor-pointer"
                           onClick={() => handleLinkClick(link.url)}
+                          className="w-full text-left bg-gray-900/60 border border-gray-700 hover:bg-gray-900/80 active:bg-gray-900 transition-colors rounded-md p-3 sm:p-4 min-h-[48px] flex items-center justify-between gap-3"
                         >
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between">
-                              <h3 className="text-base font-medium text-white">{link.titulo}</h3>
-                              <ExternalLink className="h-4 w-4 text-gray-400 ml-4 flex-shrink-0" />
-                            </div>
-                          </CardContent>
-                        </Card>
+                          <h3 className="text-sm sm:text-base font-medium text-white truncate">{link.titulo}</h3>
+                          <ExternalLink className="h-4 w-4 text-gray-400 shrink-0" />
+                        </button>
                       ))}
                     </div>
                   </AccordionContent>
@@ -102,7 +98,7 @@ const LinksUteis = () => {
           </Accordion>
         )}
 
-        <div className="fixed bottom-4 left-0 right-0 px-4 max-w-md mx-auto">
+        <div className="fixed bottom-4 left-0 right-0 px-4 max-w-md sm:max-w-2xl mx-auto">
           <Button variant="outline" className="w-full" onClick={() => navigate("/")}>Voltar à Home</Button>
         </div>
       </div>
