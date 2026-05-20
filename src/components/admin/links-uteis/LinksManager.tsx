@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLinksUteis, useLinksUteisGrupos, LinkUtil } from "@/hooks/useLinksUteis";
 import { getIconeLink } from "@/lib/iconesLinksUteis";
 import { Edit, Trash2, Plus, ExternalLink, GripVertical } from "lucide-react";
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, TouchSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
@@ -19,20 +19,20 @@ function SortableLinkRow({ link, onEdit, onDelete, onToggle }: { link: LinkUtil;
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: link.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
   return (
-    <div ref={setNodeRef} style={style} className="flex items-center gap-3 p-2 border rounded-md bg-background">
-      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none">
-        <GripVertical className="h-4 w-4 text-muted-foreground" />
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2 sm:gap-3 p-2 border rounded-md bg-background">
+      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none p-2 -m-1 shrink-0" aria-label="Arrastar">
+        <GripVertical className="h-5 w-5 text-muted-foreground" />
       </button>
       <div className="flex-1 min-w-0">
-        <div className="font-medium truncate">{link.titulo}</div>
+        <div className="font-medium truncate text-sm sm:text-base">{link.titulo}</div>
         <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 hover:underline flex items-center gap-1 truncate">
           <span className="truncate">{link.url}</span>
           <ExternalLink className="h-3 w-3 flex-shrink-0" />
         </a>
       </div>
-      <Switch checked={link.ativo} onCheckedChange={() => onToggle(link)} />
-      <Button variant="outline" size="sm" onClick={() => onEdit(link)}><Edit className="h-4 w-4" /></Button>
-      <Button variant="destructive" size="sm" onClick={() => onDelete(link)}><Trash2 className="h-4 w-4" /></Button>
+      <Switch checked={link.ativo} onCheckedChange={() => onToggle(link)} className="shrink-0" />
+      <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => onEdit(link)}><Edit className="h-4 w-4" /></Button>
+      <Button variant="destructive" size="icon" className="h-9 w-9 shrink-0" onClick={() => onDelete(link)}><Trash2 className="h-4 w-4" /></Button>
     </div>
   );
 }
@@ -47,7 +47,11 @@ export function LinksManager() {
   const [deleteTarget, setDeleteTarget] = useState<LinkUtil | null>(null);
   const [form, setForm] = useState({ titulo: "", url: "", grupo_id: "", ativo: true });
 
-  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const linksPorGrupo = useMemo(() => {
     const map = new Map<string, LinkUtil[]>();
