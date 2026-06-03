@@ -23,7 +23,10 @@ interface FlyerItem {
   status_flyer: string;
   data_aprovacao: string | null;
   data_inicio_estagio: string | null;
+  registro_id: number | null;
+  telefone: string | null;
 }
+
 
 interface FlyersEstagioListProps {
   userId?: string;
@@ -63,7 +66,7 @@ export function FlyersEstagioList({ userId, readOnly = false }: FlyersEstagioLis
           regional_id,
           data_aprovacao,
           data_inicio_estagio,
-          integrantes_portal!solicitacoes_estagio_integrante_id_fkey(nome_colete),
+          integrantes_portal!solicitacoes_estagio_integrante_id_fkey(nome_colete, registro_id, profile_id),
           cargos!solicitacoes_estagio_cargo_estagio_id_fkey(nome),
           divisoes!solicitacoes_estagio_divisao_id_fkey(nome)
         `)
@@ -78,6 +81,24 @@ export function FlyersEstagioList({ userId, readOnly = false }: FlyersEstagioLis
       const { data, error } = await query;
       if (error) throw error;
 
+      // Buscar telefones dos profiles
+      const profileIds = (data || [])
+        .map((sol: any) => sol.integrantes_portal?.profile_id)
+        .filter(Boolean);
+
+      let telefonesMap: Record<string, string | null> = {};
+      if (profileIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("id, telefone")
+          .in("id", profileIds);
+
+        telefonesMap = (profilesData || []).reduce((acc: Record<string, string | null>, p: any) => {
+          acc[p.id] = p.telefone || null;
+          return acc;
+        }, {});
+      }
+
       const mapped: FlyerItem[] = (data || []).map((sol: any) => ({
         solicitacao_id: sol.id,
         integrante_nome_colete: sol.integrantes_portal?.nome_colete || "N/A",
@@ -89,6 +110,8 @@ export function FlyersEstagioList({ userId, readOnly = false }: FlyersEstagioLis
         status_flyer: sol.status_flyer || "pendente",
         data_aprovacao: sol.data_aprovacao,
         data_inicio_estagio: sol.data_inicio_estagio,
+        registro_id: sol.integrantes_portal?.registro_id || null,
+        telefone: telefonesMap[sol.integrantes_portal?.profile_id] || null,
       }));
 
       // Ordenar: pendente primeiro, depois solicitado, depois concluido
@@ -255,6 +278,8 @@ export function FlyersEstagioList({ userId, readOnly = false }: FlyersEstagioLis
                             Início: {format(new Date(item.data_inicio_estagio), "dd/MM/yyyy", { locale: ptBR })}
                           </p>
                         )}
+                        <p className="text-xs text-muted-foreground">ID Clube: {item.registro_id ?? "N/A"}</p>
+                        <p className="text-xs text-muted-foreground">Tel: {item.telefone ?? "Não informado"}</p>
                       </div>
                       <div className="shrink-0">{getStatusBadge(item.status_flyer)}</div>
                     </div>
