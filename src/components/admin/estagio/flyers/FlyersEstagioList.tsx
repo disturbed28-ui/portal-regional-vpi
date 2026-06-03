@@ -278,6 +278,8 @@ export function FlyersEstagioList({ userId, readOnly = false }: FlyersEstagioLis
                             Início: {format(new Date(item.data_inicio_estagio), "dd/MM/yyyy", { locale: ptBR })}
                           </p>
                         )}
+                        <p className="text-xs text-muted-foreground">ID Clube: {item.registro_id ?? "N/A"}</p>
+                        <p className="text-xs text-muted-foreground">Tel: {item.telefone ?? "Não informado"}</p>
                       </div>
                       <div className="shrink-0">{getStatusBadge(item.status_flyer)}</div>
                     </div>
