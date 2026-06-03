@@ -23,7 +23,10 @@ interface FlyerItem {
   status_flyer: string;
   data_aprovacao: string | null;
   data_inicio_estagio: string | null;
+  registro_id: number | null;
+  telefone: string | null;
 }
+
 
 interface FlyersEstagioListProps {
   userId?: string;
