@@ -46,6 +46,8 @@ export interface ExpansaoCandidato {
   cadastrado_por_nome: string | null;
   enviado_em: string | null;
   enviado_por: string | null;
+  enviado_para_nome: string | null;
+  enviado_para_telefone: string | null;
   baixa_em: string | null;
   baixa_por: string | null;
   baixa_observacao: string | null;
