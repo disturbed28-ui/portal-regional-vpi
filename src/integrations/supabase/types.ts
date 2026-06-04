@@ -1383,6 +1383,7 @@ export type Database = {
           cadastrado_por_nome: string | null
           colete_tipo: string | null
           comando_responsavel: string | null
+          contato_em: string | null
           contato_emergencia: string | null
           cpf: string | null
           created_at: string
@@ -1426,6 +1427,7 @@ export type Database = {
           cadastrado_por_nome?: string | null
           colete_tipo?: string | null
           comando_responsavel?: string | null
+          contato_em?: string | null
           contato_emergencia?: string | null
           cpf?: string | null
           created_at?: string
@@ -1469,6 +1471,7 @@ export type Database = {
           cadastrado_por_nome?: string | null
           colete_tipo?: string | null
           comando_responsavel?: string | null
+          contato_em?: string | null
           contato_emergencia?: string | null
           cpf?: string | null
           created_at?: string
