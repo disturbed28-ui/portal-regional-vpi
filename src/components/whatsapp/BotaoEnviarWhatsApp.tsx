@@ -86,6 +86,14 @@ export function BotaoEnviarWhatsApp({
       regional_id: regionalId ?? profile?.regional_id ?? null,
       divisao_id: divisaoId ?? profile?.divisao_id ?? null,
     });
+
+    if (onClickExtra) {
+      try {
+        await onClickExtra();
+      } catch {
+        /* tratado no caller */
+      }
+    }
   };
 
   return (
