@@ -398,6 +398,16 @@ const Index = () => {
                 Avaliacao de Integrantes
               </Button>
             )}
+
+            {!loadingPermissions && hasAcessoExpansao && (
+              <Button
+                onClick={() => navigate("/expansao")}
+                disabled={!isLoggedIn || !isActive}
+                className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Expansao
+              </Button>
+            )}
           </div>
 
           {/* Botão Instalar App - oculto quando já está em modo PWA instalado */}
