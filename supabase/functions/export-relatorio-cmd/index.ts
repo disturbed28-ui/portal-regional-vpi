@@ -46,6 +46,15 @@ interface DadosIntegrantesAtivos {
   };
 }
 
+interface ExpansaoCandidatoRelatorio {
+  nome_colete: string | null;
+  telefone: string | null;
+  data_recebimento: string | null;
+  contato_em: string | null;
+  status: string | null;
+  baixa_observacao: string | null;
+}
+
 interface DadosRelatorio {
   regional_nome: string;
   regional_numero_romano: string;
@@ -53,6 +62,7 @@ interface DadosRelatorio {
   mes: number;
   semana: number;
   divisoes: DivisaoCompleta[];
+  expansao_candidatos: ExpansaoCandidatoRelatorio[];
   total_mes_anterior: number;
   dados_mes_anterior: DadosMesAnterior;
   dados_integrantes_ativos: DadosIntegrantesAtivos;
@@ -264,6 +274,38 @@ async function fetchDadosRelatorio(
   console.log('[Fetch Dados] Total divisões:', divisoesCompletas.length);
   console.log('[Fetch Dados] Com relatório:', divisoesCompletas.filter(d => d.tem_relatorio).length);
 
+  // 7. Buscar candidatos de Expansão da regional
+  // Critério: data_recebimento dentro do período OU status ainda não encerrado
+  // (encerrado = efetivado_reportado, desistente_reportado, cancelado)
+  const ultimoDiaMes = new Date(ano, mes, 0).getDate();
+  let diaInicio = 1;
+  let diaFim = ultimoDiaMes;
+  if (semana === 1) { diaInicio = 1; diaFim = 10; }
+  else if (semana === 2) { diaInicio = 11; diaFim = 20; }
+  else { diaInicio = 21; diaFim = ultimoDiaMes; }
+  const dataInicioPeriodo = `${ano}-${String(mes).padStart(2, '0')}-${String(diaInicio).padStart(2, '0')}`;
+  const dataFimPeriodo = `${ano}-${String(mes).padStart(2, '0')}-${String(diaFim).padStart(2, '0')}`;
+
+  const STATUS_ENCERRADOS = ['efetivado_reportado', 'desistente_reportado', 'cancelado'];
+
+  const { data: candidatosExpansao, error: expansaoError } = await supabase
+    .from('expansao_candidatos')
+    .select('nome_colete, telefone, data_recebimento, contato_em, status, baixa_observacao')
+    .eq('regional_id', regional_id)
+    .order('data_recebimento', { ascending: true });
+
+  if (expansaoError) console.error('[Fetch Dados] Erro ao buscar expansão:', expansaoError.message);
+
+  const expansaoFiltrada: ExpansaoCandidatoRelatorio[] = (candidatosExpansao || []).filter((c: any) => {
+    const dentroPeriodo = c.data_recebimento &&
+      c.data_recebimento >= dataInicioPeriodo &&
+      c.data_recebimento <= dataFimPeriodo;
+    const naoEncerrado = !STATUS_ENCERRADOS.includes(c.status);
+    return dentroPeriodo || naoEncerrado;
+  });
+
+  console.log('[Fetch Dados] Candidatos expansão no relatório:', expansaoFiltrada.length);
+
   return {
     regional_nome: regional.nome,
     regional_numero_romano: extrairNumeroRomano(regional.nome),
@@ -271,6 +313,7 @@ async function fetchDadosRelatorio(
     mes,
     semana,
     divisoes: ordenarDivisoes(divisoesCompletas),
+    expansao_candidatos: expansaoFiltrada,
     total_mes_anterior: totalMesAnterior,
     dados_mes_anterior: dadosMesAnterior,
     dados_integrantes_ativos: dadosIntegrantesAtivos,
@@ -743,6 +786,45 @@ function adicionarBlocoUrsinhos(wsData: any[][], dados: DadosRelatorio, row: num
   return row;
 }
 
+// Helper: formata data ISO (YYYY-MM-DD) para DD/MM/YYYY
+function formatarDataBR(data: string | null): string {
+  if (!data) return '-';
+  const apenasData = String(data).split('T')[0];
+  const partes = apenasData.split('-');
+  if (partes.length !== 3) return data;
+  return `${partes[2]}/${partes[1]}/${partes[0]}`;
+}
+
+// Bloco 18: Expansão (regional, no final do relatório)
+function adicionarBlocoExpansao(wsData: any[][], dados: DadosRelatorio, row: number): number {
+  wsData[row++] = ['EXPANSÃO'];
+  wsData[row++] = ['Nome de colete', 'Telefone', 'Data de recebimento da ficha', 'Data de contato', 'Converteu', 'Motivo/Observação'];
+
+  const candidatos = dados.expansao_candidatos || [];
+
+  if (candidatos.length === 0) {
+    wsData[row++] = ['Sem candidatos de expansão'];
+  } else {
+    candidatos.forEach(c => {
+      let converteu = '-';
+      if (c.status === 'efetivado' || c.status === 'efetivado_reportado') converteu = 'Sim';
+      else if (c.status === 'desistente' || c.status === 'desistente_reportado') converteu = 'Não';
+
+      wsData[row++] = [
+        c.nome_colete || '-',
+        c.telefone || '-',
+        formatarDataBR(c.data_recebimento),
+        formatarDataBR(c.contato_em),
+        converteu,
+        c.baixa_observacao || '-',
+      ];
+    });
+  }
+
+  wsData[row++] = [];
+  return row;
+}
+
 // ============================================================================
 // GERAÇÃO DO XLSX
 // ============================================================================
@@ -752,8 +834,9 @@ const BLOCK_TITLE_KEYWORDS = [
   'MOVIMENTAÇÃO', 'CRESCIMENTO', 'EFETIVO', 'INADIMPLÊNCIA',
   'AÇÕES DE', 'AÇÕES SOCIAIS', 'ENTRADAS', 'CONFLITOS',
   'BATEDORES', 'CAVEIRAS', 'SGT ARMAS', 'COMBATE', 'LOBOS', 'URSINHOS',
-  'PERÍODO',
+  'EXPANSÃO', 'PERÍODO',
 ];
+
 
 function isBlockTitle(value: any): boolean {
   if (typeof value !== 'string') return false;
@@ -783,6 +866,7 @@ async function generateXlsxReport(dados: DadosRelatorio): Promise<ArrayBuffer> {
   row = adicionarBlocoCombateInsano(wsData, dados, row);
   row = adicionarBlocoLobos(wsData, dados, row);
   row = adicionarBlocoUrsinhos(wsData, dados, row);
+  row = adicionarBlocoExpansao(wsData, dados, row);
 
   // Criar workbook ExcelJS com formatação completa (equivalente à macro VBA)
   const wb = new ExcelJS.Workbook();
