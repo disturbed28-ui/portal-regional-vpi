@@ -21,6 +21,49 @@ import { toast } from "sonner";
 const notify = (m: string, e = false) =>
   (e ? toast.error : toast.success)(m, { duration: 6000, dismissible: false });
 
+const fmtDataHora = (v: string | null): string | null => {
+  if (!v) return null;
+  const d = new Date(v);
+  if (isNaN(d.getTime())) return v;
+  return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+};
+
+const fmtData = (v: string | null): string | null => {
+  if (!v) return null;
+  // datas puras (YYYY-MM-DD) — evitar shift de fuso
+  const apenas = String(v).split("T")[0];
+  const partes = apenas.split("-");
+  if (partes.length === 3) return `${partes[2]}/${partes[1]}/${partes[0]}`;
+  return v;
+};
+
+/* ---------- Linha do tempo (histórico detalhado) ---------- */
+function LinhaDoTempo({ c }: { c: ExpansaoCandidato }) {
+  const baixaLabel = STATUS_META[c.status]?.label || c.status;
+  const etapas: { label: string; valor: string | null }[] = [
+    ["Divisão de destino", c.divisoes?.nome || null],
+    ["Recebimento da ficha", fmtData(c.data_recebimento)],
+    ["Enviada ao Diretor de Divisão", fmtDataHora(c.enviado_em)],
+    ["Diretor que recebeu", c.enviado_para_nome],
+    ["Telefone do diretor", c.enviado_para_telefone],
+    ["Data de contato com o candidato", fmtData(c.contato_em)],
+    [`Baixa (${baixaLabel})`, fmtDataHora(c.baixa_em)],
+    ["Observação da baixa", c.baixa_observacao],
+    ["Reportado à Expansão", fmtDataHora(c.reportado_em)],
+  ].map(([label, valor]) => ({ label, valor }));
+
+  return (
+    <div className="mt-2 border-l-2 border-muted pl-3 space-y-1.5">
+      {etapas.map(({ label, valor }) => (
+        <div key={label} className="text-xs">
+          <span className="font-medium text-muted-foreground">{label}:</span>{" "}
+          <span>{valor || "—"}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const toneClass: Record<string, string> = {
   red: "border-l-4 border-l-destructive",
   green: "border-l-4 border-l-green-600",
@@ -81,6 +124,8 @@ function EnviarFichaDD({ c, divisaoId, divisaoNome, profile, userId, update }: {
     await update.mutateAsync({
       id: c.id, divisao_id: divisaoId, status: "enviado",
       enviado_em: new Date().toISOString(), enviado_por: userId,
+      enviado_para_nome: dd?.nome || null,
+      enviado_para_telefone: dd?.telefone || null,
     });
     notify("Ficha enviada ao Diretor de Divisão.");
   };
@@ -293,13 +338,17 @@ export function HistoricoList() {
       {lista.map((c) => (
         <Card key={c.id} className={toneClass[STATUS_META[c.status].tone]}>
           <CardContent className="p-3 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-semibold text-sm">{c.nome_colete || c.nome_completo}</p>
+              <StatusBadge status={c.status} />
+            </div>
+            <LinhaDoTempo c={c} />
             <Collapsible>
               <div className="flex items-center justify-between gap-2">
-                <CollapsibleTrigger className="flex items-center gap-2 text-left flex-1">
+                <CollapsibleTrigger className="flex items-center gap-2 text-left flex-1 text-xs text-muted-foreground">
                   <ChevronDown className="h-4 w-4 shrink-0" />
-                  <p className="font-semibold text-sm">{c.nome_colete || c.nome_completo}</p>
+                  Ver dados completos da ficha
                 </CollapsibleTrigger>
-                <StatusBadge status={c.status} />
               </div>
               <CollapsibleContent><FichaDetalhe c={c} /></CollapsibleContent>
             </Collapsible>

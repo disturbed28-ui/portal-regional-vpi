@@ -1398,6 +1398,8 @@ export type Database = {
           endereco_estado: string | null
           endereco_rua: string | null
           enviado_em: string | null
+          enviado_para_nome: string | null
+          enviado_para_telefone: string | null
           enviado_por: string | null
           expansao_nome: string | null
           expansao_telefone: string | null
@@ -1442,6 +1444,8 @@ export type Database = {
           endereco_estado?: string | null
           endereco_rua?: string | null
           enviado_em?: string | null
+          enviado_para_nome?: string | null
+          enviado_para_telefone?: string | null
           enviado_por?: string | null
           expansao_nome?: string | null
           expansao_telefone?: string | null
@@ -1486,6 +1490,8 @@ export type Database = {
           endereco_estado?: string | null
           endereco_rua?: string | null
           enviado_em?: string | null
+          enviado_para_nome?: string | null
+          enviado_para_telefone?: string | null
           enviado_por?: string | null
           expansao_nome?: string | null
           expansao_telefone?: string | null
