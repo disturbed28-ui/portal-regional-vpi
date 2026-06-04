@@ -46,6 +46,15 @@ interface DadosIntegrantesAtivos {
   };
 }
 
+interface ExpansaoCandidatoRelatorio {
+  nome_colete: string | null;
+  telefone: string | null;
+  data_recebimento: string | null;
+  contato_em: string | null;
+  status: string | null;
+  baixa_observacao: string | null;
+}
+
 interface DadosRelatorio {
   regional_nome: string;
   regional_numero_romano: string;
@@ -53,6 +62,7 @@ interface DadosRelatorio {
   mes: number;
   semana: number;
   divisoes: DivisaoCompleta[];
+  expansao_candidatos: ExpansaoCandidatoRelatorio[];
   total_mes_anterior: number;
   dados_mes_anterior: DadosMesAnterior;
   dados_integrantes_ativos: DadosIntegrantesAtivos;
