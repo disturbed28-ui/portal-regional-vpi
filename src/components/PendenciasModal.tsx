@@ -1151,6 +1151,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle, onDispensarDados }
     if (isTreinamentoAprovador || isTreinamentoIntegrante) return '🎓';
     if (isEstagioAprovador || isEstagioIntegrante) return '🎖️';
     if (isFlyerPendente) return '🖼️';
+    if (isExpansaoBaixa) return '🧭';
     if (isEventoCancelado) {
       const eventDetalhes = detalhes as EventoCanceladoDetalhes;
       return eventDetalhes?.status === 'cancelled' ? '📅' : '❌';
