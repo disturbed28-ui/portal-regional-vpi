@@ -77,16 +77,6 @@ export function CandidatosList() {
   const candidatos: ExpansaoCandidato[] = (data || []).filter((c: ExpansaoCandidato) =>
     ["pendente", "enviado"].includes(c.status));
 
-  const enviar = async (c: ExpansaoCandidato) => {
-    const divisaoId = divSel[c.id] || c.divisao_id;
-    if (!divisaoId) { notify("Selecione a divisão antes de enviar.", true); return; }
-    await update.mutateAsync({
-      id: c.id, divisao_id: divisaoId, status: "enviado",
-      enviado_em: new Date().toISOString(), enviado_por: user?.id || null,
-    });
-    notify("Ficha enviada ao Diretor de Divisão.");
-  };
-
   const baixa = async (c: ExpansaoCandidato, status: ExpansaoStatus) => {
     await update.mutateAsync({
       id: c.id, status, baixa_em: new Date().toISOString(), baixa_por: user?.id || null,
