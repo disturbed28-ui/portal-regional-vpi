@@ -274,6 +274,9 @@ export function FlyersEstagioList({ userId, readOnly = false }: FlyersEstagioLis
                         <p className="text-xs text-muted-foreground">
                           {item.cargo_estagio_nome} • Grau {item.grau_estagio}
                         </p>
+                        <p className="text-xs text-muted-foreground">
+                          Grau atual: {item.grau_atual ?? "N/A"}
+                        </p>
                         <p className="text-xs text-muted-foreground">{item.divisao_nome}</p>
                         {item.data_inicio_estagio && (
                           <p className="text-xs text-muted-foreground">
