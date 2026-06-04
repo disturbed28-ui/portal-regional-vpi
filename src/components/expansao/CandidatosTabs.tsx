@@ -197,23 +197,14 @@ export function CandidatosList() {
 
             <div className="flex flex-wrap gap-2 mt-2">
               {(["efetivado", "desistente", "cancelado"] as ExpansaoStatus[]).map((s) => (
-                <AlertDialog key={s}>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="text-xs">{STATUS_META[s].label}</Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Confirmar baixa</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Marcar <strong>{c.nome_colete}</strong> como <strong>{STATUS_META[s].label}</strong>? Esta ação pode ser revertida apenas por um administrador.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => baixa(c, s)}>Confirmar</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <BaixaDialog
+                  key={s}
+                  candidatoNome={c.nome_colete || c.nome_completo || ""}
+                  statusLabel={STATUS_META[s].label}
+                  triggerLabel={STATUS_META[s].label}
+                  requireContato={s !== "cancelado"}
+                  onConfirm={(payload) => baixa(c, s, payload)}
+                />
               ))}
             </div>
           </CardContent>
