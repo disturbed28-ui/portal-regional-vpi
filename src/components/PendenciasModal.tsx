@@ -7,6 +7,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
@@ -22,9 +32,12 @@ import {
   AlertTriangle,
   ArrowRight,
   RefreshCw,
-  CheckCircle
+  CheckCircle,
+  Compass,
+  Phone,
+  XCircle
 } from "lucide-react";
-import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes, FlyerPendenteDetalhes } from "@/hooks/usePendencias";
+import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes, FlyerPendenteDetalhes, ExpansaoBaixaDetalhes } from "@/hooks/usePendencias";
 
 interface PendenciasModalProps {
   pendencias: Pendencia[];
