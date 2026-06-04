@@ -866,6 +866,7 @@ async function generateXlsxReport(dados: DadosRelatorio): Promise<ArrayBuffer> {
   row = adicionarBlocoCombateInsano(wsData, dados, row);
   row = adicionarBlocoLobos(wsData, dados, row);
   row = adicionarBlocoUrsinhos(wsData, dados, row);
+  row = adicionarBlocoExpansao(wsData, dados, row);
 
   // Criar workbook ExcelJS com formatação completa (equivalente à macro VBA)
   const wb = new ExcelJS.Workbook();
