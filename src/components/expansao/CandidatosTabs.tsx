@@ -338,13 +338,13 @@ export function HistoricoList() {
       {lista.map((c) => (
         <Card key={c.id} className={toneClass[STATUS_META[c.status].tone]}>
           <CardContent className="p-3 space-y-2">
+            <LinhaDoTempo c={c} />
             <Collapsible>
               <div className="flex items-center justify-between gap-2">
-                <CollapsibleTrigger className="flex items-center gap-2 text-left flex-1">
+                <CollapsibleTrigger className="flex items-center gap-2 text-left flex-1 text-xs text-muted-foreground">
                   <ChevronDown className="h-4 w-4 shrink-0" />
-                  <p className="font-semibold text-sm">{c.nome_colete || c.nome_completo}</p>
+                  Ver dados completos da ficha
                 </CollapsibleTrigger>
-                <StatusBadge status={c.status} />
               </div>
               <CollapsibleContent><FichaDetalhe c={c} /></CollapsibleContent>
             </Collapsible>
