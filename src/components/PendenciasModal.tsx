@@ -919,6 +919,9 @@ const limparCachePendencias = () => {
 const ExpansaoBaixaCard = ({ detalhes }: { detalhes: ExpansaoBaixaDetalhes }) => {
   const [acaoSelecionada, setAcaoSelecionada] = useState<ExpansaoBaixaTipo | null>(null);
   const [processando, setProcessando] = useState(false);
+  const [contatoData, setContatoData] = useState("");
+  const [observacao, setObservacao] = useState("");
+
 
   const acoesMeta: Record<ExpansaoBaixaTipo, { label: string; descricao: string }> = {
     efetivado: {
