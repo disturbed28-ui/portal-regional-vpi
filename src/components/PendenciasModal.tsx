@@ -1111,9 +1111,9 @@ const ExpansaoBaixaCard = ({ detalhes }: { detalhes: ExpansaoBaixaDetalhes }) =>
 
           <AlertDialogFooter>
             <AlertDialogCancel disabled={processando}>Voltar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmarBaixa} disabled={processando}>
+            <Button onClick={confirmarBaixa} disabled={processando}>
               {processando ? 'Processando...' : 'Confirmar'}
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
