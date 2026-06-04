@@ -905,6 +905,179 @@ const AjusteRolesDetalhesCard = ({ detalhes }: { detalhes: AjusteRolesDetalhes }
   );
 };
 
+type ExpansaoBaixaTipo = 'efetivado' | 'desistente' | 'cancelado';
+
+const limparCachePendencias = () => {
+  Object.keys(localStorage).forEach((key) => {
+    if (key.startsWith('pendencias_')) localStorage.removeItem(key);
+  });
+};
+
+const ExpansaoBaixaCard = ({ detalhes }: { detalhes: ExpansaoBaixaDetalhes }) => {
+  const [acaoSelecionada, setAcaoSelecionada] = useState<ExpansaoBaixaTipo | null>(null);
+  const [processando, setProcessando] = useState(false);
+
+  const acoesMeta: Record<ExpansaoBaixaTipo, { label: string; descricao: string }> = {
+    efetivado: {
+      label: 'Efetivado',
+      descricao: 'Confirma que o candidato foi efetivado na divisão.',
+    },
+    desistente: {
+      label: 'Desistente',
+      descricao: 'Marca o candidato como desistente do processo.',
+    },
+    cancelado: {
+      label: 'Cancelado',
+      descricao: 'Cancela definitivamente o cadastro deste candidato.',
+    },
+  };
+
+  const confirmarBaixa = async () => {
+    if (!acaoSelecionada) return;
+    setProcessando(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+
+      const { error } = await supabase
+        .from('expansao_candidatos')
+        .update({
+          status: acaoSelecionada,
+          baixa_em: new Date().toISOString(),
+          baixa_por: user.id,
+        })
+        .eq('id', detalhes.candidato_id);
+
+      if (error) throw error;
+
+      limparCachePendencias();
+      toast({
+        title: 'Baixa registrada',
+        description: `Candidato marcado como "${acoesMeta[acaoSelecionada].label}".`,
+      });
+      setAcaoSelecionada(null);
+      setTimeout(() => window.location.reload(), 600);
+    } catch (error) {
+      console.error('[ExpansaoBaixaCard] Erro ao dar baixa:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível registrar a baixa. Tente novamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setProcessando(false);
+    }
+  };
+
+  return (
+    <>
+      <Card className="bg-background/50 border-teal-300 dark:border-teal-700">
+        <CardContent className="p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Compass className="h-5 w-5 text-teal-600" />
+            <div>
+              <p className="text-sm font-semibold">{detalhes.nome_completo || detalhes.nome_colete || 'Candidato'}</p>
+              {detalhes.nome_colete && (
+                <p className="text-xs text-muted-foreground">Colete: {detalhes.nome_colete}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2 text-xs">
+            {detalhes.telefone && (
+              <div className="flex items-center gap-2">
+                <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>{detalhes.telefone}</span>
+              </div>
+            )}
+            {detalhes.cpf && (
+              <div className="flex items-center gap-2">
+                <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>CPF: {detalhes.cpf}</span>
+              </div>
+            )}
+            {detalhes.profissao && (
+              <div className="flex items-center gap-2">
+                <User className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>{detalhes.profissao}</span>
+              </div>
+            )}
+            {detalhes.endereco_cidade && (
+              <div className="flex items-center gap-2">
+                <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>{detalhes.endereco_cidade}</span>
+              </div>
+            )}
+            {detalhes.expansao_nome && (
+              <div className="flex items-center gap-2">
+                <Compass className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Expansão: {detalhes.expansao_nome}</span>
+              </div>
+            )}
+            {detalhes.enviado_em && (
+              <div className="flex items-center gap-2">
+                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Enviado em {format(new Date(detalhes.enviado_em), 'dd/MM/yyyy', { locale: ptBR })}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="pt-2 border-t space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Dar baixa (ação irreversível):</p>
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                size="sm"
+                variant="default"
+                className="bg-green-600 hover:bg-green-700"
+                onClick={() => setAcaoSelecionada('efetivado')}
+                disabled={processando}
+              >
+                <CheckCircle className="h-4 w-4 mr-1" />
+                Efetivado
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => setAcaoSelecionada('desistente')}
+                disabled={processando}
+              >
+                <XCircle className="h-4 w-4 mr-1" />
+                Desistente
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setAcaoSelecionada('cancelado')}
+                disabled={processando}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <AlertDialog open={acaoSelecionada !== null} onOpenChange={(o) => !o && setAcaoSelecionada(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar baixa</AlertDialogTitle>
+            <AlertDialogDescription>
+              {acaoSelecionada && acoesMeta[acaoSelecionada].descricao}{' '}
+              Esta ação é <strong>irreversível</strong>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={processando}>Voltar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmarBaixa} disabled={processando}>
+              {processando ? 'Processando...' : 'Confirmar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+};
+
 interface PendenciaItemProps {
   pendencia: Pendencia;
   itemId: string;
