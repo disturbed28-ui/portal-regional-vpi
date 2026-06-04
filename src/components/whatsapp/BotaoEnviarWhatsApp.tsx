@@ -68,8 +68,24 @@ export function BotaoEnviarWhatsApp({
       toast.error("Telefone do destinatário não disponível");
       return;
     }
-    // Abre WhatsApp em nova aba (mobile abre o app direto)
-    window.open(link, "_blank", "noopener,noreferrer");
+    // Abre WhatsApp via clique em âncora (mais confiável que window.open,
+    // que costuma ser bloqueado dentro de iframes/preview).
+    const a = document.createElement("a");
+    a.href = link;
+    a.target = "_blank";
+    a.rel = "noopener,noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    // Fallback: se por algum motivo a aba não abrir, tenta window.open.
+    setTimeout(() => {
+      try {
+        window.open(link, "_blank", "noopener,noreferrer");
+      } catch {
+        /* ignore */
+      }
+    }, 150);
 
     // Log assíncrono (não bloqueia)
     logEnvioWhatsApp({
