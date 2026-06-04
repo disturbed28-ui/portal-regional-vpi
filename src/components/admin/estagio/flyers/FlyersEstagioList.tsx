@@ -17,6 +17,7 @@ interface FlyerItem {
   integrante_nome_colete: string;
   cargo_estagio_nome: string;
   grau_estagio: string;
+  grau_atual: string | null;
   divisao_nome: string;
   divisao_id: string;
   regional_id: string;
@@ -66,7 +67,7 @@ export function FlyersEstagioList({ userId, readOnly = false }: FlyersEstagioLis
           regional_id,
           data_aprovacao,
           data_inicio_estagio,
-          integrantes_portal!solicitacoes_estagio_integrante_id_fkey(nome_colete, registro_id, profile_id),
+          integrantes_portal!solicitacoes_estagio_integrante_id_fkey(nome_colete, registro_id, profile_id, grau),
           cargos!solicitacoes_estagio_cargo_estagio_id_fkey(nome),
           divisoes!solicitacoes_estagio_divisao_id_fkey(nome)
         `)
@@ -104,6 +105,7 @@ export function FlyersEstagioList({ userId, readOnly = false }: FlyersEstagioLis
         integrante_nome_colete: sol.integrantes_portal?.nome_colete || "N/A",
         cargo_estagio_nome: sol.cargos?.nome || "N/A",
         grau_estagio: sol.grau_estagio,
+        grau_atual: sol.integrantes_portal?.grau || null,
         divisao_nome: sol.divisoes?.nome || "N/A",
         divisao_id: sol.divisao_id || "",
         regional_id: sol.regional_id || "",
@@ -271,6 +273,9 @@ export function FlyersEstagioList({ userId, readOnly = false }: FlyersEstagioLis
                         <p className="font-medium text-sm break-words">{item.integrante_nome_colete}</p>
                         <p className="text-xs text-muted-foreground">
                           {item.cargo_estagio_nome} • Grau {item.grau_estagio}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Grau atual: {item.grau_atual ?? "N/A"}
                         </p>
                         <p className="text-xs text-muted-foreground">{item.divisao_nome}</p>
                         {item.data_inicio_estagio && (
