@@ -132,17 +132,30 @@ interface DadosDesatualizadosDetalhes {
   dias_desde_atualizacao: number | null;
 }
 
+interface ExpansaoBaixaDetalhes {
+  candidato_id: string;
+  nome_completo: string | null;
+  nome_colete: string | null;
+  telefone: string | null;
+  cpf: string | null;
+  profissao: string | null;
+  endereco_cidade: string | null;
+  divisao_texto: string;
+  expansao_nome: string | null;
+  enviado_em: string | null;
+}
+
 interface Pendencia {
   nome_colete: string;
   divisao_texto: string;
-  tipo: 'mensalidade' | 'afastamento' | 'delta' | 'evento_cancelado' | 'treinamento_aprovador' | 'treinamento_integrante' | 'estagio_aprovador' | 'estagio_integrante' | 'ajuste_roles' | 'desligamento_compulsorio' | 'dados_desatualizados' | 'flyer_pendente';
+  tipo: 'mensalidade' | 'afastamento' | 'delta' | 'evento_cancelado' | 'treinamento_aprovador' | 'treinamento_integrante' | 'estagio_aprovador' | 'estagio_integrante' | 'ajuste_roles' | 'desligamento_compulsorio' | 'dados_desatualizados' | 'flyer_pendente' | 'expansao_baixa';
   detalhe: string;
   data_ref: string;
   registro_id: number;
-  detalhes_completos: MensalidadeDetalhes | AfastamentoDetalhes | DeltaDetalhes | EventoCanceladoDetalhes | TreinamentoAprovadorDetalhes | TreinamentoIntegranteDetalhes | EstagioAprovadorDetalhes | EstagioIntegranteDetalhes | AjusteRolesDetalhes | DesligamentoCompulsorioDetalhes | DadosDesatualizadosDetalhes | FlyerPendenteDetalhes;
+  detalhes_completos: MensalidadeDetalhes | AfastamentoDetalhes | DeltaDetalhes | EventoCanceladoDetalhes | TreinamentoAprovadorDetalhes | TreinamentoIntegranteDetalhes | EstagioAprovadorDetalhes | EstagioIntegranteDetalhes | AjusteRolesDetalhes | DesligamentoCompulsorioDetalhes | DadosDesatualizadosDetalhes | FlyerPendenteDetalhes | ExpansaoBaixaDetalhes;
 }
 
-export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes, FlyerPendenteDetalhes };
+export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes, FlyerPendenteDetalhes, ExpansaoBaixaDetalhes };
 
 export const usePendencias = (
   userId: string | undefined,
@@ -962,6 +975,54 @@ export const usePendencias = (
           console.log('[usePendencias] Pendências de flyer encontradas:',
             todasPendencias.filter(p => p.tipo === 'flyer_pendente').length);
         }
+      }
+
+      // 5.3 Expansão: candidatos enviados ao DD aguardando baixa
+      // O Diretor de Divisão dá baixa pela própria modal, sem acessar a tela de Expansão.
+      if (userRole === 'diretor_divisao' && divisaoId) {
+        console.log('[usePendencias] Buscando candidatos de expansão enviados ao DD...');
+
+        const { data: divisaoExpData } = await supabase
+          .from('divisoes')
+          .select('nome')
+          .eq('id', divisaoId)
+          .single();
+        const divisaoNome = divisaoExpData?.nome || '';
+
+        const { data: candidatosExp, error: candidatosExpError } = await supabase
+          .from('expansao_candidatos')
+          .select('id, nome_completo, nome_colete, telefone, cpf, profissao, endereco_cidade, expansao_nome, enviado_em')
+          .eq('status', 'enviado')
+          .eq('divisao_id', divisaoId);
+
+        if (candidatosExpError) {
+          console.error('[usePendencias] Erro ao buscar candidatos de expansão:', candidatosExpError);
+        } else if (candidatosExp) {
+          for (const cand of candidatosExp) {
+            todasPendencias.push({
+              registro_id: 0,
+              nome_colete: cand.nome_colete || cand.nome_completo || 'Candidato',
+              divisao_texto: divisaoNome,
+              tipo: 'expansao_baixa',
+              detalhe: '🧭 Candidato da Expansão aguardando baixa',
+              data_ref: cand.enviado_em || new Date().toISOString(),
+              detalhes_completos: {
+                candidato_id: cand.id,
+                nome_completo: cand.nome_completo,
+                nome_colete: cand.nome_colete,
+                telefone: cand.telefone,
+                cpf: cand.cpf,
+                profissao: cand.profissao,
+                endereco_cidade: cand.endereco_cidade,
+                divisao_texto: divisaoNome,
+                expansao_nome: cand.expansao_nome,
+                enviado_em: cand.enviado_em,
+              } as ExpansaoBaixaDetalhes,
+            });
+          }
+        }
+        console.log('[usePendencias] Candidatos de expansão encontrados:',
+          todasPendencias.filter(p => p.tipo === 'expansao_baixa').length);
       }
 
       // 6. Pendências de Ajuste de Roles (apenas para admin)
