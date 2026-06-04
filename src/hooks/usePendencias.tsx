@@ -981,9 +981,17 @@ export const usePendencias = (
       // O Diretor de Divisão dá baixa pela própria modal, sem acessar a tela de Expansão.
       if (userRole === 'diretor_divisao' && divisaoId) {
         console.log('[usePendencias] Buscando candidatos de expansão enviados ao DD...');
+
+        const { data: divisaoExpData } = await supabase
+          .from('divisoes')
+          .select('nome')
+          .eq('id', divisaoId)
+          .single();
+        const divisaoNome = divisaoExpData?.nome || '';
+
         const { data: candidatosExp, error: candidatosExpError } = await supabase
           .from('expansao_candidatos')
-          .select('id, nome_completo, nome_colete, telefone, cpf, profissao, endereco_cidade, expansao_nome, enviado_em, divisao_id, divisoes:divisao_id(nome)')
+          .select('id, nome_completo, nome_colete, telefone, cpf, profissao, endereco_cidade, expansao_nome, enviado_em')
           .eq('status', 'enviado')
           .eq('divisao_id', divisaoId);
 
@@ -991,7 +999,6 @@ export const usePendencias = (
           console.error('[usePendencias] Erro ao buscar candidatos de expansão:', candidatosExpError);
         } else if (candidatosExp) {
           for (const cand of candidatosExp) {
-            const divisaoNome = (cand.divisoes as any)?.nome || '';
             todasPendencias.push({
               registro_id: 0,
               nome_colete: cand.nome_colete || cand.nome_completo || 'Candidato',
