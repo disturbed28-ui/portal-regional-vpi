@@ -786,6 +786,45 @@ function adicionarBlocoUrsinhos(wsData: any[][], dados: DadosRelatorio, row: num
   return row;
 }
 
+// Helper: formata data ISO (YYYY-MM-DD) para DD/MM/YYYY
+function formatarDataBR(data: string | null): string {
+  if (!data) return '-';
+  const apenasData = String(data).split('T')[0];
+  const partes = apenasData.split('-');
+  if (partes.length !== 3) return data;
+  return `${partes[2]}/${partes[1]}/${partes[0]}`;
+}
+
+// Bloco 18: Expansão (regional, no final do relatório)
+function adicionarBlocoExpansao(wsData: any[][], dados: DadosRelatorio, row: number): number {
+  wsData[row++] = ['EXPANSÃO'];
+  wsData[row++] = ['Nome de colete', 'Telefone', 'Data de recebimento da ficha', 'Data de contato', 'Converteu', 'Motivo/Observação'];
+
+  const candidatos = dados.expansao_candidatos || [];
+
+  if (candidatos.length === 0) {
+    wsData[row++] = ['Sem candidatos de expansão'];
+  } else {
+    candidatos.forEach(c => {
+      let converteu = '-';
+      if (c.status === 'efetivado' || c.status === 'efetivado_reportado') converteu = 'Sim';
+      else if (c.status === 'desistente' || c.status === 'desistente_reportado') converteu = 'Não';
+
+      wsData[row++] = [
+        c.nome_colete || '-',
+        c.telefone || '-',
+        formatarDataBR(c.data_recebimento),
+        formatarDataBR(c.contato_em),
+        converteu,
+        c.baixa_observacao || '-',
+      ];
+    });
+  }
+
+  wsData[row++] = [];
+  return row;
+}
+
 // ============================================================================
 // GERAÇÃO DO XLSX
 // ============================================================================
@@ -795,8 +834,9 @@ const BLOCK_TITLE_KEYWORDS = [
   'MOVIMENTAÇÃO', 'CRESCIMENTO', 'EFETIVO', 'INADIMPLÊNCIA',
   'AÇÕES DE', 'AÇÕES SOCIAIS', 'ENTRADAS', 'CONFLITOS',
   'BATEDORES', 'CAVEIRAS', 'SGT ARMAS', 'COMBATE', 'LOBOS', 'URSINHOS',
-  'PERÍODO',
+  'EXPANSÃO', 'PERÍODO',
 ];
+
 
 function isBlockTitle(value: any): boolean {
   if (typeof value !== 'string') return false;
