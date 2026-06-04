@@ -67,7 +67,7 @@ export function FlyersEstagioList({ userId, readOnly = false }: FlyersEstagioLis
           regional_id,
           data_aprovacao,
           data_inicio_estagio,
-          integrantes_portal!solicitacoes_estagio_integrante_id_fkey(nome_colete, registro_id, profile_id),
+          integrantes_portal!solicitacoes_estagio_integrante_id_fkey(nome_colete, registro_id, profile_id, grau),
           cargos!solicitacoes_estagio_cargo_estagio_id_fkey(nome),
           divisoes!solicitacoes_estagio_divisao_id_fkey(nome)
         `)
