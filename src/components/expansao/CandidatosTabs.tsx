@@ -146,9 +146,11 @@ export function CandidatosList() {
   const candidatos: ExpansaoCandidato[] = (data || []).filter((c: ExpansaoCandidato) =>
     ["pendente", "enviado"].includes(c.status));
 
-  const baixa = async (c: ExpansaoCandidato, status: ExpansaoStatus) => {
+  const baixa = async (c: ExpansaoCandidato, status: ExpansaoStatus, payload: BaixaPayload) => {
     await update.mutateAsync({
-      id: c.id, status, baixa_em: new Date().toISOString(), baixa_por: user?.id || null,
+      id: c.id, status,
+      baixa_em: new Date().toISOString(), baixa_por: user?.id || null,
+      contato_em: payload.contato_em, baixa_observacao: payload.observacao,
     });
     notify("Status atualizado.");
   };
