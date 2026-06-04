@@ -1533,7 +1533,7 @@ export const PendenciasModal = ({ pendencias, totalPendencias }: PendenciasModal
             <PendenciaItem 
               key={`${p.tipo}_${idx}`} 
               pendencia={p}
-              itemId={`${p.tipo}_${p.registro_id}`}
+              itemId={`${p.tipo}_${p.registro_id}_${idx}`}
               isOpen={openItemId === `${p.tipo}_${p.registro_id}`}
               onToggle={(id) => setOpenItemId(openItemId === id ? null : id)}
               onDispensarDados={handleDispensarDados}
