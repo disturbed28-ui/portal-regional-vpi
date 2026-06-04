@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useDivisoesPorRegional } from "@/hooks/useDivisoesPorRegional";
 import { useExpansaoCandidatos, STATUS_META, type ExpansaoCandidato, type ExpansaoStatus } from "@/hooks/useExpansao";
+import { useDiretorDivisao } from "@/hooks/useDiretorDivisao";
 import { useWhatsAppTemplates } from "@/hooks/useWhatsAppTemplates";
 import { renderTemplate } from "@/lib/whatsapp";
 import { BotaoEnviarWhatsApp } from "@/components/whatsapp/BotaoEnviarWhatsApp";
@@ -67,7 +68,76 @@ function useExpansaoCtx() {
   return { user, profile, regionalId, ...data };
 }
 
+/* ---------- Enviar ficha ao DD (com WhatsApp) ---------- */
+function EnviarFichaDD({ c, divisaoId, divisaoNome, profile, userId, update }: {
+  c: ExpansaoCandidato; divisaoId: string | null; divisaoNome: string;
+  profile: any; userId: string | null; update: any;
+}) {
+  const { data: dd } = useDiretorDivisao(divisaoId);
+  const { data: templates } = useWhatsAppTemplates();
+  const tpl = (templates || []).find((t: any) => t.chave === "expansao_envio_dd");
+
+  const marcarEnviado = async () => {
+    await update.mutateAsync({
+      id: c.id, divisao_id: divisaoId, status: "enviado",
+      enviado_em: new Date().toISOString(), enviado_por: userId,
+    });
+    notify("Ficha enviada ao Diretor de Divisão.");
+  };
+
+  if (!divisaoId) {
+    return (
+      <Button disabled className="gap-2 w-full">
+        <Send className="h-4 w-4" />Selecione a divisão
+      </Button>
+    );
+  }
+
+  const payload = {
+    diretor_divisao: dd?.nome || "Diretor",
+    candidato_nome: c.nome_completo || "",
+    candidato_colete: c.nome_colete || "",
+    candidato_telefone: c.telefone || "",
+    divisao: divisaoNome,
+    regional: profile?.regional || "",
+    diretor_regional: profile?.nome_colete || "",
+  };
+  const corpo = tpl
+    ? renderTemplate(tpl.corpo, payload)
+    : `Caro Diretor ${dd?.nome || ""}, você recebeu uma nova ficha de candidato: ${c.nome_colete || c.nome_completo}.`;
+
+  if (!dd?.telefone) {
+    return (
+      <div className="flex flex-col gap-1">
+        <p className="text-[11px] text-muted-foreground">
+          Diretor de Divisão sem telefone cadastrado — registre o envio e avise manualmente.
+        </p>
+        <Button onClick={marcarEnviado} className="gap-2 w-full">
+          <Send className="h-4 w-4" />Marcar como enviada ao DD
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <BotaoEnviarWhatsApp
+      telefone={dd.telefone}
+      destinatarioNome={dd.nome || "Diretor de Divisão"}
+      mensagem={corpo}
+      templateChave="expansao_envio_dd"
+      templateTitulo={tpl?.titulo}
+      moduloOrigem="expansao"
+      divisaoId={divisaoId}
+      label="Enviar ao DD (WhatsApp)"
+      payload={payload}
+      fullWidth
+      onClickExtra={marcarEnviado}
+    />
+  );
+}
+
 /* ---------- Candidatos ---------- */
+
 export function CandidatosList() {
   const { user, profile, regionalId, data, isLoading, update } = useExpansaoCtx() as any;
   const { divisoes } = useDivisoesPorRegional(regionalId);
@@ -75,16 +145,6 @@ export function CandidatosList() {
 
   const candidatos: ExpansaoCandidato[] = (data || []).filter((c: ExpansaoCandidato) =>
     ["pendente", "enviado"].includes(c.status));
-
-  const enviar = async (c: ExpansaoCandidato) => {
-    const divisaoId = divSel[c.id] || c.divisao_id;
-    if (!divisaoId) { notify("Selecione a divisão antes de enviar.", true); return; }
-    await update.mutateAsync({
-      id: c.id, divisao_id: divisaoId, status: "enviado",
-      enviado_em: new Date().toISOString(), enviado_por: user?.id || null,
-    });
-    notify("Ficha enviada ao Diretor de Divisão.");
-  };
 
   const baixa = async (c: ExpansaoCandidato, status: ExpansaoStatus) => {
     await update.mutateAsync({
@@ -115,14 +175,21 @@ export function CandidatosList() {
             </Collapsible>
 
             {c.status === "pendente" && (
-              <div className="flex flex-col sm:flex-row gap-2 mt-3">
+              <div className="flex flex-col gap-2 mt-3">
                 <Select value={divSel[c.id] || c.divisao_id || ""} onValueChange={(v) => setDivSel((p) => ({ ...p, [c.id]: v }))}>
-                  <SelectTrigger className="flex-1"><SelectValue placeholder="Selecionar divisão" /></SelectTrigger>
+                  <SelectTrigger className="w-full"><SelectValue placeholder="Selecionar divisão" /></SelectTrigger>
                   <SelectContent>
                     {divisoes.map((d) => <SelectItem key={d.id} value={d.id}>{d.nome}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <Button onClick={() => enviar(c)} className="gap-2"><Send className="h-4 w-4" />Enviar ao DD</Button>
+                <EnviarFichaDD
+                  c={c}
+                  divisaoId={divSel[c.id] || c.divisao_id || null}
+                  divisaoNome={divisoes.find((d) => d.id === (divSel[c.id] || c.divisao_id))?.nome || ""}
+                  profile={profile}
+                  userId={user?.id || null}
+                  update={update}
+                />
               </div>
             )}
 
