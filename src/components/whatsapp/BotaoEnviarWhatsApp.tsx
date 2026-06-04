@@ -23,6 +23,9 @@ export interface BotaoEnviarWhatsAppProps {
   regionalId?: string | null;
   divisaoId?: string | null;
 
+  /** Executado após abrir o WhatsApp (ex.: atualizar status). */
+  onClickExtra?: () => void | Promise<void>;
+
   /** Visual */
   label?: string;
   variant?: "default" | "outline" | "ghost" | "secondary";
