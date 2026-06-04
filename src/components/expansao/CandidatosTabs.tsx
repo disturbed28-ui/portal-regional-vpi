@@ -81,6 +81,8 @@ function EnviarFichaDD({ c, divisaoId, divisaoNome, profile, userId, update }: {
     await update.mutateAsync({
       id: c.id, divisao_id: divisaoId, status: "enviado",
       enviado_em: new Date().toISOString(), enviado_por: userId,
+      enviado_para_nome: dd?.nome || null,
+      enviado_para_telefone: dd?.telefone || null,
     });
     notify("Ficha enviada ao Diretor de Divisão.");
   };
