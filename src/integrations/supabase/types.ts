@@ -1373,6 +1373,167 @@ export type Database = {
         }
         Relationships: []
       }
+      expansao_candidatos: {
+        Row: {
+          anexo_path: string | null
+          baixa_em: string | null
+          baixa_observacao: string | null
+          baixa_por: string | null
+          cadastrado_por: string | null
+          cadastrado_por_nome: string | null
+          colete_tipo: string | null
+          comando_responsavel: string | null
+          contato_emergencia: string | null
+          cpf: string | null
+          created_at: string
+          dados_extraidos: Json | null
+          data_recebimento: string | null
+          diretor_regional_responsavel: string | null
+          divisao_id: string | null
+          email: string | null
+          endereco_bairro: string | null
+          endereco_cep: string | null
+          endereco_cidade: string | null
+          endereco_estado: string | null
+          endereco_rua: string | null
+          enviado_em: string | null
+          enviado_por: string | null
+          expansao_nome: string | null
+          expansao_telefone: string | null
+          ficha_raw: string | null
+          forma_pagamento: string | null
+          id: string
+          nascimento: string | null
+          nome_colete: string | null
+          nome_completo: string | null
+          profissao: string | null
+          regional_id: string | null
+          reportado_em: string | null
+          reportado_por: string | null
+          rg: string | null
+          status: Database["public"]["Enums"]["expansao_status"]
+          tamanho_camiseta: string | null
+          tamanho_colete: string | null
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          anexo_path?: string | null
+          baixa_em?: string | null
+          baixa_observacao?: string | null
+          baixa_por?: string | null
+          cadastrado_por?: string | null
+          cadastrado_por_nome?: string | null
+          colete_tipo?: string | null
+          comando_responsavel?: string | null
+          contato_emergencia?: string | null
+          cpf?: string | null
+          created_at?: string
+          dados_extraidos?: Json | null
+          data_recebimento?: string | null
+          diretor_regional_responsavel?: string | null
+          divisao_id?: string | null
+          email?: string | null
+          endereco_bairro?: string | null
+          endereco_cep?: string | null
+          endereco_cidade?: string | null
+          endereco_estado?: string | null
+          endereco_rua?: string | null
+          enviado_em?: string | null
+          enviado_por?: string | null
+          expansao_nome?: string | null
+          expansao_telefone?: string | null
+          ficha_raw?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          nascimento?: string | null
+          nome_colete?: string | null
+          nome_completo?: string | null
+          profissao?: string | null
+          regional_id?: string | null
+          reportado_em?: string | null
+          reportado_por?: string | null
+          rg?: string | null
+          status?: Database["public"]["Enums"]["expansao_status"]
+          tamanho_camiseta?: string | null
+          tamanho_colete?: string | null
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          anexo_path?: string | null
+          baixa_em?: string | null
+          baixa_observacao?: string | null
+          baixa_por?: string | null
+          cadastrado_por?: string | null
+          cadastrado_por_nome?: string | null
+          colete_tipo?: string | null
+          comando_responsavel?: string | null
+          contato_emergencia?: string | null
+          cpf?: string | null
+          created_at?: string
+          dados_extraidos?: Json | null
+          data_recebimento?: string | null
+          diretor_regional_responsavel?: string | null
+          divisao_id?: string | null
+          email?: string | null
+          endereco_bairro?: string | null
+          endereco_cep?: string | null
+          endereco_cidade?: string | null
+          endereco_estado?: string | null
+          endereco_rua?: string | null
+          enviado_em?: string | null
+          enviado_por?: string | null
+          expansao_nome?: string | null
+          expansao_telefone?: string | null
+          ficha_raw?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          nascimento?: string | null
+          nome_colete?: string | null
+          nome_completo?: string | null
+          profissao?: string | null
+          regional_id?: string | null
+          reportado_em?: string | null
+          reportado_por?: string | null
+          rg?: string | null
+          status?: Database["public"]["Enums"]["expansao_status"]
+          tamanho_camiseta?: string | null
+          tamanho_colete?: string | null
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expansao_candidatos_divisao_id_fkey"
+            columns: ["divisao_id"]
+            isOneToOne: false
+            referencedRelation: "divisoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expansao_candidatos_divisao_id_fkey"
+            columns: ["divisao_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["divisao_id"]
+          },
+          {
+            foreignKeyName: "expansao_candidatos_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "regionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expansao_candidatos_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["regional_id"]
+          },
+        ]
+      }
       formularios_catalogo: {
         Row: {
           ativo: boolean | null
@@ -3464,6 +3625,14 @@ export type Database = {
         | "adm_divisao"
         | "adm_regional"
         | "comando"
+      expansao_status:
+        | "pendente"
+        | "enviado"
+        | "efetivado"
+        | "efetivado_reportado"
+        | "desistente"
+        | "desistente_reportado"
+        | "cancelado"
       motivo_inativacao:
         | "transferido"
         | "falecido"
@@ -3613,6 +3782,15 @@ export const Constants = {
         "adm_divisao",
         "adm_regional",
         "comando",
+      ],
+      expansao_status: [
+        "pendente",
+        "enviado",
+        "efetivado",
+        "efetivado_reportado",
+        "desistente",
+        "desistente_reportado",
+        "cancelado",
       ],
       motivo_inativacao: [
         "transferido",

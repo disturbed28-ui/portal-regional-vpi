@@ -23,6 +23,9 @@ export interface BotaoEnviarWhatsAppProps {
   regionalId?: string | null;
   divisaoId?: string | null;
 
+  /** Executado após abrir o WhatsApp (ex.: atualizar status). */
+  onClickExtra?: () => void | Promise<void>;
+
   /** Visual */
   label?: string;
   variant?: "default" | "outline" | "ghost" | "secondary";
@@ -46,6 +49,7 @@ export function BotaoEnviarWhatsApp({
   moduloOrigem,
   regionalId,
   divisaoId,
+  onClickExtra,
   label = "Enviar WhatsApp",
   variant = "default",
   size = "default",
@@ -82,6 +86,14 @@ export function BotaoEnviarWhatsApp({
       regional_id: regionalId ?? profile?.regional_id ?? null,
       divisao_id: divisaoId ?? profile?.divisao_id ?? null,
     });
+
+    if (onClickExtra) {
+      try {
+        await onClickExtra();
+      } catch {
+        /* tratado no caller */
+      }
+    }
   };
 
   return (
