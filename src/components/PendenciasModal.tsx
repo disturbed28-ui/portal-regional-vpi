@@ -1187,6 +1187,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle, onDispensarDados }
       const flyerDet = detalhes as FlyerPendenteDetalhes;
       return flyerDet?.status_flyer === 'solicitado' ? 'Flyer Aguardando' : 'Flyer Pendente';
     }
+    if (isExpansaoBaixa) return 'Expansão';
     return 'Pendência';
   };
   
