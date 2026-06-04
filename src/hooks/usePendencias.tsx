@@ -977,6 +977,47 @@ export const usePendencias = (
         }
       }
 
+      // 5.3 Expansão: candidatos enviados ao DD aguardando baixa
+      // O Diretor de Divisão dá baixa pela própria modal, sem acessar a tela de Expansão.
+      if (userRole === 'diretor_divisao' && divisaoId) {
+        console.log('[usePendencias] Buscando candidatos de expansão enviados ao DD...');
+        const { data: candidatosExp, error: candidatosExpError } = await supabase
+          .from('expansao_candidatos')
+          .select('id, nome_completo, nome_colete, telefone, cpf, profissao, endereco_cidade, expansao_nome, enviado_em, divisao_id, divisoes:divisao_id(nome)')
+          .eq('status', 'enviado')
+          .eq('divisao_id', divisaoId);
+
+        if (candidatosExpError) {
+          console.error('[usePendencias] Erro ao buscar candidatos de expansão:', candidatosExpError);
+        } else if (candidatosExp) {
+          for (const cand of candidatosExp) {
+            const divisaoNome = (cand.divisoes as any)?.nome || '';
+            todasPendencias.push({
+              registro_id: 0,
+              nome_colete: cand.nome_colete || cand.nome_completo || 'Candidato',
+              divisao_texto: divisaoNome,
+              tipo: 'expansao_baixa',
+              detalhe: '🧭 Candidato da Expansão aguardando baixa',
+              data_ref: cand.enviado_em || new Date().toISOString(),
+              detalhes_completos: {
+                candidato_id: cand.id,
+                nome_completo: cand.nome_completo,
+                nome_colete: cand.nome_colete,
+                telefone: cand.telefone,
+                cpf: cand.cpf,
+                profissao: cand.profissao,
+                endereco_cidade: cand.endereco_cidade,
+                divisao_texto: divisaoNome,
+                expansao_nome: cand.expansao_nome,
+                enviado_em: cand.enviado_em,
+              } as ExpansaoBaixaDetalhes,
+            });
+          }
+        }
+        console.log('[usePendencias] Candidatos de expansão encontrados:',
+          todasPendencias.filter(p => p.tipo === 'expansao_baixa').length);
+      }
+
       // 6. Pendências de Ajuste de Roles (apenas para admin)
       // REGRA: admin com regionalId vê apenas integrantes da própria regional
       if (userRole === 'admin') {
