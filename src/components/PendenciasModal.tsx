@@ -1328,6 +1328,11 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle, onDispensarDados }
               );
             })()}
 
+            {/* Card de Baixa de Expansão (DD) */}
+            {isExpansaoBaixa && detalhes && <ExpansaoBaixaCard detalhes={detalhes as ExpansaoBaixaDetalhes} />}
+
+
+
             {/* Card de Ajuste de Roles */}
             {isAjusteRoles && detalhes && <AjusteRolesDetalhesCard detalhes={detalhes as AjusteRolesDetalhes} />}
 
