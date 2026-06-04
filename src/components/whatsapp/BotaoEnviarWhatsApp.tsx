@@ -49,6 +49,7 @@ export function BotaoEnviarWhatsApp({
   moduloOrigem,
   regionalId,
   divisaoId,
+  onClickExtra,
   label = "Enviar WhatsApp",
   variant = "default",
   size = "default",
