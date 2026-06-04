@@ -14,10 +14,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { BaixaDialog, type BaixaPayload } from "@/components/expansao/BaixaDialog";
 import { ChevronDown, Send, Phone, IdCard } from "lucide-react";
 import { toast } from "sonner";
 
