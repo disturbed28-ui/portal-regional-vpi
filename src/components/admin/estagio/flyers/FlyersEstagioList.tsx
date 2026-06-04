@@ -17,6 +17,7 @@ interface FlyerItem {
   integrante_nome_colete: string;
   cargo_estagio_nome: string;
   grau_estagio: string;
+  grau_atual: string | null;
   divisao_nome: string;
   divisao_id: string;
   regional_id: string;
