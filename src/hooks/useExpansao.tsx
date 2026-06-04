@@ -49,6 +49,7 @@ export interface ExpansaoCandidato {
   baixa_em: string | null;
   baixa_por: string | null;
   baixa_observacao: string | null;
+  contato_em: string | null;
   reportado_em: string | null;
   reportado_por: string | null;
   created_at: string;
