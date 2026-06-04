@@ -940,6 +940,15 @@ const ExpansaoBaixaCard = ({ detalhes }: { detalhes: ExpansaoBaixaDetalhes }) =>
 
   const confirmarBaixa = async () => {
     if (!acaoSelecionada) return;
+    const requireContato = acaoSelecionada !== 'cancelado';
+    if (requireContato && !contatoData) {
+      toast({ title: 'Atenção', description: 'Informe a data do contato com o candidato.', variant: 'destructive' });
+      return;
+    }
+    if (!observacao.trim()) {
+      toast({ title: 'Atenção', description: 'A observação é obrigatória.', variant: 'destructive' });
+      return;
+    }
     setProcessando(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -951,10 +960,13 @@ const ExpansaoBaixaCard = ({ detalhes }: { detalhes: ExpansaoBaixaDetalhes }) =>
           status: acaoSelecionada,
           baixa_em: new Date().toISOString(),
           baixa_por: user.id,
+          contato_em: contatoData || null,
+          baixa_observacao: observacao.trim(),
         })
         .eq('id', detalhes.candidato_id);
 
       if (error) throw error;
+
 
       limparCachePendencias();
       toast({
