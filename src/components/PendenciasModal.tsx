@@ -1075,7 +1075,7 @@ const ExpansaoBaixaCard = ({ detalhes }: { detalhes: ExpansaoBaixaDetalhes }) =>
         </CardContent>
       </Card>
 
-      <AlertDialog open={acaoSelecionada !== null} onOpenChange={(o) => !o && setAcaoSelecionada(null)}>
+      <AlertDialog open={acaoSelecionada !== null} onOpenChange={(o) => { if (!o) { setAcaoSelecionada(null); setContatoData(''); setObservacao(''); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar baixa</AlertDialogTitle>
@@ -1084,6 +1084,31 @@ const ExpansaoBaixaCard = ({ detalhes }: { detalhes: ExpansaoBaixaDetalhes }) =>
               Esta ação é <strong>irreversível</strong>.
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label htmlFor="exp-contato">
+                Data do contato com o candidato{acaoSelecionada !== 'cancelado' ? ' *' : ' (opcional)'}
+              </Label>
+              <Input
+                id="exp-contato"
+                type="date"
+                value={contatoData}
+                onChange={(e) => setContatoData(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="exp-obs">Observação *</Label>
+              <Textarea
+                id="exp-obs"
+                value={observacao}
+                onChange={(e) => setObservacao(e.target.value)}
+                placeholder="Descreva o resultado / motivo do contato"
+                rows={3}
+              />
+            </div>
+          </div>
+
           <AlertDialogFooter>
             <AlertDialogCancel disabled={processando}>Voltar</AlertDialogCancel>
             <AlertDialogAction onClick={confirmarBaixa} disabled={processando}>
