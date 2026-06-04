@@ -106,14 +106,21 @@ export function CandidatosList() {
             </Collapsible>
 
             {c.status === "pendente" && (
-              <div className="flex flex-col sm:flex-row gap-2 mt-3">
+              <div className="flex flex-col gap-2 mt-3">
                 <Select value={divSel[c.id] || c.divisao_id || ""} onValueChange={(v) => setDivSel((p) => ({ ...p, [c.id]: v }))}>
-                  <SelectTrigger className="flex-1"><SelectValue placeholder="Selecionar divisão" /></SelectTrigger>
+                  <SelectTrigger className="w-full"><SelectValue placeholder="Selecionar divisão" /></SelectTrigger>
                   <SelectContent>
                     {divisoes.map((d) => <SelectItem key={d.id} value={d.id}>{d.nome}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <Button onClick={() => enviar(c)} className="gap-2"><Send className="h-4 w-4" />Enviar ao DD</Button>
+                <EnviarFichaDD
+                  c={c}
+                  divisaoId={divSel[c.id] || c.divisao_id || null}
+                  divisaoNome={divisoes.find((d) => d.id === (divSel[c.id] || c.divisao_id))?.nome || ""}
+                  profile={profile}
+                  userId={user?.id || null}
+                  update={update}
+                />
               </div>
             )}
 
