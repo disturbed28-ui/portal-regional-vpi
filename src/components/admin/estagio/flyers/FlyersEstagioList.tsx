@@ -105,6 +105,7 @@ export function FlyersEstagioList({ userId, readOnly = false }: FlyersEstagioLis
         integrante_nome_colete: sol.integrantes_portal?.nome_colete || "N/A",
         cargo_estagio_nome: sol.cargos?.nome || "N/A",
         grau_estagio: sol.grau_estagio,
+        grau_atual: sol.integrantes_portal?.grau || null,
         divisao_nome: sol.divisoes?.nome || "N/A",
         divisao_id: sol.divisao_id || "",
         regional_id: sol.regional_id || "",
