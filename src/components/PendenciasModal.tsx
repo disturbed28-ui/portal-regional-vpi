@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -916,6 +919,9 @@ const limparCachePendencias = () => {
 const ExpansaoBaixaCard = ({ detalhes }: { detalhes: ExpansaoBaixaDetalhes }) => {
   const [acaoSelecionada, setAcaoSelecionada] = useState<ExpansaoBaixaTipo | null>(null);
   const [processando, setProcessando] = useState(false);
+  const [contatoData, setContatoData] = useState("");
+  const [observacao, setObservacao] = useState("");
+
 
   const acoesMeta: Record<ExpansaoBaixaTipo, { label: string; descricao: string }> = {
     efetivado: {
@@ -934,6 +940,15 @@ const ExpansaoBaixaCard = ({ detalhes }: { detalhes: ExpansaoBaixaDetalhes }) =>
 
   const confirmarBaixa = async () => {
     if (!acaoSelecionada) return;
+    const requireContato = acaoSelecionada !== 'cancelado';
+    if (requireContato && !contatoData) {
+      toast({ title: 'Atenção', description: 'Informe a data do contato com o candidato.', variant: 'destructive' });
+      return;
+    }
+    if (!observacao.trim()) {
+      toast({ title: 'Atenção', description: 'A observação é obrigatória.', variant: 'destructive' });
+      return;
+    }
     setProcessando(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -945,10 +960,13 @@ const ExpansaoBaixaCard = ({ detalhes }: { detalhes: ExpansaoBaixaDetalhes }) =>
           status: acaoSelecionada,
           baixa_em: new Date().toISOString(),
           baixa_por: user.id,
+          contato_em: contatoData || null,
+          baixa_observacao: observacao.trim(),
         })
         .eq('id', detalhes.candidato_id);
 
       if (error) throw error;
+
 
       limparCachePendencias();
       toast({
@@ -1057,7 +1075,7 @@ const ExpansaoBaixaCard = ({ detalhes }: { detalhes: ExpansaoBaixaDetalhes }) =>
         </CardContent>
       </Card>
 
-      <AlertDialog open={acaoSelecionada !== null} onOpenChange={(o) => !o && setAcaoSelecionada(null)}>
+      <AlertDialog open={acaoSelecionada !== null} onOpenChange={(o) => { if (!o) { setAcaoSelecionada(null); setContatoData(''); setObservacao(''); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar baixa</AlertDialogTitle>
@@ -1066,11 +1084,36 @@ const ExpansaoBaixaCard = ({ detalhes }: { detalhes: ExpansaoBaixaDetalhes }) =>
               Esta ação é <strong>irreversível</strong>.
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label htmlFor="exp-contato">
+                Data do contato com o candidato{acaoSelecionada !== 'cancelado' ? ' *' : ' (opcional)'}
+              </Label>
+              <Input
+                id="exp-contato"
+                type="date"
+                value={contatoData}
+                onChange={(e) => setContatoData(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="exp-obs">Observação *</Label>
+              <Textarea
+                id="exp-obs"
+                value={observacao}
+                onChange={(e) => setObservacao(e.target.value)}
+                placeholder="Descreva o resultado / motivo do contato"
+                rows={3}
+              />
+            </div>
+          </div>
+
           <AlertDialogFooter>
             <AlertDialogCancel disabled={processando}>Voltar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmarBaixa} disabled={processando}>
+            <Button onClick={confirmarBaixa} disabled={processando}>
               {processando ? 'Processando...' : 'Confirmar'}
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

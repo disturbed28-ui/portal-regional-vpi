@@ -14,10 +14,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { BaixaDialog, type BaixaPayload } from "@/components/expansao/BaixaDialog";
 import { ChevronDown, Send, Phone, IdCard } from "lucide-react";
 import { toast } from "sonner";
 
@@ -45,6 +42,9 @@ function FichaDetalhe({ c }: { c: ExpansaoCandidato }) {
     ["Comando resp.", c.comando_responsavel],
     ["DR resp.", c.diretor_regional_responsavel],
     ["Recebido de", [c.expansao_nome, c.expansao_telefone].filter(Boolean).join(" - ") || null],
+    ["Data recebimento", c.data_recebimento],
+    ["Data contato", c.contato_em],
+    ["Observação", c.baixa_observacao],
   ];
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs mt-2 bg-muted/40 p-2 rounded">
@@ -146,9 +146,11 @@ export function CandidatosList() {
   const candidatos: ExpansaoCandidato[] = (data || []).filter((c: ExpansaoCandidato) =>
     ["pendente", "enviado"].includes(c.status));
 
-  const baixa = async (c: ExpansaoCandidato, status: ExpansaoStatus) => {
+  const baixa = async (c: ExpansaoCandidato, status: ExpansaoStatus, payload: BaixaPayload) => {
     await update.mutateAsync({
-      id: c.id, status, baixa_em: new Date().toISOString(), baixa_por: user?.id || null,
+      id: c.id, status,
+      baixa_em: new Date().toISOString(), baixa_por: user?.id || null,
+      contato_em: payload.contato_em, baixa_observacao: payload.observacao,
     });
     notify("Status atualizado.");
   };
@@ -195,23 +197,14 @@ export function CandidatosList() {
 
             <div className="flex flex-wrap gap-2 mt-2">
               {(["efetivado", "desistente", "cancelado"] as ExpansaoStatus[]).map((s) => (
-                <AlertDialog key={s}>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="text-xs">{STATUS_META[s].label}</Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Confirmar baixa</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Marcar <strong>{c.nome_colete}</strong> como <strong>{STATUS_META[s].label}</strong>? Esta ação pode ser revertida apenas por um administrador.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => baixa(c, s)}>Confirmar</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <BaixaDialog
+                  key={s}
+                  candidatoNome={c.nome_colete || c.nome_completo || ""}
+                  statusLabel={STATUS_META[s].label}
+                  triggerLabel={STATUS_META[s].label}
+                  requireContato={s !== "cancelado"}
+                  onConfirm={(payload) => baixa(c, s, payload)}
+                />
               ))}
             </div>
           </CardContent>
