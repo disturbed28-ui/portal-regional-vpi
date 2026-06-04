@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useDivisoesPorRegional } from "@/hooks/useDivisoesPorRegional";
 import { useExpansaoCandidatos, STATUS_META, type ExpansaoCandidato, type ExpansaoStatus } from "@/hooks/useExpansao";
+import { useDiretorDivisao } from "@/hooks/useDiretorDivisao";
 import { useWhatsAppTemplates } from "@/hooks/useWhatsAppTemplates";
 import { renderTemplate } from "@/lib/whatsapp";
 import { BotaoEnviarWhatsApp } from "@/components/whatsapp/BotaoEnviarWhatsApp";
