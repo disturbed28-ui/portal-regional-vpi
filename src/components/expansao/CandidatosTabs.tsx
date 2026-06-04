@@ -338,6 +338,10 @@ export function HistoricoList() {
       {lista.map((c) => (
         <Card key={c.id} className={toneClass[STATUS_META[c.status].tone]}>
           <CardContent className="p-3 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-semibold text-sm">{c.nome_colete || c.nome_completo}</p>
+              <StatusBadge status={c.status} />
+            </div>
             <LinhaDoTempo c={c} />
             <Collapsible>
               <div className="flex items-center justify-between gap-2">
