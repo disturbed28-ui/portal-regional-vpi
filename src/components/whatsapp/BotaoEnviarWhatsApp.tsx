@@ -78,14 +78,7 @@ export function BotaoEnviarWhatsApp({
     a.click();
     a.remove();
 
-    // Fallback: se por algum motivo a aba não abrir, tenta window.open.
-    setTimeout(() => {
-      try {
-        window.open(link, "_blank", "noopener,noreferrer");
-      } catch {
-        /* ignore */
-      }
-    }, 150);
+
 
     // Log assíncrono (não bloqueia)
     logEnvioWhatsApp({
