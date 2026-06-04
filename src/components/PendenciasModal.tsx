@@ -1132,6 +1132,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle, onDispensarDados }
     if (isEstagioAprovador) return 'border-fuchsia-500';
     if (isEstagioIntegrante) return 'border-cyan-500';
     if (isFlyerPendente) return 'border-indigo-500';
+    if (isExpansaoBaixa) return 'border-teal-500';
     if (isDelta) {
       const deltaDetalhes = detalhes as DeltaDetalhes | null;
       if (!deltaDetalhes) return 'border-gray-500';
