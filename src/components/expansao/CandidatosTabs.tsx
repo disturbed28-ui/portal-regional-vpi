@@ -42,6 +42,9 @@ function FichaDetalhe({ c }: { c: ExpansaoCandidato }) {
     ["Comando resp.", c.comando_responsavel],
     ["DR resp.", c.diretor_regional_responsavel],
     ["Recebido de", [c.expansao_nome, c.expansao_telefone].filter(Boolean).join(" - ") || null],
+    ["Data recebimento", c.data_recebimento],
+    ["Data contato", c.contato_em],
+    ["Observação", c.baixa_observacao],
   ];
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs mt-2 bg-muted/40 p-2 rounded">
