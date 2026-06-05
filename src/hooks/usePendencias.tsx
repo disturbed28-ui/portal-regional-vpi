@@ -978,9 +978,27 @@ export const usePendencias = (
       }
 
       // 5.3 Expansão: candidatos enviados ao DD aguardando baixa
-      // O Diretor de Divisão dá baixa pela própria modal, sem acessar a tela de Expansão.
+      // O Diretor de Divisão TITULAR dá baixa pela própria modal, sem acessar a tela de Expansão.
+      // IMPORTANTE: só o Diretor TITULAR da divisão vê esta pendência — nem o Sub Diretor,
+      // nem os demais integrantes da divisão (mesmo que tenham a role diretor_divisao).
+      let ehDiretorTitularDivisao = false;
       if (userRole === 'diretor_divisao' && divisaoId) {
-        console.log('[usePendencias] Buscando candidatos de expansão enviados ao DD...');
+        const { data: meuCargoExp } = await supabase
+          .from('integrantes_portal')
+          .select('cargo_grau_texto')
+          .eq('profile_id', userId)
+          .eq('divisao_id', divisaoId)
+          .eq('ativo', true)
+          .maybeSingle();
+        const cargoTxt = String(meuCargoExp?.cargo_grau_texto || '').toLowerCase();
+        ehDiretorTitularDivisao =
+          cargoTxt.includes('diretor') &&
+          cargoTxt.includes('divis') &&
+          !cargoTxt.includes('sub');
+      }
+
+      if (userRole === 'diretor_divisao' && divisaoId && ehDiretorTitularDivisao) {
+        console.log('[usePendencias] Buscando candidatos de expansão enviados ao DD titular...');
 
         const { data: divisaoExpData } = await supabase
           .from('divisoes')
