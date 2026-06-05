@@ -317,8 +317,13 @@ export function EfetivadosList() {
               <IdCard className="h-3 w-3" />{c.divisoes?.nome || "—"}
             </p>
             <FichaDetalhe c={c} />
-            {c.status === "efetivado" && (
-              <ReportarBotao c={c} statusReportado="efetivado_reportado" templateChave="expansao_efetivado" label="Reportar à Expansão" />
+            {(c.status === "efetivado" || c.status === "efetivado_reportado") && (
+              <ReportarBotao
+                c={c}
+                statusReportado="efetivado_reportado"
+                templateChave="expansao_efetivado"
+                label={c.status === "efetivado_reportado" ? "Reenviar à Expansão" : "Reportar à Expansão"}
+              />
             )}
           </CardContent>
         </Card>
