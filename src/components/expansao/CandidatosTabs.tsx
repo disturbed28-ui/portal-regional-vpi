@@ -270,6 +270,7 @@ function ReportarBotao({ c, statusReportado, templateChave, label }: {
   const payload = {
     candidato_nome: c.nome_completo || "",
     candidato_colete: c.nome_colete || "",
+    candidato_telefone: c.telefone || "",
     regional: profile?.regional || "",
     divisao: c.divisoes?.nome || "",
     diretor_regional: profile?.nome_colete || "",
