@@ -181,6 +181,61 @@ function EnviarFichaDD({ c, divisaoId, divisaoNome, profile, userId, update }: {
   );
 }
 
+/* ---------- Enviado ao DD: divisão + reenviar cobrança ---------- */
+function EnviadoInfoDD({ c, profile }: { c: ExpansaoCandidato; profile: any }) {
+  const { data: templates } = useWhatsAppTemplates();
+  const tpl = (templates || []).find((t: any) => t.chave === "expansao_cobranca_dd");
+
+  const divisaoNome = c.divisoes?.nome || "—";
+  const diretorNome = c.enviado_para_nome || "Diretor de Divisão";
+  const diretorTelefone = c.enviado_para_telefone || null;
+
+  const payload = {
+    diretor_divisao: c.enviado_para_nome || "Diretor",
+    candidato_nome: c.nome_completo || "",
+    candidato_colete: c.nome_colete || "",
+    candidato_telefone: c.telefone || "",
+    divisao: divisaoNome,
+    regional: profile?.regional || "",
+    diretor_regional: profile?.nome_colete || "",
+  };
+  const corpo = tpl
+    ? renderTemplate(tpl.corpo, payload)
+    : `Caro Diretor ${diretorNome}, como está o andamento do candidato ${c.nome_colete || c.nome_completo} que enviei para a sua divisão?`;
+
+  return (
+    <div className="flex flex-col gap-2 mt-3 bg-muted/40 p-2 rounded text-xs">
+      <div className="flex items-center gap-2">
+        <IdCard className="h-3 w-3 shrink-0 text-muted-foreground" />
+        <span><span className="font-medium">Ficha enviada à divisão:</span> {divisaoNome}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <Phone className="h-3 w-3 shrink-0 text-muted-foreground" />
+        <span><span className="font-medium">Diretor:</span> {diretorNome}{c.enviado_em ? ` · ${fmtDataHora(c.enviado_em)}` : ""}</span>
+      </div>
+      {diretorTelefone ? (
+        <BotaoEnviarWhatsApp
+          telefone={diretorTelefone}
+          destinatarioNome={diretorNome}
+          mensagem={corpo}
+          templateChave="expansao_cobranca_dd"
+          templateTitulo={tpl?.titulo}
+          moduloOrigem="expansao"
+          divisaoId={c.divisao_id}
+          label="Reenviar cobrança ao DD"
+          size="sm"
+          payload={payload}
+          fullWidth
+        />
+      ) : (
+        <p className="text-[11px] text-muted-foreground">
+          Diretor de Divisão sem telefone cadastrado — não é possível reenviar.
+        </p>
+      )}
+    </div>
+  );
+}
+
 /* ---------- Candidatos ---------- */
 
 export function CandidatosList() {
@@ -239,6 +294,10 @@ export function CandidatosList() {
                 />
               </div>
             )}
+
+            {c.status === "enviado" && <EnviadoInfoDD c={c} profile={profile} />}
+
+
 
             <div className="flex flex-wrap gap-2 mt-2">
               {(["efetivado", "desistente", "cancelado"] as ExpansaoStatus[]).map((s) => (
