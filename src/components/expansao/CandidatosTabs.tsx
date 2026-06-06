@@ -185,10 +185,13 @@ function EnviarFichaDD({ c, divisaoId, divisaoNome, profile, userId, update }: {
 function EnviadoInfoDD({ c, profile }: { c: ExpansaoCandidato; profile: any }) {
   const { data: templates } = useWhatsAppTemplates();
   const tpl = (templates || []).find((t: any) => t.chave === "expansao_cobranca_dd");
+  // Busca o Diretor de Divisão ATUAL como fallback (caso o envio tenha sido
+  // registrado sem telefone, ou um DD com telefone tenha sido cadastrado depois).
+  const { data: ddAtual } = useDiretorDivisao(c.divisao_id);
 
   const divisaoNome = c.divisoes?.nome || "—";
-  const diretorNome = c.enviado_para_nome || "Diretor de Divisão";
-  const diretorTelefone = c.enviado_para_telefone || null;
+  const diretorTelefone = c.enviado_para_telefone || ddAtual?.telefone || null;
+  const diretorNome = c.enviado_para_nome || ddAtual?.nome || "Diretor de Divisão";
 
   const payload = {
     diretor_divisao: c.enviado_para_nome || "Diretor",
