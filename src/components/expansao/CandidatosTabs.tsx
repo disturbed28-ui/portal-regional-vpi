@@ -295,6 +295,10 @@ export function CandidatosList() {
               </div>
             )}
 
+            {c.status === "enviado" && <EnviadoInfoDD c={c} profile={profile} />}
+
+
+
             <div className="flex flex-wrap gap-2 mt-2">
               {(["efetivado", "desistente", "cancelado"] as ExpansaoStatus[]).map((s) => (
                 <BaixaDialog
