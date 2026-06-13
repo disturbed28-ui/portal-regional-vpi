@@ -37,6 +37,33 @@ const fmtData = (v: string | null): string | null => {
   return v;
 };
 
+/* Monta a ficha completa do candidato em texto para envio via WhatsApp */
+function buildFichaCompleta(c: ExpansaoCandidato): string {
+  const linhas: [string, string | null][] = [
+    ["Nome completo", c.nome_completo],
+    ["Nome de colete", c.nome_colete],
+    ["Telefone", c.telefone],
+    ["Nascimento", fmtData(c.nascimento)],
+    ["CPF", c.cpf],
+    ["RG", c.rg],
+    ["Profissão", c.profissao],
+    ["Email", c.email],
+    ["Endereço", [c.endereco_rua, c.endereco_bairro, c.endereco_cidade, c.endereco_estado, c.endereco_cep].filter(Boolean).join(", ") || null],
+    ["Camiseta", c.tamanho_camiseta],
+    ["Colete", [c.colete_tipo, c.tamanho_colete].filter(Boolean).join(" - ") || null],
+    ["Forma de pagamento", c.forma_pagamento],
+    ["Contato de emergência", c.contato_emergencia],
+    ["Comando responsável", c.comando_responsavel],
+    ["DR responsável", c.diretor_regional_responsavel],
+    ["Recebido de", [c.expansao_nome, c.expansao_telefone].filter(Boolean).join(" - ") || null],
+    ["Data de recebimento", fmtData(c.data_recebimento)],
+  ];
+  return linhas
+    .filter(([, v]) => v)
+    .map(([k, v]) => `• ${k}: ${v}`)
+    .join("\n");
+}
+
 /* ---------- Linha do tempo (histórico detalhado) ---------- */
 function LinhaDoTempo({ c }: { c: ExpansaoCandidato }) {
   const baixaLabel = STATUS_META[c.status]?.label || c.status;
