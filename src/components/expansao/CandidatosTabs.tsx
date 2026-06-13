@@ -173,6 +173,7 @@ function EnviarFichaDD({ c, divisaoId, divisaoNome, profile, userId, update }: {
     divisao: divisaoNome,
     regional: profile?.regional || "",
     diretor_regional: profile?.nome_colete || "",
+    ficha_completa: buildFichaCompleta(c),
   };
   const corpo = tpl
     ? renderTemplate(tpl.corpo, payload)
