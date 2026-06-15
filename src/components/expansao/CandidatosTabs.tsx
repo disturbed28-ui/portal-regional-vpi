@@ -365,6 +365,8 @@ function ReportarBotao({ c, statusReportado, templateChave, label }: {
     divisao: c.divisoes?.nome || "",
     diretor_regional: profile?.nome_colete || "",
     status: STATUS_META[c.status].label,
+    observacao: c.baixa_observacao || "—",
+    data_contato: fmtData(c.contato_em) || "—",
   };
   const corpo = tpl
     ? renderTemplate(tpl.corpo, payload)
@@ -448,8 +450,13 @@ export function HistoricoList() {
               </div>
               <CollapsibleContent><FichaDetalhe c={c} /></CollapsibleContent>
             </Collapsible>
-            {c.status === "desistente" && (
-              <ReportarBotao c={c} statusReportado="desistente_reportado" templateChave="expansao_desistente" label="Reportar desistência" />
+            {(c.status === "desistente" || c.status === "desistente_reportado") && (
+              <ReportarBotao
+                c={c}
+                statusReportado="desistente_reportado"
+                templateChave="expansao_desistente"
+                label={c.status === "desistente_reportado" ? "Reenviar desistência à Expansão" : "Reportar desistência à Expansão"}
+              />
             )}
           </CardContent>
         </Card>
