@@ -365,6 +365,8 @@ function ReportarBotao({ c, statusReportado, templateChave, label }: {
     divisao: c.divisoes?.nome || "",
     diretor_regional: profile?.nome_colete || "",
     status: STATUS_META[c.status].label,
+    observacao: c.baixa_observacao || "—",
+    data_contato: fmtData(c.contato_em) || "—",
   };
   const corpo = tpl
     ? renderTemplate(tpl.corpo, payload)
