@@ -450,8 +450,13 @@ export function HistoricoList() {
               </div>
               <CollapsibleContent><FichaDetalhe c={c} /></CollapsibleContent>
             </Collapsible>
-            {c.status === "desistente" && (
-              <ReportarBotao c={c} statusReportado="desistente_reportado" templateChave="expansao_desistente" label="Reportar desistência" />
+            {(c.status === "desistente" || c.status === "desistente_reportado") && (
+              <ReportarBotao
+                c={c}
+                statusReportado="desistente_reportado"
+                templateChave="expansao_desistente"
+                label={c.status === "desistente_reportado" ? "Reenviar desistência à Expansão" : "Reportar desistência à Expansão"}
+              />
             )}
           </CardContent>
         </Card>
