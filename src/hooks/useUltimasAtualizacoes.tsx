@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface UltimaAtualizacao {
-  tipo: 'integrantes' | 'inadimplencia' | 'aniversariantes' | 'afastados';
+  tipo: 'integrantes' | 'inadimplencia' | 'aniversariantes' | 'afastados' | 'desligados';
   label: string;
   ultimaAtualizacao: string | null;
   diasDesdeAtualizacao: number | null;
@@ -68,6 +68,16 @@ export const useUltimasAtualizacoes = (enabled = true) => {
 
       const dataAfastados = cargaAfastados?.[0]?.data_carga || null;
 
+      // 5. Desligados - cargas_historico tipo 'desligados'
+      const { data: cargaDesligados } = await supabase
+        .from('cargas_historico')
+        .select('data_carga')
+        .eq('tipo_carga', 'desligados')
+        .order('data_carga', { ascending: false })
+        .limit(1);
+
+      const dataDesligados = cargaDesligados?.[0]?.data_carga || null;
+
       const calcularDias = (dataStr: string | null): number | null => {
         if (!dataStr) return null;
         const data = new Date(dataStr);
@@ -78,6 +88,7 @@ export const useUltimasAtualizacoes = (enabled = true) => {
       const diasMensalidades = calcularDias(dataMensalidades);
       const diasAniversariantes = calcularDias(dataAniversariantes);
       const diasAfastados = calcularDias(dataAfastados);
+      const diasDesligados = calcularDias(dataDesligados);
 
       return [
         {
@@ -111,6 +122,14 @@ export const useUltimasAtualizacoes = (enabled = true) => {
           diasDesdeAtualizacao: diasAfastados,
           desatualizado: (diasAfastados !== null ? diasAfastados > LIMITE_DIAS : true) && !tiposDispensados.has('afastados'),
           dispensado: tiposDispensados.has('afastados'),
+        },
+        {
+          tipo: 'desligados',
+          label: 'Desligados',
+          ultimaAtualizacao: dataDesligados,
+          diasDesdeAtualizacao: diasDesligados,
+          desatualizado: (diasDesligados !== null ? diasDesligados > LIMITE_DIAS : true) && !tiposDispensados.has('desligados'),
+          dispensado: tiposDispensados.has('desligados'),
         },
       ];
     },

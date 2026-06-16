@@ -39,6 +39,7 @@ import AdminEventosAgendaPendentes from "./pages/AdminEventosAgendaPendentes";
 import GestaoADM from "./pages/GestaoADM";
 import AvaliacaoIntegrantes from "./pages/AvaliacaoIntegrantes";
 import Expansao from "./pages/Expansao";
+import ConsultaIntegrante from "./pages/ConsultaIntegrante";
 import Instalar from "./pages/Instalar";
 
 const queryClient = new QueryClient();
@@ -82,6 +83,7 @@ const App = () => (
                 <Route path="/gestao-adm" element={<GestaoADM />} />
                 <Route path="/avaliacao-integrantes" element={<AvaliacaoIntegrantes />} />
                 <Route path="/expansao" element={<Expansao />} />
+                <Route path="/consulta-integrante" element={<ConsultaIntegrante />} />
                 <Route path="/instalar" element={<Instalar />} />
                 <Route path="/cobranca-relatorios" element={<Navigate to="/relatorios?tab=cobranca" replace />} />
                 <Route path="/politica-privacidade" element={<PoliticaPrivacidade />} />

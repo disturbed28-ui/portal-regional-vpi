@@ -33,7 +33,7 @@ const Index = () => {
   const { links: linksAtivos } = useLinksUteis(true);
   
   // Batch único para todas as permissões de tela - elimina race conditions no refresh
-  const permissionRoutes = ['/acoes-sociais', '/listas-presenca', '/relatorios', '/organograma', '/admin', '/gestao-adm', '/avaliacao-integrantes', '/expansao'];
+  const permissionRoutes = ['/acoes-sociais', '/listas-presenca', '/relatorios', '/organograma', '/admin', '/gestao-adm', '/avaliacao-integrantes', '/expansao', '/consulta-integrante'];
   const { permissions, loading: loadingPermissions } = useScreenPermissionsBatch(permissionRoutes, '/', user?.id);
   
   const hasAcessoAcoesSociais = permissions['/acoes-sociais']?.hasAccess ?? false;
@@ -44,6 +44,7 @@ const Index = () => {
   const hasAcessoGestaoADM = permissions['/gestao-adm']?.hasAccess ?? false;
   const hasAcessoAvaliacao = permissions['/avaliacao-integrantes']?.hasAccess ?? false;
   const hasAcessoExpansao = permissions['/expansao']?.hasAccess ?? false;
+  const hasAcessoConsulta = permissions['/consulta-integrante']?.hasAccess ?? false;
   const [showQRCode, setShowQRCode] = useState(false);
 
   // Sincronização automática da Agenda para admins (detecta eventos cancelados/removidos)
@@ -406,6 +407,16 @@ const Index = () => {
                 className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Expansao
+              </Button>
+            )}
+
+            {!loadingPermissions && hasAcessoConsulta && (
+              <Button
+                onClick={() => navigate("/consulta-integrante")}
+                disabled={!isLoggedIn || !isActive}
+                className="w-full h-12 bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Consultar Integrante
               </Button>
             )}
           </div>

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ArrowLeft, Users, DollarSign, GraduationCap, Cake, Clock, FileEdit, History, ClipboardCheck, XCircle, List, Award, Image, RefreshCw, AlertTriangle, UserMinus, ListChecks, CalendarRange, ClipboardList } from "lucide-react";
+import { ArrowLeft, Users, DollarSign, GraduationCap, Cake, Clock, FileEdit, History, ClipboardCheck, XCircle, List, Award, Image, RefreshCw, AlertTriangle, UserMinus, UserX, ListChecks, CalendarRange, ClipboardList } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import { CriteriosAvaliacaoTab } from "@/components/admin/avaliacao/CriteriosAvaliacaoTab";
 import { PeriodosAvaliacaoTab } from "@/components/admin/avaliacao/PeriodosAvaliacaoTab";
@@ -31,6 +31,7 @@ import { EncerramentoEstagio } from "@/components/admin/estagio/EncerramentoEsta
 import { HistoricoEstagio } from "@/components/admin/estagio/HistoricoEstagio";
 import { FlyersEstagioList } from "@/components/admin/estagio/flyers/FlyersEstagioList";
 import { AfastadosGestaoTab } from "@/components/gestao/afastados/AfastadosGestaoTab";
+import { DesligadosGestaoTab } from "@/components/gestao/desligados/DesligadosGestaoTab";
 
 // Todas as rotas que precisamos verificar permissões
 const ALL_ROUTES = [
@@ -53,6 +54,7 @@ const ALL_ROUTES = [
   '/gestao-adm-estagio-flyers',
   '/gestao-adm-aniversariantes',
   '/gestao-adm-afastamentos',
+  '/gestao-adm-desligados',
   '/gestao-adm/criterios-avaliacao',
   '/gestao-adm/periodos-avaliacao',
 ];
@@ -83,6 +85,7 @@ const GestaoADM = () => {
   const estagioP = getPerm('/gestao-adm-estagio');
   const aniversariantesP = getPerm('/gestao-adm-aniversariantes');
   const afastamentosP = getPerm('/gestao-adm-afastamentos');
+  const desligadosP = getPerm('/gestao-adm-desligados');
   const criteriosAvalP = getPerm('/gestao-adm/criterios-avaliacao');
   const periodosAvalP = getPerm('/gestao-adm/periodos-avaliacao');
 
@@ -114,10 +117,11 @@ const GestaoADM = () => {
       { value: "estagio", label: "Estágio", icon: Award, hasAccess: estagioP.hasAnyAccess },
       { value: "aniversariantes", label: "Aniversários", icon: Cake, hasAccess: aniversariantesP.hasAnyAccess },
       { value: "afastamentos", label: "Afastados", icon: UserMinus, hasAccess: afastamentosP.hasAnyAccess },
+      { value: "desligados", label: "Desligados", icon: UserX, hasAccess: desligadosP.hasAnyAccess },
       { value: "avaliacao", label: "Avaliação dos Integrantes", icon: ClipboardList, hasAccess: criteriosAvalP.hasAnyAccess || periodosAvalP.hasAnyAccess },
     ];
     return allTabs.filter(tab => tab.hasAccess);
-  }, [integrantesP.hasAnyAccess, inadimplenciaP.hasAnyAccess, treinamentoP.hasAnyAccess, estagioP.hasAnyAccess, aniversariantesP.hasAnyAccess, afastamentosP.hasAnyAccess, criteriosAvalP.hasAnyAccess, periodosAvalP.hasAnyAccess]);
+  }, [integrantesP.hasAnyAccess, inadimplenciaP.hasAnyAccess, treinamentoP.hasAnyAccess, estagioP.hasAnyAccess, aniversariantesP.hasAnyAccess, afastamentosP.hasAnyAccess, desligadosP.hasAnyAccess, criteriosAvalP.hasAnyAccess, periodosAvalP.hasAnyAccess]);
 
   // Sub-abas de Avaliação dos Integrantes
   const visibleAvaliacaoSubTabs = useMemo(() => {
@@ -287,6 +291,7 @@ const GestaoADM = () => {
                     inadimplencia: 'inadimplencia',
                     aniversariantes: 'aniversariantes',
                     afastamentos: 'afastados',
+                    desligados: 'desligados',
                   };
                   const atualizacao = atualizacoes?.find(a => a.tipo === tipoMap[tab.value]);
                   const isDesatualizado = atualizacao?.desatualizado ?? false;
@@ -538,6 +543,12 @@ const GestaoADM = () => {
             {afastamentosP.hasAnyAccess && (
               <TabsContent value="afastamentos" className="m-0">
                 <AfastadosGestaoTab userId={user?.id} readOnly={afastamentosP.isReadOnly} />
+              </TabsContent>
+            )}
+
+            {desligadosP.hasAnyAccess && (
+              <TabsContent value="desligados" className="m-0">
+                <DesligadosGestaoTab userId={user?.id} readOnly={desligadosP.isReadOnly} />
               </TabsContent>
             )}
 
