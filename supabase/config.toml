@@ -71,3 +71,6 @@ verify_jwt = false
 
 [functions.notificar-dr-avaliacao]
 verify_jwt = false
+
+[functions.admin-import-desligados]
+verify_jwt = false
