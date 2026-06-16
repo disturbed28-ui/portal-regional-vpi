@@ -1,0 +1,1 @@
+ALTER TABLE public.cargas_historico DROP CONSTRAINT IF EXISTS check_tipo_carga;
