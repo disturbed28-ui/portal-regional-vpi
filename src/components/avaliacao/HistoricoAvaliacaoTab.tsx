@@ -45,15 +45,23 @@ export function HistoricoAvaliacaoTab({ userId, regionalId }: Props) {
 
   const handleReabrir = async (integranteId: string, integranteNome: string) => {
     if (!periodoId) return;
-    if (!confirm(`Reabrir a avaliação de ${integranteNome}? A decisão Regional será removida e a avaliação voltará a aparecer como pendente.`)) return;
-    const { error } = await supabase
+    if (!confirm(`Reabrir a avaliação de ${integranteNome}? As decisões da Divisão e Regional serão removidas e a avaliação voltará a aparecer como pendente para o Diretor de Divisão refazer.`)) return;
+    const { data, error } = await supabase
       .from('avaliacoes_decisao_final' as any)
       .delete()
       .eq('periodo_id', periodoId)
       .eq('integrante_id', integranteId)
-      .eq('etapa', 'regional');
+      .in('etapa', ['divisao', 'regional'])
+      .select('id');
     if (error) {
       toast.error('Erro ao reabrir avaliação', { description: error.message, duration: 6000 });
+      return;
+    }
+    if (!data || data.length === 0) {
+      toast.error('Não foi possível reabrir', {
+        description: 'Você não tem permissão para reabrir esta avaliação ou o período está encerrado.',
+        duration: 6000,
+      });
       return;
     }
     toast.success(`Avaliação de ${integranteNome} reaberta`, { duration: 6000 });
