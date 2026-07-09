@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Search, Users, Filter } from "lucide-react";
 import { useIntegrantesGestao } from "@/hooks/useIntegrantesGestao";
 import { useGerenciarIntegrante } from "@/hooks/useGerenciarIntegrante";
+import { useAfastamentosAtivos } from "@/hooks/useAfastamentosAtivos";
 import { IntegranteCard } from "./IntegranteCard";
 import { ModalEditarIntegrante } from "./ModalEditarIntegrante";
 import { ModalInativarIntegrante } from "./ModalInativarIntegrante";
