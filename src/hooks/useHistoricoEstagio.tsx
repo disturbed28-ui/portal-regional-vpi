@@ -17,6 +17,7 @@ export interface EstagioHistorico {
   tipo_encerramento?: string;
   data_inicio: string;
   data_encerramento?: string;
+  data_termino_previsto?: string;
   solicitante_nome_colete: string;
   observacoes?: string;
 }
