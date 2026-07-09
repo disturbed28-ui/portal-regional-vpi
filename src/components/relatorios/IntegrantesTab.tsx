@@ -27,6 +27,8 @@ export const IntegrantesTab = () => {
     comboDesabilitado
   } = useIntegrantesRelatorio(user?.id, isAdmin);
 
+  const { afastamentosMap } = useAfastamentosAtivos();
+
   const [integranteSelecionado, setIntegranteSelecionado] = useState<any>(null);
   const [modalAberto, setModalAberto] = useState(false);
 
@@ -35,7 +37,7 @@ export const IntegrantesTab = () => {
       const opcaoAtual = opcoesFiltragem.find(o => o.value === filtroAtivo);
       const filtroNome = opcaoAtual?.label || 'todos';
       
-      exportarIntegrantesExcel(integrantes, filtroNome, integrantesAgrupados);
+      exportarIntegrantesExcel(integrantes, filtroNome, integrantesAgrupados, afastamentosMap);
       toast.success('Excel exportado com sucesso!');
     } catch (error) {
       console.error('Erro ao exportar Excel:', error);
