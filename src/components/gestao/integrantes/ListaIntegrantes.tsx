@@ -49,6 +49,7 @@ export function ListaIntegrantes({ userId, readOnly = false }: ListaIntegrantesP
   } = useIntegrantesGestao(userId);
 
   const { editarIntegrante, inativarIntegrante, operando } = useGerenciarIntegrante();
+  const { afastamentosMap } = useAfastamentosAtivos();
 
   // Estado dos modais
   const [integranteEditar, setIntegranteEditar] = useState<IntegrantePortal | null>(null);
