@@ -89,12 +89,18 @@ export const EstagioCard = ({ estagio }: EstagioCardProps) => {
             <Calendar className="h-3 w-3 shrink-0" />
             <span>Início: {formatDate(estagio.data_inicio)}</span>
           </div>
+          {estagio.data_termino_previsto && (
+            <div className="flex items-center gap-2 pl-5">
+              <span>Previsão de encerramento: {formatDateOnly(estagio.data_termino_previsto)}</span>
+            </div>
+          )}
           {estagio.data_encerramento && (
             <div className="flex items-center gap-2 pl-5">
               <span>Encerramento: {formatDate(estagio.data_encerramento)}</span>
             </div>
           )}
         </div>
+
 
         {/* Solicitante */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1 border-t border-border/30">
