@@ -80,6 +80,7 @@ export const useHistoricoEstagio = ({ userId }: UseHistoricoEstagioParams) => {
             regional_id,
             data_aprovacao,
             data_inicio_estagio,
+            data_termino_previsto,
             solicitante_nome_colete,
             integrantes_portal!solicitacoes_estagio_integrante_id_fkey(nome_colete),
             cargos!solicitacoes_estagio_cargo_estagio_id_fkey(nome),
