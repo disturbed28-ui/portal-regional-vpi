@@ -23,6 +23,7 @@ interface Presenca {
   visitante_tipo?: string | null;
   integrante: {
     id: string;
+    registro_id: number;
     nome_colete: string;
     cargo_nome: string | null;
     grau: string | null;
@@ -82,6 +83,7 @@ export const useEventoPresenca = (eventoId: string | null) => {
         visitante_tipo,
         integrante:integrantes_portal (
           id,
+          registro_id,
           nome_colete,
           cargo_nome,
           grau,

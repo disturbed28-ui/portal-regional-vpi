@@ -28,6 +28,7 @@ export const DivisaoGrid = ({ integrantes }: DivisaoGridProps) => {
           grau={integrante.grau || undefined}
           divisao={integrante.divisao_texto}
           foto={integrante.foto}
+          afastamento={integrante.afastamento}
           badges={getBadges(integrante)}
         />
       ))}

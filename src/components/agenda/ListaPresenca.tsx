@@ -41,6 +41,8 @@ import { removeAccents, normalizeSearchTerm } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useScreenAccess } from "@/hooks/useScreenAccess";
 import { useProfile } from "@/hooks/useProfile";
+import { useAfastamentosAtivos } from "@/hooks/useAfastamentosAtivos";
+import { AfastamentoBadge } from "@/components/shared/AfastamentoBadge";
 
 interface ListaPresencaProps {
   event: CalendarEvent | null;
@@ -168,6 +170,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
   const { toast } = useToast();
   const { user } = useAuth();
   const { profile: userProfile } = useProfile(user?.id);
+  const { afastamentosMap } = useAfastamentosAtivos();
   
   // Validar permissão para abrir Lista de Presença
   const { hasAccess: hasScreenAccessLista, loading: loadingScreenAccessLista } = 
@@ -678,6 +681,9 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                 {integrante.isExterno ? 'Externo' : 'Visitante'}
               </Badge>
             )}
+            {integrante.registro_id != null && (
+              <AfastamentoBadge tipo={afastamentosMap.get(integrante.registro_id)} />
+            )}
           </div>
           <div className="text-xs text-muted-foreground mt-1 truncate">
             {integrante.divisao_texto}
@@ -730,7 +736,12 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     >
       <div className="flex justify-between items-start gap-2">
         <div className="flex-1 min-w-0">
-          <div className="font-medium text-foreground truncate">{integrante.nome_colete}</div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-medium text-foreground truncate">{integrante.nome_colete}</span>
+            {integrante.registro_id != null && (
+              <AfastamentoBadge tipo={afastamentosMap.get(integrante.registro_id)} />
+            )}
+          </div>
           <div className="text-xs text-muted-foreground mt-1">
             {integrante.cargo_nome || '-'} • Grau {integrante.grau || '-'}
           </div>
@@ -1066,12 +1077,15 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                               }
                             >
                               <TableCell className="font-medium text-foreground">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
                                   {integrante.nome_colete}
                                   {integrante.isVisitante && (
                                     <Badge variant={(integrante as any).isExterno ? "secondary" : "outline"} className={(integrante as any).isExterno ? "" : "text-blue-700 border-blue-700 dark:text-blue-400 dark:border-blue-400 bg-white/50 dark:bg-transparent"}>
                                       {(integrante as any).isExterno ? 'Visitante (Externo)' : 'Visitante'}
                                     </Badge>
+                                  )}
+                                  {(integrante as any).registro_id != null && (
+                                    <AfastamentoBadge tipo={afastamentosMap.get((integrante as any).registro_id)} />
                                   )}
                                 </div>
                               </TableCell>
@@ -1128,7 +1142,14 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                         <TableBody>
                           {dadosFiltrados.ausentes.map((integrante) => (
                             <TableRow key={integrante.id} className="hover:bg-muted/30 transition-colors">
-                              <TableCell className="font-medium text-foreground">{integrante.nome_colete}</TableCell>
+                              <TableCell className="font-medium text-foreground">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {integrante.nome_colete}
+                                  {(integrante as any).registro_id != null && (
+                                    <AfastamentoBadge tipo={afastamentosMap.get((integrante as any).registro_id)} />
+                                  )}
+                                </div>
+                              </TableCell>
                               <TableCell className="text-foreground/80">{integrante.cargo_nome || '-'}</TableCell>
                               <TableCell className="text-foreground/80">{integrante.grau || '-'}</TableCell>
                               <TableCell>

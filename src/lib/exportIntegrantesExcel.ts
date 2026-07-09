@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
+import { formatarNomeComAfastamento } from './afastamentoStatus';
 
 interface IntegranteExport {
   registro_id: number;
@@ -49,32 +50,38 @@ const emptyRow = (overrides: Partial<Record<string, any>> = {}) =>
     return acc;
   }, {} as Record<string, any>);
 
-const linhaIntegrante = (integrante: IntegranteExport) => ({
-  'Registro': integrante.registro_id,
-  'Nome Colete': integrante.nome_colete,
-  'Cargo': integrante.cargo_nome || '',
-  'Grau': integrante.grau || '',
-  'Comando': integrante.comando_texto,
-  'Regional': integrante.regional_texto,
-  'Divisão': integrante.divisao_texto,
-  'Ativo': integrante.ativo ? 'Sim' : 'Não',
-  'Vinculado': integrante.vinculado ? 'Sim' : 'Não',
-  'Data Entrada': integrante.data_entrada || '',
-  'Data Vinculação': integrante.data_vinculacao || '',
-  'Data Inativação': integrante.data_inativacao || '',
-  'Motivo Inativação': integrante.motivo_inativacao || '',
-  'Instagram': integrante.instagram || '',
-  'Sgt. Armas': integrante.sgt_armas ? 'Sim' : 'Não',
-  'Caveira': integrante.caveira ? 'Sim' : 'Não',
-  'Caveira Suplente': integrante.caveira_suplente ? 'Sim' : 'Não',
-  'Batedor': integrante.batedor ? 'Sim' : 'Não',
-  'Lobo': integrante.lobo ? 'Sim' : 'Não',
-  'Ursinho': integrante.ursinho ? 'Sim' : 'Não',
-  'Combate Insano': integrante.combate_insano ? 'Sim' : 'Não',
-  'Tem Carro': integrante.tem_carro ? 'Sim' : 'Não',
-  'Tem Moto': integrante.tem_moto ? 'Sim' : 'Não',
-  'Observações': integrante.observacoes || ''
-});
+const linhaIntegrante = (
+  integrante: IntegranteExport,
+  afastamentosMap?: Map<number, string>
+) => {
+  const afastamento = afastamentosMap?.get(integrante.registro_id);
+  return {
+    'Registro': integrante.registro_id,
+    'Nome Colete': formatarNomeComAfastamento(integrante.nome_colete, afastamento),
+    'Cargo': integrante.cargo_nome || '',
+    'Grau': integrante.grau || '',
+    'Comando': integrante.comando_texto,
+    'Regional': integrante.regional_texto,
+    'Divisão': integrante.divisao_texto,
+    'Ativo': integrante.ativo ? 'Sim' : 'Não',
+    'Vinculado': integrante.vinculado ? 'Sim' : 'Não',
+    'Data Entrada': integrante.data_entrada || '',
+    'Data Vinculação': integrante.data_vinculacao || '',
+    'Data Inativação': integrante.data_inativacao || '',
+    'Motivo Inativação': integrante.motivo_inativacao || '',
+    'Instagram': integrante.instagram || '',
+    'Sgt. Armas': integrante.sgt_armas ? 'Sim' : 'Não',
+    'Caveira': integrante.caveira ? 'Sim' : 'Não',
+    'Caveira Suplente': integrante.caveira_suplente ? 'Sim' : 'Não',
+    'Batedor': integrante.batedor ? 'Sim' : 'Não',
+    'Lobo': integrante.lobo ? 'Sim' : 'Não',
+    'Ursinho': integrante.ursinho ? 'Sim' : 'Não',
+    'Combate Insano': integrante.combate_insano ? 'Sim' : 'Não',
+    'Tem Carro': integrante.tem_carro ? 'Sim' : 'Não',
+    'Tem Moto': integrante.tem_moto ? 'Sim' : 'Não',
+    'Observações': integrante.observacoes || ''
+  };
+};
 
 /**
  * Exporta lista de integrantes para arquivo Excel com totalizadores
@@ -82,14 +89,15 @@ const linhaIntegrante = (integrante: IntegranteExport) => ({
 export const exportarIntegrantesExcel = (
   integrantes: IntegranteExport[],
   filtroNome: string,
-  grupos?: GrupoIntegrantes[]
+  grupos?: GrupoIntegrantes[],
+  afastamentosMap?: Map<number, string>
 ): void => {
   const dadosExportacao: any[] = [];
 
   if (grupos && grupos.length > 0) {
     grupos.forEach((grupo, index) => {
       grupo.integrantes.forEach(integrante => {
-        dadosExportacao.push(linhaIntegrante(integrante));
+        dadosExportacao.push(linhaIntegrante(integrante, afastamentosMap));
       });
 
       dadosExportacao.push(emptyRow({
@@ -107,7 +115,7 @@ export const exportarIntegrantesExcel = (
     }));
   } else {
     integrantes.forEach(integrante => {
-      dadosExportacao.push(linhaIntegrante(integrante));
+      dadosExportacao.push(linhaIntegrante(integrante, afastamentosMap));
     });
   }
 

@@ -4,6 +4,7 @@ import { ordenarIntegrantes } from '@/lib/integranteOrdering';
 
 export interface IntegranteComFoto {
   id: string;
+  registro_id: number;
   nome_colete: string;
   cargo_nome: string | null;
   grau: string | null;
@@ -14,6 +15,7 @@ export interface IntegranteComFoto {
   vinculado: boolean;
   profile_id: string | null;
   foto: string | null;
+  afastamento: string | null;
   sgt_armas: boolean;
   caveira: boolean;
   caveira_suplente: boolean;
@@ -85,9 +87,28 @@ export const useOrganogramaData = (regionalId: string | null) => {
           profiles = profilesData || [];
         }
 
+        // 2b. Buscar afastamentos vigentes dos integrantes desta regional
+        const registroIds = (integrantes || [])
+          .map(i => i.registro_id)
+          .filter((r): r is number => r != null);
+
+        const afastamentosMap = new Map<number, string>();
+        if (registroIds.length > 0) {
+          const { data: afastadosData } = await supabase
+            .from('integrantes_afastados')
+            .select('registro_id, tipo_afastamento')
+            .eq('ativo', true)
+            .in('registro_id', registroIds);
+
+          (afastadosData || []).forEach((a: any) => {
+            if (a.registro_id != null) afastamentosMap.set(a.registro_id, a.tipo_afastamento);
+          });
+        }
+
         // 3. Merge foto + integrante
         const integrantesComFoto: IntegranteComFoto[] = (integrantes || []).map(i => ({
           id: i.id,
+          registro_id: i.registro_id,
           nome_colete: i.nome_colete,
           cargo_nome: i.cargo_nome,
           grau: i.grau,
@@ -98,6 +119,7 @@ export const useOrganogramaData = (regionalId: string | null) => {
           vinculado: i.vinculado,
           profile_id: i.profile_id,
           foto: profiles.find(p => p.id === i.profile_id)?.photo_url || null,
+          afastamento: afastamentosMap.get(i.registro_id) || null,
           sgt_armas: i.sgt_armas || false,
           caveira: i.caveira || false,
           caveira_suplente: i.caveira_suplente || false,
