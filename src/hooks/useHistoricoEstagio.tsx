@@ -17,6 +17,7 @@ export interface EstagioHistorico {
   tipo_encerramento?: string;
   data_inicio: string;
   data_encerramento?: string;
+  data_termino_previsto?: string;
   solicitante_nome_colete: string;
   observacoes?: string;
 }
@@ -79,6 +80,7 @@ export const useHistoricoEstagio = ({ userId }: UseHistoricoEstagioParams) => {
             regional_id,
             data_aprovacao,
             data_inicio_estagio,
+            data_termino_previsto,
             solicitante_nome_colete,
             integrantes_portal!solicitacoes_estagio_integrante_id_fkey(nome_colete),
             cargos!solicitacoes_estagio_cargo_estagio_id_fkey(nome),
@@ -120,6 +122,7 @@ export const useHistoricoEstagio = ({ userId }: UseHistoricoEstagioParams) => {
             cargos!estagios_historico_cargo_estagio_id_fkey(nome),
             solicitacoes_estagio!estagios_historico_solicitacao_id_fkey(
               solicitante_nome_colete,
+              data_termino_previsto,
               divisao_id,
               regional_id
             )
@@ -144,6 +147,7 @@ export const useHistoricoEstagio = ({ userId }: UseHistoricoEstagioParams) => {
             regional_id: sol.regional_id || "",
             status: "Em Andamento",
             data_inicio: sol.data_inicio_estagio || sol.data_aprovacao || "",
+            data_termino_previsto: sol.data_termino_previsto || undefined,
             solicitante_nome_colete: sol.solicitante_nome_colete,
           });
         });
@@ -175,6 +179,7 @@ export const useHistoricoEstagio = ({ userId }: UseHistoricoEstagioParams) => {
             tipo_encerramento: hist.tipo_encerramento,
             data_inicio: hist.data_inicio || "",
             data_encerramento: hist.data_encerramento,
+            data_termino_previsto: (hist.solicitacoes_estagio as any)?.data_termino_previsto || undefined,
             solicitante_nome_colete: (hist.solicitacoes_estagio as any)?.solicitante_nome_colete || "N/A",
             observacoes: hist.observacoes,
           });
