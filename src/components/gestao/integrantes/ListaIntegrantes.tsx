@@ -16,13 +16,16 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Search, Users, Filter } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Loader2, Search, Users, Filter, UserX } from "lucide-react";
 import { useIntegrantesGestao } from "@/hooks/useIntegrantesGestao";
 import { useGerenciarIntegrante } from "@/hooks/useGerenciarIntegrante";
 import { useAfastamentosAtivos } from "@/hooks/useAfastamentosAtivos";
+import { useUserRole } from "@/hooks/useUserRole";
 import { IntegranteCard } from "./IntegranteCard";
 import { ModalEditarIntegrante } from "./ModalEditarIntegrante";
 import { ModalInativarIntegrante } from "./ModalInativarIntegrante";
+import { ModalReativarIntegrante } from "./ModalReativarIntegrante";
 import { IntegrantePortal } from "@/hooks/useIntegrantes";
 import { ReadOnlyBanner } from "@/components/ui/read-only-banner";
 
@@ -44,16 +47,24 @@ export function ListaIntegrantes({ userId, readOnly = false }: ListaIntegrantesP
     setFiltroDivisao,
     filtroBusca,
     setFiltroBusca,
+    mostrarDesligados,
+    setMostrarDesligados,
+    suspeitasSet,
     loading,
     refetch,
   } = useIntegrantesGestao(userId);
 
-  const { editarIntegrante, inativarIntegrante, operando } = useGerenciarIntegrante();
+  const { editarIntegrante, inativarIntegrante, reativarIntegrante, operando } = useGerenciarIntegrante();
   const { afastamentosMap } = useAfastamentosAtivos();
+  const { hasRole } = useUserRole(userId);
+
+  // Quem pode reativar desligados: Admin, Comando e Diretor Regional
+  const podeReativar = hasRole('admin') || hasRole('comando') || hasRole('diretor_regional');
 
   // Estado dos modais
   const [integranteEditar, setIntegranteEditar] = useState<IntegrantePortal | null>(null);
   const [integranteInativar, setIntegranteInativar] = useState<IntegrantePortal | null>(null);
+  const [integranteReativar, setIntegranteReativar] = useState<IntegrantePortal | null>(null);
 
   const handleSalvarEdicao = async (dadosNovos: Record<string, any>, observacao: string) => {
     if (!integranteEditar || !userId) return false;
@@ -67,6 +78,15 @@ export function ListaIntegrantes({ userId, readOnly = false }: ListaIntegrantesP
   const handleConfirmarInativacao = async (motivo: string, justificativa: string) => {
     if (!integranteInativar || !userId) return false;
     const success = await inativarIntegrante(integranteInativar, motivo, justificativa, userId);
+    if (success) {
+      refetch();
+    }
+    return success;
+  };
+
+  const handleConfirmarReativacao = async (justificativa: string) => {
+    if (!integranteReativar || !userId) return false;
+    const success = await reativarIntegrante(integranteReativar, justificativa, userId);
     if (success) {
       refetch();
     }
@@ -164,6 +184,22 @@ export function ListaIntegrantes({ userId, readOnly = false }: ListaIntegrantesP
               </div>
             </div>
           </div>
+
+          {/* Alternar exibição de desligados/inativos */}
+          {podeReativar && (
+            <div className="flex items-center justify-between gap-3 rounded-md border border-border/50 bg-muted/20 px-3 py-2 mt-1">
+              <div className="flex items-center gap-2 min-w-0">
+                <UserX className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-xs font-medium leading-tight">Mostrar desligados/inativos</p>
+                  <p className="text-[11px] text-muted-foreground leading-tight">
+                    Para localizar e reativar quem foi desligado por engano.
+                  </p>
+                </div>
+              </div>
+              <Switch checked={mostrarDesligados} onCheckedChange={setMostrarDesligados} />
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -197,8 +233,8 @@ export function ListaIntegrantes({ userId, readOnly = false }: ListaIntegrantesP
               <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-muted/30">
                 <div className="flex items-center gap-3 text-left">
                   <span className="font-semibold text-sm sm:text-base">{grupo.divisaoNome}</span>
-                  <Badge variant="secondary" className="text-xs">
-                    {grupo.totalAtivos} ativo{grupo.totalAtivos !== 1 ? 's' : ''}
+                  <Badge variant={mostrarDesligados ? "destructive" : "secondary"} className="text-xs">
+                    {grupo.totalAtivos} {mostrarDesligados ? 'desligado' : 'ativo'}{grupo.totalAtivos !== 1 ? 's' : ''}
                   </Badge>
                 </div>
               </AccordionTrigger>
@@ -211,6 +247,8 @@ export function ListaIntegrantes({ userId, readOnly = false }: ListaIntegrantesP
                       afastamento={afastamentosMap.get(integrante.registro_id)}
                       onEditar={readOnly ? undefined : setIntegranteEditar}
                       onInativar={readOnly ? undefined : setIntegranteInativar}
+                      onReativar={readOnly || !podeReativar ? undefined : setIntegranteReativar}
+                      suspeitaReativacao={suspeitasSet.has(integrante.id)}
                       readOnly={readOnly}
                     />
                   ))}
@@ -239,6 +277,16 @@ export function ListaIntegrantes({ userId, readOnly = false }: ListaIntegrantesP
             onConfirmar={handleConfirmarInativacao}
             operando={operando}
           />
+
+          {podeReativar && (
+            <ModalReativarIntegrante
+              open={!!integranteReativar}
+              onOpenChange={(open) => !open && setIntegranteReativar(null)}
+              integrante={integranteReativar}
+              onConfirmar={handleConfirmarReativacao}
+              operando={operando}
+            />
+          )}
         </>
       )}
     </div>
