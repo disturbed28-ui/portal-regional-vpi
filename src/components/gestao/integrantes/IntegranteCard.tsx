@@ -3,15 +3,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { User, Edit, UserX } from "lucide-react";
 import { IntegrantePortal } from "@/hooks/useIntegrantes";
+import { AfastamentoBadge } from "@/components/shared/AfastamentoBadge";
 
 interface IntegranteCardProps {
   integrante: IntegrantePortal;
+  afastamento?: string | null;
   onEditar?: (integrante: IntegrantePortal) => void;
   onInativar?: (integrante: IntegrantePortal) => void;
   readOnly?: boolean;
 }
 
-export function IntegranteCard({ integrante, onEditar, onInativar, readOnly = false }: IntegranteCardProps) {
+export function IntegranteCard({ integrante, afastamento, onEditar, onInativar, readOnly = false }: IntegranteCardProps) {
   return (
     <Card className="bg-card border-border/50 hover:border-border transition-colors">
       <CardContent className="p-3 sm:p-4">
@@ -32,6 +34,7 @@ export function IntegranteCard({ integrante, onEditar, onInativar, readOnly = fa
                   Inativo
                 </Badge>
               )}
+              <AfastamentoBadge tipo={afastamento} />
             </div>
             
             <p className="text-sm text-muted-foreground truncate">
