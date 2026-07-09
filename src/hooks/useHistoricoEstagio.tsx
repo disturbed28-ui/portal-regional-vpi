@@ -122,6 +122,7 @@ export const useHistoricoEstagio = ({ userId }: UseHistoricoEstagioParams) => {
             cargos!estagios_historico_cargo_estagio_id_fkey(nome),
             solicitacoes_estagio!estagios_historico_solicitacao_id_fkey(
               solicitante_nome_colete,
+              data_termino_previsto,
               divisao_id,
               regional_id
             )
