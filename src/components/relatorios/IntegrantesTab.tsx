@@ -127,6 +127,7 @@ export const IntegrantesTab = () => {
                   <IntegranteCard
                     key={integrante.id}
                     integrante={integrante}
+                    afastamento={afastamentosMap.get(integrante.registro_id)}
                     onClick={() => handleClickIntegrante(integrante)}
                   />
                 ))}
