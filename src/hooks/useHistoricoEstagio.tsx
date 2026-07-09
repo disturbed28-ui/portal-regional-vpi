@@ -179,6 +179,7 @@ export const useHistoricoEstagio = ({ userId }: UseHistoricoEstagioParams) => {
             tipo_encerramento: hist.tipo_encerramento,
             data_inicio: hist.data_inicio || "",
             data_encerramento: hist.data_encerramento,
+            data_termino_previsto: (hist.solicitacoes_estagio as any)?.data_termino_previsto || undefined,
             solicitante_nome_colete: (hist.solicitacoes_estagio as any)?.solicitante_nome_colete || "N/A",
             observacoes: hist.observacoes,
           });
