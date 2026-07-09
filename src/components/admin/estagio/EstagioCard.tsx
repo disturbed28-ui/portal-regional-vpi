@@ -19,6 +19,18 @@ export const EstagioCard = ({ estagio }: EstagioCardProps) => {
     }
   };
 
+  const formatDateOnly = (dateString?: string) => {
+    if (!dateString) return "N/A";
+    try {
+      // Datas de previsão podem vir como "yyyy-MM-dd" (sem hora)
+      const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(dateString);
+      const dateObj = dateOnly ? new Date(`${dateString}T00:00:00`) : new Date(dateString);
+      return format(dateObj, "dd/MM/yyyy", { locale: ptBR });
+    } catch {
+      return "N/A";
+    }
+  };
+
   const getStatusBadge = () => {
     if (estagio.status === "Em Andamento") {
       return (
