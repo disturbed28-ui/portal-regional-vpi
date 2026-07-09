@@ -146,6 +146,7 @@ export const useHistoricoEstagio = ({ userId }: UseHistoricoEstagioParams) => {
             regional_id: sol.regional_id || "",
             status: "Em Andamento",
             data_inicio: sol.data_inicio_estagio || sol.data_aprovacao || "",
+            data_termino_previsto: sol.data_termino_previsto || undefined,
             solicitante_nome_colete: sol.solicitante_nome_colete,
           });
         });
