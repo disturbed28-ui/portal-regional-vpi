@@ -38,6 +38,11 @@ interface UseGerenciarIntegranteReturn {
     justificativa: string,
     userId: string
   ) => Promise<boolean>;
+  reativarIntegrante: (
+    integrante: IntegrantePortal,
+    justificativa: string,
+    userId: string
+  ) => Promise<boolean>;
   operando: boolean;
 }
 
@@ -261,9 +266,92 @@ export const useGerenciarIntegrante = (): UseGerenciarIntegranteReturn => {
     }
   };
 
+  const reativarIntegrante = async (
+    integrante: IntegrantePortal,
+    justificativa: string,
+    userId: string
+  ): Promise<boolean> => {
+    if (!justificativa || justificativa.trim().length < 10) {
+      toast({
+        title: "Justificativa obrigatória",
+        description: "Explique o motivo da reativação (mínimo 10 caracteres).",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    setOperando(true);
+
+    try {
+      const dadosAnteriores: Record<string, any> = {
+        ativo: integrante.ativo,
+        motivo_inativacao: (integrante as any).motivo_inativacao ?? null,
+        data_inativacao: (integrante as any).data_inativacao ?? null,
+        nome_colete: integrante.nome_colete,
+        divisao_texto: integrante.divisao_texto,
+      };
+
+      const { error: updateError } = await supabase
+        .from('integrantes_portal')
+        .update({
+          ativo: true,
+          motivo_inativacao: null,
+          data_inativacao: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', integrante.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      const { error: historicoError } = await supabase
+        .from('integrantes_historico')
+        .insert([{
+          integrante_id: integrante.id,
+          profile_id: integrante.profile_id,
+          acao: 'reativacao',
+          dados_anteriores: dadosAnteriores as any,
+          dados_novos: {
+            ativo: true,
+            motivo_inativacao: null,
+            data_inativacao: null,
+          } as any,
+          alterado_por: userId,
+          observacao: justificativa.trim(),
+        }]);
+
+      if (historicoError) {
+        console.error('Erro ao registrar histórico:', historicoError);
+        toast({
+          title: "Aviso",
+          description: "Reativação realizada, mas o histórico não foi registrado. Contate um administrador.",
+        });
+      }
+
+      toast({
+        title: "Integrante reativado",
+        description: `${integrante.nome_colete} voltou a ser ativo.`,
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Erro ao reativar integrante:', error);
+      toast({
+        title: "Erro ao reativar",
+        description: "Não foi possível reativar o integrante. Verifique suas permissões e tente novamente.",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setOperando(false);
+    }
+  };
+
   return {
     editarIntegrante,
     inativarIntegrante,
+    reativarIntegrante,
     operando,
   };
 };

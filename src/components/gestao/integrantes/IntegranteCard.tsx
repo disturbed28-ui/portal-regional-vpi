@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { User, Edit, UserX } from "lucide-react";
+import { User, Edit, UserX, UserCheck, AlertTriangle } from "lucide-react";
 import { IntegrantePortal } from "@/hooks/useIntegrantes";
 import { AfastamentoBadge } from "@/components/shared/AfastamentoBadge";
 
@@ -10,10 +10,12 @@ interface IntegranteCardProps {
   afastamento?: string | null;
   onEditar?: (integrante: IntegrantePortal) => void;
   onInativar?: (integrante: IntegrantePortal) => void;
+  onReativar?: (integrante: IntegrantePortal) => void;
+  suspeitaReativacao?: boolean;
   readOnly?: boolean;
 }
 
-export function IntegranteCard({ integrante, afastamento, onEditar, onInativar, readOnly = false }: IntegranteCardProps) {
+export function IntegranteCard({ integrante, afastamento, onEditar, onInativar, onReativar, suspeitaReativacao = false, readOnly = false }: IntegranteCardProps) {
   return (
     <Card className="bg-card border-border/50 hover:border-border transition-colors">
       <CardContent className="p-3 sm:p-4">
@@ -31,11 +33,22 @@ export function IntegranteCard({ integrante, afastamento, onEditar, onInativar, 
               </h4>
               {!integrante.ativo && (
                 <Badge variant="destructive" className="text-xs">
-                  Inativo
+                  {(integrante as any).motivo_inativacao === 'desligado' ? 'Desligado' : 'Inativo'}
+                </Badge>
+              )}
+              {suspeitaReativacao && (
+                <Badge className="text-[10px] px-1.5 py-0 h-4 gap-1 bg-amber-500/15 text-amber-600 border border-amber-500/40 hover:bg-amber-500/15">
+                  <AlertTriangle className="h-3 w-3" />
+                  Possível erro
                 </Badge>
               )}
               <AfastamentoBadge tipo={afastamento} />
             </div>
+            {suspeitaReativacao && (
+              <p className="text-[11px] text-amber-600 leading-tight">
+                Consta afastamento vigente ou já retornado — verifique se o desligamento foi indevido.
+              </p>
+            )}
             
             <p className="text-sm text-muted-foreground truncate">
               {integrante.cargo_grau_texto || integrante.cargo_nome || 'Sem cargo'}
@@ -72,7 +85,7 @@ export function IntegranteCard({ integrante, afastamento, onEditar, onInativar, 
         </div>
         
         {/* Ações - só aparecem se NÃO for readOnly */}
-        {!readOnly && (onEditar || onInativar) && (
+        {!readOnly && (onEditar || onInativar || onReativar) && (
           <div className="flex gap-2 mt-3 pt-3 border-t border-border/50">
             {onEditar && (
               <Button
@@ -95,6 +108,18 @@ export function IntegranteCard({ integrante, afastamento, onEditar, onInativar, 
               >
                 <UserX className="h-3.5 w-3.5 mr-1.5" />
                 Inativar
+              </Button>
+            )}
+
+            {onReativar && !integrante.ativo && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 text-xs h-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10 border-emerald-500/30"
+                onClick={() => onReativar(integrante)}
+              >
+                <UserCheck className="h-3.5 w-3.5 mr-1.5" />
+                Reativar
               </Button>
             )}
           </div>

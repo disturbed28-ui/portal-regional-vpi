@@ -42,6 +42,11 @@ interface UseIntegrantesGestaoReturn {
   setFiltroDivisao: (id: string) => void;
   filtroBusca: string;
   setFiltroBusca: (termo: string) => void;
+  mostrarDesligados: boolean;
+  setMostrarDesligados: (v: boolean) => void;
+
+  // IDs de integrantes desligados com suspeita de erro (tinham afastamento retornado/vigente)
+  suspeitasSet: Set<string>;
   
   // Estados
   loading: boolean;
@@ -82,6 +87,8 @@ export const useIntegrantesGestao = (userId: string | undefined): UseIntegrantes
   const [filtroRegional, setFiltroRegional] = useState<string>('');
   const [filtroDivisao, setFiltroDivisao] = useState<string>('');
   const [filtroBusca, setFiltroBusca] = useState<string>('');
+  const [mostrarDesligados, setMostrarDesligados] = useState<boolean>(false);
+
   
   // Determinar regional efetiva para filtro de divisões
   const regionalEfetiva = useMemo(() => {
@@ -111,6 +118,7 @@ export const useIntegrantesGestao = (userId: string | undefined): UseIntegrantes
   
   // Estado dos integrantes
   const [integrantes, setIntegrantes] = useState<IntegrantePortal[]>([]);
+  const [suspeitasSet, setSuspeitasSet] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   
   const fetchIntegrantes = useCallback(async () => {
@@ -130,7 +138,8 @@ export const useIntegrantesGestao = (userId: string | undefined): UseIntegrantes
             telefone
           )
         `)
-        .eq('ativo', true);
+        .eq('ativo', !mostrarDesligados);
+
       
       // Aplicar filtros de escopo
       if (escopo.nivelAcesso === 'divisao') {
@@ -168,6 +177,7 @@ export const useIntegrantesGestao = (userId: string | undefined): UseIntegrantes
       if (error) {
         console.error('Error fetching integrantes:', error);
         setIntegrantes([]);
+        setSuspeitasSet(new Set());
       } else {
         // Mapear dados de contato do profile para campos de primeiro nível
         const integrantesComContato = (data || []).map((integrante: any) => ({
@@ -176,14 +186,51 @@ export const useIntegrantesGestao = (userId: string | undefined): UseIntegrantes
           telefone: integrante.profiles?.telefone || null,
         }));
         setIntegrantes(integrantesComContato);
+
+        // Detectar suspeitas de desligamento indevido:
+        // integrante desligado que possui afastamento vigente OU já retornado.
+        if (mostrarDesligados && integrantesComContato.length > 0) {
+          const registroIds = integrantesComContato
+            .map((i: any) => i.registro_id)
+            .filter(Boolean);
+          if (registroIds.length > 0) {
+            const { data: afastados } = await supabase
+              .from('integrantes_afastados')
+              .select('registro_id, ativo, data_retorno_efetivo')
+              .in('registro_id', registroIds);
+
+            const registrosSuspeitos = new Set(
+              (afastados || [])
+                .filter((a: any) => a.ativo === true || a.data_retorno_efetivo !== null)
+                .map((a: any) => a.registro_id)
+            );
+
+            setSuspeitasSet(
+              new Set(
+                integrantesComContato
+                  .filter(
+                    (i: any) =>
+                      i.motivo_inativacao === 'desligado' &&
+                      registrosSuspeitos.has(i.registro_id)
+                  )
+                  .map((i: any) => i.id)
+              )
+            );
+          } else {
+            setSuspeitasSet(new Set());
+          }
+        } else {
+          setSuspeitasSet(new Set());
+        }
       }
     } catch (err) {
       console.error('Error in fetchIntegrantes:', err);
       setIntegrantes([]);
+      setSuspeitasSet(new Set());
     }
     
     setLoading(false);
-  }, [profile, profileLoading, escopo, filtroRegional, filtroDivisao, filtroBusca]);
+  }, [profile, profileLoading, escopo, filtroRegional, filtroDivisao, filtroBusca, mostrarDesligados]);
   
   // Buscar integrantes quando filtros mudarem
   useEffect(() => {
@@ -214,7 +261,7 @@ export const useIntegrantesGestao = (userId: string | undefined): UseIntegrantes
           divisaoNome: primeiro?.divisao_texto || 'Sem Divisão',
           regionalNome: primeiro?.regional_texto || 'Sem Regional',
           integrantes: [...lista].sort(ordenarIntegrantes),
-          totalAtivos: lista.filter(i => i.ativo).length,
+          totalAtivos: lista.length,
         };
       })
       .sort((a, b) => a.divisaoNome.localeCompare(b.divisaoNome));
@@ -234,6 +281,9 @@ export const useIntegrantesGestao = (userId: string | undefined): UseIntegrantes
     setFiltroDivisao,
     filtroBusca,
     setFiltroBusca,
+    mostrarDesligados,
+    setMostrarDesligados,
+    suspeitasSet,
     loading: loading || profileLoading || regionaisLoading || divisoesLoading,
     refetch: fetchIntegrantes,
   };
