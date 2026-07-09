@@ -206,6 +206,7 @@ export function ListaIntegrantes({ userId, readOnly = false }: ListaIntegrantesP
                     <IntegranteCard
                       key={integrante.id}
                       integrante={integrante}
+                      afastamento={afastamentosMap.get(integrante.registro_id)}
                       onEditar={readOnly ? undefined : setIntegranteEditar}
                       onInativar={readOnly ? undefined : setIntegranteInativar}
                       readOnly={readOnly}
