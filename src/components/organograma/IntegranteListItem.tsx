@@ -3,6 +3,7 @@ import { LoboIcon } from '@/components/icons/LoboIcon';
 import { UrsinhoIcon } from '@/components/icons/UrsinhoIcon';
 import { Card, CardContent } from '@/components/ui/card';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { AfastamentoBadge } from '@/components/shared/AfastamentoBadge';
 import skullIcon from '@/assets/skull_icon.png';
 
 interface IntegranteListItemProps {
@@ -11,6 +12,7 @@ interface IntegranteListItemProps {
   grau?: string;
   divisao?: string;
   foto?: string | null;
+  afastamento?: string | null;
   badges?: ('sgt_armas' | 'caveira' | 'caveira_suplente' | 'batedor' | 'combate_insano' | 'lobo' | 'ursinho')[];
   onClick?: () => void;
 }
@@ -31,6 +33,7 @@ export const IntegranteListItem = ({
   grau,
   divisao,
   foto,
+  afastamento,
   badges = [],
   onClick
 }: IntegranteListItemProps) => {
@@ -48,7 +51,10 @@ export const IntegranteListItem = ({
         />
         
         <div className="flex-1 min-w-0">
-          <h4 className="text-sm font-semibold truncate">{nome}</h4>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h4 className="text-sm font-semibold truncate">{nome}</h4>
+            <AfastamentoBadge tipo={afastamento} />
+          </div>
           <p className="text-xs text-muted-foreground">{cargo}</p>
           {grau && <p className="text-xs text-muted-foreground">Grau {grau}</p>}
           {divisao && <p className="text-xs text-muted-foreground">{divisao}</p>}

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useIntegrantesRelatorio } from '@/hooks/useIntegrantesRelatorio';
+import { useAfastamentosAtivos } from '@/hooks/useAfastamentosAtivos';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
@@ -26,6 +27,8 @@ export const IntegrantesTab = () => {
     comboDesabilitado
   } = useIntegrantesRelatorio(user?.id, isAdmin);
 
+  const { afastamentosMap } = useAfastamentosAtivos();
+
   const [integranteSelecionado, setIntegranteSelecionado] = useState<any>(null);
   const [modalAberto, setModalAberto] = useState(false);
 
@@ -34,7 +37,7 @@ export const IntegrantesTab = () => {
       const opcaoAtual = opcoesFiltragem.find(o => o.value === filtroAtivo);
       const filtroNome = opcaoAtual?.label || 'todos';
       
-      exportarIntegrantesExcel(integrantes, filtroNome, integrantesAgrupados);
+      exportarIntegrantesExcel(integrantes, filtroNome, integrantesAgrupados, afastamentosMap);
       toast.success('Excel exportado com sucesso!');
     } catch (error) {
       console.error('Erro ao exportar Excel:', error);
@@ -124,6 +127,7 @@ export const IntegrantesTab = () => {
                   <IntegranteCard
                     key={integrante.id}
                     integrante={integrante}
+                    afastamento={afastamentosMap.get(integrante.registro_id)}
                     onClick={() => handleClickIntegrante(integrante)}
                   />
                 ))}

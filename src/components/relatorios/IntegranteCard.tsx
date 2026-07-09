@@ -1,6 +1,7 @@
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Check, X } from 'lucide-react';
+import { AfastamentoBadge } from '@/components/shared/AfastamentoBadge';
 
 interface IntegranteCardProps {
   integrante: {
@@ -11,10 +12,11 @@ interface IntegranteCardProps {
     vinculado: boolean | null;
     ativo: boolean | null;
   };
+  afastamento?: string | null;
   onClick: () => void;
 }
 
-export const IntegranteCard = ({ integrante, onClick }: IntegranteCardProps) => {
+export const IntegranteCard = ({ integrante, afastamento, onClick }: IntegranteCardProps) => {
   return (
     <Card 
       className="p-3 hover:bg-accent/50 cursor-pointer transition-colors"
@@ -22,9 +24,12 @@ export const IntegranteCard = ({ integrante, onClick }: IntegranteCardProps) => 
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <h4 className="font-medium text-sm truncate">
-            {integrante.nome_colete}
-          </h4>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h4 className="font-medium text-sm truncate">
+              {integrante.nome_colete}
+            </h4>
+            <AfastamentoBadge tipo={afastamento} />
+          </div>
           <p className="text-xs text-muted-foreground mt-0.5">
             {integrante.cargo_nome || 'Sem cargo'} • Grau {integrante.grau || '-'}
           </p>

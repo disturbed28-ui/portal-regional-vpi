@@ -234,6 +234,7 @@ const Organograma = () => {
               cargo="Diretor Regional"
               nome={hierarquiaRegional.diretor_regional?.nome_colete}
               foto={hierarquiaRegional.diretor_regional?.foto}
+              afastamento={hierarquiaRegional.diretor_regional?.afastamento}
               badges={getBadges(hierarquiaRegional.diretor_regional)}
               onClick={() => navegarParaLista('diretores')}
               destaque
@@ -244,6 +245,7 @@ const Organograma = () => {
                 cargo="Operacional Regional"
                 nome={hierarquiaRegional.operacional_regional?.nome_colete}
                 foto={hierarquiaRegional.operacional_regional?.foto}
+                afastamento={hierarquiaRegional.operacional_regional?.afastamento}
                 badges={getBadges(hierarquiaRegional.operacional_regional)}
                 onClick={() => navegarParaLista('subdiretores')}
               />
@@ -251,6 +253,7 @@ const Organograma = () => {
                 cargo="Social Regional"
                 nome={hierarquiaRegional.social_regional?.nome_colete}
                 foto={hierarquiaRegional.social_regional?.foto}
+                afastamento={hierarquiaRegional.social_regional?.afastamento}
                 badges={getBadges(hierarquiaRegional.social_regional)}
                 onClick={() => navegarParaLista('sociais')}
               />
@@ -258,6 +261,7 @@ const Organograma = () => {
                 cargo="ADM Regional"
                 nome={hierarquiaRegional.adm_regional?.nome_colete}
                 foto={hierarquiaRegional.adm_regional?.foto}
+                afastamento={hierarquiaRegional.adm_regional?.afastamento}
                 badges={getBadges(hierarquiaRegional.adm_regional)}
                 onClick={() => navegarParaLista('adms')}
               />
@@ -265,6 +269,7 @@ const Organograma = () => {
                 cargo="Comunicação Regional"
                 nome={hierarquiaRegional.comunicacao_regional?.nome_colete}
                 foto={hierarquiaRegional.comunicacao_regional?.foto}
+                afastamento={hierarquiaRegional.comunicacao_regional?.afastamento}
                 badges={getBadges(hierarquiaRegional.comunicacao_regional)}
               />
             </div>
@@ -288,6 +293,7 @@ const Organograma = () => {
               grau={integrante.grau || undefined}
               divisao={integrante.divisao_texto}
               foto={integrante.foto}
+              afastamento={integrante.afastamento}
               badges={getBadges(integrante)}
               onClick={() => navegarParaDivisao(integrante.divisao_id || integrante.divisao_texto, integrante.divisao_texto)}
             />

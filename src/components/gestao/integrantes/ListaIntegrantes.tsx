@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Search, Users, Filter } from "lucide-react";
 import { useIntegrantesGestao } from "@/hooks/useIntegrantesGestao";
 import { useGerenciarIntegrante } from "@/hooks/useGerenciarIntegrante";
+import { useAfastamentosAtivos } from "@/hooks/useAfastamentosAtivos";
 import { IntegranteCard } from "./IntegranteCard";
 import { ModalEditarIntegrante } from "./ModalEditarIntegrante";
 import { ModalInativarIntegrante } from "./ModalInativarIntegrante";
@@ -48,6 +49,7 @@ export function ListaIntegrantes({ userId, readOnly = false }: ListaIntegrantesP
   } = useIntegrantesGestao(userId);
 
   const { editarIntegrante, inativarIntegrante, operando } = useGerenciarIntegrante();
+  const { afastamentosMap } = useAfastamentosAtivos();
 
   // Estado dos modais
   const [integranteEditar, setIntegranteEditar] = useState<IntegrantePortal | null>(null);
@@ -206,6 +208,7 @@ export function ListaIntegrantes({ userId, readOnly = false }: ListaIntegrantesP
                     <IntegranteCard
                       key={integrante.id}
                       integrante={integrante}
+                      afastamento={afastamentosMap.get(integrante.registro_id)}
                       onEditar={readOnly ? undefined : setIntegranteEditar}
                       onInativar={readOnly ? undefined : setIntegranteInativar}
                       readOnly={readOnly}

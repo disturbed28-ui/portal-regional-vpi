@@ -3,12 +3,14 @@ import { LoboIcon } from '@/components/icons/LoboIcon';
 import { UrsinhoIcon } from '@/components/icons/UrsinhoIcon';
 import { Card, CardContent } from '@/components/ui/card';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { AfastamentoBadge } from '@/components/shared/AfastamentoBadge';
 import skullIcon from '@/assets/skull_icon.png';
 
 interface HierarchyCardProps {
   cargo: string;
   nome?: string;
   foto?: string | null;
+  afastamento?: string | null;
   badges?: ('sgt_armas' | 'caveira' | 'caveira_suplente' | 'batedor' | 'combate_insano' | 'lobo' | 'ursinho')[];
   onClick?: () => void;
   destaque?: boolean;
@@ -28,6 +30,7 @@ export const HierarchyCard = ({
   cargo,
   nome,
   foto,
+  afastamento,
   badges = [],
   onClick,
   destaque = false
@@ -50,6 +53,11 @@ export const HierarchyCard = ({
         <div className="text-center">
           <h3 className={`${destaque ? 'text-base' : 'text-sm'} font-semibold`}>{cargo}</h3>
           {nome && <p className="text-xs text-muted-foreground mt-1">{nome}</p>}
+          {afastamento && (
+            <div className="flex justify-center mt-1">
+              <AfastamentoBadge tipo={afastamento} />
+            </div>
+          )}
         </div>
 
         {badges.length > 0 && (
