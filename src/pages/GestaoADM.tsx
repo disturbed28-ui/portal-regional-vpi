@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ArrowLeft, Users, DollarSign, GraduationCap, Cake, Clock, FileEdit, History, ClipboardCheck, XCircle, List, Award, Image, RefreshCw, AlertTriangle, UserMinus, UserX, ListChecks, CalendarRange, ClipboardList } from "lucide-react";
+import { ArrowLeft, Users, DollarSign, GraduationCap, Cake, Clock, FileEdit, History, ClipboardCheck, XCircle, List, Award, Image, RefreshCw, AlertTriangle, UserMinus, UserX, ListChecks, CalendarRange, ClipboardList, CalendarDays } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import { CriteriosAvaliacaoTab } from "@/components/admin/avaliacao/CriteriosAvaliacaoTab";
 import { PeriodosAvaliacaoTab } from "@/components/admin/avaliacao/PeriodosAvaliacaoTab";
@@ -32,6 +32,7 @@ import { HistoricoEstagio } from "@/components/admin/estagio/HistoricoEstagio";
 import { FlyersEstagioList } from "@/components/admin/estagio/flyers/FlyersEstagioList";
 import { AfastadosGestaoTab } from "@/components/gestao/afastados/AfastadosGestaoTab";
 import { DesligadosGestaoTab } from "@/components/gestao/desligados/DesligadosGestaoTab";
+import { AgendasGestaoTab } from "@/components/admin/agendas/AgendasGestaoTab";
 
 // Todas as rotas que precisamos verificar permissões
 const ALL_ROUTES = [
@@ -57,6 +58,7 @@ const ALL_ROUTES = [
   '/gestao-adm-desligados',
   '/gestao-adm/criterios-avaliacao',
   '/gestao-adm/periodos-avaliacao',
+  '/gestao-adm-agendas',
 ];
 
 const GestaoADM = () => {
@@ -88,6 +90,7 @@ const GestaoADM = () => {
   const desligadosP = getPerm('/gestao-adm-desligados');
   const criteriosAvalP = getPerm('/gestao-adm/criterios-avaliacao');
   const periodosAvalP = getPerm('/gestao-adm/periodos-avaliacao');
+  const agendasP = getPerm('/gestao-adm-agendas');
 
   // Permissões das sub-abas de Integrantes
   const listaP = getPerm('/gestao-adm-integrantes-lista');
@@ -119,9 +122,10 @@ const GestaoADM = () => {
       { value: "afastamentos", label: "Afastados", icon: UserMinus, hasAccess: afastamentosP.hasAnyAccess },
       { value: "desligados", label: "Desligados", icon: UserX, hasAccess: desligadosP.hasAnyAccess },
       { value: "avaliacao", label: "Avaliação dos Integrantes", icon: ClipboardList, hasAccess: criteriosAvalP.hasAnyAccess || periodosAvalP.hasAnyAccess },
+      { value: "agendas", label: "Agenda", icon: CalendarDays, hasAccess: agendasP.hasAnyAccess },
     ];
     return allTabs.filter(tab => tab.hasAccess);
-  }, [integrantesP.hasAnyAccess, inadimplenciaP.hasAnyAccess, treinamentoP.hasAnyAccess, estagioP.hasAnyAccess, aniversariantesP.hasAnyAccess, afastamentosP.hasAnyAccess, desligadosP.hasAnyAccess, criteriosAvalP.hasAnyAccess, periodosAvalP.hasAnyAccess]);
+  }, [integrantesP.hasAnyAccess, inadimplenciaP.hasAnyAccess, treinamentoP.hasAnyAccess, estagioP.hasAnyAccess, aniversariantesP.hasAnyAccess, afastamentosP.hasAnyAccess, desligadosP.hasAnyAccess, criteriosAvalP.hasAnyAccess, periodosAvalP.hasAnyAccess, agendasP.hasAnyAccess]);
 
   // Sub-abas de Avaliação dos Integrantes
   const visibleAvaliacaoSubTabs = useMemo(() => {
@@ -594,6 +598,12 @@ const GestaoADM = () => {
                     </CardContent>
                   </Card>
                 )}
+              </TabsContent>
+            )}
+
+            {agendasP.hasAnyAccess && (
+              <TabsContent value="agendas" className="m-0">
+                <AgendasGestaoTab readOnly={agendasP.isReadOnly} />
               </TabsContent>
             )}
           </div>

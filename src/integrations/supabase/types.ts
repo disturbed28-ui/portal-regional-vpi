@@ -300,6 +300,51 @@ export type Database = {
         }
         Relationships: []
       }
+      agenda_calendars: {
+        Row: {
+          ativo: boolean
+          calendar_id: string
+          created_at: string
+          id: string
+          nome: string
+          ordem: number
+          palavras_chave: string[]
+          updated_at: string
+          ver_flag_caveira: boolean
+          ver_flag_lobo: boolean
+          ver_flag_ursinho: boolean
+          ver_grau_v_regional: boolean
+        }
+        Insert: {
+          ativo?: boolean
+          calendar_id: string
+          created_at?: string
+          id?: string
+          nome: string
+          ordem?: number
+          palavras_chave?: string[]
+          updated_at?: string
+          ver_flag_caveira?: boolean
+          ver_flag_lobo?: boolean
+          ver_flag_ursinho?: boolean
+          ver_grau_v_regional?: boolean
+        }
+        Update: {
+          ativo?: boolean
+          calendar_id?: string
+          created_at?: string
+          id?: string
+          nome?: string
+          ordem?: number
+          palavras_chave?: string[]
+          updated_at?: string
+          ver_flag_caveira?: boolean
+          ver_flag_lobo?: boolean
+          ver_flag_ursinho?: boolean
+          ver_grau_v_regional?: boolean
+        }
+        Relationships: []
+      }
       alertas_emails_log: {
         Row: {
           created_at: string | null
