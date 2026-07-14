@@ -297,6 +297,35 @@ async function parseEventComponents(originalTitle: string): Promise<ParsedEvent>
     if (tituloParaExtras.length > 0) informacoesExtras = tituloParaExtras;
   } else {
     divisao = await detectDivisionFromTitle(normalized);
+    // Fallback: se não achou divisão, mas há sigla regional no título (VP1/VP2/VP3/LN),
+    // classificar como evento Regional. Cobre casos como "REUNIÃO ADM VP3 - INTEGRAÇÃO".
+    if (divisao === 'Sem Divisao') {
+      const siglaFallback = detectRegionalSiglaFromTitle(originalTitle);
+      if (siglaFallback && siglaFallback !== 'CMD') {
+        regionalSiglaDetectada = siglaFallback;
+        divisao = `Regional ${siglaFallback}`;
+        // Reclassificar como Regional para toda a lógica downstream
+        (isRegional as unknown as boolean); // no-op para clareza
+        let tituloParaExtras = originalTitle
+          .replace(/reuniao\s*[-\s]*/gi, '')
+          .replace(/\b(VP\s*[123]|VP\s*(?:III|II|I)|LN)\b/gi, '')
+          .replace(/\s{2,}/g, ' ')
+          .replace(/^[-\s]+|[-\s]+$/g, '')
+          .trim();
+        if (tituloParaExtras.length > 0) informacoesExtras = tituloParaExtras;
+        return {
+          tipoEvento,
+          subtipo,
+          divisao,
+          divisaoId: null,
+          regionalSigla: regionalSiglaDetectada,
+          informacoesExtras,
+          isCMD: false,
+          isRegional: true,
+          isCaveira: false,
+        };
+      }
+    }
     const divIndex = originalTitle.toLowerCase().indexOf(divisao.toLowerCase());
     if (divIndex > -1 && divIndex + divisao.length < originalTitle.length) {
       const extras = originalTitle.substring(divIndex + divisao.length).trim();
@@ -305,6 +334,7 @@ async function parseEventComponents(originalTitle: string): Promise<ParsedEvent>
       }
     }
   }
+
   
   return {
     tipoEvento,
