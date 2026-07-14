@@ -57,11 +57,8 @@ export function EventCard({ event, onClick }: EventCardProps) {
           backgroundColor: bgColor,
         }}
       >
-        {eventIsToday && (
-          <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground text-[10px] px-2 py-0.5">
-            HOJE
-          </Badge>
-        )}
+
+
 
         {/* Ícone de Caveira para eventos restritos */}
         {isCaveiraEvent && (
@@ -88,6 +85,13 @@ export function EventCard({ event, onClick }: EventCardProps) {
           >
             {event.type}
           </Badge>
+
+          {eventIsToday && (
+            <Badge className="bg-primary text-primary-foreground text-[10px] px-2 py-0.5 animate-pulse">
+              HOJE
+            </Badge>
+          )}
+
           
           {/* Badge adicional para Caveira */}
           {isCaveiraEvent && (
