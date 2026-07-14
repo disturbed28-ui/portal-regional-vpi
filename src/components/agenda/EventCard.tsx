@@ -1,10 +1,11 @@
 import { CalendarEvent } from "@/lib/googleCalendar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import { format, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useTiposEvento } from "@/hooks/useTiposEvento";
 import { Crown, Skull } from "lucide-react";
+
 
 interface EventCardProps {
   event: CalendarEvent;
@@ -21,6 +22,9 @@ export function EventCard({ event, onClick }: EventCardProps) {
   
   // Cor especial para eventos Caveira (roxo)
   const isCaveiraEvent = event.isCaveiraEvent;
+
+  // Destaque para eventos de hoje
+  const eventIsToday = isToday(startDate);
   
   const borderColor = isCaveiraEvent
     ? '#9333ea' // Roxo para Caveira
@@ -37,21 +41,28 @@ export function EventCard({ event, onClick }: EventCardProps) {
   return (
     <div className="flex gap-4 cursor-pointer" onClick={onClick}>
       <div className="flex flex-col items-center justify-start pt-2 min-w-[60px]">
-        <div className="text-xs font-semibold text-muted-foreground uppercase">
-          {format(startDate, "EEE.", { locale: ptBR })}
+        <div className={`text-xs font-semibold uppercase ${eventIsToday ? 'text-primary' : 'text-muted-foreground'}`}>
+          {eventIsToday ? 'HOJE' : format(startDate, "EEE.", { locale: ptBR })}
         </div>
-        <div className="text-4xl font-bold text-foreground">
+        <div className={`text-4xl font-bold ${eventIsToday ? 'text-primary' : 'text-foreground'}`}>
           {format(startDate, "dd")}
         </div>
       </div>
+
       
       <Card 
-        className="flex-1 p-4 hover:shadow-lg transition-all hover:scale-[1.02] relative overflow-hidden"
+        className={`flex-1 p-4 hover:shadow-lg transition-all hover:scale-[1.02] relative overflow-hidden ${eventIsToday ? 'ring-2 ring-primary shadow-lg' : ''}`}
         style={{
           borderLeft: `${isCaveiraEvent || isSpecialEvent ? '5px' : '4px'} solid ${borderColor}`,
           backgroundColor: bgColor,
         }}
       >
+        {eventIsToday && (
+          <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground text-[10px] px-2 py-0.5">
+            HOJE
+          </Badge>
+        )}
+
         {/* Ícone de Caveira para eventos restritos */}
         {isCaveiraEvent && (
           <div className="absolute top-2 right-2">
