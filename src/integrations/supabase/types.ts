@@ -3659,10 +3659,12 @@ export type Database = {
       normalize_divisao_text: { Args: { texto: string }; Returns: string }
       unaccent: { Args: { "": string }; Returns: string }
       user_grau_num: { Args: { _user_id: string }; Returns: number }
-      user_has_screen_permission: {
-        Args: { _rota: string; _user_id: string }
-        Returns: boolean
-      }
+      user_has_screen_permission:
+        | { Args: { _rota: string; _user_id: string }; Returns: boolean }
+        | {
+            Args: { _screen_route: string; _user_id: string }
+            Returns: boolean
+          }
     }
     Enums: {
       app_role:
