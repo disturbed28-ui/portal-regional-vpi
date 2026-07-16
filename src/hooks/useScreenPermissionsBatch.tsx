@@ -60,7 +60,6 @@ export function useScreenPermissionsBatch(
       setLoading(true);
 
       try {
-        const isAdmRegional = roles.includes('adm_regional');
         const isComando = roles.includes('comando');
         const isAdmin = roles.includes('admin');
 
@@ -143,9 +142,7 @@ export function useScreenPermissionsBatch(
 
           let accessLevel: AccessLevel = 'none';
 
-          if (isAdmRegional && route.startsWith('/gestao-adm')) {
-            accessLevel = 'full';
-          } else if (!screenExists) {
+          if (!screenExists) {
             accessLevel = 'full';
           } else if (roles.some(r => routePerms.includes(r as AppRole))) {
             accessLevel = 'full';
