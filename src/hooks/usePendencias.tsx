@@ -125,6 +125,17 @@ interface FlyerPendenteDetalhes {
   data_aprovacao: string | null;
 }
 
+interface EstagioVencidoDetalhes {
+  solicitacao_id: string;
+  integrante_nome_colete: string;
+  cargo_estagio_nome: string;
+  grau_estagio: string;
+  divisao_texto: string;
+  data_termino_previsto: string;
+  dias_vencido: number;
+  status_flyer: string;
+}
+
 interface DadosDesatualizadosDetalhes {
   tipo_dado: 'integrantes' | 'inadimplencia' | 'aniversariantes' | 'afastados';
   label: string;
@@ -160,14 +171,14 @@ interface ExpansaoBaixaDetalhes {
 interface Pendencia {
   nome_colete: string;
   divisao_texto: string;
-  tipo: 'mensalidade' | 'afastamento' | 'delta' | 'evento_cancelado' | 'treinamento_aprovador' | 'treinamento_integrante' | 'estagio_aprovador' | 'estagio_integrante' | 'ajuste_roles' | 'desligamento_compulsorio' | 'dados_desatualizados' | 'flyer_pendente' | 'expansao_baixa' | 'cadastro_pendente';
+  tipo: 'mensalidade' | 'afastamento' | 'delta' | 'evento_cancelado' | 'treinamento_aprovador' | 'treinamento_integrante' | 'estagio_aprovador' | 'estagio_integrante' | 'ajuste_roles' | 'desligamento_compulsorio' | 'dados_desatualizados' | 'flyer_pendente' | 'estagio_vencido' | 'expansao_baixa' | 'cadastro_pendente';
   detalhe: string;
   data_ref: string;
   registro_id: number;
-  detalhes_completos: MensalidadeDetalhes | AfastamentoDetalhes | DeltaDetalhes | EventoCanceladoDetalhes | TreinamentoAprovadorDetalhes | TreinamentoIntegranteDetalhes | EstagioAprovadorDetalhes | EstagioIntegranteDetalhes | AjusteRolesDetalhes | DesligamentoCompulsorioDetalhes | DadosDesatualizadosDetalhes | FlyerPendenteDetalhes | ExpansaoBaixaDetalhes | CadastroPendenteDetalhes;
+  detalhes_completos: MensalidadeDetalhes | AfastamentoDetalhes | DeltaDetalhes | EventoCanceladoDetalhes | TreinamentoAprovadorDetalhes | TreinamentoIntegranteDetalhes | EstagioAprovadorDetalhes | EstagioIntegranteDetalhes | AjusteRolesDetalhes | DesligamentoCompulsorioDetalhes | DadosDesatualizadosDetalhes | FlyerPendenteDetalhes | EstagioVencidoDetalhes | ExpansaoBaixaDetalhes | CadastroPendenteDetalhes;
 }
 
-export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes, FlyerPendenteDetalhes, ExpansaoBaixaDetalhes, CadastroPendenteDetalhes };
+export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes, FlyerPendenteDetalhes, EstagioVencidoDetalhes, ExpansaoBaixaDetalhes, CadastroPendenteDetalhes };
 
 export const usePendencias = (
   userId: string | undefined,
@@ -194,7 +205,7 @@ export const usePendencias = (
   // Cache de 5 minutos (ao invés de diário)
   const getCacheKey = () => {
     const cacheTime = Math.floor(Date.now() / (5 * 60 * 1000)); // 5 minutos
-      return `pendencias_v9_${userId}_${userRole}_${regionalId || 'no_reg'}_${divisaoId || 'no_div'}_${registroId || 'all'}_${cacheTime}`;
+      return `pendencias_v10_${userId}_${userRole}_${regionalId || 'no_reg'}_${divisaoId || 'no_div'}_${registroId || 'all'}_${cacheTime}`;
   };
 
   useEffect(() => {
@@ -227,9 +238,9 @@ export const usePendencias = (
       });
     }
 
-    // Limpar caches antigos (versões anteriores a v8)
+    // Limpar caches antigos (versões anteriores)
     Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('pendencias_') && !key.includes('_v9_')) {
+      if (key.startsWith('pendencias_') && !key.includes('_v10_')) {
         console.log('[usePendencias] Removendo cache antigo:', key);
         localStorage.removeItem(key);
       }
@@ -989,6 +1000,61 @@ export const usePendencias = (
         }
       }
 
+      // 5.2.b Estágios com data de término prevista já vencida (URGENTE)
+      // Visível para admin, adm_regional, diretor_regional (via userRole 'admin'|'regional')
+      // filtrado pela regional do usuário. Alerta pesado para não deixar passar.
+      if (userRole === 'admin' || userRole === 'regional' || userRole === 'diretor_regional') {
+        const hojeStr = new Date().toISOString().split('T')[0];
+        let queryVencidos = supabase
+          .from('solicitacoes_estagio')
+          .select(`
+            id, grau_estagio, data_termino_previsto, status_flyer,
+            divisao_id, regional_id,
+            integrantes_portal!solicitacoes_estagio_integrante_id_fkey(nome_colete, divisao_texto),
+            cargos!solicitacoes_estagio_cargo_estagio_id_fkey(nome)
+          `)
+          .eq('status', 'Em Estagio')
+          .lt('data_termino_previsto', hojeStr)
+          .neq('status_flyer', 'concluido');
+
+        if (regionalId) {
+          queryVencidos = queryVencidos.eq('regional_id', regionalId);
+        }
+
+        const { data: estagiosVencidos, error: vencidosErr } = await queryVencidos;
+        if (!vencidosErr && estagiosVencidos) {
+          for (const sol of estagiosVencidos) {
+            const integrante = sol.integrantes_portal as any;
+            const cargoEstagio = sol.cargos as any;
+            const termino = sol.data_termino_previsto as string;
+            const diasVencido = Math.floor(
+              (new Date().getTime() - new Date(termino).getTime()) / (1000 * 60 * 60 * 24)
+            );
+            todasPendencias.push({
+              registro_id: 0,
+              nome_colete: integrante?.nome_colete || 'N/A',
+              divisao_texto: integrante?.divisao_texto || '',
+              tipo: 'estagio_vencido',
+              detalhe: `🚨 Estágio vencido há ${diasVencido} dia(s) — solicitar flyer de encerramento`,
+              data_ref: termino,
+              detalhes_completos: {
+                solicitacao_id: sol.id,
+                integrante_nome_colete: integrante?.nome_colete || 'N/A',
+                cargo_estagio_nome: cargoEstagio?.nome || 'N/A',
+                grau_estagio: sol.grau_estagio,
+                divisao_texto: integrante?.divisao_texto || '',
+                data_termino_previsto: termino,
+                dias_vencido: diasVencido,
+                status_flyer: sol.status_flyer || 'pendente',
+              } as EstagioVencidoDetalhes,
+            });
+          }
+          console.log('[usePendencias] Estágios vencidos encontrados:', estagiosVencidos.length);
+        }
+      }
+
+
+
       // 5.3 Expansão: candidatos enviados ao DD aguardando baixa
       // O Diretor de Divisão TITULAR dá baixa pela própria modal, sem acessar a tela de Expansão.
       // IMPORTANTE: só o Diretor TITULAR da divisão vê esta pendência — nem o Sub Diretor,
@@ -1174,6 +1240,7 @@ export const usePendencias = (
           'estagio_aprovador',
           'estagio_integrante',
           'flyer_pendente',
+          'estagio_vencido',
         ]);
 
         const antesFiltroFinal = todasPendencias.length;
@@ -1323,6 +1390,10 @@ export const usePendencias = (
       // Ordenar: desligamento_compulsorio primeiro, depois ajuste_roles, depois eventos cancelados, depois por data
       todasPendencias.sort((a, b) => {
         // Desligamento compulsório tem prioridade MÁXIMA
+        // Estágio vencido tem prioridade MÁXIMA (alerta pesado)
+        if (a.tipo === 'estagio_vencido' && b.tipo !== 'estagio_vencido') return -1;
+        if (b.tipo === 'estagio_vencido' && a.tipo !== 'estagio_vencido') return 1;
+
         if (a.tipo === 'desligamento_compulsorio' && b.tipo !== 'desligamento_compulsorio') return -1;
         if (b.tipo === 'desligamento_compulsorio' && a.tipo !== 'desligamento_compulsorio') return 1;
         
