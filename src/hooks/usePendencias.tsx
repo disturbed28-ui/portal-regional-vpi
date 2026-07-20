@@ -1116,6 +1116,53 @@ export const usePendencias = (
           todasPendencias.filter(p => p.tipo === 'ajuste_roles').length);
       }
 
+      // 7. Cadastros pendentes de aprovação (perfis Pendente/Analise)
+      // Visível para admin, diretor_regional, adm_regional (mapeados aqui como 'admin' ou 'regional')
+      if (userRole === 'admin' || userRole === 'regional' || userRole === 'diretor_regional') {
+        console.log('[usePendencias] Buscando cadastros pendentes de aprovação...');
+
+        let queryCadastros = supabase
+          .from('profiles')
+          .select('id, name, nome_colete, profile_status, cargo, grau, created_at, regional_id, divisao_id, regionais:regional_id(nome), divisoes:divisao_id(nome)')
+          .in('profile_status', ['Pendente', 'Analise']);
+
+        if (regionalId) {
+          queryCadastros = queryCadastros.eq('regional_id', regionalId);
+        }
+
+        const { data: cadastros, error: errorCadastros } = await queryCadastros;
+
+        if (errorCadastros) {
+          console.error('[usePendencias] Erro ao buscar cadastros pendentes:', errorCadastros);
+        } else if (cadastros) {
+          for (const c of cadastros) {
+            const divisaoNome = (c.divisoes as any)?.nome || '';
+            const regionalNome = (c.regionais as any)?.nome || '';
+            const statusLabel = c.profile_status === 'Analise' ? 'Em análise' : 'Pendente';
+            todasPendencias.push({
+              registro_id: 0,
+              nome_colete: c.nome_colete || c.name || 'Sem nome',
+              divisao_texto: divisaoNome || regionalNome || 'Sem divisão',
+              tipo: 'cadastro_pendente',
+              detalhe: `👤 Cadastro aguardando aprovação (${statusLabel})`,
+              data_ref: c.created_at || new Date().toISOString(),
+              detalhes_completos: {
+                profile_id: c.id,
+                name: c.name,
+                nome_colete: c.nome_colete,
+                profile_status: c.profile_status as 'Pendente' | 'Analise',
+                divisao: divisaoNome,
+                regional: regionalNome,
+                cargo: c.cargo,
+                grau: c.grau,
+                created_at: c.created_at,
+              } as CadastroPendenteDetalhes,
+            });
+          }
+          console.log('[usePendencias] Cadastros pendentes encontrados:', cadastros.length);
+        }
+      }
+
       if (aplicaEscopoRegional && nomesDivisoesRegional.length > 0) {
         const tiposComEscopoPorDivisao = new Set<Pendencia['tipo']>([
           'mensalidade',
