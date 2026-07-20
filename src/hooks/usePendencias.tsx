@@ -132,6 +132,18 @@ interface DadosDesatualizadosDetalhes {
   dias_desde_atualizacao: number | null;
 }
 
+interface CadastroPendenteDetalhes {
+  profile_id: string;
+  name: string | null;
+  nome_colete: string | null;
+  profile_status: 'Pendente' | 'Analise';
+  divisao: string | null;
+  regional: string | null;
+  cargo: string | null;
+  grau: string | null;
+  created_at: string | null;
+}
+
 interface ExpansaoBaixaDetalhes {
   candidato_id: string;
   nome_completo: string | null;
