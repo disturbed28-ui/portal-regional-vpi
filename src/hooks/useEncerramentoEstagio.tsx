@@ -53,18 +53,22 @@ export function useEncerramentoEstagio(userId: string | undefined) {
   const [loading, setLoading] = useState(true);
   const [operando, setOperando] = useState(false);
   const [meuIntegranteId, setMeuIntegranteId] = useState<string | null>(null);
+  const [escopo, setEscopo] = useState<{
+    nivel: 'comando' | 'regional' | 'aprovador';
+    regionalId: string | null;
+  }>({ nivel: 'aprovador', regionalId: null });
 
-  // Buscar meu integrante_id
+  // Buscar meu integrante_id + escopo (roles)
   useEffect(() => {
     async function fetchMeuIntegrante() {
       if (!userId) return;
-      
+
       const { data: profile } = await supabase
         .from('profiles')
-        .select('nome_colete')
+        .select('nome_colete, regional_id')
         .eq('id', userId)
         .single();
-      
+
       if (profile?.nome_colete) {
         const { data: integrante } = await supabase
           .from('integrantes_portal')
@@ -72,45 +76,72 @@ export function useEncerramentoEstagio(userId: string | undefined) {
           .eq('nome_colete', profile.nome_colete)
           .eq('ativo', true)
           .single();
-        
+
         if (integrante) {
           setMeuIntegranteId(integrante.id);
         }
       }
+
+      // Determinar escopo pelas roles
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId);
+
+      const roleList = (roles || []).map(r => r.role as string);
+      if (roleList.includes('admin') || roleList.includes('comando')) {
+        setEscopo({ nivel: 'comando', regionalId: null });
+      } else if (
+        roleList.includes('diretor_regional') ||
+        roleList.includes('adm_regional') ||
+        roleList.includes('regional')
+      ) {
+        setEscopo({ nivel: 'regional', regionalId: profile?.regional_id || null });
+      } else {
+        setEscopo({ nivel: 'aprovador', regionalId: profile?.regional_id || null });
+      }
     }
-    
+
     fetchMeuIntegrante();
   }, [userId]);
 
   const fetchEstagios = useCallback(async () => {
-    if (!meuIntegranteId) {
+    if (!userId) {
       setLoading(false);
       return;
     }
 
     try {
-      // 1. Buscar solicitações onde sou aprovador
-      const { data: minhasAprovacoes, error: apError } = await supabase
-        .from('aprovacoes_estagio')
-        .select('solicitacao_id')
-        .eq('aprovador_integrante_id', meuIntegranteId);
+      let solicitacaoIds: string[] | null = null;
 
-      if (apError) {
-        console.error('Erro ao buscar aprovações:', apError);
-        setLoading(false);
-        return;
+      // Se for aprovador (não admin/comando/regional), restringe às solicitações que aprova
+      if (escopo.nivel === 'aprovador') {
+        if (!meuIntegranteId) {
+          setEstagios([]);
+          setLoading(false);
+          return;
+        }
+        const { data: minhasAprovacoes, error: apError } = await supabase
+          .from('aprovacoes_estagio')
+          .select('solicitacao_id')
+          .eq('aprovador_integrante_id', meuIntegranteId);
+
+        if (apError) {
+          console.error('Erro ao buscar aprovações:', apError);
+          setLoading(false);
+          return;
+        }
+
+        if (!minhasAprovacoes || minhasAprovacoes.length === 0) {
+          setEstagios([]);
+          setLoading(false);
+          return;
+        }
+        solicitacaoIds = minhasAprovacoes.map(a => a.solicitacao_id);
       }
 
-      if (!minhasAprovacoes || minhasAprovacoes.length === 0) {
-        setEstagios([]);
-        setLoading(false);
-        return;
-      }
-
-      const solicitacaoIds = minhasAprovacoes.map(a => a.solicitacao_id);
-
-      // 2. Buscar solicitações com status ativo
-      const { data: solicitacoes, error: solError } = await supabase
+      // Buscar solicitações com status ativo, respeitando escopo
+      let query = supabase
         .from('solicitacoes_estagio')
         .select(`
           id,
@@ -133,8 +164,16 @@ export function useEncerramentoEstagio(userId: string | undefined) {
             nome
           )
         `)
-        .in('id', solicitacaoIds)
         .in('status', ['Em Aprovacao', 'Em Estagio']);
+
+      if (solicitacaoIds) {
+        query = query.in('id', solicitacaoIds);
+      }
+      if (escopo.nivel === 'regional' && escopo.regionalId) {
+        query = query.eq('regional_id', escopo.regionalId);
+      }
+
+      const { data: solicitacoes, error: solError } = await query;
 
       if (solError) {
         console.error('Erro ao buscar solicitações:', solError);
@@ -169,7 +208,8 @@ export function useEncerramentoEstagio(userId: string | undefined) {
     } finally {
       setLoading(false);
     }
-  }, [meuIntegranteId]);
+  }, [meuIntegranteId, userId, escopo]);
+
 
   useEffect(() => {
     fetchEstagios();
