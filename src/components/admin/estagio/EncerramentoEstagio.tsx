@@ -228,6 +228,8 @@ export function EncerramentoEstagio({ userId, readOnly = false }: EncerramentoEs
                   </a>
                 </div>
               )}
+            </div>
+
 
 
             {/* Dados do Estágio */}
