@@ -1240,6 +1240,7 @@ export const usePendencias = (
           'estagio_aprovador',
           'estagio_integrante',
           'flyer_pendente',
+          'estagio_vencido',
         ]);
 
         const antesFiltroFinal = todasPendencias.length;
@@ -1389,6 +1390,10 @@ export const usePendencias = (
       // Ordenar: desligamento_compulsorio primeiro, depois ajuste_roles, depois eventos cancelados, depois por data
       todasPendencias.sort((a, b) => {
         // Desligamento compulsório tem prioridade MÁXIMA
+        // Estágio vencido tem prioridade MÁXIMA (alerta pesado)
+        if (a.tipo === 'estagio_vencido' && b.tipo !== 'estagio_vencido') return -1;
+        if (b.tipo === 'estagio_vencido' && a.tipo !== 'estagio_vencido') return 1;
+
         if (a.tipo === 'desligamento_compulsorio' && b.tipo !== 'desligamento_compulsorio') return -1;
         if (b.tipo === 'desligamento_compulsorio' && a.tipo !== 'desligamento_compulsorio') return 1;
         
