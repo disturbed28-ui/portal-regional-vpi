@@ -1014,8 +1014,7 @@ export const usePendencias = (
             cargos!solicitacoes_estagio_cargo_estagio_id_fkey(nome)
           `)
           .eq('status', 'Em Estagio')
-          .lt('data_termino_previsto', hojeStr)
-          .neq('status_flyer', 'concluido');
+          .lt('data_termino_previsto', hojeStr);
 
         if (regionalId) {
           queryVencidos = queryVencidos.eq('regional_id', regionalId);
