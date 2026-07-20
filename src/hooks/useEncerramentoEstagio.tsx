@@ -6,7 +6,7 @@ export interface EstagioEncerramento {
   id: string; // solicitacao_id
   status: string;
   integrante_id: string;
-  integrante_registro_id: string | null;
+  integrante_registro_id: string | number | null;
   integrante_email: string | null;
   integrante_telefone: string | null;
   integrante_nome_colete: string;
@@ -194,12 +194,13 @@ export function useEncerramentoEstagio(userId: string | undefined) {
       const mapped: EstagioEncerramento[] = (solicitacoes || []).map(s => {
         const integrante = s.integrante as {
           nome_colete: string;
-          registro_id: string | null;
+          registro_id: string | number | null;
           divisao_texto: string;
           regional_texto: string;
           cargo_grau_texto: string;
           profile?: { email: string | null; telefone: string | null } | null;
         } | null;
+
         const cargo = s.cargo_estagio as { nome: string } | null;
 
         return {
