@@ -40,7 +40,7 @@ import {
   Phone,
   XCircle
 } from "lucide-react";
-import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes, FlyerPendenteDetalhes, ExpansaoBaixaDetalhes } from "@/hooks/usePendencias";
+import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes, FlyerPendenteDetalhes, ExpansaoBaixaDetalhes, CadastroPendenteDetalhes } from "@/hooks/usePendencias";
 
 interface PendenciasModalProps {
   pendencias: Pendencia[];
@@ -1144,6 +1144,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle, onDispensarDados }
   const isDadosDesatualizados = pendencia.tipo === 'dados_desatualizados';
   const isFlyerPendente = pendencia.tipo === 'flyer_pendente';
   const isExpansaoBaixa = pendencia.tipo === 'expansao_baixa';
+  const isCadastroPendente = pendencia.tipo === 'cadastro_pendente';
   const detalhes = pendencia.detalhes_completos;
   
   // LOG DE DEBUG TEMPORÁRIO
@@ -1176,6 +1177,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle, onDispensarDados }
     if (isEstagioIntegrante) return 'border-cyan-500';
     if (isFlyerPendente) return 'border-indigo-500';
     if (isExpansaoBaixa) return 'border-teal-500';
+    if (isCadastroPendente) return 'border-sky-500';
     if (isDelta) {
       const deltaDetalhes = detalhes as DeltaDetalhes | null;
       if (!deltaDetalhes) return 'border-gray-500';
@@ -1195,6 +1197,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle, onDispensarDados }
     if (isEstagioAprovador || isEstagioIntegrante) return '🎖️';
     if (isFlyerPendente) return '🖼️';
     if (isExpansaoBaixa) return '🧭';
+    if (isCadastroPendente) return '👤';
     if (isEventoCancelado) {
       const eventDetalhes = detalhes as EventoCanceladoDetalhes;
       return eventDetalhes?.status === 'cancelled' ? '📅' : '❌';
@@ -1231,6 +1234,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle, onDispensarDados }
       return flyerDet?.status_flyer === 'solicitado' ? 'Flyer Aguardando' : 'Flyer Pendente';
     }
     if (isExpansaoBaixa) return 'Expansão';
+    if (isCadastroPendente) return 'Cadastro Pendente';
     return 'Pendência';
   };
   
@@ -1373,6 +1377,71 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle, onDispensarDados }
 
             {/* Card de Baixa de Expansão (DD) */}
             {isExpansaoBaixa && detalhes && <ExpansaoBaixaCard detalhes={detalhes as ExpansaoBaixaDetalhes} />}
+
+            {/* Card de Cadastro Pendente (informativo) */}
+            {isCadastroPendente && detalhes && (() => {
+              const d = detalhes as CadastroPendenteDetalhes;
+              return (
+                <Card className="bg-background/50 border-sky-300 dark:border-sky-700">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center gap-3 p-3 bg-sky-50 dark:bg-sky-950/20 rounded-lg border border-sky-200 dark:border-sky-800">
+                      <span className="text-2xl">👤</span>
+                      <div className="flex-1">
+                        <p className="font-semibold text-sky-700 dark:text-sky-300 text-sm">
+                          Cadastro aguardando aprovação
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Status: {d.profile_status === 'Analise' ? 'Em análise' : 'Pendente'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 text-sm">
+                      {d.name && (
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Nome:</span>
+                          <span className="font-medium">{d.name}</span>
+                        </div>
+                      )}
+                      {d.cargo && (
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Cargo:</span>
+                          <span className="font-medium">{d.cargo}{d.grau ? ` (Grau ${d.grau})` : ''}</span>
+                        </div>
+                      )}
+                      {(d.divisao || d.regional) && (
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Divisão/Regional:</span>
+                          <span className="font-medium">{d.divisao || d.regional}</span>
+                        </div>
+                      )}
+                      {d.created_at && (
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Solicitado em:</span>
+                          <span className="font-medium">
+                            {format(new Date(d.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => navigate('/admin')}
+                    >
+                      <ArrowRight className="h-4 w-4 mr-2" />
+                      Ir para aprovação de cadastros
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })()}
 
 
 

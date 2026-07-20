@@ -132,6 +132,18 @@ interface DadosDesatualizadosDetalhes {
   dias_desde_atualizacao: number | null;
 }
 
+interface CadastroPendenteDetalhes {
+  profile_id: string;
+  name: string | null;
+  nome_colete: string | null;
+  profile_status: 'Pendente' | 'Analise';
+  divisao: string | null;
+  regional: string | null;
+  cargo: string | null;
+  grau: string | null;
+  created_at: string | null;
+}
+
 interface ExpansaoBaixaDetalhes {
   candidato_id: string;
   nome_completo: string | null;
@@ -148,14 +160,14 @@ interface ExpansaoBaixaDetalhes {
 interface Pendencia {
   nome_colete: string;
   divisao_texto: string;
-  tipo: 'mensalidade' | 'afastamento' | 'delta' | 'evento_cancelado' | 'treinamento_aprovador' | 'treinamento_integrante' | 'estagio_aprovador' | 'estagio_integrante' | 'ajuste_roles' | 'desligamento_compulsorio' | 'dados_desatualizados' | 'flyer_pendente' | 'expansao_baixa';
+  tipo: 'mensalidade' | 'afastamento' | 'delta' | 'evento_cancelado' | 'treinamento_aprovador' | 'treinamento_integrante' | 'estagio_aprovador' | 'estagio_integrante' | 'ajuste_roles' | 'desligamento_compulsorio' | 'dados_desatualizados' | 'flyer_pendente' | 'expansao_baixa' | 'cadastro_pendente';
   detalhe: string;
   data_ref: string;
   registro_id: number;
-  detalhes_completos: MensalidadeDetalhes | AfastamentoDetalhes | DeltaDetalhes | EventoCanceladoDetalhes | TreinamentoAprovadorDetalhes | TreinamentoIntegranteDetalhes | EstagioAprovadorDetalhes | EstagioIntegranteDetalhes | AjusteRolesDetalhes | DesligamentoCompulsorioDetalhes | DadosDesatualizadosDetalhes | FlyerPendenteDetalhes | ExpansaoBaixaDetalhes;
+  detalhes_completos: MensalidadeDetalhes | AfastamentoDetalhes | DeltaDetalhes | EventoCanceladoDetalhes | TreinamentoAprovadorDetalhes | TreinamentoIntegranteDetalhes | EstagioAprovadorDetalhes | EstagioIntegranteDetalhes | AjusteRolesDetalhes | DesligamentoCompulsorioDetalhes | DadosDesatualizadosDetalhes | FlyerPendenteDetalhes | ExpansaoBaixaDetalhes | CadastroPendenteDetalhes;
 }
 
-export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes, FlyerPendenteDetalhes, ExpansaoBaixaDetalhes };
+export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes, FlyerPendenteDetalhes, ExpansaoBaixaDetalhes, CadastroPendenteDetalhes };
 
 export const usePendencias = (
   userId: string | undefined,
@@ -182,7 +194,7 @@ export const usePendencias = (
   // Cache de 5 minutos (ao invés de diário)
   const getCacheKey = () => {
     const cacheTime = Math.floor(Date.now() / (5 * 60 * 1000)); // 5 minutos
-      return `pendencias_v8_${userId}_${userRole}_${regionalId || 'no_reg'}_${divisaoId || 'no_div'}_${registroId || 'all'}_${cacheTime}`;
+      return `pendencias_v9_${userId}_${userRole}_${regionalId || 'no_reg'}_${divisaoId || 'no_div'}_${registroId || 'all'}_${cacheTime}`;
   };
 
   useEffect(() => {
@@ -217,7 +229,7 @@ export const usePendencias = (
 
     // Limpar caches antigos (versões anteriores a v8)
     Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('pendencias_') && !key.includes('_v8_')) {
+      if (key.startsWith('pendencias_') && !key.includes('_v9_')) {
         console.log('[usePendencias] Removendo cache antigo:', key);
         localStorage.removeItem(key);
       }
@@ -1102,6 +1114,53 @@ export const usePendencias = (
 
         console.log('[usePendencias] Pendências de ajuste de roles encontradas:', 
           todasPendencias.filter(p => p.tipo === 'ajuste_roles').length);
+      }
+
+      // 7. Cadastros pendentes de aprovação (perfis Pendente/Analise)
+      // Visível para admin, diretor_regional, adm_regional (mapeados aqui como 'admin' ou 'regional')
+      if (userRole === 'admin' || userRole === 'regional' || userRole === 'diretor_regional') {
+        console.log('[usePendencias] Buscando cadastros pendentes de aprovação...');
+
+        let queryCadastros = supabase
+          .from('profiles')
+          .select('id, name, nome_colete, profile_status, cargo, grau, created_at, regional_id, divisao_id, regionais:regional_id(nome), divisoes:divisao_id(nome)')
+          .in('profile_status', ['Pendente', 'Analise']);
+
+        if (regionalId) {
+          queryCadastros = queryCadastros.eq('regional_id', regionalId);
+        }
+
+        const { data: cadastros, error: errorCadastros } = await queryCadastros;
+
+        if (errorCadastros) {
+          console.error('[usePendencias] Erro ao buscar cadastros pendentes:', errorCadastros);
+        } else if (cadastros) {
+          for (const c of cadastros) {
+            const divisaoNome = (c.divisoes as any)?.nome || '';
+            const regionalNome = (c.regionais as any)?.nome || '';
+            const statusLabel = c.profile_status === 'Analise' ? 'Em análise' : 'Pendente';
+            todasPendencias.push({
+              registro_id: 0,
+              nome_colete: c.nome_colete || c.name || 'Sem nome',
+              divisao_texto: divisaoNome || regionalNome || 'Sem divisão',
+              tipo: 'cadastro_pendente',
+              detalhe: `👤 Cadastro aguardando aprovação (${statusLabel})`,
+              data_ref: c.created_at || new Date().toISOString(),
+              detalhes_completos: {
+                profile_id: c.id,
+                name: c.name,
+                nome_colete: c.nome_colete,
+                profile_status: c.profile_status as 'Pendente' | 'Analise',
+                divisao: divisaoNome,
+                regional: regionalNome,
+                cargo: c.cargo,
+                grau: c.grau,
+                created_at: c.created_at,
+              } as CadastroPendenteDetalhes,
+            });
+          }
+          console.log('[usePendencias] Cadastros pendentes encontrados:', cadastros.length);
+        }
       }
 
       if (aplicaEscopoRegional && nomesDivisoesRegional.length > 0) {
