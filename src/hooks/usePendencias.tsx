@@ -1000,6 +1000,61 @@ export const usePendencias = (
         }
       }
 
+      // 5.2.b Estágios com data de término prevista já vencida (URGENTE)
+      // Visível para admin, adm_regional, diretor_regional (via userRole 'admin'|'regional')
+      // filtrado pela regional do usuário. Alerta pesado para não deixar passar.
+      if (userRole === 'admin' || userRole === 'regional' || userRole === 'diretor_regional') {
+        const hojeStr = new Date().toISOString().split('T')[0];
+        let queryVencidos = supabase
+          .from('solicitacoes_estagio')
+          .select(`
+            id, grau_estagio, data_termino_previsto, status_flyer,
+            divisao_id, regional_id,
+            integrantes_portal!solicitacoes_estagio_integrante_id_fkey(nome_colete, divisao_texto),
+            cargos!solicitacoes_estagio_cargo_estagio_id_fkey(nome)
+          `)
+          .eq('status', 'Em Estagio')
+          .lt('data_termino_previsto', hojeStr)
+          .neq('status_flyer', 'concluido');
+
+        if (regionalId) {
+          queryVencidos = queryVencidos.eq('regional_id', regionalId);
+        }
+
+        const { data: estagiosVencidos, error: vencidosErr } = await queryVencidos;
+        if (!vencidosErr && estagiosVencidos) {
+          for (const sol of estagiosVencidos) {
+            const integrante = sol.integrantes_portal as any;
+            const cargoEstagio = sol.cargos as any;
+            const termino = sol.data_termino_previsto as string;
+            const diasVencido = Math.floor(
+              (new Date().getTime() - new Date(termino).getTime()) / (1000 * 60 * 60 * 24)
+            );
+            todasPendencias.push({
+              registro_id: 0,
+              nome_colete: integrante?.nome_colete || 'N/A',
+              divisao_texto: integrante?.divisao_texto || '',
+              tipo: 'estagio_vencido',
+              detalhe: `🚨 Estágio vencido há ${diasVencido} dia(s) — solicitar flyer de encerramento`,
+              data_ref: termino,
+              detalhes_completos: {
+                solicitacao_id: sol.id,
+                integrante_nome_colete: integrante?.nome_colete || 'N/A',
+                cargo_estagio_nome: cargoEstagio?.nome || 'N/A',
+                grau_estagio: sol.grau_estagio,
+                divisao_texto: integrante?.divisao_texto || '',
+                data_termino_previsto: termino,
+                dias_vencido: diasVencido,
+                status_flyer: sol.status_flyer || 'pendente',
+              } as EstagioVencidoDetalhes,
+            });
+          }
+          console.log('[usePendencias] Estágios vencidos encontrados:', estagiosVencidos.length);
+        }
+      }
+
+
+
       // 5.3 Expansão: candidatos enviados ao DD aguardando baixa
       // O Diretor de Divisão TITULAR dá baixa pela própria modal, sem acessar a tela de Expansão.
       // IMPORTANTE: só o Diretor TITULAR da divisão vê esta pendência — nem o Sub Diretor,
