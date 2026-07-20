@@ -160,9 +160,15 @@ export function useEncerramentoEstagio(userId: string | undefined) {
           regional_id,
           integrante:integrantes_portal!solicitacoes_estagio_integrante_id_fkey(
             nome_colete,
+            registro_id,
             divisao_texto,
             regional_texto,
-            cargo_grau_texto
+            cargo_grau_texto,
+            profile_id,
+            profile:profiles!integrantes_portal_profile_id_fkey(
+              email,
+              telefone
+            )
           ),
           cargo_estagio:cargos!solicitacoes_estagio_cargo_estagio_id_fkey(
             nome
@@ -186,18 +192,29 @@ export function useEncerramentoEstagio(userId: string | undefined) {
       }
 
       const mapped: EstagioEncerramento[] = (solicitacoes || []).map(s => {
-        const integrante = s.integrante as { nome_colete: string; divisao_texto: string; regional_texto: string; cargo_grau_texto: string } | null;
+        const integrante = s.integrante as {
+          nome_colete: string;
+          registro_id: string | null;
+          divisao_texto: string;
+          regional_texto: string;
+          cargo_grau_texto: string;
+          profile?: { email: string | null; telefone: string | null } | null;
+        } | null;
         const cargo = s.cargo_estagio as { nome: string } | null;
-        
+
         return {
           id: s.id,
           status: s.status || '',
           integrante_id: s.integrante_id,
+          integrante_registro_id: integrante?.registro_id || null,
+          integrante_email: integrante?.profile?.email || null,
+          integrante_telefone: integrante?.profile?.telefone || null,
           integrante_nome_colete: integrante?.nome_colete || '',
           integrante_divisao_texto: integrante?.divisao_texto || '',
           integrante_regional_texto: integrante?.regional_texto || '',
           integrante_cargo_atual: integrante?.cargo_grau_texto || '',
           cargo_estagio_id: s.cargo_estagio_id,
+
           cargo_estagio_nome: cargo?.nome || '',
           grau_estagio: s.grau_estagio || '',
           data_inicio_estagio: s.data_inicio_estagio,
