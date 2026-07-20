@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, User, Building2, MapPin, Briefcase, GraduationCap, Calendar, Clock, XCircle, CheckCircle } from 'lucide-react';
+import { Loader2, User, Building2, MapPin, Briefcase, GraduationCap, Calendar, Clock, XCircle, CheckCircle, Hash, Mail, Phone } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useEncerramentoEstagio, EstagioEncerramento } from '@/hooks/useEncerramentoEstagio';
@@ -197,7 +197,38 @@ export function EncerramentoEstagio({ userId, readOnly = false }: EncerramentoEs
                 <span>Cargo Atual:</span>
                 <span className="text-foreground">{e.integrante_cargo_atual}</span>
               </div>
-            </div>
+              {e.integrante_registro_id != null && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Hash className="h-4 w-4 shrink-0" />
+                  <span>ID:</span>
+                  <span className="text-foreground font-mono">{e.integrante_registro_id}</span>
+                </div>
+              )}
+              {e.integrante_email && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Mail className="h-4 w-4 shrink-0" />
+                  <span>E-mail:</span>
+                  <a
+                    href={`mailto:${e.integrante_email}`}
+                    className="text-foreground hover:underline break-all"
+                  >
+                    {e.integrante_email}
+                  </a>
+                </div>
+              )}
+              {e.integrante_telefone && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Phone className="h-4 w-4 shrink-0" />
+                  <span>Telefone:</span>
+                  <a
+                    href={`tel:${e.integrante_telefone}`}
+                    className="text-foreground hover:underline"
+                  >
+                    {e.integrante_telefone}
+                  </a>
+                </div>
+              )}
+
 
             {/* Dados do Estágio */}
             {e.status === 'Em Estagio' && (
