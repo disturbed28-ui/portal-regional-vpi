@@ -40,7 +40,7 @@ import {
   Phone,
   XCircle
 } from "lucide-react";
-import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes, FlyerPendenteDetalhes, ExpansaoBaixaDetalhes, CadastroPendenteDetalhes } from "@/hooks/usePendencias";
+import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes, FlyerPendenteDetalhes, EstagioVencidoDetalhes, ExpansaoBaixaDetalhes, CadastroPendenteDetalhes } from "@/hooks/usePendencias";
 
 interface PendenciasModalProps {
   pendencias: Pendencia[];
@@ -1143,6 +1143,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle, onDispensarDados }
   const isDesligamento = pendencia.tipo === 'desligamento_compulsorio';
   const isDadosDesatualizados = pendencia.tipo === 'dados_desatualizados';
   const isFlyerPendente = pendencia.tipo === 'flyer_pendente';
+  const isEstagioVencido = pendencia.tipo === 'estagio_vencido';
   const isExpansaoBaixa = pendencia.tipo === 'expansao_baixa';
   const isCadastroPendente = pendencia.tipo === 'cadastro_pendente';
   const detalhes = pendencia.detalhes_completos;
@@ -1164,6 +1165,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle, onDispensarDados }
   const isCritico = isMensalidade && maiorAtrasoMensalidade >= 80;
   
   const getBorderColor = () => {
+    if (isEstagioVencido) return 'border-red-700 ring-2 ring-red-500';
     if (isDesligamento) return 'border-red-700';
     if (isDadosDesatualizados) return 'border-amber-500';
     if (isAjusteRoles) return 'border-emerald-500';
@@ -1188,6 +1190,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle, onDispensarDados }
   };
   
   const getIcon = () => {
+    if (isEstagioVencido) return '🚨';
     if (isDesligamento) return '🚫';
     if (isDadosDesatualizados) return '📊';
     if (isAjusteRoles) return '🔐';
@@ -1218,6 +1221,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle, onDispensarDados }
   };
   
   const getLabel = () => {
+    if (isEstagioVencido) return 'ESTÁGIO VENCIDO';
     if (isDesligamento) return 'DESLIGAMENTO';
     if (isDadosDesatualizados) return 'Dados Desatualizados';
     if (isAjusteRoles) return 'Ajuste Permissões';
