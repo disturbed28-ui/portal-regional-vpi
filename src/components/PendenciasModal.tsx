@@ -1271,8 +1271,8 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle, onDispensarDados }
             {/* Linha 2: Badge + Detalhe */}
             <div className="flex items-center gap-2 flex-wrap">
               <Badge 
-                variant={isDesligamento || isMensalidade ? 'destructive' : isDelta ? 'default' : 'secondary'}
-                className={`text-xs ${isDesligamento ? 'animate-pulse' : ''}`}
+                variant={isEstagioVencido || isDesligamento || isMensalidade ? 'destructive' : isDelta ? 'default' : 'secondary'}
+                className={`text-xs ${isEstagioVencido || isDesligamento ? 'animate-pulse' : ''}`}
               >
                 {getIcon()} {getLabel()}
               </Badge>
@@ -1298,8 +1298,8 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle, onDispensarDados }
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Badge 
-                  variant={isDesligamento || isMensalidade ? 'destructive' : isDelta ? 'default' : 'secondary'}
-                  className={`text-xs truncate ${isDesligamento ? 'animate-pulse' : ''}`}
+                  variant={isEstagioVencido || isDesligamento || isMensalidade ? 'destructive' : isDelta ? 'default' : 'secondary'}
+                  className={`text-xs truncate ${isEstagioVencido || isDesligamento ? 'animate-pulse' : ''}`}
                 >
                   {getIcon()} {getLabel()}
                 </Badge>
@@ -1354,6 +1354,33 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle, onDispensarDados }
             {isEstagioIntegrante && detalhes && <EstagioIntegranteDetalhesCard detalhes={detalhes as EstagioIntegranteDetalhes} />}
             
             {/* Card de Flyer Pendente */}
+            {isEstagioVencido && detalhes && (() => {
+              const d = detalhes as EstagioVencidoDetalhes;
+              return (
+                <Card className="bg-red-50 dark:bg-red-950/30 border-red-500 border-2 ring-2 ring-red-400 animate-pulse">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center gap-3 p-3 bg-red-100 dark:bg-red-900/40 rounded-lg border border-red-400">
+                      <span className="text-3xl">🚨</span>
+                      <div className="flex-1">
+                        <p className="font-bold text-red-800 dark:text-red-200 text-sm uppercase tracking-wide">
+                          Estágio vencido há {d.dias_vencido} dia(s)
+                        </p>
+                        <p className="text-xs text-red-700 dark:text-red-300 mt-1 font-medium">
+                          ⚠️ Solicitar flyer de encerramento no portal dos Insanos MC
+                        </p>
+                      </div>
+                    </div>
+                    <div className="space-y-1 text-sm">
+                      <p><span className="font-semibold">Cargo:</span> {d.cargo_estagio_nome} (Grau {d.grau_estagio})</p>
+                      <p><span className="font-semibold">Divisão:</span> {d.divisao_texto}</p>
+                      <p><span className="font-semibold">Término previsto:</span> {format(new Date(d.data_termino_previsto), 'dd/MM/yyyy', { locale: ptBR })}</p>
+                      <p><span className="font-semibold">Status do flyer:</span> {d.status_flyer === 'pendente' ? 'Aguardando solicitação' : d.status_flyer === 'solicitado' ? 'Solicitado, aguardando conclusão' : d.status_flyer}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
+
             {isFlyerPendente && detalhes && (() => {
               const d = detalhes as FlyerPendenteDetalhes;
               return (
