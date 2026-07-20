@@ -6,6 +6,9 @@ export interface EstagioEncerramento {
   id: string; // solicitacao_id
   status: string;
   integrante_id: string;
+  integrante_registro_id: string | null;
+  integrante_email: string | null;
+  integrante_telefone: string | null;
   integrante_nome_colete: string;
   integrante_divisao_texto: string;
   integrante_regional_texto: string;
@@ -17,6 +20,7 @@ export interface EstagioEncerramento {
   tempo_estagio_meses: number;
   data_termino_previsto: string | null;
 }
+
 
 interface EncerrarParams {
   solicitacaoId: string;
