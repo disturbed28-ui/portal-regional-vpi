@@ -642,106 +642,100 @@ function adicionarBlocoAcoesSociais(wsData: any[][], dados: DadosRelatorio, row:
   return row;
 }
 
-// Bloco 12: Batedores
+// Bloco 12: Batedores (com nomes por divisão)
 function adicionarBlocoBatedores(wsData: any[][], dados: DadosRelatorio, row: number): number {
   wsData[row++] = ['BATEDORES'];
-  wsData[row++] = ['Divisão', 'Quantidade'];
-  
-  let total = 0;
-  
+  wsData[row++] = ['Divisão', 'Nomes', 'Subtotal'];
+
+  let totalGeral = 0;
+
   dados.divisoes.forEach(div => {
-    // Normalizar nome da divisão para buscar dados ativos
     const nomeAscii = dados.mapNomeParaNomeAscii.get(div.divisao_nome) || div.divisao_nome.toUpperCase();
     const chaveAtivos = nomeAscii.toUpperCase();
-    
-    // Buscar de integrantes ativos usando chave normalizada
-    const stats = dados.dados_integrantes_ativos[chaveAtivos] || { batedores: 0 };
-    const qtd = stats.batedores;
-    
-    wsData[row++] = [div.divisao_nome, qtd];
-    total += qtd;
+    const stats = dados.dados_integrantes_ativos[chaveAtivos];
+    const nomes = stats?.nomes_batedores || [];
+
+    wsData[row++] = [div.divisao_nome, nomes.length === 0 ? '-' : nomes.join(', '), nomes.length];
+    totalGeral += nomes.length;
   });
-  
-  wsData[row++] = ['TOTAL', total];
+
+  wsData[row++] = ['TOTAL GERAL', '', totalGeral];
   wsData[row++] = [];
   return row;
 }
 
-// Bloco 13: Caveiras
+// Bloco 13: Caveiras (com nomes de titulares e suplentes por divisão)
 function adicionarBlocoCaveiras(wsData: any[][], dados: DadosRelatorio, row: number): number {
   wsData[row++] = ['CAVEIRAS'];
-  wsData[row++] = ['Divisão', 'Caveiras', 'Suplentes'];
+  wsData[row++] = ['Divisão', 'Nomes Titulares', 'Titulares', 'Nomes Suplentes', 'Suplentes'];
   
   let totalCaveiras = 0;
   let totalSuplentes = 0;
   
   dados.divisoes.forEach(div => {
-    // Normalizar nome da divisão para buscar dados ativos
     const nomeAscii = dados.mapNomeParaNomeAscii.get(div.divisao_nome) || div.divisao_nome.toUpperCase();
     const chaveAtivos = nomeAscii.toUpperCase();
+    const stats = dados.dados_integrantes_ativos[chaveAtivos];
+    const nomesTit = stats?.nomes_caveiras || [];
+    const nomesSup = stats?.nomes_caveiras_suplentes || [];
     
-    // Buscar de integrantes ativos usando chave normalizada
-    const stats = dados.dados_integrantes_ativos[chaveAtivos] || { 
-      caveiras: 0, caveiras_suplentes: 0 
-    };
+    wsData[row++] = [
+      div.divisao_nome,
+      nomesTit.length === 0 ? '-' : nomesTit.join(', '),
+      nomesTit.length,
+      nomesSup.length === 0 ? '-' : nomesSup.join(', '),
+      nomesSup.length,
+    ];
     
-    wsData[row++] = [div.divisao_nome, stats.caveiras, stats.caveiras_suplentes];
-    
-    totalCaveiras += stats.caveiras;
-    totalSuplentes += stats.caveiras_suplentes;
+    totalCaveiras += nomesTit.length;
+    totalSuplentes += nomesSup.length;
   });
   
-  wsData[row++] = ['TOTAL', totalCaveiras, totalSuplentes];
+  wsData[row++] = ['TOTAL', '', totalCaveiras, '', totalSuplentes];
   wsData[row++] = [];
   return row;
 }
 
-// Bloco 14: Sgt Armas
+// Bloco 14: Sgt Armas (com nomes por divisão)
 function adicionarBlocoSgtArmas(wsData: any[][], dados: DadosRelatorio, row: number): number {
   wsData[row++] = ['SGT ARMAS'];
-  wsData[row++] = ['Divisão', 'Quantidade'];
-  
-  let total = 0;
-  
+  wsData[row++] = ['Divisão', 'Nomes', 'Subtotal'];
+
+  let totalGeral = 0;
+
   dados.divisoes.forEach(div => {
-    // Normalizar nome da divisão para buscar dados ativos
     const nomeAscii = dados.mapNomeParaNomeAscii.get(div.divisao_nome) || div.divisao_nome.toUpperCase();
     const chaveAtivos = nomeAscii.toUpperCase();
-    
-    // Buscar de integrantes ativos usando chave normalizada
-    const stats = dados.dados_integrantes_ativos[chaveAtivos] || { sgt_armas: 0 };
-    const qtd = stats.sgt_armas;
-    
-    wsData[row++] = [div.divisao_nome, qtd];
-    total += qtd;
+    const stats = dados.dados_integrantes_ativos[chaveAtivos];
+    const nomes = stats?.nomes_sgt_armas || [];
+
+    wsData[row++] = [div.divisao_nome, nomes.length === 0 ? '-' : nomes.join(', '), nomes.length];
+    totalGeral += nomes.length;
   });
-  
-  wsData[row++] = ['TOTAL', total];
+
+  wsData[row++] = ['TOTAL GERAL', '', totalGeral];
   wsData[row++] = [];
   return row;
 }
 
-// Bloco 15: Combate Insano
+// Bloco 15: Combate Insano (com nomes por divisão)
 function adicionarBlocoCombateInsano(wsData: any[][], dados: DadosRelatorio, row: number): number {
   wsData[row++] = ['COMBATE INSANO'];
-  wsData[row++] = ['Divisão', 'Quantidade'];
-  
-  let total = 0;
-  
+  wsData[row++] = ['Divisão', 'Nomes', 'Subtotal'];
+
+  let totalGeral = 0;
+
   dados.divisoes.forEach(div => {
-    // Normalizar nome da divisão para buscar dados ativos
     const nomeAscii = dados.mapNomeParaNomeAscii.get(div.divisao_nome) || div.divisao_nome.toUpperCase();
     const chaveAtivos = nomeAscii.toUpperCase();
-    
-    // Buscar de integrantes ativos usando chave normalizada
-    const stats = dados.dados_integrantes_ativos[chaveAtivos] || { combate_insano: 0 };
-    const qtd = stats.combate_insano;
-    
-    wsData[row++] = [div.divisao_nome, qtd];
-    total += qtd;
+    const stats = dados.dados_integrantes_ativos[chaveAtivos];
+    const nomes = stats?.nomes_combate_insano || [];
+
+    wsData[row++] = [div.divisao_nome, nomes.length === 0 ? '-' : nomes.join(', '), nomes.length];
+    totalGeral += nomes.length;
   });
-  
-  wsData[row++] = ['TOTAL', total];
+
+  wsData[row++] = ['TOTAL GERAL', '', totalGeral];
   wsData[row++] = [];
   return row;
 }
