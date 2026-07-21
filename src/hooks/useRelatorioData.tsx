@@ -218,7 +218,16 @@ export const useRelatorioData = (regionalTexto?: string) => {
             batedores: 0,
             caveiras: 0,
             caveiras_suplentes: 0,
+            lobos: 0,
+            ursinhos: 0,
             devedores: 0,
+            nomes_sgt_armas: [],
+            nomes_combate_insano: [],
+            nomes_batedores: [],
+            nomes_caveiras: [],
+            nomes_caveiras_suplentes: [],
+            nomes_lobos: [],
+            nomes_ursinhos: [],
           });
         }
 
