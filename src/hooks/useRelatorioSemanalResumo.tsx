@@ -317,6 +317,8 @@ export const useRelatorioSemanalResumo = (regionalId: string, ano?: number, mes?
           batedores: acc.batedores + div.batedores,
           caveiras: acc.caveiras + div.caveiras,
           caveiras_suplentes: acc.caveiras_suplentes + div.caveiras_suplentes,
+          lobos: acc.lobos + div.lobos,
+          ursinhos: acc.ursinhos + div.ursinhos,
           devedores: acc.devedores + div.devedores,
         }),
         {
@@ -333,6 +335,8 @@ export const useRelatorioSemanalResumo = (regionalId: string, ano?: number, mes?
           batedores: 0,
           caveiras: 0,
           caveiras_suplentes: 0,
+          lobos: 0,
+          ursinhos: 0,
           devedores: 0,
         }
       );
