@@ -235,6 +235,7 @@ async function fetchDadosRelatorio(
         lobos: 0, ursinhos: 0,
         nomes_caveiras: [], nomes_caveiras_suplentes: [],
         nomes_lobos: [], nomes_ursinhos: [],
+        nomes_batedores: [], nomes_sgt_armas: [], nomes_combate_insano: [],
       };
     }
     
@@ -248,9 +249,9 @@ async function fetchDadosRelatorio(
     else stats.sem_veiculo++;
     
     // Times especiais
-    if (integrante.sgt_armas) stats.sgt_armas++;
-    if (integrante.combate_insano) stats.combate_insano++;
-    if (integrante.batedor) stats.batedores++;
+    if (integrante.sgt_armas) { stats.sgt_armas++; stats.nomes_sgt_armas.push(integrante.nome_colete); }
+    if (integrante.combate_insano) { stats.combate_insano++; stats.nomes_combate_insano.push(integrante.nome_colete); }
+    if (integrante.batedor) { stats.batedores++; stats.nomes_batedores.push(integrante.nome_colete); }
     if (integrante.caveira) { stats.caveiras++; stats.nomes_caveiras.push(integrante.nome_colete); }
     if (integrante.caveira_suplente) { stats.caveiras_suplentes++; stats.nomes_caveiras_suplentes.push(integrante.nome_colete); }
     if (integrante.lobo) { stats.lobos++; stats.nomes_lobos.push(integrante.nome_colete); }
