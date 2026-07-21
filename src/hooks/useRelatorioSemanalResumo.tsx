@@ -139,7 +139,16 @@ export const useRelatorioSemanalResumo = (regionalId: string, ano?: number, mes?
             batedores: 0,
             caveiras: 0,
             caveiras_suplentes: 0,
+            lobos: 0,
+            ursinhos: 0,
             devedores: 0,
+            nomes_sgt_armas: [],
+            nomes_combate_insano: [],
+            nomes_batedores: [],
+            nomes_caveiras: [],
+            nomes_caveiras_suplentes: [],
+            nomes_lobos: [],
+            nomes_ursinhos: [],
           });
         }
 
@@ -156,11 +165,14 @@ export const useRelatorioSemanalResumo = (regionalId: string, ano?: number, mes?
         }
 
         // Times especiais
-        if (integrante.sgt_armas) divisaoData.sgt_armas++;
-        if (integrante.combate_insano) divisaoData.combate_insano++;
-        if (integrante.batedor) divisaoData.batedores++;
-        if (integrante.caveira) divisaoData.caveiras++;
-        if (integrante.caveira_suplente) divisaoData.caveiras_suplentes++;
+        const nome = integrante.nome_colete || '';
+        if (integrante.sgt_armas) { divisaoData.sgt_armas++; divisaoData.nomes_sgt_armas.push(nome); }
+        if (integrante.combate_insano) { divisaoData.combate_insano++; divisaoData.nomes_combate_insano.push(nome); }
+        if (integrante.batedor) { divisaoData.batedores++; divisaoData.nomes_batedores.push(nome); }
+        if (integrante.caveira) { divisaoData.caveiras++; divisaoData.nomes_caveiras.push(nome); }
+        if (integrante.caveira_suplente) { divisaoData.caveiras_suplentes++; divisaoData.nomes_caveiras_suplentes.push(nome); }
+        if (integrante.lobo) { divisaoData.lobos++; divisaoData.nomes_lobos.push(nome); }
+        if (integrante.ursinho) { divisaoData.ursinhos++; divisaoData.nomes_ursinhos.push(nome); }
       });
 
       // Mapear entradas/saídas dos relatórios semanais por divisão
@@ -221,7 +233,16 @@ export const useRelatorioSemanalResumo = (regionalId: string, ano?: number, mes?
             batedores: 0,
             caveiras: 0,
             caveiras_suplentes: 0,
+            lobos: 0,
+            ursinhos: 0,
             devedores: 0,
+            nomes_sgt_armas: [],
+            nomes_combate_insano: [],
+            nomes_batedores: [],
+            nomes_caveiras: [],
+            nomes_caveiras_suplentes: [],
+            nomes_lobos: [],
+            nomes_ursinhos: [],
           });
         }
 
@@ -296,6 +317,8 @@ export const useRelatorioSemanalResumo = (regionalId: string, ano?: number, mes?
           batedores: acc.batedores + div.batedores,
           caveiras: acc.caveiras + div.caveiras,
           caveiras_suplentes: acc.caveiras_suplentes + div.caveiras_suplentes,
+          lobos: acc.lobos + div.lobos,
+          ursinhos: acc.ursinhos + div.ursinhos,
           devedores: acc.devedores + div.devedores,
         }),
         {
@@ -312,6 +335,8 @@ export const useRelatorioSemanalResumo = (regionalId: string, ano?: number, mes?
           batedores: 0,
           caveiras: 0,
           caveiras_suplentes: 0,
+          lobos: 0,
+          ursinhos: 0,
           devedores: 0,
         }
       );
