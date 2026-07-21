@@ -43,6 +43,9 @@ interface DadosIntegrantesAtivos {
     nomes_caveiras_suplentes: string[];
     nomes_lobos: string[];
     nomes_ursinhos: string[];
+    nomes_batedores: string[];
+    nomes_sgt_armas: string[];
+    nomes_combate_insano: string[];
   };
 }
 
