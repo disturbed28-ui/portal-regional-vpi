@@ -16,7 +16,16 @@ export interface DivisaoRelatorio {
   batedores: number;
   caveiras: number;
   caveiras_suplentes: number;
+  lobos: number;
+  ursinhos: number;
   devedores: number;
+  nomes_sgt_armas: string[];
+  nomes_combate_insano: string[];
+  nomes_batedores: string[];
+  nomes_caveiras: string[];
+  nomes_caveiras_suplentes: string[];
+  nomes_lobos: string[];
+  nomes_ursinhos: string[];
 }
 
 export interface TotaisRelatorio {
@@ -33,6 +42,8 @@ export interface TotaisRelatorio {
   batedores: number;
   caveiras: number;
   caveiras_suplentes: number;
+  lobos: number;
+  ursinhos: number;
   devedores: number;
 }
 
