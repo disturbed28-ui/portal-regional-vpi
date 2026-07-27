@@ -230,7 +230,17 @@ export const AgendasGestaoTab = ({ readOnly = false }: Props) => {
                     {a.calendar_id}
                   </p>
                 </div>
-                {!readOnly && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-2 text-[#25D366] border-[#25D366]/40 hover:bg-[#25D366]/10"
+                    onClick={() => compartilharWhatsApp(a.nome, a.calendar_id)}
+                  >
+                    <Share2 className="h-4 w-4" />
+                    Compartilhar
+                  </Button>
+                  {!readOnly && (
                   <div className="flex items-center gap-2">
                     <div className="flex items-center gap-2 text-xs">
                       <span>Ativa</span>
