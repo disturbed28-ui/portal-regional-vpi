@@ -553,10 +553,12 @@ function buildNormalizedTitle(components: ParsedEvent): string {
     parts.push(components.divisao);
   }
   
-  // Informações extras
+  // Informações extras (abreviadas para não estourar o layout)
   if (components.informacoesExtras) {
-    parts.push(components.informacoesExtras);
+    const extras = abreviarExtras(components.informacoesExtras);
+    if (extras) parts.push(extras);
   }
+
   
   let innerTitle = parts.join(' - ');
   
