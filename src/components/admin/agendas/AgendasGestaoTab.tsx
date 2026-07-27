@@ -260,7 +260,8 @@ export const AgendasGestaoTab = ({ readOnly = false }: Props) => {
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
-                )}
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent className="pt-0 space-y-2">
