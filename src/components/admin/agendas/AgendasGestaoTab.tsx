@@ -11,7 +11,23 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, CalendarDays, Info } from "lucide-react";
+import { Plus, Pencil, Trash2, CalendarDays, Info, Share2 } from "lucide-react";
+
+/** Link público do Google Agenda a partir do ID do calendário. */
+const buildCalendarLink = (calendarId: string) =>
+  `https://calendar.google.com/calendar/u/0?cid=${btoa(calendarId.trim())}`;
+
+const compartilharWhatsApp = (nome: string, calendarId: string) => {
+  const link = buildCalendarLink(calendarId);
+  const texto = `📅 Agenda: ${nome}\n\nAcesse/assine pelo Google Agenda:\n${link}`;
+  const a = document.createElement("a");
+  a.href = `https://wa.me/?text=${encodeURIComponent(texto)}`;
+  a.target = "_blank";
+  a.rel = "noopener,noreferrer";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+};
 
 interface AgendaCalendar {
   id: string;
