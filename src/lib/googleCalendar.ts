@@ -275,17 +275,24 @@ function extrairInformacoesExtras(
     if (nomeLimpo && texto.includes(nomeLimpo)) {
       texto = texto.replace(nomeLimpo, ' ');
     }
-    // Apelidos - remover somente a PRIMEIRA ocorrência de cada apelido pertencente à divisão
+    // Apelidos - remover somente a PRIMEIRA ocorrência de cada apelido pertencente à divisão.
+    // Direções genéricas (NORTE/SUL/...) só são removidas se nenhum apelido específico casou,
+    // para não apagar o nome de outra divisão citada no complemento.
+    const GENERICOS = new Set(['CENTRO', 'NORTE', 'SUL', 'LESTE', 'OESTE']);
+    let casouEspecifico = false;
     for (const alias of ALIASES_DIVISAO) {
       if (!nomeLimpo.includes(alias.chave)) continue;
+      if (GENERICOS.has(alias.chave) && casouEspecifico) continue;
       for (const padrao of alias.padroes) {
         const re = new RegExp(padrao.source, 'i'); // sem 'g' => só a 1ª ocorrência
         if (re.test(texto)) {
           texto = texto.replace(re, ' ');
+          if (!GENERICOS.has(alias.chave)) casouEspecifico = true;
           break;
         }
       }
     }
+
     // "DIVISAO"/"DIV" solto sobrando nas bordas do trecho removido
     texto = texto.replace(/^\s*DIVISAO\b/, ' ').replace(/^\s*DIV\.?\b/, ' ');
     texto = texto.replace(/\bDIVISAO\s{2,}/, ' ').replace(/\bDIV\.?\s{2,}/, ' ');
