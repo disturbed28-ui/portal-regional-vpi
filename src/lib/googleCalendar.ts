@@ -212,6 +212,159 @@ function detectRegionalSiglaFromTitle(title: string): string | null {
   return null;
 }
 
+// ===== Extração e abreviação do complemento do título =====
+
+// Padrões do tipo de evento que devem sair do texto residual
+const TIPO_REGEX: Record<string, RegExp[]> = {
+  'PUB': [/\bPUBS?\b/g],
+  'Acao Social': [/\bACAO\s+SOCIAL\b/g, /\bACOES\s+SOCIAIS\b/g, /\bARRECADACAO\b/g],
+  'Reuniao': [/\bREUNIAO\b/g, /\bREUNIOES\b/g, /\bBATE[-\s]?PAPO\b/g],
+  'Bate e Volta': [/\bBATE\s*E?\s*VOLTA\b/g, /\bBATE-VOLTA\b/g],
+  'Bonde Insano': [/\bBONDE\s+INSANO\b/g, /\bBONDE\b/g, /\bVIAGEM\s+INSANA\b/g],
+  'Caveira': [/\bCAVEIRAS?\b/g],
+};
+
+// Apelidos usados nos títulos para identificar a divisão do evento
+const ALIASES_DIVISAO: Array<{ chave: string; padroes: RegExp[] }> = [
+  { chave: 'EXTREMO SUL', padroes: [/\bEXTREMO\s+SUL\b/g, /\bEXT\.?\s*SUL\b/g] },
+  { chave: 'EXTREMO NORTE', padroes: [/\bEXTREMO\s+NORTE\b/g, /\bEXT\.?\s*NORTE\b/g] },
+  { chave: 'EXTREMO LESTE', padroes: [/\bEXTREMO\s+LESTE\b/g, /\bEXT\.?\s*LESTE\b/g] },
+  { chave: 'SAO JOSE DOS CAMPOS', padroes: [/\bSAO\s+JOSE\s+DOS\s+CAMPOS\b/g, /\bSAO\s+JOSE\b/g, /\bSJC\b/g] },
+  { chave: 'JACAREI', padroes: [/\bJACAREI\b/g, /\bJAC\.?\b/g] },
+  { chave: 'CACAPAVA', padroes: [/\bCACAPAVA\b/g] },
+  { chave: 'CENTRO', padroes: [/\bCENTRO\b/g] },
+  { chave: 'NORTE', padroes: [/\bNORTE\b/g] },
+  { chave: 'SUL', padroes: [/\bSUL\b/g] },
+  { chave: 'LESTE', padroes: [/\bLESTE\b/g] },
+  { chave: 'OESTE', padroes: [/\bOESTE\b/g] },
+];
+
+const STOPWORDS_EXTRAS = new Set(['DA', 'DE', 'DO', 'DAS', 'DOS', 'E', 'A', 'O', 'NA', 'NO', 'EM', 'SP']);
+
+function limparBordas(texto: string): string {
+  return texto
+    .replace(/\(\s*\)/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/^[\s\-–—:|,.\/]+/, '')
+    .replace(/[\s\-–—:|,.\/]+$/, '')
+    .replace(/\s+([-–—:|])\s+\1/g, ' $1 ')
+    .trim();
+}
+
+/**
+ * Remove do título original tudo que já é representado nos outros campos
+ * (tipo de evento, divisão detectada, sigla regional) e devolve o que sobrar.
+ */
+function extrairInformacoesExtras(
+  originalTitle: string,
+  tipoEvento: string,
+  divisaoNome: string
+): string | undefined {
+  let texto = removeSpecialCharacters(originalTitle).toUpperCase();
+
+  // 1. Tipo de evento
+  (TIPO_REGEX[tipoEvento] || []).forEach((re) => {
+    texto = texto.replace(re, ' ');
+  });
+
+  // 2. Divisão detectada (apenas a ocorrência que identificou o evento)
+  const divNorm = removeSpecialCharacters(divisaoNome || '').toUpperCase();
+  if (divNorm && divNorm !== 'SEM DIVISAO') {
+    // Nome completo da divisão, se aparecer literalmente
+    const nomeLimpo = divNorm.replace(/^DIVISAO\s+/, '').replace(/\s*-\s*SP\s*$/, '').trim();
+    if (nomeLimpo && texto.includes(nomeLimpo)) {
+      texto = texto.replace(nomeLimpo, ' ');
+    }
+    // Apelidos - remover somente a PRIMEIRA ocorrência de cada apelido pertencente à divisão
+    for (const alias of ALIASES_DIVISAO) {
+      if (!nomeLimpo.includes(alias.chave)) continue;
+      for (const padrao of alias.padroes) {
+        const re = new RegExp(padrao.source, 'i'); // sem 'g' => só a 1ª ocorrência
+        if (re.test(texto)) {
+          texto = texto.replace(re, ' ');
+          break;
+        }
+      }
+    }
+    // "DIVISAO"/"DIV" solto sobrando nas bordas do trecho removido
+    texto = texto.replace(/^\s*DIVISAO\b/, ' ').replace(/^\s*DIV\.?\b/, ' ');
+    texto = texto.replace(/\bDIVISAO\s{2,}/, ' ').replace(/\bDIV\.?\s{2,}/, ' ');
+  }
+
+  // 3. Sigla regional / comando
+  texto = texto
+    .replace(/\bVP\s*(?:[123]|III|II|I)\b/g, ' ')
+    .replace(/\bVALE\s+(?:DO\s+)?PARAIBA\s*(?:[123]|III|II|I)?\b/g, ' ')
+    .replace(/\bLITORAL\s+NORTE\b/g, ' ')
+    .replace(/\bLN\b/g, ' ')
+    .replace(/\bCMD\b/g, ' ')
+    .replace(/\bCOMANDO\s+(?:MUNDIAL|REGIONAL)\b/g, ' ')
+    .replace(/\bREGIONAL\b/g, ' ')
+    .replace(/\s*-\s*SP\b/g, ' ');
+
+  // 4. Limpeza
+  const limpo = limparBordas(texto);
+
+  // 5. Validação: precisa ter conteúdo real
+  const palavras = limpo.split(/\s+/).filter(Boolean).filter(p => !STOPWORDS_EXTRAS.has(p));
+  if (palavras.length === 0) return undefined;
+  if (limpo.replace(/[^A-Z0-9]/g, '').length < 3) return undefined;
+
+  return limpo;
+}
+
+const ABREVIACOES: Array<[RegExp, string]> = [
+  [/\bANIVERSARIO\s+DE\s+FUNDACAO\b/g, 'ANIV. FUNDACAO'],
+  [/\bANIVERSARIANTES\b/g, 'ANIVERS.'],
+  [/\bANIVERSARIO\b/g, 'ANIV.'],
+  [/\bCONFRATERNIZACAO\b/g, 'CONFRAT.'],
+  [/\bCOMEMORACAO\b/g, 'COMEM.'],
+  [/\bINTEGRACAO\b/g, 'INTEGR.'],
+  [/\bARRECADACAO\b/g, 'ARREC.'],
+  [/\bSAO\s+JOSE\s+DOS\s+CAMPOS\b/g, 'SJC'],
+  [/\bJACAREI\b/g, 'JAC'],
+  [/\bEXTREMO\b/g, 'EXT'],
+  [/\bDIVISAO\b/g, 'DIV.'],
+  [/\bREGIONAL\b/g, 'REG.'],
+  [/\bCOMANDO\b/g, 'CMD'],
+  [/\bSOLIDARIEDADE\b/g, 'SOLID.'],
+  [/\bSOLIDARIA\b/g, 'SOLID.'],
+  [/\bCAMPANHA\b/g, 'CAMP.'],
+  [/\bMOTOCICLISTAS?\b/g, 'MOTOC.'],
+  [/\bHOMENAGEM\b/g, 'HOMEN.'],
+];
+
+/**
+ * Abrevia e encurta o complemento para não estourar o layout,
+ * mantendo o sentido do texto original.
+ */
+export function abreviarExtras(texto: string, limite = 48): string {
+  let resultado = texto;
+  ABREVIACOES.forEach(([re, sub]) => {
+    resultado = resultado.replace(re, sub);
+  });
+  resultado = limparBordas(resultado);
+
+  if (resultado.length <= limite) return resultado;
+
+  // Remover preposições/artigos redundantes
+  resultado = limparBordas(
+    resultado
+      .split(/\s+/)
+      .filter((p, i) => i === 0 || !STOPWORDS_EXTRAS.has(p))
+      .join(' ')
+  );
+
+  if (resultado.length <= limite) return resultado;
+
+  // Cortar na última palavra inteira
+  const cortado = resultado.slice(0, limite);
+  const ultimoEspaco = cortado.lastIndexOf(' ');
+  return `${(ultimoEspaco > 20 ? cortado.slice(0, ultimoEspaco) : cortado).replace(/[\s\-–—:|,.]+$/, '')}…`;
+}
+
+// Parsear componentes do título do evento (continua abaixo)
+
 // Parsear componentes do título do evento
 async function parseEventComponents(originalTitle: string): Promise<ParsedEvent> {
   const normalized = removeSpecialCharacters(originalTitle);
