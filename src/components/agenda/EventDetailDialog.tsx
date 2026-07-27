@@ -82,9 +82,15 @@ export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDial
             )}
           </div>
           <DialogTitle className="text-xl sm:text-2xl">{event.title}</DialogTitle>
+          {event.originalTitle && event.originalTitle !== event.title && (
+            <p className="text-xs text-muted-foreground mt-1 text-left">
+              Título original: {event.originalTitle}
+            </p>
+          )}
           <DialogDescription className="sr-only">
             Detalhes do evento
           </DialogDescription>
+
         </DialogHeader>
 
         <div className="space-y-4 mt-4">
