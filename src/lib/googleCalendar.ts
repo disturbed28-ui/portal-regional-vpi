@@ -415,39 +415,14 @@ async function parseEventComponents(originalTitle: string): Promise<ParsedEvent>
     const siglaMatch = originalTitle.match(/\b(VP1|VP2|VP3|LN|CMD)\b/i);
     regionalSiglaDetectada = siglaMatch ? siglaMatch[1].toUpperCase() : null;
     divisao = regionalSiglaDetectada || 'Sem Divisao';
-    
-    const tituloSemCaveira = originalTitle
-      .replace(/\bcaveiras?\b/gi, '')
-      .replace(/\b(VP1|VP2|VP3|LN|CMD)\b/gi, '')
-      .replace(/\s+/g, ' ')
-      .replace(/^\s*[-:–]\s*/, '')
-      .replace(/\s*[-:–]\s*$/, '')
-      .trim();
-    if (tituloSemCaveira) informacoesExtras = tituloSemCaveira;
+    informacoesExtras = extrairInformacoesExtras(originalTitle, tipoEvento, '');
   } else if (isCMD) {
     divisao = 'CMD';
-    let tituloParaExtras = originalTitle;
-    if (lower.includes('pub')) tituloParaExtras = originalTitle.replace(/pub\s*[-\s]*/gi, '').trim();
-    if (lower.includes('reuniao')) tituloParaExtras = originalTitle.replace(/reuniao\s*[-\s]*/gi, '').trim();
-    if (lower.includes('acao social')) tituloParaExtras = originalTitle.replace(/acao\s+social\s*[-\s]*/gi, '').trim();
-    tituloParaExtras = tituloParaExtras
-      .replace(/comando\s+mundial\s*[-\s]*/gi, '')
-      .replace(/cmd\s*[-\s]*/gi, '')
-      .replace(/^\(+/, '').replace(/\)+$/, '').trim();
-    if (tituloParaExtras.length > 0) informacoesExtras = tituloParaExtras;
+    informacoesExtras = extrairInformacoesExtras(originalTitle, tipoEvento, '');
   } else if (isRegional) {
     regionalSiglaDetectada = detectRegionalSiglaFromTitle(originalTitle);
     divisao = regionalSiglaDetectada ? `Regional ${regionalSiglaDetectada}` : 'Regional';
-    let tituloParaExtras = originalTitle;
-    if (lower.includes('pub')) tituloParaExtras = originalTitle.replace(/pub\s*[-\s]*/gi, '').trim();
-    if (lower.includes('reuniao')) tituloParaExtras = originalTitle.replace(/reuniao\s*[-\s]*/gi, '').trim();
-    if (lower.includes('acao social')) tituloParaExtras = originalTitle.replace(/acao\s+social\s*[-\s]*/gi, '').trim();
-    tituloParaExtras = tituloParaExtras
-      .replace(/comando\s+regional\s*[-\s]*/gi, '')
-      .replace(/cmd\s+regional\s*[-\s]*/gi, '')
-      .replace(/regional\s*[-\s]*/gi, '')
-      .replace(/^\(+/, '').replace(/\)+$/, '').replace(/^[-\s]+/, '').trim();
-    if (tituloParaExtras.length > 0) informacoesExtras = tituloParaExtras;
+    informacoesExtras = extrairInformacoesExtras(originalTitle, tipoEvento, '');
   } else {
     divisao = await detectDivisionFromTitle(normalized);
     // Fallback: se não achou divisão, mas há sigla regional no título (VP1/VP2/VP3/LN),
@@ -457,36 +432,22 @@ async function parseEventComponents(originalTitle: string): Promise<ParsedEvent>
       if (siglaFallback && siglaFallback !== 'CMD') {
         regionalSiglaDetectada = siglaFallback;
         divisao = `Regional ${siglaFallback}`;
-        // Reclassificar como Regional para toda a lógica downstream
-        (isRegional as unknown as boolean); // no-op para clareza
-        let tituloParaExtras = originalTitle
-          .replace(/reuniao\s*[-\s]*/gi, '')
-          .replace(/\b(VP\s*[123]|VP\s*(?:III|II|I)|LN)\b/gi, '')
-          .replace(/\s{2,}/g, ' ')
-          .replace(/^[-\s]+|[-\s]+$/g, '')
-          .trim();
-        if (tituloParaExtras.length > 0) informacoesExtras = tituloParaExtras;
         return {
           tipoEvento,
           subtipo,
           divisao,
           divisaoId: null,
           regionalSigla: regionalSiglaDetectada,
-          informacoesExtras,
+          informacoesExtras: extrairInformacoesExtras(originalTitle, tipoEvento, ''),
           isCMD: false,
           isRegional: true,
           isCaveira: false,
         };
       }
     }
-    const divIndex = originalTitle.toLowerCase().indexOf(divisao.toLowerCase());
-    if (divIndex > -1 && divIndex + divisao.length < originalTitle.length) {
-      const extras = originalTitle.substring(divIndex + divisao.length).trim();
-      if (extras && extras.length > 0 && !extras.startsWith('-')) {
-        informacoesExtras = extras.replace(/^[-\s]+/, '').trim();
-      }
-    }
+    informacoesExtras = extrairInformacoesExtras(originalTitle, tipoEvento, divisao);
   }
+
 
   
   return {
