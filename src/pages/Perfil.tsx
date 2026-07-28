@@ -287,6 +287,18 @@ const Perfil = () => {
           </Card>
         )}
 
+        {/* Cobrança de análise do cadastro */}
+        {user && (profile?.profile_status === 'Pendente' || profile?.profile_status === 'Analise') && (
+          <CobrarAnaliseCard
+            userId={user.id}
+            nome={userName}
+            nomeColete={profile?.nome_colete || nomeColete || null}
+            telefone={profile?.telefone || telefone || null}
+            email={userEmail}
+            status={profile?.profile_status === 'Analise' ? 'Em análise' : 'Pendente'}
+          />
+        )}
+
         {/* Alerta de Instagram pendente */}
         {instagramPendente && (
           <Card className="border-yellow-500 bg-yellow-500/10">
