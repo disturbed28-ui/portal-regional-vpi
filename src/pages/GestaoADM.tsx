@@ -10,6 +10,7 @@ import { ArrowLeft, Users, DollarSign, GraduationCap, Cake, Clock, FileEdit, His
 import { useProfile } from "@/hooks/useProfile";
 import { CriteriosAvaliacaoTab } from "@/components/admin/avaliacao/CriteriosAvaliacaoTab";
 import { PeriodosAvaliacaoTab } from "@/components/admin/avaliacao/PeriodosAvaliacaoTab";
+import { PendenciasAvaliacaoTab } from "@/components/admin/avaliacao/PendenciasAvaliacaoTab";
 import { useUltimasAtualizacoes } from "@/hooks/useUltimasAtualizacoes";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -58,6 +59,7 @@ const ALL_ROUTES = [
   '/gestao-adm-desligados',
   '/gestao-adm/criterios-avaliacao',
   '/gestao-adm/periodos-avaliacao',
+  '/gestao-adm/pendencias-avaliacao',
   '/gestao-adm-agendas',
 ];
 
@@ -90,6 +92,7 @@ const GestaoADM = () => {
   const desligadosP = getPerm('/gestao-adm-desligados');
   const criteriosAvalP = getPerm('/gestao-adm/criterios-avaliacao');
   const periodosAvalP = getPerm('/gestao-adm/periodos-avaliacao');
+  const pendenciasAvalP = getPerm('/gestao-adm/pendencias-avaliacao');
   const agendasP = getPerm('/gestao-adm-agendas');
 
   // Permissões das sub-abas de Integrantes
@@ -121,7 +124,7 @@ const GestaoADM = () => {
       { value: "aniversariantes", label: "Aniversários", icon: Cake, hasAccess: aniversariantesP.hasAnyAccess },
       { value: "afastamentos", label: "Afastados", icon: UserMinus, hasAccess: afastamentosP.hasAnyAccess },
       { value: "desligados", label: "Desligados", icon: UserX, hasAccess: desligadosP.hasAnyAccess },
-      { value: "avaliacao", label: "Avaliação dos Integrantes", icon: ClipboardList, hasAccess: criteriosAvalP.hasAnyAccess || periodosAvalP.hasAnyAccess },
+      { value: "avaliacao", label: "Avaliação dos Integrantes", icon: ClipboardList, hasAccess: criteriosAvalP.hasAnyAccess || periodosAvalP.hasAnyAccess || pendenciasAvalP.hasAnyAccess },
       { value: "agendas", label: "Agenda", icon: CalendarDays, hasAccess: agendasP.hasAnyAccess },
     ];
     return allTabs.filter(tab => tab.hasAccess);
@@ -132,9 +135,10 @@ const GestaoADM = () => {
     const allSubTabs = [
       { value: "criterios-avaliacao", label: "Critérios de Avaliação", icon: ListChecks, hasAccess: criteriosAvalP.hasAnyAccess },
       { value: "periodos-avaliacao", label: "Períodos de Avaliação", icon: CalendarRange, hasAccess: periodosAvalP.hasAnyAccess },
+      { value: "pendencias-avaliacao", label: "Pendências de Avaliação", icon: AlertTriangle, hasAccess: pendenciasAvalP.hasAnyAccess },
     ];
     return allSubTabs.filter(tab => tab.hasAccess);
-  }, [criteriosAvalP.hasAnyAccess, periodosAvalP.hasAnyAccess]);
+  }, [criteriosAvalP.hasAnyAccess, periodosAvalP.hasAnyAccess, pendenciasAvalP.hasAnyAccess]);
 
   const initialAvaliacaoSubTab = useMemo(() => {
     const urlMainTab = searchParams.get('mainTab');
@@ -556,7 +560,7 @@ const GestaoADM = () => {
               </TabsContent>
             )}
 
-            {(criteriosAvalP.hasAnyAccess || periodosAvalP.hasAnyAccess) && (
+            {(criteriosAvalP.hasAnyAccess || periodosAvalP.hasAnyAccess || pendenciasAvalP.hasAnyAccess) && (
               <TabsContent value="avaliacao" className="m-0">
                 {visibleAvaliacaoSubTabs.length > 0 ? (
                   <Tabs defaultValue={initialAvaliacaoSubTab} className="w-full">
@@ -584,6 +588,12 @@ const GestaoADM = () => {
                     {periodosAvalP.hasAnyAccess && (
                       <TabsContent value="periodos-avaliacao" className="m-0">
                         <PeriodosAvaliacaoTab userId={user?.id} regionalId={regionalId} readOnly={periodosAvalP.isReadOnly} />
+                      </TabsContent>
+                    )}
+
+                    {pendenciasAvalP.hasAnyAccess && (
+                      <TabsContent value="pendencias-avaliacao" className="m-0">
+                        <PendenciasAvaliacaoTab userId={user?.id} regionalId={regionalId} readOnly={pendenciasAvalP.isReadOnly} />
                       </TabsContent>
                     )}
                   </Tabs>
