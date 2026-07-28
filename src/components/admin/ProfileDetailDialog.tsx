@@ -98,7 +98,10 @@ export function ProfileDetailDialog({
 }: ProfileDetailDialogProps) {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { profile: adminProfile } = useProfile(user?.id);
   const [loading, setLoading] = useState(false);
+  const [showNotificarAtivacao, setShowNotificarAtivacao] = useState(false);
+  const [destinatarioAtivacao, setDestinatarioAtivacao] = useState<AtivacaoDestinatario | null>(null);
   const [formData, setFormData] = useState<Partial<Profile>>({});
   const [integranteSelecionado, setIntegranteSelecionado] = useState<IntegrantePortal | null>(null);
   const [integranteAtualmenteVinculado, setIntegranteAtualmenteVinculado] = useState<IntegrantePortal | null>(null);
