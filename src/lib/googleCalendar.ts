@@ -641,9 +641,14 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
     );
 
     const allEvents = processedEvents;
-    const activeEvents = allEvents.filter(
-      e => e.googleStatus !== 'cancelled' && e.originalTitle !== 'Sem titulo'
-    );
+    const activeEvents = allEvents
+      .filter(e => e.googleStatus !== 'cancelled' && e.originalTitle !== 'Sem titulo')
+      .sort((a, b) => {
+        const ta = a.start ? new Date(a.start).getTime() : 0;
+        const tb = b.start ? new Date(b.start).getTime() : 0;
+        return ta - tb;
+      });
+
 
     console.log('[fetchCalendarEvents] Eventos:', allEvents.length, '| Ativos:', activeEvents.length);
 
