@@ -29,6 +29,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { ProfileStatus } from "@/types/profile";
 import { ProfileDetailDialog } from "@/components/admin/ProfileDetailDialog";
+import { NotificarAtivacaoDialog, AtivacaoDestinatario } from "@/components/admin/NotificarAtivacaoDialog";
 import { logSystemEventFromClient } from "@/lib/logSystemEvent";
 
 interface Profile {
