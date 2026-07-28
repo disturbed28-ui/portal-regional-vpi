@@ -77,6 +77,8 @@ const Admin = () => {
   const [observacao, setObservacao] = useState("");
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [detailProfile, setDetailProfile] = useState<Profile | null>(null);
+  const [showNotificarAtivacao, setShowNotificarAtivacao] = useState(false);
+  const [destinatarioAtivacao, setDestinatarioAtivacao] = useState<AtivacaoDestinatario | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<ProfileStatus>('Analise');
   const [selectedRole, setSelectedRole] = useState<'all' | 'admin' | 'diretor_regional' | 'regional' | 'diretor_divisao' | 'social_divisao' | 'adm_divisao' | 'moderator' | 'user'>('all');
   const [activeDivisionKey, setActiveDivisionKey] = useState<string | null>(null);
