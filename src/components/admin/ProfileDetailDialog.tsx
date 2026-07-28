@@ -38,6 +38,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Download, CheckCircle, UserPlus } from "lucide-react";
 import { RoleManager } from "./RoleManager";
 import { CriarIntegranteModal } from "./CriarIntegranteModal";
+import { useProfile } from "@/hooks/useProfile";
+import { NotificarAtivacaoDialog, AtivacaoDestinatario } from "./NotificarAtivacaoDialog";
 
 interface Profile {
   id: string;
