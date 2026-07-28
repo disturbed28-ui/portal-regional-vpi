@@ -313,6 +313,26 @@ const Admin = () => {
         description: `Perfil ${actionType === 'aprovar' ? 'aprovado' : actionType === 'recusar' ? 'recusado' : 'inativado'} com sucesso`,
       });
 
+      if (actionType === 'aprovar' && selectedProfile.profile_status !== 'Ativo') {
+        const { data: dadosContato } = await supabase
+          .from('profiles')
+          .select('telefone')
+          .eq('id', selectedProfile.id)
+          .maybeSingle();
+
+        setDestinatarioAtivacao({
+          profileId: selectedProfile.id,
+          nome: selectedProfile.name,
+          nomeColete: selectedProfile.nome_colete,
+          telefone: dadosContato?.telefone || null,
+          divisao: selectedProfile.divisoes?.nome || selectedProfile.divisao || null,
+          cargo: selectedProfile.cargos?.nome || selectedProfile.cargo || null,
+          regionalId: selectedProfile.regional_id,
+          divisaoId: selectedProfile.divisao_id,
+        });
+        setShowNotificarAtivacao(true);
+      }
+
       setDialogOpen(false);
       setSelectedProfile(null);
       setObservacao("");
