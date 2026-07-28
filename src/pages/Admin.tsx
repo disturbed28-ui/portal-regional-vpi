@@ -29,6 +29,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { ProfileStatus } from "@/types/profile";
 import { ProfileDetailDialog } from "@/components/admin/ProfileDetailDialog";
+import { NotificarAtivacaoDialog, AtivacaoDestinatario } from "@/components/admin/NotificarAtivacaoDialog";
 import { logSystemEventFromClient } from "@/lib/logSystemEvent";
 
 interface Profile {
@@ -76,6 +77,8 @@ const Admin = () => {
   const [observacao, setObservacao] = useState("");
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [detailProfile, setDetailProfile] = useState<Profile | null>(null);
+  const [showNotificarAtivacao, setShowNotificarAtivacao] = useState(false);
+  const [destinatarioAtivacao, setDestinatarioAtivacao] = useState<AtivacaoDestinatario | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<ProfileStatus>('Analise');
   const [selectedRole, setSelectedRole] = useState<'all' | 'admin' | 'diretor_regional' | 'regional' | 'diretor_divisao' | 'social_divisao' | 'adm_divisao' | 'moderator' | 'user'>('all');
   const [activeDivisionKey, setActiveDivisionKey] = useState<string | null>(null);
@@ -309,6 +312,26 @@ const Admin = () => {
         title: "Sucesso",
         description: `Perfil ${actionType === 'aprovar' ? 'aprovado' : actionType === 'recusar' ? 'recusado' : 'inativado'} com sucesso`,
       });
+
+      if (actionType === 'aprovar' && selectedProfile.profile_status !== 'Ativo') {
+        const { data: dadosContato } = await supabase
+          .from('profiles')
+          .select('telefone')
+          .eq('id', selectedProfile.id)
+          .maybeSingle();
+
+        setDestinatarioAtivacao({
+          profileId: selectedProfile.id,
+          nome: selectedProfile.name,
+          nomeColete: selectedProfile.nome_colete,
+          telefone: dadosContato?.telefone || null,
+          divisao: selectedProfile.divisoes?.nome || selectedProfile.divisao || null,
+          cargo: selectedProfile.cargos?.nome || selectedProfile.cargo || null,
+          regionalId: selectedProfile.regional_id,
+          divisaoId: selectedProfile.divisao_id,
+        });
+        setShowNotificarAtivacao(true);
+      }
 
       setDialogOpen(false);
       setSelectedProfile(null);
@@ -813,6 +836,14 @@ const Admin = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <NotificarAtivacaoDialog
+          open={showNotificarAtivacao}
+          onOpenChange={setShowNotificarAtivacao}
+          destinatario={destinatarioAtivacao}
+          remetenteId={user?.id || ''}
+          remetenteNome={null}
+        />
 
         {/* Dialog de detalhes */}
         <ProfileDetailDialog
