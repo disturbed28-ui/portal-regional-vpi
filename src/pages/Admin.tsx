@@ -837,6 +837,14 @@ const Admin = () => {
           </DialogContent>
         </Dialog>
 
+        <NotificarAtivacaoDialog
+          open={showNotificarAtivacao}
+          onOpenChange={setShowNotificarAtivacao}
+          destinatario={destinatarioAtivacao}
+          remetenteId={user?.id || ''}
+          remetenteNome={null}
+        />
+
         {/* Dialog de detalhes */}
         <ProfileDetailDialog
           profile={detailProfile}
