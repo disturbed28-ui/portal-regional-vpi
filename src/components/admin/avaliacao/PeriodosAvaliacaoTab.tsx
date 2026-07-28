@@ -24,6 +24,38 @@ export function PeriodosAvaliacaoTab({ userId, regionalId, readOnly }: Props) {
   const [periodoVerificandoId, setPeriodoVerificandoId] = useState<string>("");
   const { avaliacoes } = useAvaliacoesIntegrantes(periodoVerificandoId, todos.map(i => i.id));
 
+  const [registrosPorPeriodo, setRegistrosPorPeriodo] = useState<Record<string, number>>({});
+  const [periodoExcluir, setPeriodoExcluir] = useState<{ id: string; nome: string } | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
+
+  const periodoIds = periodos.map(p => p.id).join(',');
+  const carregarRegistros = useCallback(async () => {
+    const ids = periodoIds ? periodoIds.split(',') : [];
+    if (ids.length === 0) { setRegistrosPorPeriodo({}); return; }
+    const [av, dec] = await Promise.all([
+      supabase.from('avaliacoes_integrantes').select('periodo_id').in('periodo_id', ids),
+      supabase.from('avaliacoes_decisao_final').select('periodo_id').in('periodo_id', ids),
+    ]);
+    const m: Record<string, number> = {};
+    for (const r of [...(av.data || []), ...(dec.data || [])] as { periodo_id: string }[]) {
+      m[r.periodo_id] = (m[r.periodo_id] || 0) + 1;
+    }
+    setRegistrosPorPeriodo(m);
+  }, [periodoIds]);
+
+  useEffect(() => { carregarRegistros(); }, [carregarRegistros]);
+
+  const excluirPeriodo = async () => {
+    if (!periodoExcluir) return;
+    setExcluindo(true);
+    const { error } = await supabase.from('avaliacao_periodos').delete().eq('id', periodoExcluir.id);
+    setExcluindo(false);
+    setPeriodoExcluir(null);
+    if (error) toast.error('Erro ao excluir período', { description: error.message, duration: 6000 });
+    else { toast.success('Período excluído', { duration: 6000 }); refetch(); carregarRegistros(); }
+  };
+
+
   const criarPeriodo = async () => {
     if (!regionalId) return;
     const ano = new Date().getFullYear();
