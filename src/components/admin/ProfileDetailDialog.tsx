@@ -412,6 +412,30 @@ export function ProfileDetailDialog({
         description: "As alteracoes foram salvas com sucesso",
       });
 
+      // Se o perfil passou a ficar Ativo, oferecer notificação via WhatsApp
+      const ativouAgora =
+        formData.profile_status === 'Ativo' && profile.profile_status !== 'Ativo';
+
+      if (ativouAgora) {
+        const { data: dadosContato } = await supabase
+          .from('profiles')
+          .select('telefone')
+          .eq('id', profile.id)
+          .maybeSingle();
+
+        setDestinatarioAtivacao({
+          profileId: profile.id,
+          nome: formData.name || profile.name,
+          nomeColete: formData.nome_colete || profile.nome_colete || null,
+          telefone: dadosContato?.telefone || null,
+          divisao: divisoes.find((d) => d.id === formData.divisao_id)?.nome || profile.divisao || null,
+          cargo: cargos.find((c) => c.id === formData.cargo_id)?.nome || profile.cargo || null,
+          regionalId: formData.regional_id || null,
+          divisaoId: formData.divisao_id || null,
+        });
+        setShowNotificarAtivacao(true);
+      }
+
       setIntegranteParaVincular(null);
       onOpenChange(false);
       onSuccess();
