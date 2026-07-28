@@ -900,6 +900,14 @@ export function ProfileDetailDialog({
           onSuccess();
         }}
       />
+
+      <NotificarAtivacaoDialog
+        open={showNotificarAtivacao}
+        onOpenChange={setShowNotificarAtivacao}
+        destinatario={destinatarioAtivacao}
+        remetenteId={user?.id || ''}
+        remetenteNome={adminProfile?.nome_colete || adminProfile?.name || null}
+      />
     </Dialog>
   );
 }
