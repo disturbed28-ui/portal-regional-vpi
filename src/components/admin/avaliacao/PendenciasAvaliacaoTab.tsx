@@ -159,7 +159,7 @@ export function PendenciasAvaliacaoTab({ userId, regionalId, readOnly }: Props) 
       }
 
       const lista = grupo.pendentesDD
-        .map((i) => `• ${i.nome_colete || i.nome_completo || "—"}`)
+        .map((i) => `• ${i.nome_colete || "—"}`)
         .join("\n");
 
       const payload = {
@@ -301,7 +301,7 @@ export function PendenciasAvaliacaoTab({ userId, regionalId, readOnly }: Props) 
                           key={i.id}
                           className="text-xs px-2 py-1.5 rounded bg-background border border-border/60"
                         >
-                          {i.nome_colete || i.nome_completo}
+                          {i.nome_colete}
                         </div>
                       ))}
                     </div>
@@ -318,7 +318,7 @@ export function PendenciasAvaliacaoTab({ userId, regionalId, readOnly }: Props) 
                           key={i.id}
                           className="text-xs px-2 py-1.5 rounded bg-muted/40 border border-border/40"
                         >
-                          {i.nome_colete || i.nome_completo}
+                          {i.nome_colete}
                         </div>
                       ))}
                     </div>
