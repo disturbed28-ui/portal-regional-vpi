@@ -1,8 +1,12 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, Lock } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Loader2, Plus, Lock, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePeriodosAvaliacao, useAvaliacoesIntegrantes } from "@/hooks/useAvaliacaoData";
 import { useIntegrantesGestao } from "@/hooks/useIntegrantesGestao";
@@ -19,6 +23,38 @@ export function PeriodosAvaliacaoTab({ userId, regionalId, readOnly }: Props) {
   const todos = useMemo(() => integrantesPorDivisao.flatMap(d => d.integrantes), [integrantesPorDivisao]);
   const [periodoVerificandoId, setPeriodoVerificandoId] = useState<string>("");
   const { avaliacoes } = useAvaliacoesIntegrantes(periodoVerificandoId, todos.map(i => i.id));
+
+  const [registrosPorPeriodo, setRegistrosPorPeriodo] = useState<Record<string, number>>({});
+  const [periodoExcluir, setPeriodoExcluir] = useState<{ id: string; nome: string } | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
+
+  const periodoIds = periodos.map(p => p.id).join(',');
+  const carregarRegistros = useCallback(async () => {
+    const ids = periodoIds ? periodoIds.split(',') : [];
+    if (ids.length === 0) { setRegistrosPorPeriodo({}); return; }
+    const [av, dec] = await Promise.all([
+      supabase.from('avaliacoes_integrantes').select('periodo_id').in('periodo_id', ids),
+      supabase.from('avaliacoes_decisao_final').select('periodo_id').in('periodo_id', ids),
+    ]);
+    const m: Record<string, number> = {};
+    for (const r of [...(av.data || []), ...(dec.data || [])] as { periodo_id: string }[]) {
+      m[r.periodo_id] = (m[r.periodo_id] || 0) + 1;
+    }
+    setRegistrosPorPeriodo(m);
+  }, [periodoIds]);
+
+  useEffect(() => { carregarRegistros(); }, [carregarRegistros]);
+
+  const excluirPeriodo = async () => {
+    if (!periodoExcluir) return;
+    setExcluindo(true);
+    const { error } = await supabase.from('avaliacao_periodos').delete().eq('id', periodoExcluir.id);
+    setExcluindo(false);
+    setPeriodoExcluir(null);
+    if (error) toast.error('Erro ao excluir período', { description: error.message, duration: 6000 });
+    else { toast.success('Período excluído', { duration: 6000 }); refetch(); carregarRegistros(); }
+  };
+
 
   const criarPeriodo = async () => {
     if (!regionalId) return;
@@ -83,11 +119,22 @@ export function PeriodosAvaliacaoTab({ userId, regionalId, readOnly }: Props) {
                   <div className="text-[11px] text-muted-foreground">
                     {format(new Date(p.data_inicio), 'dd/MM/yy')} – {format(new Date(p.data_fim), 'dd/MM/yy')}
                     {periodoVerificandoId === p.id && ` · ${avaliados}/${todos.length} avaliados`}
+                    {(registrosPorPeriodo[p.id] || 0) === 0 && ' · sem registros'}
                   </div>
                 </div>
                 {p.status === 'aberto' && !readOnly && (
                   <Button size="sm" variant="outline" onClick={() => encerrar(p.id)}>
                     <Lock className="h-3.5 w-3.5 mr-1" /> Encerrar
+                  </Button>
+                )}
+                {!readOnly && (registrosPorPeriodo[p.id] || 0) === 0 && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => setPeriodoExcluir({ id: p.id, nome: p.nome })}
+                  >
+                    <Trash2 className="h-3.5 w-3.5 mr-1" /> Excluir
                   </Button>
                 )}
               </CardContent>
@@ -96,6 +143,24 @@ export function PeriodosAvaliacaoTab({ userId, regionalId, readOnly }: Props) {
         })}
         {periodos.length === 0 && <Card><CardContent className="py-6 text-center text-sm text-muted-foreground">Nenhum período cadastrado.</CardContent></Card>}
       </div>
+
+      <AlertDialog open={!!periodoExcluir} onOpenChange={(o) => !o && setPeriodoExcluir(null)}>
+        <AlertDialogContent className="w-[98vw] max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir período</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja excluir o período "{periodoExcluir?.nome}"? Ele não possui nenhum registro de avaliação. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={excluindo}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); excluirPeriodo(); }} disabled={excluindo}>
+              {excluindo ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Excluir'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
+
   );
 }
