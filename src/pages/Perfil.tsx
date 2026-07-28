@@ -18,6 +18,7 @@ import { useScreenAccess } from "@/hooks/useScreenAccess";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Instagram, AlertTriangle } from "lucide-react";
 import { validateInstagram, isInstagramPendente } from "@/lib/instagramUtils";
+import { CobrarAnaliseCard } from "@/components/perfil/CobrarAnaliseCard";
 
 const Perfil = () => {
   const navigate = useNavigate();
