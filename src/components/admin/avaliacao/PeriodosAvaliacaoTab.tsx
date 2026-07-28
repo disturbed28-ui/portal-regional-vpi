@@ -119,11 +119,22 @@ export function PeriodosAvaliacaoTab({ userId, regionalId, readOnly }: Props) {
                   <div className="text-[11px] text-muted-foreground">
                     {format(new Date(p.data_inicio), 'dd/MM/yy')} – {format(new Date(p.data_fim), 'dd/MM/yy')}
                     {periodoVerificandoId === p.id && ` · ${avaliados}/${todos.length} avaliados`}
+                    {(registrosPorPeriodo[p.id] || 0) === 0 && ' · sem registros'}
                   </div>
                 </div>
                 {p.status === 'aberto' && !readOnly && (
                   <Button size="sm" variant="outline" onClick={() => encerrar(p.id)}>
                     <Lock className="h-3.5 w-3.5 mr-1" /> Encerrar
+                  </Button>
+                )}
+                {!readOnly && (registrosPorPeriodo[p.id] || 0) === 0 && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => setPeriodoExcluir({ id: p.id, nome: p.nome })}
+                  >
+                    <Trash2 className="h-3.5 w-3.5 mr-1" /> Excluir
                   </Button>
                 )}
               </CardContent>
@@ -132,6 +143,24 @@ export function PeriodosAvaliacaoTab({ userId, regionalId, readOnly }: Props) {
         })}
         {periodos.length === 0 && <Card><CardContent className="py-6 text-center text-sm text-muted-foreground">Nenhum período cadastrado.</CardContent></Card>}
       </div>
+
+      <AlertDialog open={!!periodoExcluir} onOpenChange={(o) => !o && setPeriodoExcluir(null)}>
+        <AlertDialogContent className="w-[98vw] max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir período</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja excluir o período "{periodoExcluir?.nome}"? Ele não possui nenhum registro de avaliação. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={excluindo}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); excluirPeriodo(); }} disabled={excluindo}>
+              {excluindo ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Excluir'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
+
   );
 }
