@@ -456,9 +456,20 @@ export function ProfileDetailDialog({
     }
   };
 
-  if (!profile) return null;
+  const notificarAtivacaoNode = (
+    <NotificarAtivacaoDialog
+      open={showNotificarAtivacao}
+      onOpenChange={setShowNotificarAtivacao}
+      destinatario={destinatarioAtivacao}
+      remetenteId={user?.id || ''}
+      remetenteNome={adminProfile?.nome_colete || adminProfile?.name || null}
+    />
+  );
+
+  if (!profile) return notificarAtivacaoNode;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="admin-page max-w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
