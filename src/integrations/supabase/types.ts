@@ -3611,6 +3611,14 @@ export type Database = {
         Args: { _integrante_id: string; _periodo_id: string }
         Returns: boolean
       }
+      get_admins_contato: {
+        Args: never
+        Returns: {
+          nome: string
+          profile_id: string
+          telefone: string
+        }[]
+      }
       get_or_create_conversation: {
         Args: { _other_user_id: string }
         Returns: string

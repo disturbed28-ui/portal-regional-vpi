@@ -18,6 +18,7 @@ import { useScreenAccess } from "@/hooks/useScreenAccess";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Instagram, AlertTriangle } from "lucide-react";
 import { validateInstagram, isInstagramPendente } from "@/lib/instagramUtils";
+import { CobrarAnaliseCard } from "@/components/perfil/CobrarAnaliseCard";
 
 const Perfil = () => {
   const navigate = useNavigate();
@@ -285,6 +286,18 @@ const Perfil = () => {
               </p>
             </CardContent>
           </Card>
+        )}
+
+        {/* Cobrança de análise do cadastro */}
+        {user && (profile?.profile_status === 'Pendente' || profile?.profile_status === 'Analise') && (
+          <CobrarAnaliseCard
+            userId={user.id}
+            nome={userName}
+            nomeColete={profile?.nome_colete || nomeColete || null}
+            telefone={profile?.telefone || telefone || null}
+            email={userEmail}
+            status={profile?.profile_status === 'Analise' ? 'Em análise' : 'Pendente'}
+          />
         )}
 
         {/* Alerta de Instagram pendente */}

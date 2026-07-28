@@ -38,6 +38,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Download, CheckCircle, UserPlus } from "lucide-react";
 import { RoleManager } from "./RoleManager";
 import { CriarIntegranteModal } from "./CriarIntegranteModal";
+import { useProfile } from "@/hooks/useProfile";
+import { NotificarAtivacaoDialog, AtivacaoDestinatario } from "./NotificarAtivacaoDialog";
 
 interface Profile {
   id: string;
@@ -96,7 +98,10 @@ export function ProfileDetailDialog({
 }: ProfileDetailDialogProps) {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { profile: adminProfile } = useProfile(user?.id);
   const [loading, setLoading] = useState(false);
+  const [showNotificarAtivacao, setShowNotificarAtivacao] = useState(false);
+  const [destinatarioAtivacao, setDestinatarioAtivacao] = useState<AtivacaoDestinatario | null>(null);
   const [formData, setFormData] = useState<Partial<Profile>>({});
   const [integranteSelecionado, setIntegranteSelecionado] = useState<IntegrantePortal | null>(null);
   const [integranteAtualmenteVinculado, setIntegranteAtualmenteVinculado] = useState<IntegrantePortal | null>(null);
@@ -412,6 +417,30 @@ export function ProfileDetailDialog({
         description: "As alteracoes foram salvas com sucesso",
       });
 
+      // Se o perfil passou a ficar Ativo, oferecer notificação via WhatsApp
+      const ativouAgora =
+        formData.profile_status === 'Ativo' && profile.profile_status !== 'Ativo';
+
+      if (ativouAgora) {
+        const { data: dadosContato } = await supabase
+          .from('profiles')
+          .select('telefone')
+          .eq('id', profile.id)
+          .maybeSingle();
+
+        setDestinatarioAtivacao({
+          profileId: profile.id,
+          nome: formData.name || profile.name,
+          nomeColete: formData.nome_colete || profile.nome_colete || null,
+          telefone: dadosContato?.telefone || null,
+          divisao: divisoes.find((d) => d.id === formData.divisao_id)?.nome || profile.divisao || null,
+          cargo: cargos.find((c) => c.id === formData.cargo_id)?.nome || profile.cargo || null,
+          regionalId: formData.regional_id || null,
+          divisaoId: formData.divisao_id || null,
+        });
+        setShowNotificarAtivacao(true);
+      }
+
       setIntegranteParaVincular(null);
       onOpenChange(false);
       onSuccess();
@@ -427,9 +456,20 @@ export function ProfileDetailDialog({
     }
   };
 
-  if (!profile) return null;
+  const notificarAtivacaoNode = (
+    <NotificarAtivacaoDialog
+      open={showNotificarAtivacao}
+      onOpenChange={setShowNotificarAtivacao}
+      destinatario={destinatarioAtivacao}
+      remetenteId={user?.id || ''}
+      remetenteNome={adminProfile?.nome_colete || adminProfile?.name || null}
+    />
+  );
+
+  if (!profile) return notificarAtivacaoNode;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="admin-page max-w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -872,5 +912,7 @@ export function ProfileDetailDialog({
         }}
       />
     </Dialog>
+    {notificarAtivacaoNode}
+    </>
   );
 }
