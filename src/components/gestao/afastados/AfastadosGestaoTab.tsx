@@ -23,6 +23,7 @@ import type { IntegranteAfastado, MotivoBaixa } from "@/hooks/useAfastados";
 import { useProfile } from "@/hooks/useProfile";
 import { getNivelAcessoAdmin } from "@/lib/grauUtils";
 import { buildEscopoCargaPayload } from "@/lib/escopoCarga";
+import { NotificarRetornoAtrasadoButton } from "./NotificarRetornoAtrasadoButton";
 
 interface AfastadosGestaoTabProps {
   userId?: string;
@@ -501,17 +502,27 @@ export const AfastadosGestaoTab = ({ userId, readOnly = false }: AfastadosGestao
                             {format(new Date(afastado.data_afastamento), 'dd/MM/yy')} → {format(new Date(afastado.data_retorno_prevista), 'dd/MM/yy')}
                           </span>
                           {!readOnly && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-xs h-7 shrink-0"
-                              onClick={() => {
-                                setSelectedAfastado(afastado);
-                                setShowBaixaModal(true);
-                              }}
-                            >
-                              Baixa
-                            </Button>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {new Date(afastado.data_retorno_prevista) < new Date() && (
+                                <NotificarRetornoAtrasadoButton
+                                  afastado={afastado}
+                                  userId={userId}
+                                  remetenteNome={profile?.nome_colete || profile?.name || null}
+                                  regionalId={profile?.regional_id || null}
+                                />
+                              )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-xs h-7"
+                                onClick={() => {
+                                  setSelectedAfastado(afastado);
+                                  setShowBaixaModal(true);
+                                }}
+                              >
+                                Baixa
+                              </Button>
+                            </div>
                           )}
                         </div>
                         {afastado.observacoes && (
