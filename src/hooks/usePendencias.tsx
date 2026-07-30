@@ -182,7 +182,7 @@ export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes
 
 export const usePendencias = (
   userId: string | undefined,
-  userRole: 'admin' | 'diretor_regional' | 'diretor_divisao' | 'regional' | 'user' | null,
+  userRole: 'admin' | 'diretor_regional' | 'diretor_divisao' | 'regional' | 'adm_regional' | 'adm_divisao' | 'user' | null,
   regionalId?: string,
   divisaoId?: string,
   registroId?: number
@@ -486,7 +486,7 @@ export const usePendencias = (
 
       // Aplicar filtro de escopo para afastamentos
       // REGRA: admin com regionalId é tratado como regional
-      if (userRole === 'admin' || userRole === 'diretor_regional' || userRole === 'regional') {
+      if (userRole === 'admin' || userRole === 'diretor_regional' || userRole === 'regional' || userRole === 'adm_regional') {
         if (regionalId) {
           if (nomesDivisoesRegional.length > 0) {
             queryAfastados = queryAfastados.in('divisao_texto', nomesDivisoesRegional);
@@ -494,9 +494,9 @@ export const usePendencias = (
             queryAfastados = queryAfastados.eq('registro_id', -1);
           }
         }
-      } else if (userRole === 'diretor_divisao') {
+      } else if (userRole === 'diretor_divisao' || userRole === 'adm_divisao') {
         if (!divisaoId) {
-          console.error('[usePendencias] ❌ diretor_divisao sem divisaoId - pulando afastados');
+          console.error('[usePendencias] ❌ diretor_divisao/adm_divisao sem divisaoId - pulando afastados');
         } else {
           // Buscar nome da divisão para filtrar por divisao_texto
           const { data: divisaoDataAfastados } = await supabase
