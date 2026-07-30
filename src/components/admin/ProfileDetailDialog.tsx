@@ -66,6 +66,7 @@ interface ProfileDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  onAtivado?: (destinatario: AtivacaoDestinatario) => void;
 }
 
 const STATUS_OPTIONS: ProfileStatus[] = [
@@ -95,6 +96,7 @@ export function ProfileDetailDialog({
   open,
   onOpenChange,
   onSuccess,
+  onAtivado,
 }: ProfileDetailDialogProps) {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -417,18 +419,18 @@ export function ProfileDetailDialog({
         description: "As alteracoes foram salvas com sucesso",
       });
 
-      // Se o perfil passou a ficar Ativo, oferecer notificação via WhatsApp
-      const ativouAgora =
-        formData.profile_status === 'Ativo' && profile.profile_status !== 'Ativo';
+      // Sempre que o perfil terminar como Ativo, oferecer notificação via WhatsApp
+      const ficouAtivo = formData.profile_status === 'Ativo';
 
-      if (ativouAgora) {
+      let destinatario: AtivacaoDestinatario | null = null;
+      if (ficouAtivo) {
         const { data: dadosContato } = await supabase
           .from('profiles')
           .select('telefone')
           .eq('id', profile.id)
           .maybeSingle();
 
-        setDestinatarioAtivacao({
+        destinatario = {
           profileId: profile.id,
           nome: formData.name || profile.name,
           nomeColete: formData.nome_colete || profile.nome_colete || null,
@@ -437,13 +439,21 @@ export function ProfileDetailDialog({
           cargo: cargos.find((c) => c.id === formData.cargo_id)?.nome || profile.cargo || null,
           regionalId: formData.regional_id || null,
           divisaoId: formData.divisao_id || null,
-        });
-        setShowNotificarAtivacao(true);
+        };
       }
 
       setIntegranteParaVincular(null);
       onOpenChange(false);
       onSuccess();
+
+      if (destinatario) {
+        if (onAtivado) {
+          onAtivado(destinatario);
+        } else {
+          setDestinatarioAtivacao(destinatario);
+          setShowNotificarAtivacao(true);
+        }
+      }
     } catch (error: any) {
       console.error('Error updating profile:', error);
       toast({
