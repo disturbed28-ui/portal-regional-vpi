@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { MessageCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { renderTemplate, logEnvioWhatsApp, openWhatsAppConversation } from "@/lib/whatsapp";
+import { renderTemplate, logEnvioWhatsApp, buildWaMeLink } from "@/lib/whatsapp";
 import { useDiretorDivisao } from "@/hooks/useDiretorDivisao";
 import type { IntegranteAfastado } from "@/hooks/useAfastados";
 import { format } from "date-fns";
@@ -34,7 +34,6 @@ export const NotificarRetornoAtrasadoButton = ({
     }
 
     setEnviando(true);
-    const waWindow = window.open("", "_blank");
     try {
       const { data: tpl } = await supabase
         .from("notificacoes_whatsapp_templates")
@@ -44,7 +43,6 @@ export const NotificarRetornoAtrasadoButton = ({
         .maybeSingle();
 
       if (!tpl?.corpo) {
-        waWindow?.close();
         toast.warning(`Template "${TEMPLATE_CHAVE}" não configurado`, { duration: 6000 });
         return;
       }
@@ -71,16 +69,18 @@ export const NotificarRetornoAtrasadoButton = ({
 
       const mensagem = renderTemplate(tpl.corpo, payload);
 
-      const abriu = openWhatsAppConversation({
-        telefone: diretor.telefone,
-        mensagem,
-        targetWindow: waWindow,
-      });
-      if (!abriu) {
-        waWindow?.close();
+      const link = buildWaMeLink(diretor.telefone, mensagem);
+      if (!link) {
         toast.error("Falha ao montar link do WhatsApp", { duration: 6000 });
         return;
       }
+      const a = document.createElement("a");
+      a.href = link;
+      a.target = "_blank";
+      a.rel = "noopener,noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
 
       logEnvioWhatsApp({
         remetente_profile_id: userId,
