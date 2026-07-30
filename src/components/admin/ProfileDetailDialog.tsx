@@ -96,6 +96,7 @@ export function ProfileDetailDialog({
   open,
   onOpenChange,
   onSuccess,
+  onAtivado,
 }: ProfileDetailDialogProps) {
   const { toast } = useToast();
   const { user } = useAuth();
