@@ -182,7 +182,7 @@ export type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes
 
 export const usePendencias = (
   userId: string | undefined,
-  userRole: 'admin' | 'diretor_regional' | 'diretor_divisao' | 'regional' | 'user' | null,
+  userRole: 'admin' | 'diretor_regional' | 'diretor_divisao' | 'regional' | 'adm_regional' | 'adm_divisao' | 'user' | null,
   regionalId?: string,
   divisaoId?: string,
   registroId?: number
