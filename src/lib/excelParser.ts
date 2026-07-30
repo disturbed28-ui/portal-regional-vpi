@@ -12,6 +12,11 @@ function normalizarParaComparacao(texto: string | null | undefined): string {
     .trim();
 }
 
+// Normaliza nome de regional para comparação (remove sufixos " - SP" repetidos)
+function normalizarRegionalParaComparacao(texto: string | null | undefined): string {
+  return normalizarParaComparacao(texto).replace(/(\s*-\s*SP)+$/, ' - SP');
+}
+
 export interface ExcelIntegrante {
   comando: string;
   regional: string;
