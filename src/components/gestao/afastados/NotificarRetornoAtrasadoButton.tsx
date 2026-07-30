@@ -97,7 +97,7 @@ export const NotificarRetornoAtrasadoButton = ({
       });
     } catch (e) {
       console.error("[NotificarRetornoAtrasado]", e);
-      waWindow?.close();
+      
       toast.error("Erro ao notificar Diretor de Divisão", { duration: 6000 });
     } finally {
       setEnviando(false);
