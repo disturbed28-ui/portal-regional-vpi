@@ -345,9 +345,9 @@ export const processDelta = (
   
   // Filtrar dbData apenas para integrantes da regional da carga
   // Comparação normalizada (sem acentos/caixa/espaços) para evitar falsos "novos"
-  const regionalDaCargaNorm = normalizarParaComparacao(regionalDaCarga);
+  const regionalDaCargaNorm = normalizarRegionalParaComparacao(regionalDaCarga);
   const dbDataFiltrado = regionalDaCarga 
-    ? dbData.filter(i => normalizarParaComparacao(i.regional_texto) === regionalDaCargaNorm)
+    ? dbData.filter(i => normalizarRegionalParaComparacao(i.regional_texto) === regionalDaCargaNorm)
     : dbData;
   
   console.log('[processDelta] 📋 Integrantes no DB da regional:', dbDataFiltrado.length, 'de', dbData.length, 'total');
@@ -409,7 +409,7 @@ export const processDelta = (
     // Verificar se este integrante existe ATIVO em OUTRA regional
     const emOutraRegional = todosAtivos.find(
       i => i.registro_id === candidato.registro_id && 
-           i.regional_texto !== regionalDaCarga &&
+           normalizarRegionalParaComparacao(i.regional_texto) !== regionalDaCargaNorm &&
            i.ativo === true
     );
     
