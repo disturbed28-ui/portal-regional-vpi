@@ -339,8 +339,10 @@ export const processDelta = (
   const regionalDaCarga = detectarRegionalDaCarga(excelData);
   
   // Filtrar dbData apenas para integrantes da regional da carga
+  // Comparação normalizada (sem acentos/caixa/espaços) para evitar falsos "novos"
+  const regionalDaCargaNorm = normalizarParaComparacao(regionalDaCarga);
   const dbDataFiltrado = regionalDaCarga 
-    ? dbData.filter(i => i.regional_texto === regionalDaCarga)
+    ? dbData.filter(i => normalizarParaComparacao(i.regional_texto) === regionalDaCargaNorm)
     : dbData;
   
   console.log('[processDelta] 📋 Integrantes no DB da regional:', dbDataFiltrado.length, 'de', dbData.length, 'total');
