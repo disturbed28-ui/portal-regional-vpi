@@ -851,7 +851,12 @@ const Admin = () => {
           open={detailDialogOpen}
           onOpenChange={setDetailDialogOpen}
           onSuccess={fetchProfiles}
+          onAtivado={(d) => {
+            setDestinatarioAtivacao(d);
+            setShowNotificarAtivacao(true);
+          }}
         />
+
       </div>
     </div>
   );
