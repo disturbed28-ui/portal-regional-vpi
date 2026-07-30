@@ -23,6 +23,7 @@ import type { IntegranteAfastado, MotivoBaixa } from "@/hooks/useAfastados";
 import { useProfile } from "@/hooks/useProfile";
 import { getNivelAcessoAdmin } from "@/lib/grauUtils";
 import { buildEscopoCargaPayload } from "@/lib/escopoCarga";
+import { NotificarRetornoAtrasadoButton } from "./NotificarRetornoAtrasadoButton";
 
 interface AfastadosGestaoTabProps {
   userId?: string;
