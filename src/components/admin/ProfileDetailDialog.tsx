@@ -66,6 +66,7 @@ interface ProfileDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  onAtivado?: (destinatario: AtivacaoDestinatario) => void;
 }
 
 const STATUS_OPTIONS: ProfileStatus[] = [
