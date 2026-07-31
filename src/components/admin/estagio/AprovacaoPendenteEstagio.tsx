@@ -6,6 +6,9 @@ import { CardAprovacaoEstagio } from './CardAprovacaoEstagio';
 import { ModalRejeicaoEstagio } from './ModalRejeicaoEstagio';
 import { ModalJustificativaEscalacao } from '@/components/admin/treinamento/ModalJustificativaEscalacao';
 import { ReadOnlyBanner } from '@/components/ui/read-only-banner';
+import { DialogNotificarAprovacao } from '@/components/whatsapp/DialogNotificarAprovacao';
+import { useNotificacaoAprovacaoFluxo } from '@/hooks/useNotificacaoAprovacaoFluxo';
+import { useProfile } from '@/hooks/useProfile';
 
 interface AprovacaoPendenteEstagioProps {
   userId: string | undefined;
@@ -14,6 +17,9 @@ interface AprovacaoPendenteEstagioProps {
 
 export function AprovacaoPendenteEstagio({ userId, readOnly = false }: AprovacaoPendenteEstagioProps) {
   const { solicitacoes, loading, operando, aprovar, rejeitar, aprovarPorEscalacao } = useAprovacoesEstagiosPendentes(userId);
+  const { profile } = useProfile(userId);
+  const remetenteNome = profile?.nome_colete || profile?.name || null;
+  const notificacaoFluxo = useNotificacaoAprovacaoFluxo('estagio', remetenteNome);
   const [rejeicaoModal, setRejeicaoModal] = useState<{
     open: boolean;
     aprovacaoId: string;
@@ -30,7 +36,8 @@ export function AprovacaoPendenteEstagio({ userId, readOnly = false }: Aprovacao
 
   async function handleAprovar(aprovacaoId: string, solicitacaoId: string) {
     if (readOnly) return;
-    await aprovar(aprovacaoId, solicitacaoId);
+    const ok = await aprovar(aprovacaoId, solicitacaoId);
+    if (ok) await notificacaoFluxo.notificarProximo(solicitacaoId);
   }
 
   function handleRejeitar(aprovacaoId: string, solicitacaoId: string) {
@@ -66,7 +73,9 @@ export function AprovacaoPendenteEstagio({ userId, readOnly = false }: Aprovacao
       justificativa
     );
     if (success) {
+      const { solicitacaoId } = escalacaoModal;
       setEscalacaoModal({ open: false, aprovacaoId: '', solicitacaoId: '', aprovadorNome: null, tipoAprovador: '' });
+      await notificacaoFluxo.notificarProximo(solicitacaoId);
     }
   }
 
@@ -143,6 +152,14 @@ export function AprovacaoPendenteEstagio({ userId, readOnly = false }: Aprovacao
           />
         </>
       )}
+
+      <DialogNotificarAprovacao
+        notificacao={notificacaoFluxo.notificacao}
+        open={notificacaoFluxo.open}
+        onOpenChange={notificacaoFluxo.setOpen}
+        userId={userId}
+        remetenteNome={remetenteNome}
+      />
     </>
   );
 }

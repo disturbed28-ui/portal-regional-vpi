@@ -6,6 +6,9 @@ import { CardAprovacaoTreinamento } from './CardAprovacaoTreinamento';
 import { ModalRejeicaoTreinamento } from './ModalRejeicaoTreinamento';
 import { ModalJustificativaEscalacao } from './ModalJustificativaEscalacao';
 import { ReadOnlyBanner } from '@/components/ui/read-only-banner';
+import { DialogNotificarAprovacao } from '@/components/whatsapp/DialogNotificarAprovacao';
+import { useNotificacaoAprovacaoFluxo } from '@/hooks/useNotificacaoAprovacaoFluxo';
+import { useProfile } from '@/hooks/useProfile';
 
 interface AprovacoesPendentesProps {
   userId: string | undefined;
@@ -14,6 +17,9 @@ interface AprovacoesPendentesProps {
 
 export function AprovacoesPendentes({ userId, readOnly = false }: AprovacoesPendentesProps) {
   const { solicitacoes, loading, operando, aprovar, rejeitar, aprovarPorEscalacao } = useAprovacoesPendentes(userId);
+  const { profile } = useProfile(userId);
+  const remetenteNome = profile?.nome_colete || profile?.name || null;
+  const notificacaoFluxo = useNotificacaoAprovacaoFluxo('treinamento', remetenteNome);
   const [rejeicaoModal, setRejeicaoModal] = useState<{
     open: boolean;
     aprovacaoId: string;
@@ -30,7 +36,8 @@ export function AprovacoesPendentes({ userId, readOnly = false }: AprovacoesPend
 
   async function handleAprovar(aprovacaoId: string, solicitacaoId: string) {
     if (readOnly) return;
-    await aprovar(aprovacaoId, solicitacaoId);
+    const ok = await aprovar(aprovacaoId, solicitacaoId);
+    if (ok) await notificacaoFluxo.notificarProximo(solicitacaoId);
   }
 
   function handleRejeitar(aprovacaoId: string, solicitacaoId: string) {
@@ -61,7 +68,9 @@ export function AprovacoesPendentes({ userId, readOnly = false }: AprovacoesPend
       justificativa
     );
     if (success) {
+      const { solicitacaoId } = escalacaoModal;
       setEscalacaoModal({ open: false, aprovacaoId: '', solicitacaoId: '', aprovadorNome: null, tipoAprovador: '' });
+      await notificacaoFluxo.notificarProximo(solicitacaoId);
     }
   }
 
@@ -138,6 +147,14 @@ export function AprovacoesPendentes({ userId, readOnly = false }: AprovacoesPend
           />
         </>
       )}
+
+      <DialogNotificarAprovacao
+        notificacao={notificacaoFluxo.notificacao}
+        open={notificacaoFluxo.open}
+        onOpenChange={notificacaoFluxo.setOpen}
+        userId={userId}
+        remetenteNome={remetenteNome}
+      />
     </>
   );
 }
