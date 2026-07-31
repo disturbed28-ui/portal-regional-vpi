@@ -1,50 +1,81 @@
-## Problema
+# Notificações WhatsApp em cadeia — Treinamento e Estágio
 
-Hoje o título exibido na agenda é reconstruído a partir de: `[SIGLA] Tipo - Divisão - Extras`.
+## Objetivo
+Cada passo do fluxo de aprovação passa a abrir uma janela de diálogo para notificar via WhatsApp o próximo responsável, até o fim do fluxo. No fim, o Diretor de Divisão do integrante recebe o aviso de conclusão.
 
-O trecho "Extras" (o complemento que o autor escreveu no Google Agenda) quase sempre se perde nos eventos de **divisão**, porque o código procura no título original a string formatada `"Divisao Sao Jose dos Campos Extremo Norte - SP"` — que nunca aparece literalmente num título como `PUB EXT NORTE - ANIVERSÁRIO DIVISÃO SANTA ISABEL`. Resultado: fica só `PUB - Divisao ... Extremo Norte`.
+## Fluxo proposto
 
-Casos citados:
-- `PUB EXT NORTE – ANIVERSÁRIO DA DIVISÃO SANTA ISABEL` → hoje: "PUB - Divisao SJC Extremo Norte - SP"
-- `AÇÃO SOCIAL EXT NORTE – PALESTRA ...` → hoje perde a palestra
+```text
+Cadastro (Solicitação salva)
+   -> dialogo: notificar aprovador do nível 1
+Aprovador nível 1 aprova
+   -> dialogo: notificar aprovador do nível 2
+Aprovador nível 2 aprova
+   -> dialogo: notificar aprovador do nível 3
+Último aprovador aprova (fluxo concluído)
+   -> dialogo: notificar Diretor de Divisão do integrante
+      "Treinamento/Estágio aprovado com sucesso para <integrante>"
+```
 
-## Solução
+Observação: Estágio Grau V tem apenas 1 aprovador (Diretor Regional). Nesse caso o cadastro
+notifica o nível 1 e a aprovação dele já dispara o aviso de conclusão.
 
-Trocar a extração de extras por uma função de **texto residual**: em vez de "achar a divisão no título", remover do título original tudo que já é representado nos outros campos e manter o que sobrar.
+## O que aparece na tela
+Um diálogo padrão (reutilizável) com:
+- Nome, cargo e divisão do destinatário
+- Prévia da mensagem que será enviada
+- Botão verde "Enviar WhatsApp" e botão "Agora não" (nunca bloqueia o fluxo)
+- Aviso claro quando o destinatário não tem telefone cadastrado (com nome de quem avisar)
 
-Etapas do residual (em `src/lib/googleCalendar.ts`):
+## Mensagens (novos templates, editáveis em Notificações WhatsApp)
+- `treinamento_aprovacao_pendente` — "Caro Diretor, {{aprovador}}! ..." com integrante, registro, divisão, cargo em treinamento, nível/etapa da aprovação, solicitante, data de início e término previsto.
+- `estagio_aprovacao_pendente` — idem, com grau do estágio.
+- `treinamento_aprovado_dd` — aviso de conclusão ao Diretor de Divisão.
+- `estagio_aprovado_dd` — aviso de conclusão ao Diretor de Divisão.
 
-1. Remover as palavras do **tipo de evento** detectado (pub, ação social, reunião, bate e volta, bonde insano, arrecadação, entrega de coletes).
-2. Remover os **tokens da divisão detectada** e seus apelidos (EXT NORTE, EXTREMO NORTE, SJC, JAC, nome completo da divisão, "DIVISÃO", "- SP"), mas **apenas a ocorrência que identificou a divisão do evento** — se o título citar outra divisão (Santa Isabel), ela é preservada.
-3. Remover **sigla regional** (VP1/VPI/LN/CMD) e palavras "REGIONAL"/"COMANDO".
-4. Limpar conectores/pontuação sobrando nas bordas (`-`, `–`, `:`, `|`, parênteses vazios) e espaços duplicados.
-5. O que sobrar (se ≥ 3 caracteres e não for só stopword como "DA", "DE", "DO") vira `informacoesExtras`.
-
-Isso vale para os 4 ramos: divisão, regional, CMD e Caveira (nos casos com palavra-chave, o comportamento atual de manter o restante continua).
-
-## Abreviação / encurtamento
-
-Nova função `abreviarExtras(texto, limite)`:
-
-- Dicionário de abreviações aplicadas por palavra inteira:
-  `ANIVERSÁRIO→ANIV.`, `DIVISÃO→DIV.`, `REGIONAL→REG.`, `COMANDO→CMD`, `CONFRATERNIZAÇÃO→CONFRAT.`, `COMEMORAÇÃO→COMEM.`, `INTEGRAÇÃO→INTEGR.`, `ARRECADAÇÃO→ARREC.`, `ANIVERSARIANTES→ANIVERS.`, `SÃO JOSÉ DOS CAMPOS→SJC`, `JACAREÍ→JAC`, `EXTREMO→EXT`, `PALESTRA` (mantida), `SOLIDÁRIA/SOLIDARIEDADE→SOLID.`, `CAMPANHA→CAMP.`, `MOTOCICLISTA→MOTOC.`, `HOMENAGEM→HOMEN.`, `ANIVERSÁRIO DE FUNDAÇÃO→ANIV. FUNDAÇÃO`.
-- Remove artigos/preposições redundantes ("DA", "DO", "DE", "DOS") quando o texto passa do limite.
-- Limite de **48 caracteres**; se ainda exceder, corta na última palavra inteira e adiciona `…`.
-- O texto completo original nunca se perde: `originalTitle` continua salvo e será exibido inteiro no modal de detalhes.
-
-Resultado esperado:
-- `[VP1] PUB - Divisao SJC Extremo Norte - SP - ANIV. DIV. SANTA ISABEL`
-- `[VP1] Acao Social - Divisao SJC Extremo Norte - SP - PALESTRA ...`
-
-## Exibição
-
-- **EventCard**: título normalizado (com extras abreviados) — sem quebrar o layout mobile.
-- **EventDetailDialog**: além dos campos atuais, exibir uma linha "Título original" com o texto integral do Google Agenda, para nunca perder informação.
+Todos os envios continuam registrados em `notificacoes_whatsapp_log` (auditoria já existente).
 
 ## Detalhes técnicos
 
-Arquivos alterados:
-- `src/lib/googleCalendar.ts` — nova `extrairInformacoesExtras()` e `abreviarExtras()`, usadas nos 4 ramos de `parseEventComponents`; `buildNormalizedTitle` passa a aplicar a abreviação.
-- `src/components/agenda/EventDetailDialog.tsx` — nova linha com o título original.
+1. **Resolução do telefone do aprovador**
+   `aprovacoes_treinamento/_estagio` guardam `aprovador_integrante_id` (integrantes_portal).
+   O telefone está em `profiles.telefone` via `integrantes_portal.profile_id`.
+   Novo hook `useContatoAprovador(aprovadorIntegranteId)` fará esse join, com fallback:
+   se o aprovador não tiver telefone, tenta o Diretor Regional/Divisão correspondente
+   (mesma lógica já usada em `useDiretorDivisao`).
 
-Sem mudanças de banco. A classificação de tipo/divisão/regional e as regras de palavras-chave (Caveira/Lobo/Ursinho) permanecem exatamente como estão.
+2. **Componente novo** `src/components/whatsapp/DialogNotificarAprovacao.tsx`
+   - Props: destinatário (nome/cargo/telefone/profile_id), `templateChave`, `payload`, `moduloOrigem`.
+   - Carrega o template, renderiza com `renderTemplate`, envia com o mesmo padrão de âncora
+     dinâmica já usado (funciona em mobile e dentro do preview).
+
+3. **Hook novo** `src/hooks/useNotificacaoAprovacaoFluxo.tsx`
+   - `resolverProximoDestinatario(solicitacaoId, tipo)`: lê as aprovações ordenadas por nível,
+     devolve a próxima pendente (ou `{ concluido: true, diretorDivisao }` quando não há mais).
+   - Centraliza a decisão para Treinamento e Estágio (mesma forma, tabelas diferentes).
+
+4. **Pontos de integração**
+   - `SolicitacaoTreinamento.tsx` / `SolicitacaoEstagio.tsx`: após salvar com sucesso,
+     abre o diálogo para o nível 1. Requer que `createSolicitacao` em
+     `useSolicitacaoTreinamento`/`useSolicitacaoEstagio` retorne o `id` da solicitação criada
+     (hoje retorna apenas `boolean`) — as aprovações são criadas por trigger, então a leitura
+     dos aprovadores acontece depois do insert.
+   - `AprovacoesPendentes.tsx` / `AprovacaoPendenteEstagio.tsx`: após `aprovar` e após
+     `aprovarPorEscalacao` retornarem sucesso, resolve o próximo destinatário e abre o diálogo.
+   - Rejeição não notifica próximo (fluxo encerrado) — mantém comportamento atual.
+
+5. **Sem mudanças de regra de acesso.** Nenhuma alteração em RLS; apenas leitura de dados já
+   acessíveis ao usuário e inserção no log de notificações (já permitida).
+
+## Melhorias sugeridas
+- **Botão "Notificar" persistente no card de aprovação pendente**: se o usuário fechar o diálogo
+  sem enviar, o card do fluxo passa a exibir um botão para reenviar/notificar depois. Evita
+  perder a notificação por um toque errado.
+- **Aviso de aprovador sem telefone**: mostrar no card, para que o ADM regional corrija o cadastro.
+- **Notificar também o solicitante** na conclusão (opcional, um segundo botão no diálogo final),
+  já que ele acompanha o caso.
+- **Anti-duplicidade**: usar `notificacoes_whatsapp_log` para indicar no card se aquela etapa já
+  foi notificada (evita cobrança repetida do mesmo aprovador).
+
+## Migração de banco
+Somente inserção dos 4 novos templates em `notificacoes_whatsapp_templates`. Nenhuma tabela nova.
