@@ -455,10 +455,18 @@ export function useConsolidacaoIntegrantes(userId?: string) {
       
       setLote(prev => ({ ...prev, etapa: 'concluido' }));
       
-      toast({
-        title: "Importação concluída",
-        description: `${data.insertedCount} novos, ${data.updatedCount} atualizados. Lote: ${lote.id}`
-      });
+      if (data?.ignoradosPorEscopo > 0) {
+        toast({
+          title: "Registros fora do seu escopo",
+          description: `${data.ignoradosPorEscopo} registro(s) foram ignorados por pertencerem a outra ${data.escopo?.tipo === 'divisao' ? 'divisão' : 'regional'}. Importados: ${data.insertedCount} novos, ${data.updatedCount} atualizados.`,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Importação concluída",
+          description: `${data.insertedCount} novos, ${data.updatedCount} atualizados. Lote: ${lote.id}`
+        });
+      }
       
       return true;
       
