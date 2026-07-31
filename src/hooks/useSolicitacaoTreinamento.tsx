@@ -117,7 +117,7 @@ export function useSolicitacaoTreinamento() {
     }
   }
 
-  async function createSolicitacao(params: CreateSolicitacaoParams): Promise<boolean> {
+  async function createSolicitacao(params: CreateSolicitacaoParams): Promise<string | null> {
     setLoading(true);
     
     try {
