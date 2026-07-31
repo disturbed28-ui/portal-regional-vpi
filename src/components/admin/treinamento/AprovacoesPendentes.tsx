@@ -98,6 +98,13 @@ export function AprovacoesPendentes({ userId, readOnly = false }: AprovacoesPend
             </p>
           </CardContent>
         </Card>
+        <DialogNotificarAprovacao
+          notificacao={notificacaoFluxo.notificacao}
+          open={notificacaoFluxo.open}
+          onOpenChange={notificacaoFluxo.setOpen}
+          userId={userId}
+          remetenteNome={remetenteNome}
+        />
       </div>
     );
   }

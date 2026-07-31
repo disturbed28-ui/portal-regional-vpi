@@ -103,6 +103,13 @@ export function AprovacaoPendenteEstagio({ userId, readOnly = false }: Aprovacao
             </p>
           </CardContent>
         </Card>
+        <DialogNotificarAprovacao
+          notificacao={notificacaoFluxo.notificacao}
+          open={notificacaoFluxo.open}
+          onOpenChange={notificacaoFluxo.setOpen}
+          userId={userId}
+          remetenteNome={remetenteNome}
+        />
       </div>
     );
   }
