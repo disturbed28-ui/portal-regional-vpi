@@ -98,7 +98,7 @@ export function useSolicitacaoEstagio() {
     }
   }
 
-  async function createSolicitacao(params: CreateSolicitacaoEstagioParams): Promise<boolean> {
+  async function createSolicitacao(params: CreateSolicitacaoEstagioParams): Promise<string | null> {
     setLoading(true);
     
     try {
@@ -114,7 +114,7 @@ export function useSolicitacaoEstagio() {
       const dataTerminoPrevisto = addMonths(params.dataInicioEstagio, params.tempoEstagioMeses);
 
       // 1. Criar solicitação
-      const { error: solError } = await supabase
+      const { data: solCriada, error: solError } = await supabase
         .from('solicitacoes_estagio')
         .insert({
           integrante_id: params.integrante.id,
@@ -131,7 +131,9 @@ export function useSolicitacaoEstagio() {
           data_inicio_estagio: params.dataInicioEstagio.toISOString().split('T')[0],
           tempo_estagio_meses: params.tempoEstagioMeses,
           data_termino_previsto: dataTerminoPrevisto.toISOString().split('T')[0]
-        });
+        })
+        .select('id')
+        .single();
       
       if (solError) {
         console.error('Erro ao criar solicitação:', solError);
@@ -140,7 +142,7 @@ export function useSolicitacaoEstagio() {
           description: 'Não foi possível criar a solicitação de estágio.',
           variant: 'destructive'
         });
-        return false;
+        return null;
       }
 
       // 2. Atualizar cargo_estagio_id do integrante
@@ -156,7 +158,7 @@ export function useSolicitacaoEstagio() {
           description: 'Solicitação criada, mas não foi possível marcar o integrante em estágio.',
           variant: 'destructive'
         });
-        return false;
+        return null;
       }
 
       toast({
@@ -164,7 +166,7 @@ export function useSolicitacaoEstagio() {
         description: 'A solicitação de estágio foi criada com sucesso.',
       });
 
-      return true;
+      return solCriada?.id ?? null;
     } finally {
       setLoading(false);
     }
