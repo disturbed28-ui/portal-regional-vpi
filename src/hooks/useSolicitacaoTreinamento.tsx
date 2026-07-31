@@ -133,7 +133,7 @@ export function useSolicitacaoTreinamento() {
       const dataTerminoPrevisto = addMonths(params.dataInicioTreinamento, params.tempoTreinamentoMeses);
 
       // 1. Criar solicitação
-      const { error: solError } = await supabase
+      const { data: solCriada, error: solError } = await supabase
         .from('solicitacoes_treinamento')
         .insert({
           integrante_id: params.integrante.id,
@@ -149,7 +149,9 @@ export function useSolicitacaoTreinamento() {
           data_inicio_treinamento: params.dataInicioTreinamento.toISOString().split('T')[0],
           tempo_treinamento_meses: params.tempoTreinamentoMeses,
           data_termino_previsto: dataTerminoPrevisto.toISOString().split('T')[0]
-        });
+        })
+        .select('id')
+        .single();
       
       if (solError) {
         console.error('Erro ao criar solicitação:', solError);
@@ -158,7 +160,7 @@ export function useSolicitacaoTreinamento() {
           description: 'Não foi possível criar a solicitação de treinamento.',
           variant: 'destructive'
         });
-        return false;
+        return null;
       }
 
       // 2. Atualizar cargo_treinamento_id do integrante
@@ -174,7 +176,7 @@ export function useSolicitacaoTreinamento() {
           description: 'Solicitação criada, mas não foi possível marcar o integrante em treinamento.',
           variant: 'destructive'
         });
-        return false;
+        return null;
       }
 
       toast({
@@ -182,7 +184,7 @@ export function useSolicitacaoTreinamento() {
         description: 'A solicitação de treinamento foi criada com sucesso.',
       });
 
-      return true;
+      return solCriada?.id ?? null;
     } finally {
       setLoading(false);
     }
