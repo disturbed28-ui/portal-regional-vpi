@@ -23,6 +23,8 @@ import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { useDivisoesPorRegional } from '@/hooks/useDivisoesPorRegional';
 import { IntegranteEstagioCard } from './IntegranteEstagioCard';
 import { ReadOnlyBanner } from '@/components/ui/read-only-banner';
+import { DialogNotificarAprovacao } from '@/components/whatsapp/DialogNotificarAprovacao';
+import { useNotificacaoAprovacaoFluxo } from '@/hooks/useNotificacaoAprovacaoFluxo';
 import { format, addMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -67,6 +69,7 @@ export function SolicitacaoEstagio({ userId, readOnly = false }: SolicitacaoEsta
     encerrarEstagio,
     createSolicitacao
   } = useSolicitacaoEstagio();
+  const notificacaoFluxo = useNotificacaoAprovacaoFluxo('estagio', profile?.nome_colete || profile?.name || null);
 
   // Atualizar tempo padrão quando mudar o grau
   useEffect(() => {
@@ -159,7 +162,7 @@ export function SolicitacaoEstagio({ userId, readOnly = false }: SolicitacaoEsta
       cargo_estagio_id: null
     };
 
-    const success = await createSolicitacao({
+    const novaSolicitacaoId = await createSolicitacao({
       integrante: integranteComDivisao,
       cargoEstagioId,
       grauEstagio,
@@ -173,7 +176,7 @@ export function SolicitacaoEstagio({ userId, readOnly = false }: SolicitacaoEsta
       tempoEstagioMeses: tempoMeses
     });
 
-    if (success) {
+    if (novaSolicitacaoId) {
       // Salvar tempo selecionado como novo padrão para o grau
       const settingKey = grauEstagio === 'V' 
         ? 'tempo_estagio_grau5_padrao' 
@@ -185,6 +188,7 @@ export function SolicitacaoEstagio({ userId, readOnly = false }: SolicitacaoEsta
       });
       
       handleLimparSelecao();
+      await notificacaoFluxo.notificarProximo(novaSolicitacaoId);
     }
   }
 
@@ -535,6 +539,15 @@ export function SolicitacaoEstagio({ userId, readOnly = false }: SolicitacaoEsta
           </>
         )}
       </CardContent>
+
+      {/* Notificação WhatsApp do fluxo de aprovação */}
+      <DialogNotificarAprovacao
+        notificacao={notificacaoFluxo.notificacao}
+        open={notificacaoFluxo.open}
+        onOpenChange={notificacaoFluxo.setOpen}
+        userId={userId}
+        remetenteNome={profile?.nome_colete || profile?.name || null}
+      />
     </Card>
   );
 }

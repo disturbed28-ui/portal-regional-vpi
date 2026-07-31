@@ -23,6 +23,8 @@ import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { IntegranteTreinamentoCard } from './IntegranteTreinamentoCard';
 import { ModalEncerrarTreinamento } from './ModalEncerrarTreinamento';
 import { ReadOnlyBanner } from '@/components/ui/read-only-banner';
+import { DialogNotificarAprovacao } from '@/components/whatsapp/DialogNotificarAprovacao';
+import { useNotificacaoAprovacaoFluxo } from '@/hooks/useNotificacaoAprovacaoFluxo';
 import { format, addMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -64,6 +66,7 @@ export function SolicitacaoTreinamento({ userId, readOnly = false }: Solicitacao
     encerrarTreinamento,
     createSolicitacao
   } = useSolicitacaoTreinamento();
+  const notificacaoFluxo = useNotificacaoAprovacaoFluxo('treinamento', profile?.nome_colete || profile?.name || null);
 
   async function handleSelectIntegrante(integrante: IntegranteSelecionado) {
     setSearchTerm('');
@@ -136,7 +139,7 @@ async function executarCriacao() {
 
     const tempoMeses = parseInt(tempoTreinamentoMeses, 10);
 
-    const success = await createSolicitacao({
+    const novaSolicitacaoId = await createSolicitacao({
       integrante: {
         ...integranteSelecionado,
         cargo_treinamento_id: null // Já foi limpo
@@ -152,13 +155,14 @@ async function executarCriacao() {
       tempoTreinamentoMeses: tempoMeses
     });
 
-    if (success) {
+    if (novaSolicitacaoId) {
       // Salvar tempo selecionado como novo padrão
       await updateSettingText.mutateAsync({
         chave: 'tempo_treinamento_padrao',
         valor_texto: tempoTreinamentoMeses
       });
       handleLimparSelecao();
+      await notificacaoFluxo.notificarProximo(novaSolicitacaoId);
     }
   }
 
@@ -460,6 +464,15 @@ async function executarCriacao() {
         cargoTreinamentoNome={cargoTreinamentoNome}
         onConfirm={handleConfirmEncerramento}
         loading={processando}
+      />
+
+      {/* Notificação WhatsApp do fluxo de aprovação */}
+      <DialogNotificarAprovacao
+        notificacao={notificacaoFluxo.notificacao}
+        open={notificacaoFluxo.open}
+        onOpenChange={notificacaoFluxo.setOpen}
+        userId={userId}
+        remetenteNome={profile?.nome_colete || profile?.name || null}
       />
     </>
   );
