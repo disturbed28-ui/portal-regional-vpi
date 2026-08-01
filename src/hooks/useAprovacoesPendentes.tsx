@@ -126,7 +126,7 @@ export function useAprovacoesPendentes(userId: string | undefined) {
 
       // 4. Montar o resultado usando variáveis LOCAIS
       const resultado: SolicitacaoAprovacao[] = solicitacoesData.map(sol => {
-        const integrante = sol.integrante as { nome_colete: string; divisao_texto: string; regional_texto: string; regional_id: string | null; cargo_grau_texto: string } | null;
+        const integrante = sol.integrante as { nome_colete: string; divisao_texto: string; regional_texto: string; regional_id: string | null; divisao_id: string | null; cargo_grau_texto: string } | null;
         const cargoTreinamento = sol.cargo_treinamento as { nome: string } | null;
         const solicitanteCargo = sol.solicitante_cargo as { nome: string } | null;
         const solicitanteDivisao = sol.solicitante_divisao as { nome: string } | null;
