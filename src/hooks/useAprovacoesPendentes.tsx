@@ -184,7 +184,18 @@ export function useAprovacoesPendentes(userId: string | undefined) {
         };
       });
 
-      setSolicitacoes(resultado);
+      // 5. Aplicar escopo hierárquico:
+      //    - Diretor Regional (Grau V): vê tudo da sua regional
+      //    - Diretor de Divisão (Grau VI+): vê apenas a sua divisão
+      const escopoFiltrado = resultado.filter(s => {
+        if (s.isAprovadorDaVez) return true;
+        if (localEhDR) {
+          return !!localRegionalId && s.integrante_regional_id === localRegionalId;
+        }
+        return !!localDivisaoId && s.integrante_divisao_id === localDivisaoId;
+      });
+
+      setSolicitacoes(escopoFiltrado);
     } finally {
       setLoading(false);
     }
