@@ -23,6 +23,7 @@ interface SolicitacaoAprovacao {
   integrante_divisao_texto: string;
   integrante_regional_texto: string;
   integrante_regional_id: string | null;
+  integrante_divisao_id: string | null;
   integrante_cargo_atual: string;
   cargo_treinamento_nome: string;
   cargo_treinamento_id: string;
