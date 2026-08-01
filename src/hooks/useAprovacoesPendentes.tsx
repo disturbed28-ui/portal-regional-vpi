@@ -23,6 +23,7 @@ interface SolicitacaoAprovacao {
   integrante_divisao_texto: string;
   integrante_regional_texto: string;
   integrante_regional_id: string | null;
+  integrante_divisao_id: string | null;
   integrante_cargo_atual: string;
   cargo_treinamento_nome: string;
   cargo_treinamento_id: string;
@@ -56,13 +57,14 @@ export function useAprovacoesPendentes(userId: string | undefined) {
       // 1. PRIMEIRO buscar dados do usuário logado (dentro do fetch para garantir valores atualizados)
       const { data: meuIntegrante } = await supabase
         .from('integrantes_portal')
-        .select('id, nome_colete, regional_id, cargo_grau_texto')
+        .select('id, nome_colete, regional_id, divisao_id, cargo_grau_texto')
         .eq('profile_id', userId)
         .single();
 
       const localIntegranteId = meuIntegrante?.id || null;
       const localIntegranteNome = meuIntegrante?.nome_colete || null;
       const localRegionalId = meuIntegrante?.regional_id || null;
+      const localDivisaoId = meuIntegrante?.divisao_id || null;
       
       // Verificar se é Diretor Regional
       const cargoNormalizado = (meuIntegrante?.cargo_grau_texto || '').toLowerCase();
@@ -89,6 +91,7 @@ export function useAprovacoesPendentes(userId: string | undefined) {
             divisao_texto,
             regional_texto,
             regional_id,
+            divisao_id,
             cargo_grau_texto
           ),
           cargo_treinamento:cargos!solicitacoes_treinamento_cargo_treinamento_id_fkey(nome),
@@ -124,7 +127,7 @@ export function useAprovacoesPendentes(userId: string | undefined) {
 
       // 4. Montar o resultado usando variáveis LOCAIS
       const resultado: SolicitacaoAprovacao[] = solicitacoesData.map(sol => {
-        const integrante = sol.integrante as { nome_colete: string; divisao_texto: string; regional_texto: string; regional_id: string | null; cargo_grau_texto: string } | null;
+        const integrante = sol.integrante as { nome_colete: string; divisao_texto: string; regional_texto: string; regional_id: string | null; divisao_id: string | null; cargo_grau_texto: string } | null;
         const cargoTreinamento = sol.cargo_treinamento as { nome: string } | null;
         const solicitanteCargo = sol.solicitante_cargo as { nome: string } | null;
         const solicitanteDivisao = sol.solicitante_divisao as { nome: string } | null;
@@ -152,6 +155,7 @@ export function useAprovacoesPendentes(userId: string | undefined) {
           integrante_divisao_texto: integrante?.divisao_texto || 'N/A',
           integrante_regional_texto: integrante?.regional_texto || 'N/A',
           integrante_regional_id: integrante?.regional_id || null,
+          integrante_divisao_id: integrante?.divisao_id || null,
           integrante_cargo_atual: integrante?.cargo_grau_texto || 'N/A',
           cargo_treinamento_nome: cargoTreinamento?.nome || 'N/A',
           cargo_treinamento_id: sol.cargo_treinamento_id,
@@ -181,7 +185,18 @@ export function useAprovacoesPendentes(userId: string | undefined) {
         };
       });
 
-      setSolicitacoes(resultado);
+      // 5. Aplicar escopo hierárquico:
+      //    - Diretor Regional (Grau V): vê tudo da sua regional
+      //    - Diretor de Divisão (Grau VI+): vê apenas a sua divisão
+      const escopoFiltrado = resultado.filter(s => {
+        if (s.isAprovadorDaVez) return true;
+        if (localEhDR) {
+          return !!localRegionalId && s.integrante_regional_id === localRegionalId;
+        }
+        return !!localDivisaoId && s.integrante_divisao_id === localDivisaoId;
+      });
+
+      setSolicitacoes(escopoFiltrado);
     } finally {
       setLoading(false);
     }
