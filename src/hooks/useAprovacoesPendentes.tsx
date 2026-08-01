@@ -154,6 +154,7 @@ export function useAprovacoesPendentes(userId: string | undefined) {
           integrante_divisao_texto: integrante?.divisao_texto || 'N/A',
           integrante_regional_texto: integrante?.regional_texto || 'N/A',
           integrante_regional_id: integrante?.regional_id || null,
+          integrante_divisao_id: integrante?.divisao_id || null,
           integrante_cargo_atual: integrante?.cargo_grau_texto || 'N/A',
           cargo_treinamento_nome: cargoTreinamento?.nome || 'N/A',
           cargo_treinamento_id: sol.cargo_treinamento_id,
