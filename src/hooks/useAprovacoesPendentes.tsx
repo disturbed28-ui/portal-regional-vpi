@@ -90,6 +90,7 @@ export function useAprovacoesPendentes(userId: string | undefined) {
             divisao_texto,
             regional_texto,
             regional_id,
+            divisao_id,
             cargo_grau_texto
           ),
           cargo_treinamento:cargos!solicitacoes_treinamento_cargo_treinamento_id_fkey(nome),
