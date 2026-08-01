@@ -56,13 +56,14 @@ export function useAprovacoesPendentes(userId: string | undefined) {
       // 1. PRIMEIRO buscar dados do usuário logado (dentro do fetch para garantir valores atualizados)
       const { data: meuIntegrante } = await supabase
         .from('integrantes_portal')
-        .select('id, nome_colete, regional_id, cargo_grau_texto')
+        .select('id, nome_colete, regional_id, divisao_id, cargo_grau_texto')
         .eq('profile_id', userId)
         .single();
 
       const localIntegranteId = meuIntegrante?.id || null;
       const localIntegranteNome = meuIntegrante?.nome_colete || null;
       const localRegionalId = meuIntegrante?.regional_id || null;
+      const localDivisaoId = meuIntegrante?.divisao_id || null;
       
       // Verificar se é Diretor Regional
       const cargoNormalizado = (meuIntegrante?.cargo_grau_texto || '').toLowerCase();
