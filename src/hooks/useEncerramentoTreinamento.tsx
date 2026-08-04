@@ -201,7 +201,7 @@ export function useEncerramentoTreinamento(userId: string | undefined) {
     } finally {
       setLoading(false);
     }
-  }, [meuIntegranteId]);
+  }, [meuIntegranteId, userId, escopo]);
 
   useEffect(() => {
     fetchTreinamentos();
