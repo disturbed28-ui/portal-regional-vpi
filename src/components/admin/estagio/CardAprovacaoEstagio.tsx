@@ -69,6 +69,7 @@ interface CardAprovacaoEstagioProps {
     aprovadorNome: string | null, 
     tipoAprovador: string
   ) => void;
+  onNotificarAprovador?: (solicitacaoId: string) => void;
   operando: boolean;
   readOnly?: boolean;
 }
@@ -88,6 +89,7 @@ export function CardAprovacaoEstagio({
   onAprovar,
   onRejeitar,
   onAprovarPorEscalacao,
+  onNotificarAprovador,
   operando,
   readOnly = false
 }: CardAprovacaoEstagioProps) {
@@ -265,6 +267,20 @@ export function CardAprovacaoEstagio({
                 {aprovacao.aprovado_por_escalacao && aprovacao.justificativa_escalacao && (
                   <div className="mt-2 p-2 bg-amber-500/10 rounded text-sm text-amber-700">
                     <strong>Escalação:</strong> {aprovacao.justificativa_escalacao}
+                  </div>
+                )}
+
+                {!readOnly && isAtual && aprovacao.status === 'pendente' && onNotificarAprovador && (
+                  <div className="mt-3">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full bg-[#25D366]/10 text-[#128C7E] border-[#25D366]/40 hover:bg-[#25D366]/20"
+                      onClick={() => onNotificarAprovador(solicitacao.id)}
+                    >
+                      <MessageCircle className="h-4 w-4 mr-1" />
+                      Cobrar aprovação (WhatsApp)
+                    </Button>
                   </div>
                 )}
 

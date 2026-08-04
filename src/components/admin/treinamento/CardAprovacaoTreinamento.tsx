@@ -13,7 +13,8 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  MessageCircle
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -60,6 +61,7 @@ interface CardAprovacaoTreinamentoProps {
   onAprovar?: (aprovacaoId: string, solicitacaoId: string) => void;
   onRejeitar?: (aprovacaoId: string, solicitacaoId: string) => void;
   onAprovarPorEscalacao?: (aprovacaoId: string, solicitacaoId: string, aprovadorNome: string | null, tipoAprovador: string) => void;
+  onNotificarAprovador?: (solicitacaoId: string) => void;
   operando: boolean;
   readOnly?: boolean;
 }
@@ -75,6 +77,7 @@ export function CardAprovacaoTreinamento({
   onAprovar, 
   onRejeitar,
   onAprovarPorEscalacao,
+  onNotificarAprovador,
   operando,
   readOnly = false
 }: CardAprovacaoTreinamentoProps) {
@@ -291,6 +294,20 @@ export function CardAprovacaoTreinamento({
                   {aprovacao.aprovado_por_escalacao && aprovacao.justificativa_escalacao && (
                     <div className="mt-2 p-2 bg-blue-500/10 rounded text-xs text-blue-600">
                       <strong>Aprovado por escalação:</strong> {aprovacao.justificativa_escalacao}
+                    </div>
+                  )}
+
+                  {!readOnly && isAtual && aprovacao.status === 'pendente' && onNotificarAprovador && (
+                    <div className="mt-3">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full bg-[#25D366]/10 text-[#128C7E] border-[#25D366]/40 hover:bg-[#25D366]/20"
+                        onClick={() => onNotificarAprovador(solicitacao.id)}
+                      >
+                        <MessageCircle className="h-4 w-4 mr-1" />
+                        Cobrar aprovação (WhatsApp)
+                      </Button>
                     </div>
                   )}
 
