@@ -134,6 +134,7 @@ export function AprovacaoPendenteEstagio({ userId, readOnly = false }: Aprovacao
               onAprovar={readOnly ? undefined : handleAprovar}
               onRejeitar={readOnly ? undefined : handleRejeitar}
               onAprovarPorEscalacao={readOnly ? undefined : handleAbrirEscalacao}
+              onNotificarAprovador={readOnly ? undefined : notificacaoFluxo.notificarProximo}
               operando={operando}
               readOnly={readOnly}
             />

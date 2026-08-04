@@ -16,7 +16,7 @@ import {
   UserCheck,
   Send,
   Award,
-  ArrowUpCircle
+  ArrowUpCircle,
   MessageCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
