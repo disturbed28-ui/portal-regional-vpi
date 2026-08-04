@@ -129,6 +129,7 @@ export function AprovacoesPendentes({ userId, readOnly = false }: AprovacoesPend
               onAprovar={readOnly ? undefined : handleAprovar}
               onRejeitar={readOnly ? undefined : handleRejeitar}
               onAprovarPorEscalacao={readOnly ? undefined : handleAbrirEscalacao}
+              onNotificarAprovador={readOnly ? undefined : notificacaoFluxo.notificarProximo}
               operando={operando}
               readOnly={readOnly}
             />
