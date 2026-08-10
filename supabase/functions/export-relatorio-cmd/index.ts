@@ -312,6 +312,24 @@ async function fetchDadosRelatorio(
 
   console.log('[Fetch Dados] Candidatos expansão no relatório:', expansaoFiltrada.length);
 
+  // 8. Acumulado do mês (períodos 1..semana) para a meta de 4% de crescimento
+  const { data: relatoriosMes } = await supabase
+    .from('relatorios_semanais_divisao')
+    .select('semana_no_mes, entradas_json, saidas_json')
+    .eq('regional_relatorio_id', regional_id)
+    .eq('ano_referencia', ano)
+    .eq('mes_referencia', mes)
+    .lte('semana_no_mes', semana);
+
+  let acumEntradas = 0;
+  let acumSaidas = 0;
+  const periodosSet = new Set<number>();
+  (relatoriosMes || []).forEach((r: any) => {
+    periodosSet.add(r.semana_no_mes);
+    acumEntradas += ((r.entradas_json as any[]) || []).length;
+    acumSaidas += ((r.saidas_json as any[]) || []).length;
+  });
+
   return {
     regional_nome: regional.nome,
     regional_numero_romano: extrairNumeroRomano(regional.nome),
@@ -326,7 +344,12 @@ async function fetchDadosRelatorio(
     total_integrantes_ativos: totalGeralAtivos,
     mapNomeParaNomeAscii: mapNomeParaNomeAscii, // Retornar mapa para uso nos blocos
     mapIntegranteIdToRegistro,
-    mapNomeColeteToRegistro
+    mapNomeColeteToRegistro,
+    acumulado_mes: {
+      entradas: acumEntradas,
+      saidas: acumSaidas,
+      periodos: Array.from(periodosSet).sort(),
+    },
   };
 }
 
