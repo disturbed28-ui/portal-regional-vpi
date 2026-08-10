@@ -920,6 +920,7 @@ async function generateXlsxReport(dados: DadosRelatorio): Promise<ArrayBuffer> {
   row = adicionarBlocoEfetivo(wsData, dados, row);
   row = adicionarBlocoInadimplencia(wsData, dados, row);
   row = adicionarBlocoAcoesInadimplencia(wsData, dados, row);
+  row = adicionarBlocoMetaCrescimento(wsData, dados, row);
   row = adicionarBlocoEntradasSaidas(wsData, dados, row);
   row = adicionarBlocoConflitosInternos(wsData, dados, row);
   row = adicionarBlocoConflitosExternos(wsData, dados, row);
