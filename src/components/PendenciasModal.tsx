@@ -41,10 +41,16 @@ import {
   XCircle
 } from "lucide-react";
 import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes, FlyerPendenteDetalhes, EstagioVencidoDetalhes, ExpansaoBaixaDetalhes, CadastroPendenteDetalhes } from "@/hooks/usePendencias";
+import { useMetaCrescimento } from "@/hooks/useMetaCrescimento";
+import { MetaCrescimentoAlerta } from "@/components/MetaCrescimentoAlerta";
 
 interface PendenciasModalProps {
   pendencias: Pendencia[];
   totalPendencias: number;
+  /** Papel do usuário (alerta de meta é exibido para regional/adm regional/admin) */
+  userRole?: string | null;
+  regionalId?: string;
+  userId?: string;
 }
 
 const MensalidadeDetalhesCard = ({ detalhes }: { detalhes: MensalidadeDetalhes }) => {
