@@ -128,6 +128,15 @@ export const RelatorioSemanalResumo = ({ regionalId, ano, mes, semana }: Relator
           <CardTitle>Dados dos Relatórios CMD - Ano {ano} / Mês {mes} / Período {semana}</CardTitle>
         </CardHeader>
         <CardContent>
+          {meta && (
+            <div className="mb-4">
+              <MetaCrescimentoAlerta
+                meta={meta}
+                contexto={`Períodos acumulados: ${periodosLancados.join(', ') || '-'}`}
+              />
+            </div>
+          )}
+
           <Accordion type="multiple" className="w-full">
             {/* Entradas Detalhadas */}
             {entradasDetalhadas.length > 0 && (
