@@ -1714,6 +1714,13 @@ export const PendenciasModal = ({ pendencias, totalPendencias, userRole, regiona
         </DialogHeader>
         
         <div className="space-y-2 overflow-y-auto max-h-[65vh] pr-2">
+          {exibirAlertaMeta && meta && (
+            <MetaCrescimentoAlerta
+              meta={meta}
+              contexto={`Mês ${String(mesAtual).padStart(2, '0')}/${anoAtual}`}
+              onDispensar={dispensarMeta}
+            />
+          )}
           {pendenciasLocais.map((p, idx) => (
             <PendenciaItem 
               key={`${p.tipo}_${idx}`} 
