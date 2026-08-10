@@ -1669,7 +1669,7 @@ export const PendenciasModal = ({ pendencias, totalPendencias, userRole, regiona
     }
   };
   
-  if (totalPendencias === 0 && pendenciasLocais.length === 0) return null;
+  if (totalPendencias === 0 && pendenciasLocais.length === 0 && !exibirAlertaMeta) return null;
 
   const countExibido = pendenciasLocais.length;
 
