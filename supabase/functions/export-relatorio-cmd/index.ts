@@ -75,6 +75,8 @@ interface DadosRelatorio {
   mapIntegranteIdToRegistro: Map<string, number>;
   /** Map nome_colete (upper) -> registro_id (numero) */
   mapNomeColeteToRegistro: Map<string, number>;
+  /** Acumulado de entradas/saídas dos períodos 1..semana do mês */
+  acumulado_mes: { entradas: number; saidas: number; periodos: number[] };
 }
 
 // Extrai número romano do nome da regional
