@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -41,10 +41,16 @@ import {
   XCircle
 } from "lucide-react";
 import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes, FlyerPendenteDetalhes, EstagioVencidoDetalhes, ExpansaoBaixaDetalhes, CadastroPendenteDetalhes } from "@/hooks/usePendencias";
+import { useMetaCrescimento } from "@/hooks/useMetaCrescimento";
+import { MetaCrescimentoAlerta } from "@/components/MetaCrescimentoAlerta";
 
 interface PendenciasModalProps {
   pendencias: Pendencia[];
   totalPendencias: number;
+  /** Papel do usuário (alerta de meta é exibido para regional/adm regional/admin) */
+  userRole?: string | null;
+  regionalId?: string;
+  userId?: string;
 }
 
 const MensalidadeDetalhesCard = ({ detalhes }: { detalhes: MensalidadeDetalhes }) => {
@@ -1563,12 +1569,48 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle, onDispensarDados }
   );
 };
 
-export const PendenciasModal = ({ pendencias, totalPendencias }: PendenciasModalProps) => {
+export const PendenciasModal = ({ pendencias, totalPendencias, userRole, regionalId, userId }: PendenciasModalProps) => {
   const navigate = useNavigate();
   const [openItemId, setOpenItemId] = useState<string | null>(null);
   const [dispensandoTipo, setDispensandoTipo] = useState<string | null>(null);
   const [pendenciasLocais, setPendenciasLocais] = useState<Pendencia[]>(pendencias);
-  
+
+  // ===== Alerta de meta de crescimento (4%) =====
+  const hoje = new Date();
+  const anoAtual = hoje.getFullYear();
+  const mesAtual = hoje.getMonth() + 1;
+  const podeVerMeta = !!regionalId && (userRole === 'regional' || userRole === 'admin');
+  const { meta, mesEncerrado } = useMetaCrescimento(
+    podeVerMeta ? regionalId : undefined,
+    anoAtual,
+    mesAtual
+  );
+
+  // Tipo do alerta: atingimento (qualquer período) ou não atingimento (fim do mês)
+  const tipoAlertaMeta = meta?.baseDisponivel
+    ? meta.atingida
+      ? 'atingida'
+      : mesEncerrado
+        ? 'nao_atingida'
+        : null
+    : null;
+
+  // Dispensa por usuário/mês (zera automaticamente a cada mês)
+  const chaveDispensaMeta = tipoAlertaMeta
+    ? `meta_crescimento_ok_${userId || 'anon'}_${anoAtual}_${mesAtual}_${tipoAlertaMeta}`
+    : null;
+  const [metaDispensada, setMetaDispensada] = useState(false);
+  useEffect(() => {
+    setMetaDispensada(chaveDispensaMeta ? localStorage.getItem(chaveDispensaMeta) === '1' : false);
+  }, [chaveDispensaMeta]);
+
+  const dispensarMeta = () => {
+    if (chaveDispensaMeta) localStorage.setItem(chaveDispensaMeta, '1');
+    setMetaDispensada(true);
+  };
+
+  const exibirAlertaMeta = !!meta && !!tipoAlertaMeta && !metaDispensada;
+
   // Sincronizar com props
   useState(() => { setPendenciasLocais(pendencias); });
   if (pendenciasLocais !== pendencias && !dispensandoTipo) {
@@ -1627,7 +1669,7 @@ export const PendenciasModal = ({ pendencias, totalPendencias }: PendenciasModal
     }
   };
   
-  if (totalPendencias === 0 && pendenciasLocais.length === 0) return null;
+  if (totalPendencias === 0 && pendenciasLocais.length === 0 && !exibirAlertaMeta) return null;
 
   const countExibido = pendenciasLocais.length;
 
@@ -1672,6 +1714,13 @@ export const PendenciasModal = ({ pendencias, totalPendencias }: PendenciasModal
         </DialogHeader>
         
         <div className="space-y-2 overflow-y-auto max-h-[65vh] pr-2">
+          {exibirAlertaMeta && meta && (
+            <MetaCrescimentoAlerta
+              meta={meta}
+              contexto={`Mês ${String(mesAtual).padStart(2, '0')}/${anoAtual}`}
+              onDispensar={dispensarMeta}
+            />
+          )}
           {pendenciasLocais.map((p, idx) => (
             <PendenciaItem 
               key={`${p.tipo}_${idx}`} 

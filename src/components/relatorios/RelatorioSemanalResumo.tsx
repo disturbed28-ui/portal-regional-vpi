@@ -9,6 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useMetaCrescimento } from '@/hooks/useMetaCrescimento';
+import { MetaCrescimentoAlerta } from '@/components/MetaCrescimentoAlerta';
 
 interface RelatorioSemanalResumoProps {
   regionalId: string;
@@ -20,6 +22,11 @@ interface RelatorioSemanalResumoProps {
 export const RelatorioSemanalResumo = ({ regionalId, ano, mes, semana }: RelatorioSemanalResumoProps) => {
   // Buscar dados do relatório (mesma lógica da aba "Relatório")
   const { data: dadosRelatorio, isLoading: loadingRelatorio } = useRelatorioSemanalResumo(regionalId, ano, mes, semana);
+
+  // Meta de crescimento de 4% (acumulado dos períodos 1..semana)
+  const { meta, periodosLancados } = useMetaCrescimento(regionalId, ano, mes, semana);
+
+
 
   // Buscar nome da regional
   const { data: regional } = useQuery({
@@ -128,6 +135,15 @@ export const RelatorioSemanalResumo = ({ regionalId, ano, mes, semana }: Relator
           <CardTitle>Dados dos Relatórios CMD - Ano {ano} / Mês {mes} / Período {semana}</CardTitle>
         </CardHeader>
         <CardContent>
+          {meta && (
+            <div className="mb-4">
+              <MetaCrescimentoAlerta
+                meta={meta}
+                contexto={`Períodos acumulados: ${periodosLancados.join(', ') || '-'}`}
+              />
+            </div>
+          )}
+
           <Accordion type="multiple" className="w-full">
             {/* Entradas Detalhadas */}
             {entradasDetalhadas.length > 0 && (
