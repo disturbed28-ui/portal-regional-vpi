@@ -23,6 +23,11 @@ export const RelatorioSemanalResumo = ({ regionalId, ano, mes, semana }: Relator
   // Buscar dados do relatório (mesma lógica da aba "Relatório")
   const { data: dadosRelatorio, isLoading: loadingRelatorio } = useRelatorioSemanalResumo(regionalId, ano, mes, semana);
 
+  // Meta de crescimento de 4% (acumulado dos períodos 1..semana)
+  const { meta, periodosLancados } = useMetaCrescimento(regionalId, ano, mes, semana);
+
+
+
   // Buscar nome da regional
   const { data: regional } = useQuery({
     queryKey: ['regional', regionalId],
