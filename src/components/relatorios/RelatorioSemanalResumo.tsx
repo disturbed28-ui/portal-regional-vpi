@@ -9,6 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useMetaCrescimento } from '@/hooks/useMetaCrescimento';
+import { MetaCrescimentoAlerta } from '@/components/MetaCrescimentoAlerta';
 
 interface RelatorioSemanalResumoProps {
   regionalId: string;
