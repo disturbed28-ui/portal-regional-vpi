@@ -848,6 +848,47 @@ function adicionarBlocoExpansao(wsData: any[][], dados: DadosRelatorio, row: num
   return row;
 }
 
+// Bloco: Meta de Crescimento (4% mensal, acumulado dos períodos do mês)
+function adicionarBlocoMetaCrescimento(wsData: any[][], dados: DadosRelatorio, row: number): number {
+  // Base = total do mês anterior das divisões da regional
+  let base = 0;
+  dados.divisoes.forEach(div => {
+    const nomeAscii = dados.mapNomeParaNomeAscii.get(div.divisao_nome) || div.divisao_nome.toUpperCase();
+    base += dados.dados_mes_anterior[nomeAscii.toLowerCase().trim()] || 0;
+  });
+
+  const entradas = dados.acumulado_mes.entradas;
+  const saidas = dados.acumulado_mes.saidas;
+  const saldo = entradas - saidas;
+  const metaIntegrantes = base > 0 ? Math.ceil((base * 4) / 100) : 0;
+  const percentual = base > 0 ? (saldo / base) * 100 : 0;
+  const faltam = Math.max(0, metaIntegrantes - saldo);
+  const excedente = Math.max(0, saldo - metaIntegrantes);
+  const pct = percentual.toFixed(1).replace('.', ',');
+
+  let mensagem = '';
+  if (base <= 0) {
+    mensagem = 'Base do mês anterior indisponível — meta de 4% não pôde ser calculada.';
+  } else if (saldo >= metaIntegrantes) {
+    mensagem = `META ATINGIDA: crescimento de ${pct}% (meta 4% = ${metaIntegrantes} integrante(s), base ${base}).` +
+      (excedente > 0 ? ` Excedente de ${excedente} integrante(s) fica para o booking do próximo mês.` : '');
+  } else if (saldo > 0) {
+    mensagem = `ATENÇÃO: crescimento de ${pct}% — faltam ${faltam} integrante(s) para a meta de 4% (base ${base} = ${metaIntegrantes} integrante(s)).`;
+  } else {
+    mensagem = `ALERTA: crescimento de ${pct}% (saldo ${saldo}) — faltam ${faltam} integrante(s) para a meta de 4% (base ${base} = ${metaIntegrantes} integrante(s)).`;
+  }
+
+  wsData[row++] = ['META DE CRESCIMENTO (4%)'];
+  wsData[row++] = ['Base Mês Anterior', 'Meta (4%)', 'Entradas Acum.', 'Saídas Acum.', 'Saldo', '% Crescimento'];
+  wsData[row++] = [base, metaIntegrantes, entradas, saidas, saldo, `${pct}%`];
+  wsData[row++] = [mensagem];
+  wsData[row++] = [`Períodos considerados: ${dados.acumulado_mes.periodos.join(', ') || '-'}`];
+  wsData[row++] = [];
+  return row;
+}
+
+
+
 // ============================================================================
 // GERAÇÃO DO XLSX
 // ============================================================================
