@@ -258,7 +258,14 @@ const Index = () => {
             <div className="flex items-center justify-center gap-2 mb-1">
               <h3 className="text-xl font-semibold text-foreground">{userName}</h3>
               {isLoggedIn && !pendenciasLoading && (
-                <PendenciasModal pendencias={pendencias} totalPendencias={totalPendencias} />
+                <PendenciasModal
+                  pendencias={pendencias}
+                  totalPendencias={totalPendencias}
+                  userRole={pendenciaRole}
+                  regionalId={profile?.regional_id || undefined}
+                  userId={user?.id}
+                />
+
               )}
             </div>
 
