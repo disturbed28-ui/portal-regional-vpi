@@ -423,9 +423,34 @@ export function useConsolidacaoIntegrantes(userId?: string) {
         ativo: true
       }));
       
+      // Formatar reativados (ex-integrantes que voltaram) para a edge function
+      const reativadosFormatados = reativadosParaImportar.map(r => ({
+        id: r.antigo.id,
+        registro_id: r.novo.id_integrante,
+        registro_id_anterior: r.antigo.registro_id,
+        match_por: r.match_por,
+        motivo_anterior: r.motivo_anterior,
+        nome_colete: r.novo.nome_colete,
+        comando_texto: r.novo.comando,
+        regional_texto: r.novo.regional,
+        divisao_texto: r.novo.divisao,
+        cargo_grau_texto: r.novo.cargo_grau,
+        cargo_estagio: r.novo.cargo_estagio || null,
+        sgt_armas: r.novo.sgt_armas || false,
+        caveira: r.novo.caveira || false,
+        caveira_suplente: r.novo.caveira_suplente || false,
+        batedor: r.novo.batedor || false,
+        ursinho: r.novo.ursinho || false,
+        lobo: r.novo.lobo || false,
+        tem_moto: r.novo.tem_moto || false,
+        tem_carro: r.novo.tem_carro || false,
+        data_entrada: r.novo.data_entrada || null
+      }));
+      
       console.log('[useConsolidacaoIntegrantes] Enviando para edge function:', {
         novos: novosFormatados.length,
         atualizados: atualizadosFormatados.length,
+        reativados: reativadosFormatados.length,
         removidos: removidosParaInativar.length,
         promovidos: removidosParaPromover.length,
         afastados: removidosAfastados.length,
