@@ -346,6 +346,7 @@ export const processDelta = (
 ): ProcessDeltaResult => {
   const novos: ExcelIntegrante[] = [];
   const atualizados: Array<{ antigo: IntegrantePortal; novo: ExcelIntegrante }> = [];
+  const reativados: ReativacaoDetectada[] = [];
   let semMudanca = 0;
 
   // Detectar a regional da carga
@@ -360,14 +361,70 @@ export const processDelta = (
   
   console.log('[processDelta] 📋 Integrantes no DB da regional:', dbDataFiltrado.length, 'de', dbData.length, 'total');
 
-  const dbMap = new Map(dbDataFiltrado.map((i) => [i.registro_id, i]));
+  // Somente ativos participam de atualização/remoção
+  const dbAtivos = dbDataFiltrado.filter((i) => i.ativo !== false);
+  // Ex-integrantes (inativos) de qualquer regional — candidatos a RETORNO
+  const dbInativos = dbData.filter((i) => i.ativo === false);
+  const inativosPorRegistro = new Map(dbInativos.map((i) => [i.registro_id, i]));
+  const inativosPorNome = new Map<string, IntegrantePortal[]>();
+  dbInativos.forEach((i) => {
+    const chave = normalizarParaComparacao(i.nome_colete);
+    if (!chave) return;
+    const lista = inativosPorNome.get(chave) || [];
+    lista.push(i);
+    inativosPorNome.set(chave, lista);
+  });
+
+  const dbMap = new Map(dbAtivos.map((i) => [i.registro_id, i]));
   const excelIds = new Set(excelData.map((i) => i.id_integrante));
+  const reativadosIds = new Set<string>();
 
   // Verificar novos e atualizados
   excelData.forEach((excelItem) => {
     const dbItem = dbMap.get(excelItem.id_integrante);
 
     if (!dbItem) {
+      // Pode ser um EX-INTEGRANTE que voltou (mesmo ID mantido no sistema do clube)
+      const inativoMesmoId = inativosPorRegistro.get(excelItem.id_integrante);
+      if (inativoMesmoId && !reativadosIds.has(inativoMesmoId.id)) {
+        reativadosIds.add(inativoMesmoId.id);
+        reativados.push({
+          antigo: inativoMesmoId,
+          novo: excelItem,
+          match_por: 'registro_id',
+          motivo_anterior: inativoMesmoId.motivo_inativacao || null
+        });
+        console.log('[processDelta] ♻️ Retorno detectado por ID:', excelItem.nome_colete, `(${excelItem.id_integrante})`);
+        return;
+      }
+
+      // Fallback: novo ID gerado — casar por nome de colete (+ data de entrada quando disponível)
+      const candidatos = (inativosPorNome.get(normalizarParaComparacao(excelItem.nome_colete)) || [])
+        .filter((c) => !reativadosIds.has(c.id));
+
+      if (candidatos.length > 0) {
+        const porDataEntrada = excelItem.data_entrada
+          ? candidatos.filter((c) => c.data_entrada === excelItem.data_entrada)
+          : [];
+
+        const escolhido = porDataEntrada.length === 1
+          ? porDataEntrada[0]
+          : (candidatos.length === 1 ? candidatos[0] : null);
+
+        if (escolhido) {
+          reativadosIds.add(escolhido.id);
+          reativados.push({
+            antigo: escolhido,
+            novo: excelItem,
+            match_por: porDataEntrada.length === 1 ? 'nome_colete_data_entrada' : 'nome_colete',
+            motivo_anterior: escolhido.motivo_inativacao || null
+          });
+          console.log('[processDelta] ♻️ Retorno detectado por nome:', excelItem.nome_colete,
+            `(antigo ${escolhido.registro_id} → novo ${excelItem.id_integrante})`);
+          return;
+        }
+      }
+
       // Novo integrante
       novos.push(excelItem);
     } else {
