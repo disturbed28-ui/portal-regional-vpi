@@ -42,12 +42,20 @@ export interface TransferenciaDetectada {
   nova_divisao: string;
 }
 
+export interface ReativacaoDetectada {
+  antigo: IntegrantePortal;
+  novo: ExcelIntegrante;
+  match_por: 'registro_id' | 'nome_colete' | 'nome_colete_data_entrada';
+  motivo_anterior: string | null;
+}
+
 export interface ProcessDeltaResult {
   novos: ExcelIntegrante[];
   atualizados: Array<{
     antigo: IntegrantePortal;
     novo: ExcelIntegrante;
   }>;
+  reativados: ReativacaoDetectada[];
   semMudanca: number;
   removidos: IntegrantePortal[];
   transferidos: TransferenciaDetectada[];
