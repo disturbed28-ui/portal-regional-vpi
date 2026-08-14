@@ -325,6 +325,7 @@ Deno.serve(async (req) => {
         data_entrada: z.string().optional().nullable()
       })).optional(),
       atualizados: z.array(z.any()).optional(),
+      reativados: z.array(z.any()).optional(),
       removidos: z.array(z.object({
         integrante_id: z.string().uuid(),
         registro_id: z.number(),
@@ -364,7 +365,7 @@ afastados_ignorados: z.array(z.object({
     });
 
     const parsedBody = await req.json();
-    let { admin_user_id, novos, atualizados, removidos, promovidos, afastados_ignorados, transferencias_internas, user_grau, user_regional_id, user_divisao_id } = requestSchema.parse(parsedBody);
+    let { admin_user_id, novos, atualizados, reativados, removidos, promovidos, afastados_ignorados, transferencias_internas, user_grau, user_regional_id, user_divisao_id } = requestSchema.parse(parsedBody);
     const skipDeltas = parsedBody.skip_deltas === true;
 
     // Resolver escopo (lança se Grau V/VI sem ID)
