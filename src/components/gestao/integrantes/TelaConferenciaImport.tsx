@@ -272,7 +272,41 @@ export function TelaConferenciaImport({
         </TabsContent>
 
         {/* Atualizados */}
-        <TabsContent value="atualizados" className="mt-3">
+        <TabsContent value="atualizados" className="mt-3 space-y-3">
+          {(delta.reativados?.length ?? 0) > 0 && (
+            <Card className="border-primary/40">
+              <CardHeader className="py-2 px-3">
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-xs">
+                    ♻️ {delta.reativados.length} retorno(s) de ex-integrante
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Detectados na carga e serão reativados automaticamente
+                </p>
+              </CardHeader>
+              <Separator />
+              <ScrollArea className="max-h-[180px]">
+                <CardContent className="py-2 px-3 space-y-2">
+                  {delta.reativados.map((item) => (
+                    <div key={item.antigo.id} className="p-2 rounded-md bg-muted/40">
+                      <p className="text-sm font-medium truncate">{item.novo.nome_colete}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {item.novo.divisao} • {item.novo.cargo_grau}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        Saída anterior: {item.motivo_anterior || 'não informado'} • match: {item.match_por}
+                        {item.antigo.registro_id !== item.novo.id_integrante
+                          ? ` • ID ${item.antigo.registro_id} → ${item.novo.id_integrante}`
+                          : ''}
+                      </p>
+                    </div>
+                  ))}
+                </CardContent>
+              </ScrollArea>
+            </Card>
+          )}
+
           <Card className="border-border/50">
             <CardHeader className="py-2 px-3">
               <div className="flex items-center justify-between">

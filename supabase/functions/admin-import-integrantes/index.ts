@@ -325,6 +325,7 @@ Deno.serve(async (req) => {
         data_entrada: z.string().optional().nullable()
       })).optional(),
       atualizados: z.array(z.any()).optional(),
+      reativados: z.array(z.any()).optional(),
       removidos: z.array(z.object({
         integrante_id: z.string().uuid(),
         registro_id: z.number(),
@@ -364,7 +365,7 @@ afastados_ignorados: z.array(z.object({
     });
 
     const parsedBody = await req.json();
-    let { admin_user_id, novos, atualizados, removidos, promovidos, afastados_ignorados, transferencias_internas, user_grau, user_regional_id, user_divisao_id } = requestSchema.parse(parsedBody);
+    let { admin_user_id, novos, atualizados, reativados, removidos, promovidos, afastados_ignorados, transferencias_internas, user_grau, user_regional_id, user_divisao_id } = requestSchema.parse(parsedBody);
     const skipDeltas = parsedBody.skip_deltas === true;
 
     // Resolver escopo (lança se Grau V/VI sem ID)
@@ -460,6 +461,7 @@ afastados_ignorados: z.array(z.object({
     // ==========================================
     let novosFiltrados = novos;
     let atualizadosFiltrados = atualizados;
+    let reativadosFiltrados = reativados;
     let removidosFiltrados = removidos;
     let promovidosFiltrados = promovidos;
     let afastadosIgnoradosFiltrados = afastados_ignorados;
@@ -534,6 +536,19 @@ afastados_ignorados: z.array(z.object({
         if (!ok) ignoradosPorEscopo.push(`Afastado: ${a.nome_colete}`);
         return ok;
       });
+      // Reativados: escopo pela hierarquia informada na carga (nova divisão/regional)
+      if (reativados && reativados.length > 0) {
+        const filtradosReat: any[] = [];
+        for (const r of reativados) {
+          if (await dentroDoEscopoPorTexto(r.divisao_texto, r.regional_texto)) {
+            filtradosReat.push(r);
+          } else {
+            ignoradosPorEscopo.push(`Retorno: ${r.nome_colete} (${r.registro_id})`);
+          }
+        }
+        reativadosFiltrados = filtradosReat;
+      }
+
       transferenciasFiltradas = transferencias_internas?.filter((t: any) => {
         const ok = dentroDoEscopo(t.registro_id);
         if (!ok) ignoradosPorEscopo.push(`Transferência: ${t.nome_colete}`);
@@ -546,6 +561,7 @@ afastados_ignorados: z.array(z.object({
     // Reatribuir aos nomes originais para o restante da função funcionar sem mudanças
     novos = novosFiltrados;
     atualizados = atualizadosFiltrados;
+    reativados = reativadosFiltrados;
     removidos = removidosFiltrados;
     promovidos = promovidosFiltrados;
     afastados_ignorados = afastadosIgnoradosFiltrados;
@@ -669,6 +685,89 @@ afastados_ignorados: z.array(z.object({
 
       insertedCount = novosEnriquecidos.length;
     }
+
+    // ==========================================
+    // REATIVAÇÕES (ex-integrantes que retornaram)
+    // ==========================================
+    let reativadosCount = 0;
+    if (reativados && reativados.length > 0) {
+      console.log('[admin-import-integrantes] Processando reativações:', reativados.length);
+
+      for (const r of reativados as any[]) {
+        try {
+          const hierarquia = await buscarIdsHierarquia(supabase, r.divisao_texto, r.regional_texto);
+          const parsedCargo = parseCargoGrau(r.cargo_grau_texto || '');
+
+          const { data: antes } = await supabase
+            .from('integrantes_portal')
+            .select('*')
+            .eq('id', r.id)
+            .maybeSingle();
+
+          const { error: reativarError } = await supabase
+            .from('integrantes_portal')
+            .update({
+              registro_id: r.registro_id,
+              nome_colete: r.nome_colete,
+              comando_texto: normalizarComandoParaSalvar(r.comando_texto),
+              regional_texto: normalizarRegionalParaSalvar(r.regional_texto),
+              divisao_texto: normalizarDivisaoParaSalvar(r.divisao_texto),
+              divisao_id: hierarquia.divisao_id,
+              regional_id: hierarquia.regional_id,
+              cargo_grau_texto: r.cargo_grau_texto,
+              cargo_nome: parsedCargo.cargo_nome || null,
+              grau: parsedCargo.grau || null,
+              cargo_estagio: r.cargo_estagio || null,
+              sgt_armas: r.sgt_armas || false,
+              caveira: r.caveira || false,
+              caveira_suplente: r.caveira_suplente || false,
+              batedor: r.batedor || false,
+              ursinho: r.ursinho || false,
+              lobo: r.lobo || false,
+              tem_moto: r.tem_moto || false,
+              tem_carro: r.tem_carro || false,
+              data_entrada: r.data_entrada || null,
+              // Limpar inativação para o trigger reativar o integrante
+              motivo_inativacao: null,
+              data_inativacao: null,
+              observacao_inativacao: null,
+              ativo: true
+            })
+            .eq('id', r.id);
+
+          if (reativarError) {
+            console.error('[admin-import-integrantes] Erro ao reativar:', r.nome_colete, reativarError);
+            continue;
+          }
+
+          reativadosCount++;
+
+          await supabase.from('integrantes_historico').insert({
+            integrante_id: r.id,
+            acao: 'REATIVACAO_CARGA',
+            dados_anteriores: antes || { ativo: false, motivo_inativacao: r.motivo_anterior },
+            dados_novos: {
+              ativo: true,
+              registro_id: r.registro_id,
+              divisao_texto: r.divisao_texto,
+              cargo_grau_texto: r.cargo_grau_texto
+            },
+            observacao: `Retorno de ex-integrante detectado na carga (match por ${r.match_por}${
+              r.registro_id_anterior && r.registro_id_anterior !== r.registro_id
+                ? `, ID ${r.registro_id_anterior} → ${r.registro_id}`
+                : ''
+            }). Motivo anterior: ${r.motivo_anterior || 'não informado'}`,
+            alterado_por: admin_user_id
+          });
+
+          console.log('[admin-import-integrantes] ♻️ Reativado:', r.nome_colete, r.registro_id);
+        } catch (e) {
+          console.error('[admin-import-integrantes] Falha na reativação:', r?.nome_colete, e);
+        }
+      }
+    }
+
+
 
     // Update existing integrantes and save old data for comparison
     const dadosAntigos = new Map();
@@ -1359,13 +1458,14 @@ afastados_ignorados: z.array(z.object({
         insertedCount, 
         updatedCount,
 inativadosCount,
+        reativadosCount,
         promovidosCount,
         afastadosIgnoradosCount,
         transferenciasInternasCount,
         ignoradosPorEscopo: ignoradosPorEscopo.length,
         ignoradosPorEscopoDetalhe: ignoradosPorEscopo.slice(0, 20),
         escopo: { tipo: escopo.tipo, regional_id: escopo.regional_id, divisao_id: escopo.divisao_id },
-        message: `${insertedCount} novos, ${updatedCount} atualizados, ${inativadosCount} inativados, ${promovidosCount} promovidos, ${afastadosIgnoradosCount} afastados mantidos, ${transferenciasInternasCount} transferências`,
+        message: `${insertedCount} novos, ${updatedCount} atualizados, ${reativadosCount} retornos, ${inativadosCount} inativados, ${promovidosCount} promovidos, ${afastadosIgnoradosCount} afastados mantidos, ${transferenciasInternasCount} transferências`,
         carga: {
           id: cargaData.id,
           data_carga: cargaData.data_carga,

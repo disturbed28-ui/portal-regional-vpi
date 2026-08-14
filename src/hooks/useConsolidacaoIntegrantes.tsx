@@ -113,11 +113,10 @@ export function useConsolidacaoIntegrantes(userId?: string) {
       console.log('[useConsolidacaoIntegrantes] Iniciando consolidação...');
       const consolidacao = await consolidarArquivos(arquivoA, arquivoB);
       
-      // 3. Buscar integrantes atuais do banco
+      // 3. Buscar integrantes do banco (ativos E inativos, para detectar retorno de ex-integrantes)
       const { data: integrantesDB, error: dbError } = await supabase
         .from('integrantes_portal')
-        .select('*')
-        .eq('ativo', true);
+        .select('*');
       
       if (dbError) {
         throw new Error('Erro ao buscar integrantes: ' + dbError.message);
@@ -157,11 +156,15 @@ export function useConsolidacaoIntegrantes(userId?: string) {
       
       // 5. Executar Delta (passando afastados para ignorar na remoção)
       console.log('[useConsolidacaoIntegrantes] Executando delta...');
-      const delta = processDelta(registrosParaDelta, integrantesDB || [], integrantesDB || [], afastadosAtivosIds);
+      const ativosDB = (integrantesDB || []).filter((i: any) => i.ativo === true);
+      const delta = processDelta(registrosParaDelta, integrantesDB || [], ativosDB, afastadosAtivosIds);
       
       // 6. Inicializar seleções (todos marcados por padrão)
       const novosSelecionados = new Set(delta.novos.map(n => n.id_integrante));
-      const atualizadosSelecionados = new Set(delta.atualizados.map(a => a.antigo.id));
+      const atualizadosSelecionados = new Set([
+        ...delta.atualizados.map(a => a.antigo.id),
+        ...delta.reativados.map(r => r.antigo.id)
+      ]);
       const removidosSelecionados = new Set(delta.removidos.map(r => r.id));
       
       // 7. Atualizar estado
@@ -183,7 +186,7 @@ export function useConsolidacaoIntegrantes(userId?: string) {
       
       toast({
         title: "Processamento concluído",
-        description: `${delta.novos.length} novos, ${delta.atualizados.length} alterados, ${delta.removidos.length} removidos`
+        description: `${delta.novos.length} novos, ${delta.atualizados.length} alterados, ${delta.reativados.length} retornos, ${delta.removidos.length} removidos`
       });
       
       return true;
@@ -256,7 +259,10 @@ export function useConsolidacaoIntegrantes(userId?: string) {
           : new Set();
       } else if (tipo === 'atualizados') {
         novaSelecao.atualizados = marcar
-          ? new Set(prev.delta.atualizados.map(a => a.antigo.id))
+          ? new Set([
+              ...prev.delta.atualizados.map(a => a.antigo.id),
+              ...prev.delta.reativados.map(r => r.antigo.id)
+            ])
           : new Set();
       } else {
         novaSelecao.removidos = marcar
@@ -306,6 +312,7 @@ export function useConsolidacaoIntegrantes(userId?: string) {
       // Filtrar apenas itens selecionados
       const novosParaImportar = lote.delta.novos.filter(n => lote.selecao.novos.has(n.id_integrante));
       const atualizadosParaImportar = lote.delta.atualizados.filter(a => lote.selecao.atualizados.has(a.antigo.id));
+      const reativadosParaImportar = lote.delta.reativados.filter(r => lote.selecao.atualizados.has(r.antigo.id));
       
       // Separar removidos por tipo de tratamento
       const removidosSelecionados = lote.delta.removidos.filter(r => lote.selecao.removidos.has(r.id));
@@ -416,9 +423,34 @@ export function useConsolidacaoIntegrantes(userId?: string) {
         ativo: true
       }));
       
+      // Formatar reativados (ex-integrantes que voltaram) para a edge function
+      const reativadosFormatados = reativadosParaImportar.map(r => ({
+        id: r.antigo.id,
+        registro_id: r.novo.id_integrante,
+        registro_id_anterior: r.antigo.registro_id,
+        match_por: r.match_por,
+        motivo_anterior: r.motivo_anterior,
+        nome_colete: r.novo.nome_colete,
+        comando_texto: r.novo.comando,
+        regional_texto: r.novo.regional,
+        divisao_texto: r.novo.divisao,
+        cargo_grau_texto: r.novo.cargo_grau,
+        cargo_estagio: r.novo.cargo_estagio || null,
+        sgt_armas: r.novo.sgt_armas || false,
+        caveira: r.novo.caveira || false,
+        caveira_suplente: r.novo.caveira_suplente || false,
+        batedor: r.novo.batedor || false,
+        ursinho: r.novo.ursinho || false,
+        lobo: r.novo.lobo || false,
+        tem_moto: r.novo.tem_moto || false,
+        tem_carro: r.novo.tem_carro || false,
+        data_entrada: r.novo.data_entrada || null
+      }));
+      
       console.log('[useConsolidacaoIntegrantes] Enviando para edge function:', {
         novos: novosFormatados.length,
         atualizados: atualizadosFormatados.length,
+        reativados: reativadosFormatados.length,
         removidos: removidosParaInativar.length,
         promovidos: removidosParaPromover.length,
         afastados: removidosAfastados.length,
@@ -438,6 +470,7 @@ export function useConsolidacaoIntegrantes(userId?: string) {
           admin_user_id: userId,
           novos: novosFormatados,
           atualizados: atualizadosFormatados,
+          reativados: reativadosFormatados,
           removidos: removidosParaInativar,
           promovidos: removidosParaPromover,
           afastados_ignorados: removidosAfastados,
@@ -464,7 +497,7 @@ export function useConsolidacaoIntegrantes(userId?: string) {
       } else {
         toast({
           title: "Importação concluída",
-          description: `${data.insertedCount} novos, ${data.updatedCount} atualizados. Lote: ${lote.id}`
+          description: `${data.insertedCount} novos, ${data.updatedCount} atualizados, ${data.reativadosCount || 0} retornos reativados. Lote: ${lote.id}`
         });
       }
       

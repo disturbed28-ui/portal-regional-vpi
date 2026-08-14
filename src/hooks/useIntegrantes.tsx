@@ -33,6 +33,9 @@ export interface IntegrantePortal {
   tem_carro: boolean;
   data_entrada: string | null;
   combate_insano: boolean;
+  motivo_inativacao?: string | null;
+  data_inativacao?: string | null;
+  observacao_inativacao?: string | null;
   // Dados de contato (vindos do profile vinculado)
   email?: string | null;
   telefone?: string | null;
