@@ -461,6 +461,7 @@ afastados_ignorados: z.array(z.object({
     // ==========================================
     let novosFiltrados = novos;
     let atualizadosFiltrados = atualizados;
+    let reativadosFiltrados = reativados;
     let removidosFiltrados = removidos;
     let promovidosFiltrados = promovidos;
     let afastadosIgnoradosFiltrados = afastados_ignorados;
@@ -535,6 +536,19 @@ afastados_ignorados: z.array(z.object({
         if (!ok) ignoradosPorEscopo.push(`Afastado: ${a.nome_colete}`);
         return ok;
       });
+      // Reativados: escopo pela hierarquia informada na carga (nova divisão/regional)
+      if (reativados && reativados.length > 0) {
+        const filtradosReat: any[] = [];
+        for (const r of reativados) {
+          if (await dentroDoEscopoPorTexto(r.divisao_texto, r.regional_texto)) {
+            filtradosReat.push(r);
+          } else {
+            ignoradosPorEscopo.push(`Retorno: ${r.nome_colete} (${r.registro_id})`);
+          }
+        }
+        reativadosFiltrados = filtradosReat;
+      }
+
       transferenciasFiltradas = transferencias_internas?.filter((t: any) => {
         const ok = dentroDoEscopo(t.registro_id);
         if (!ok) ignoradosPorEscopo.push(`Transferência: ${t.nome_colete}`);
@@ -547,6 +561,7 @@ afastados_ignorados: z.array(z.object({
     // Reatribuir aos nomes originais para o restante da função funcionar sem mudanças
     novos = novosFiltrados;
     atualizados = atualizadosFiltrados;
+    reativados = reativadosFiltrados;
     removidos = removidosFiltrados;
     promovidos = promovidosFiltrados;
     afastados_ignorados = afastadosIgnoradosFiltrados;
