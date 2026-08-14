@@ -454,8 +454,8 @@ export const processDelta = (
     }
   });
 
-  // Verificar removidos da regional (existem no DB da regional mas nao no Excel)
-  const candidatosRemocao = dbDataFiltrado.filter((dbItem) => !excelIds.has(dbItem.registro_id));
+  // Verificar removidos da regional (existem ATIVOS no DB da regional mas nao no Excel)
+  const candidatosRemocao = dbAtivos.filter((dbItem) => !excelIds.has(dbItem.registro_id));
   
   // Separar removidos de transferidos
   const removidos: IntegrantePortal[] = [];
@@ -496,6 +496,7 @@ export const processDelta = (
   console.log('[processDelta] 📊 Resultado:', {
     novos: novos.length,
     atualizados: atualizados.length,
+    reativados: reativados.length,
     semMudanca,
     removidos: removidos.length,
     transferidos: transferidos.length,
@@ -505,6 +506,7 @@ export const processDelta = (
   return {
     novos,
     atualizados,
+    reativados,
     semMudanca,
     removidos,
     transferidos,
