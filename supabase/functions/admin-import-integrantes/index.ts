@@ -686,6 +686,89 @@ afastados_ignorados: z.array(z.object({
       insertedCount = novosEnriquecidos.length;
     }
 
+    // ==========================================
+    // REATIVAÇÕES (ex-integrantes que retornaram)
+    // ==========================================
+    let reativadosCount = 0;
+    if (reativados && reativados.length > 0) {
+      console.log('[admin-import-integrantes] Processando reativações:', reativados.length);
+
+      for (const r of reativados as any[]) {
+        try {
+          const hierarquia = await buscarIdsHierarquia(supabase, r.divisao_texto, r.regional_texto);
+          const parsedCargo = parseCargoGrau(r.cargo_grau_texto || '');
+
+          const { data: antes } = await supabase
+            .from('integrantes_portal')
+            .select('*')
+            .eq('id', r.id)
+            .maybeSingle();
+
+          const { error: reativarError } = await supabase
+            .from('integrantes_portal')
+            .update({
+              registro_id: r.registro_id,
+              nome_colete: r.nome_colete,
+              comando_texto: normalizarComandoParaSalvar(r.comando_texto),
+              regional_texto: normalizarRegionalParaSalvar(r.regional_texto),
+              divisao_texto: normalizarDivisaoParaSalvar(r.divisao_texto),
+              divisao_id: hierarquia.divisao_id,
+              regional_id: hierarquia.regional_id,
+              cargo_grau_texto: r.cargo_grau_texto,
+              cargo_nome: parsedCargo.cargo_nome || null,
+              grau: parsedCargo.grau || null,
+              cargo_estagio: r.cargo_estagio || null,
+              sgt_armas: r.sgt_armas || false,
+              caveira: r.caveira || false,
+              caveira_suplente: r.caveira_suplente || false,
+              batedor: r.batedor || false,
+              ursinho: r.ursinho || false,
+              lobo: r.lobo || false,
+              tem_moto: r.tem_moto || false,
+              tem_carro: r.tem_carro || false,
+              data_entrada: r.data_entrada || null,
+              // Limpar inativação para o trigger reativar o integrante
+              motivo_inativacao: null,
+              data_inativacao: null,
+              observacao_inativacao: null,
+              ativo: true
+            })
+            .eq('id', r.id);
+
+          if (reativarError) {
+            console.error('[admin-import-integrantes] Erro ao reativar:', r.nome_colete, reativarError);
+            continue;
+          }
+
+          reativadosCount++;
+
+          await supabase.from('integrantes_historico').insert({
+            integrante_id: r.id,
+            acao: 'REATIVACAO_CARGA',
+            dados_anteriores: antes || { ativo: false, motivo_inativacao: r.motivo_anterior },
+            dados_novos: {
+              ativo: true,
+              registro_id: r.registro_id,
+              divisao_texto: r.divisao_texto,
+              cargo_grau_texto: r.cargo_grau_texto
+            },
+            observacao: `Retorno de ex-integrante detectado na carga (match por ${r.match_por}${
+              r.registro_id_anterior && r.registro_id_anterior !== r.registro_id
+                ? `, ID ${r.registro_id_anterior} → ${r.registro_id}`
+                : ''
+            }). Motivo anterior: ${r.motivo_anterior || 'não informado'}`,
+            alterado_por: admin_user_id
+          });
+
+          console.log('[admin-import-integrantes] ♻️ Reativado:', r.nome_colete, r.registro_id);
+        } catch (e) {
+          console.error('[admin-import-integrantes] Falha na reativação:', r?.nome_colete, e);
+        }
+      }
+    }
+
+
+
     // Update existing integrantes and save old data for comparison
     const dadosAntigos = new Map();
     
