@@ -730,7 +730,7 @@ afastados_ignorados: z.array(z.object({
               // Limpar inativação para o trigger reativar o integrante
               motivo_inativacao: null,
               data_inativacao: null,
-              observacao_inativacao: null,
+              
               ativo: true
             })
             .eq('id', r.id);
