@@ -497,7 +497,7 @@ export function useConsolidacaoIntegrantes(userId?: string) {
       } else {
         toast({
           title: "Importação concluída",
-          description: `${data.insertedCount} novos, ${data.updatedCount} atualizados. Lote: ${lote.id}`
+          description: `${data.insertedCount} novos, ${data.updatedCount} atualizados, ${data.reativadosCount || 0} retornos reativados. Lote: ${lote.id}`
         });
       }
       
