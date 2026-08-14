@@ -156,11 +156,15 @@ export function useConsolidacaoIntegrantes(userId?: string) {
       
       // 5. Executar Delta (passando afastados para ignorar na remoção)
       console.log('[useConsolidacaoIntegrantes] Executando delta...');
-      const delta = processDelta(registrosParaDelta, integrantesDB || [], integrantesDB || [], afastadosAtivosIds);
+      const ativosDB = (integrantesDB || []).filter((i: any) => i.ativo === true);
+      const delta = processDelta(registrosParaDelta, integrantesDB || [], ativosDB, afastadosAtivosIds);
       
       // 6. Inicializar seleções (todos marcados por padrão)
       const novosSelecionados = new Set(delta.novos.map(n => n.id_integrante));
-      const atualizadosSelecionados = new Set(delta.atualizados.map(a => a.antigo.id));
+      const atualizadosSelecionados = new Set([
+        ...delta.atualizados.map(a => a.antigo.id),
+        ...delta.reativados.map(r => r.antigo.id)
+      ]);
       const removidosSelecionados = new Set(delta.removidos.map(r => r.id));
       
       // 7. Atualizar estado
@@ -182,7 +186,7 @@ export function useConsolidacaoIntegrantes(userId?: string) {
       
       toast({
         title: "Processamento concluído",
-        description: `${delta.novos.length} novos, ${delta.atualizados.length} alterados, ${delta.removidos.length} removidos`
+        description: `${delta.novos.length} novos, ${delta.atualizados.length} alterados, ${delta.reativados.length} retornos, ${delta.removidos.length} removidos`
       });
       
       return true;
