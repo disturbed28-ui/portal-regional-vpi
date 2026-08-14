@@ -259,7 +259,10 @@ export function useConsolidacaoIntegrantes(userId?: string) {
           : new Set();
       } else if (tipo === 'atualizados') {
         novaSelecao.atualizados = marcar
-          ? new Set(prev.delta.atualizados.map(a => a.antigo.id))
+          ? new Set([
+              ...prev.delta.atualizados.map(a => a.antigo.id),
+              ...prev.delta.reativados.map(r => r.antigo.id)
+            ])
           : new Set();
       } else {
         novaSelecao.removidos = marcar
