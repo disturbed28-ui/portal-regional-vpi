@@ -113,11 +113,10 @@ export function useConsolidacaoIntegrantes(userId?: string) {
       console.log('[useConsolidacaoIntegrantes] Iniciando consolidação...');
       const consolidacao = await consolidarArquivos(arquivoA, arquivoB);
       
-      // 3. Buscar integrantes atuais do banco
+      // 3. Buscar integrantes do banco (ativos E inativos, para detectar retorno de ex-integrantes)
       const { data: integrantesDB, error: dbError } = await supabase
         .from('integrantes_portal')
-        .select('*')
-        .eq('ativo', true);
+        .select('*');
       
       if (dbError) {
         throw new Error('Erro ao buscar integrantes: ' + dbError.message);
