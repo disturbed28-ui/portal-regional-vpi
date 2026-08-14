@@ -312,6 +312,7 @@ export function useConsolidacaoIntegrantes(userId?: string) {
       // Filtrar apenas itens selecionados
       const novosParaImportar = lote.delta.novos.filter(n => lote.selecao.novos.has(n.id_integrante));
       const atualizadosParaImportar = lote.delta.atualizados.filter(a => lote.selecao.atualizados.has(a.antigo.id));
+      const reativadosParaImportar = lote.delta.reativados.filter(r => lote.selecao.atualizados.has(r.antigo.id));
       
       // Separar removidos por tipo de tratamento
       const removidosSelecionados = lote.delta.removidos.filter(r => lote.selecao.removidos.has(r.id));
