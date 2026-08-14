@@ -470,6 +470,7 @@ export function useConsolidacaoIntegrantes(userId?: string) {
           admin_user_id: userId,
           novos: novosFormatados,
           atualizados: atualizadosFormatados,
+          reativados: reativadosFormatados,
           removidos: removidosParaInativar,
           promovidos: removidosParaPromover,
           afastados_ignorados: removidosAfastados,
