@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, MapPin, Tag, ExternalLink, Users, Crown, Skull } from "lucide-react";
+import { Calendar, Clock, MapPin, Tag, ExternalLink, Users, Crown, Skull, MessageCircle } from "lucide-react";
 import { ListaPresenca } from "./ListaPresenca";
 import { useTiposEvento } from "@/hooks/useTiposEvento";
 import { useAuth } from "@/hooks/useAuth";
