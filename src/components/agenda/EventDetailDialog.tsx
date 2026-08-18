@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, MapPin, Tag, ExternalLink, Users, Crown, Skull } from "lucide-react";
+import { Calendar, Clock, MapPin, Tag, ExternalLink, Users, Crown, Skull, MessageCircle } from "lucide-react";
 import { ListaPresenca } from "./ListaPresenca";
 import { useTiposEvento } from "@/hooks/useTiposEvento";
 import { useAuth } from "@/hooks/useAuth";
@@ -42,6 +42,32 @@ export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDial
     : event.isComandoEvent 
       ? '#fb923c' 
       : getColorForType(event.type);
+
+  const handleCompartilharWhatsApp = () => {
+    const linhas: string[] = [
+      `🏍️ *CONVITE — ${event.title}*`,
+      "",
+      `📅 Data: ${format(startDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`,
+      `🕒 Horário: ${format(startDate, "HH:mm")} às ${format(endDate, "HH:mm")}`,
+    ];
+    if (event.location) linhas.push(`📍 Local: ${event.location}`);
+    if (event.type) linhas.push(`🏷️ Tipo: ${event.type}`);
+    if (event.division) linhas.push(`🛡️ Divisão: ${event.division}`);
+    linhas.push("", "Contamos com a sua presença!");
+    if (event.htmlLink) linhas.push("", `🔗 Ver na agenda: ${event.htmlLink}`);
+    linhas.push("", "_Enviado pelo Portal Regional VP1_");
+
+    const url = `https://wa.me/?text=${encodeURIComponent(linhas.join("\n"))}`;
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener,noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -166,6 +192,16 @@ export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDial
                 Lista de Presença
               </Button>
             )}
+
+            <Button
+              variant="default"
+              className="w-full sm:flex-1 bg-[#25D366] hover:bg-[#25D366]/90 text-white"
+              onClick={handleCompartilharWhatsApp}
+            >
+              <MessageCircle className="mr-2 h-4 w-4" />
+              Compartilhar
+            </Button>
+            
             
             {event.htmlLink && (
               <Button
