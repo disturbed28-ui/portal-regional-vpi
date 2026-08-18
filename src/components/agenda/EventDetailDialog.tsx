@@ -166,6 +166,16 @@ export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDial
                 Lista de Presença
               </Button>
             )}
+
+            <Button
+              variant="default"
+              className="w-full sm:flex-1 bg-[#25D366] hover:bg-[#25D366]/90 text-white"
+              onClick={handleCompartilharWhatsApp}
+            >
+              <MessageCircle className="mr-2 h-4 w-4" />
+              Compartilhar
+            </Button>
+            
             
             {event.htmlLink && (
               <Button
