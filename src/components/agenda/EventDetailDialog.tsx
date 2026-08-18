@@ -43,6 +43,32 @@ export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDial
       ? '#fb923c' 
       : getColorForType(event.type);
 
+  const handleCompartilharWhatsApp = () => {
+    const linhas: string[] = [
+      `🏍️ *CONVITE — ${event.title}*`,
+      "",
+      `📅 Data: ${format(startDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`,
+      `🕒 Horário: ${format(startDate, "HH:mm")} às ${format(endDate, "HH:mm")}`,
+    ];
+    if (event.location) linhas.push(`📍 Local: ${event.location}`);
+    if (event.type) linhas.push(`🏷️ Tipo: ${event.type}`);
+    if (event.division) linhas.push(`🛡️ Divisão: ${event.division}`);
+    linhas.push("", "Contamos com a sua presença!");
+    if (event.htmlLink) linhas.push("", `🔗 Ver na agenda: ${event.htmlLink}`);
+    linhas.push("", "_Enviado pelo Portal Regional VP1_");
+
+    const url = `https://wa.me/?text=${encodeURIComponent(linhas.join("\n"))}`;
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener,noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] max-w-lg sm:w-auto px-4 sm:px-6">
