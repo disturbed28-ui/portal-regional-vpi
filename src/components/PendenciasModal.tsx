@@ -38,7 +38,7 @@ import {
   CheckCircle,
   Compass,
   Phone,
-  XCircle
+  XCircle,
   Building2,
 } from "lucide-react";
 import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes, FlyerPendenteDetalhes, EstagioVencidoDetalhes, ExpansaoBaixaDetalhes, CadastroPendenteDetalhes } from "@/hooks/usePendencias";
