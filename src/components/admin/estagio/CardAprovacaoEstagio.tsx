@@ -195,6 +195,18 @@ export function CardAprovacaoEstagio({
             <span className="font-medium">Cargo Estágio: {solicitacao.cargo_estagio_nome}</span>
           </div>
           <div className="flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-primary" />
+            <span className="font-medium text-primary">
+              Estágio na divisão: {solicitacao.divisao_estagio_texto || solicitacao.integrante_divisao_texto}
+            </span>
+            {solicitacao.divisao_estagio_texto &&
+              solicitacao.divisao_estagio_texto !== solicitacao.integrante_divisao_texto && (
+                <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-500">
+                  Outra divisão
+                </Badge>
+              )}
+          </div>
+          <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
             <span>Início: {formatDate(solicitacao.data_inicio_estagio)}</span>
           </div>
