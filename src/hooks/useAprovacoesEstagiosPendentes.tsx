@@ -24,6 +24,7 @@ interface SolicitacaoAprovacaoEstagio {
   integrante_regional_texto: string;
   integrante_regional_id: string | null;
   integrante_cargo_atual: string;
+  divisao_estagio_texto: string | null;
   cargo_estagio_nome: string;
   cargo_estagio_id: string;
   grau_estagio: string;
@@ -93,6 +94,7 @@ export function useAprovacoesEstagiosPendentes(userId: string | undefined) {
             cargo_grau_texto
           ),
           cargo_estagio:cargos!solicitacoes_estagio_cargo_estagio_id_fkey(nome),
+          divisao_estagio:divisoes!solicitacoes_estagio_divisao_id_fkey(nome),
           solicitante_cargo:cargos!solicitacoes_estagio_solicitante_cargo_id_fkey(nome),
           solicitante_divisao:divisoes!solicitacoes_estagio_solicitante_divisao_id_fkey(nome)
         `)
@@ -141,6 +143,7 @@ export function useAprovacoesEstagiosPendentes(userId: string | undefined) {
         const cargoEstagio = sol.cargo_estagio as { nome: string } | null;
         const solicitanteCargo = sol.solicitante_cargo as { nome: string } | null;
         const solicitanteDivisao = sol.solicitante_divisao as { nome: string } | null;
+        const divisaoEstagio = (sol as { divisao_estagio?: { nome: string } | null }).divisao_estagio as { nome: string } | null;
 
         // Verificar se DR pode escalar (mesmo comportamento do treinamento)
         const mesmaRegional = integrante?.regional_id === minhaRegionalId;
@@ -155,6 +158,7 @@ export function useAprovacoesEstagiosPendentes(userId: string | undefined) {
           integrante_regional_texto: integrante?.regional_texto || '',
           integrante_regional_id: integrante?.regional_id || null,
           integrante_cargo_atual: integrante?.cargo_grau_texto || '',
+          divisao_estagio_texto: divisaoEstagio?.nome || null,
           cargo_estagio_nome: cargoEstagio?.nome || '',
           cargo_estagio_id: sol.cargo_estagio_id,
           grau_estagio: sol.grau_estagio,

@@ -38,7 +38,8 @@ import {
   CheckCircle,
   Compass,
   Phone,
-  XCircle
+  XCircle,
+  Building2,
 } from "lucide-react";
 import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes, FlyerPendenteDetalhes, EstagioVencidoDetalhes, ExpansaoBaixaDetalhes, CadastroPendenteDetalhes } from "@/hooks/usePendencias";
 import { useMetaCrescimento } from "@/hooks/useMetaCrescimento";
@@ -709,8 +710,21 @@ const EstagioAprovadorDetalhesCard = ({ detalhes }: { detalhes: EstagioAprovador
           
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">Divisão / Regional:</span>
+            <span className="text-muted-foreground">Divisão de origem:</span>
             <span className="font-medium text-foreground">{detalhes.divisao_texto}</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-fuchsia-400" />
+            <span className="text-muted-foreground">Estágio na divisão:</span>
+            <span className="font-semibold text-fuchsia-400">
+              {detalhes.divisao_estagio_texto || detalhes.divisao_texto}
+            </span>
+            {detalhes.divisao_estagio_texto && detalhes.divisao_estagio_texto !== detalhes.divisao_texto && (
+              <Badge variant="outline" className="text-[10px] border-amber-700/50 text-amber-300">
+                Outra divisão
+              </Badge>
+            )}
           </div>
         </div>
 
@@ -772,8 +786,16 @@ const EstagioIntegranteDetalhesCard = ({ detalhes }: { detalhes: EstagioIntegran
           
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">Divisão:</span>
+            <span className="text-muted-foreground">Divisão de origem:</span>
             <span className="font-medium text-foreground">{detalhes.divisao_texto}</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-primary" />
+            <span className="text-muted-foreground">Estágio na divisão:</span>
+            <span className="font-semibold text-primary">
+              {detalhes.divisao_estagio_texto || detalhes.divisao_texto}
+            </span>
           </div>
         </div>
 

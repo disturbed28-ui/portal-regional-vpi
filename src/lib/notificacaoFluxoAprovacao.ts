@@ -116,11 +116,14 @@ export async function resolverNotificacaoFluxo(
     ? "integrante:integrantes_portal!solicitacoes_treinamento_integrante_id_fkey(nome_colete, divisao_texto, divisao_id, regional_id, cargo_grau_texto)"
     : "integrante:integrantes_portal!solicitacoes_estagio_integrante_id_fkey(nome_colete, divisao_texto, divisao_id, regional_id, cargo_grau_texto)";
   const campoInicio = isTreinamento ? "data_inicio_treinamento" : "data_inicio_estagio";
+  const divisaoDestinoFk = isTreinamento
+    ? ""
+    : ", divisao_estagio:divisoes!solicitacoes_estagio_divisao_id_fkey(nome)";
 
   const { data: sol, error } = await supabase
     .from(tabelaSol as "solicitacoes_treinamento")
     .select(
-      `id, integrante_id, solicitante_nome_colete, data_termino_previsto, ${campoInicio}${isTreinamento ? "" : ", grau_estagio"}, ${integranteFk}, ${cargoFk}`,
+      `id, integrante_id, solicitante_nome_colete, data_termino_previsto, ${campoInicio}${isTreinamento ? "" : ", grau_estagio"}, ${integranteFk}, ${cargoFk}${divisaoDestinoFk}`,
     )
     .eq("id", solicitacaoId)
     .maybeSingle();
@@ -155,9 +158,16 @@ export async function resolverNotificacaoFluxo(
   const algumReprovado = lista.some((a) => a.status === "reprovado");
   if (algumReprovado) return null;
 
+  const divisaoOrigem = integrante?.divisao_texto ?? "-";
+  const divisaoDestino = (s.divisao_estagio as { nome: string } | null)?.nome ?? null;
+  const divisaoTexto =
+    !isTreinamento && divisaoDestino && divisaoDestino !== divisaoOrigem
+      ? `${divisaoDestino} (integrante da ${divisaoOrigem})`
+      : divisaoOrigem;
+
   const base = {
     integrante: integrante?.nome_colete ?? "-",
-    divisao: integrante?.divisao_texto ?? "-",
+    divisao: divisaoTexto,
     cargo_atual: integrante?.cargo_grau_texto ?? "-",
     data_inicio: formatarData(s[campoInicio]),
     data_termino: formatarData(s.data_termino_previsto),

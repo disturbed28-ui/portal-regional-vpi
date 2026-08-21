@@ -44,6 +44,7 @@ interface SolicitacaoAprovacaoEstagio {
   integrante_regional_texto: string;
   integrante_regional_id: string | null;
   integrante_cargo_atual: string;
+  divisao_estagio_texto?: string | null;
   cargo_estagio_nome: string;
   cargo_estagio_id: string;
   grau_estagio: string;
@@ -172,6 +173,7 @@ export function CardAprovacaoEstagio({
           </div>
           <div className="flex items-center gap-2">
             <Building2 className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Divisão de origem:</span>
             <span>{solicitacao.integrante_divisao_texto}</span>
           </div>
           <div className="flex items-center gap-2">
@@ -191,6 +193,18 @@ export function CardAprovacaoEstagio({
           <div className="flex items-center gap-2">
             <GraduationCap className="h-4 w-4 text-primary" />
             <span className="font-medium">Cargo Estágio: {solicitacao.cargo_estagio_nome}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-primary" />
+            <span className="font-medium text-primary">
+              Estágio na divisão: {solicitacao.divisao_estagio_texto || solicitacao.integrante_divisao_texto}
+            </span>
+            {solicitacao.divisao_estagio_texto &&
+              solicitacao.divisao_estagio_texto !== solicitacao.integrante_divisao_texto && (
+                <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-500">
+                  Outra divisão
+                </Badge>
+              )}
           </div>
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
