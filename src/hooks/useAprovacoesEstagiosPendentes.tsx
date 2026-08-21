@@ -291,7 +291,7 @@ export function useAprovacoesEstagiosPendentes(userId: string | undefined) {
         .single();
 
       // Atualizar aprovação com campos de escalação
-      const { error: updateError } = await supabase
+      const { data: atualizadas, error: updateError } = await supabase
         .from('aprovacoes_estagio')
         .update({
           status: 'aprovado',
@@ -301,9 +301,15 @@ export function useAprovacoesEstagiosPendentes(userId: string | undefined) {
           aprovador_escalacao_nome: meuIntegrante?.nome_colete || null,
           justificativa_escalacao: justificativa
         })
-        .eq('id', aprovacaoId);
+        .eq('id', aprovacaoId)
+        .select('id');
 
       if (updateError) throw updateError;
+      if (!atualizadas || atualizadas.length === 0) {
+        toast.error('Você não tem permissão para aprovar por escalação esta solicitação.');
+        return false;
+      }
+
 
       // Verificar se todas as aprovações estão completas
       const { data: todasAprovacoes } = await supabase
