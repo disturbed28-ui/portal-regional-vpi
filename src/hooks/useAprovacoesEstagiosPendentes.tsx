@@ -158,6 +158,7 @@ export function useAprovacoesEstagiosPendentes(userId: string | undefined) {
           integrante_regional_texto: integrante?.regional_texto || '',
           integrante_regional_id: integrante?.regional_id || null,
           integrante_cargo_atual: integrante?.cargo_grau_texto || '',
+          divisao_estagio_texto: divisaoEstagio?.nome || null,
           cargo_estagio_nome: cargoEstagio?.nome || '',
           cargo_estagio_id: sol.cargo_estagio_id,
           grau_estagio: sol.grau_estagio,
