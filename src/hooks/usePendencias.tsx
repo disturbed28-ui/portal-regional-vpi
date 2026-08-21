@@ -73,6 +73,7 @@ interface EstagioAprovadorDetalhes {
   cargo_estagio: string;
   grau_estagio: string;
   divisao_texto: string;
+  divisao_estagio_texto: string | null;
   regional_texto: string;
   created_at: string;
   aprovadores_pendentes: string[];
@@ -83,6 +84,7 @@ interface EstagioIntegranteDetalhes {
   cargo_estagio: string;
   grau_estagio: string;
   divisao_texto: string;
+  divisao_estagio_texto: string | null;
   diretor_divisao_nome: string;
   diretor_divisao_cargo: string;
   created_at: string;
@@ -799,6 +801,7 @@ export const usePendencias = (
                   integrante_cargo_atual: integrante?.cargo_grau_texto || 'N/A',
                   cargo_treinamento: cargoTreinamento?.nome || 'N/A',
                   divisao_texto: integrante?.divisao_texto || 'N/A',
+                  divisao_estagio_texto: divisaoEstagioNome,
                   regional_texto: integrante?.regional_texto || 'N/A',
                   created_at: sol.created_at,
                   aprovadores_pendentes: aprovadoresPendentes
@@ -822,7 +825,8 @@ export const usePendencias = (
             integrante:integrantes_portal!solicitacoes_estagio_integrante_id_fkey(
               id, nome_colete, divisao_texto, regional_texto, cargo_grau_texto
             ),
-            cargo_estagio:cargos!solicitacoes_estagio_cargo_estagio_id_fkey(nome, grau)
+            cargo_estagio:cargos!solicitacoes_estagio_cargo_estagio_id_fkey(nome, grau),
+            divisao_estagio:divisoes!solicitacoes_estagio_divisao_id_fkey(nome)
           `)
           .eq('status', 'Em Aprovacao');
 
@@ -838,6 +842,7 @@ export const usePendencias = (
           for (const sol of solicitacoesEstagio || []) {
             const integrante = sol.integrante as any;
             const cargoEstagio = sol.cargo_estagio as any;
+            const divisaoEstagioNome = (sol as any).divisao_estagio?.nome || null;
             const aprovacoesDoSol = aprovacoesEstagio?.filter(a => a.solicitacao_id === sol.id) || [];
             
             // Verificar se realmente há aprovações pendentes antes de criar pendência
@@ -864,6 +869,7 @@ export const usePendencias = (
                   cargo_estagio: cargoEstagio?.nome || 'N/A',
                   grau_estagio: cargoEstagio?.grau || 'N/A',
                   divisao_texto: integrante?.divisao_texto || 'N/A',
+                  divisao_estagio_texto: divisaoEstagioNome,
                   diretor_divisao_nome: diretorDivisao?.aprovador_nome_colete || 'N/A',
                   diretor_divisao_cargo: diretorDivisao?.aprovador_cargo || 'N/A',
                   created_at: sol.created_at
@@ -895,6 +901,7 @@ export const usePendencias = (
                   cargo_estagio: cargoEstagio?.nome || 'N/A',
                   grau_estagio: cargoEstagio?.grau || 'N/A',
                   divisao_texto: integrante?.divisao_texto || 'N/A',
+                  divisao_estagio_texto: divisaoEstagioNome,
                   regional_texto: integrante?.regional_texto || 'N/A',
                   created_at: sol.created_at,
                   aprovadores_pendentes: aprovadoresPendentesEstagio
