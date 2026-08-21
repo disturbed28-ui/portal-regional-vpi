@@ -801,7 +801,6 @@ export const usePendencias = (
                   integrante_cargo_atual: integrante?.cargo_grau_texto || 'N/A',
                   cargo_treinamento: cargoTreinamento?.nome || 'N/A',
                   divisao_texto: integrante?.divisao_texto || 'N/A',
-                  divisao_estagio_texto: divisaoEstagioNome,
                   regional_texto: integrante?.regional_texto || 'N/A',
                   created_at: sol.created_at,
                   aprovadores_pendentes: aprovadoresPendentes
