@@ -160,10 +160,7 @@ export async function resolverNotificacaoFluxo(
 
   const divisaoOrigem = integrante?.divisao_texto ?? "-";
   const divisaoDestino = (s.divisao_estagio as { nome: string } | null)?.nome ?? null;
-  const divisaoTexto =
-    !isTreinamento && divisaoDestino && divisaoDestino !== divisaoOrigem
-      ? `${divisaoDestino} (integrante da ${divisaoOrigem})`
-      : divisaoOrigem;
+  const divisaoTexto = !isTreinamento && divisaoDestino ? divisaoDestino : divisaoOrigem;
 
   const base = {
     integrante: integrante?.nome_colete ?? "-",
