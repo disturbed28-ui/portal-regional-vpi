@@ -94,6 +94,7 @@ export function useAprovacoesEstagiosPendentes(userId: string | undefined) {
             cargo_grau_texto
           ),
           cargo_estagio:cargos!solicitacoes_estagio_cargo_estagio_id_fkey(nome),
+          divisao_estagio:divisoes!solicitacoes_estagio_divisao_id_fkey(nome),
           solicitante_cargo:cargos!solicitacoes_estagio_solicitante_cargo_id_fkey(nome),
           solicitante_divisao:divisoes!solicitacoes_estagio_solicitante_divisao_id_fkey(nome)
         `)
