@@ -143,6 +143,7 @@ export function useAprovacoesEstagiosPendentes(userId: string | undefined) {
         const cargoEstagio = sol.cargo_estagio as { nome: string } | null;
         const solicitanteCargo = sol.solicitante_cargo as { nome: string } | null;
         const solicitanteDivisao = sol.solicitante_divisao as { nome: string } | null;
+        const divisaoEstagio = (sol as { divisao_estagio?: { nome: string } | null }).divisao_estagio as { nome: string } | null;
 
         // Verificar se DR pode escalar (mesmo comportamento do treinamento)
         const mesmaRegional = integrante?.regional_id === minhaRegionalId;
