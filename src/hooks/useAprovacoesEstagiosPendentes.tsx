@@ -209,15 +209,21 @@ export function useAprovacoesEstagiosPendentes(userId: string | undefined) {
       setOperando(true);
 
       // Atualizar aprovação
-      const { error: updateError } = await supabase
+      const { data: atualizadas, error: updateError } = await supabase
         .from('aprovacoes_estagio')
         .update({
           status: 'aprovado',
           data_hora_acao: new Date().toISOString()
         })
-        .eq('id', aprovacaoId);
+        .eq('id', aprovacaoId)
+        .select('id');
 
       if (updateError) throw updateError;
+      if (!atualizadas || atualizadas.length === 0) {
+        toast.error('Você não tem permissão para registrar esta aprovação.');
+        return false;
+      }
+
 
       // Verificar se todas as aprovações estão completas
       const { data: todasAprovacoes } = await supabase
