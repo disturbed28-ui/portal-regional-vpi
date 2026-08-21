@@ -24,6 +24,7 @@ interface SolicitacaoAprovacaoEstagio {
   integrante_regional_texto: string;
   integrante_regional_id: string | null;
   integrante_cargo_atual: string;
+  divisao_estagio_texto: string | null;
   cargo_estagio_nome: string;
   cargo_estagio_id: string;
   grau_estagio: string;
