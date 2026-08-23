@@ -1021,6 +1021,69 @@ afastados_ignorados: z.array(z.object({
       }
     }
 
+    // ==========================================
+    // ENCERRAR AFASTAMENTOS de quem voltou a aparecer como ATIVO na carga
+    // ==========================================
+    let afastamentosEncerradosCount = 0;
+    try {
+      const idsAtivosNaCarga = new Set<number>();
+      (novos || []).forEach((n: any) => n.registro_id != null && idsAtivosNaCarga.add(Number(n.registro_id)));
+      (atualizados || []).forEach((a: any) => a.registro_id != null && idsAtivosNaCarga.add(Number(a.registro_id)));
+      (reativados || []).forEach((r: any) => r.registro_id != null && idsAtivosNaCarga.add(Number(r.registro_id)));
+
+      // Não encerrar afastamentos de quem continua listado como afastado nesta carga
+      (afastados_ignorados || []).forEach((a: any) => a.registro_id != null && idsAtivosNaCarga.delete(Number(a.registro_id)));
+
+      if (idsAtivosNaCarga.size > 0) {
+        const { data: afastamentosAtivos } = await supabase
+          .from('integrantes_afastados')
+          .select('id, registro_id, nome_colete, tipo_afastamento')
+          .eq('ativo', true)
+          .in('registro_id', Array.from(idsAtivosNaCarga));
+
+        for (const af of afastamentosAtivos || []) {
+          const { error: baixaError } = await supabase
+            .from('integrantes_afastados')
+            .update({
+              ativo: false,
+              data_retorno_efetivo: new Date().toISOString().split('T')[0],
+              motivo_baixa: 'retorno_detectado_carga',
+              observacoes_baixa: 'Integrante voltou a constar como ativo na carga de integrantes'
+            })
+            .eq('id', af.id);
+
+          if (baixaError) {
+            console.error('[admin-import-integrantes] Erro ao encerrar afastamento:', af.nome_colete, baixaError);
+            continue;
+          }
+
+          afastamentosEncerradosCount++;
+          console.log(`[admin-import-integrantes] ✅ Afastamento encerrado (retorno na carga): ${af.nome_colete} (${af.registro_id})`);
+
+          const { data: integrante } = await supabase
+            .from('integrantes_portal')
+            .select('id')
+            .eq('registro_id', af.registro_id)
+            .maybeSingle();
+
+          if (integrante?.id) {
+            await supabase.from('integrantes_historico').insert({
+              integrante_id: integrante.id,
+              acao: 'RETORNO_AFASTAMENTO_CARGA',
+              dados_anteriores: { afastado: true, tipo_afastamento: af.tipo_afastamento },
+              dados_novos: { afastado: false },
+              observacao: 'Afastamento encerrado automaticamente: integrante consta como ativo na carga de integrantes',
+              alterado_por: admin_user_id
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.error('[admin-import-integrantes] Falha ao encerrar afastamentos pela carga:', e);
+    }
+
+
+
     // Process TRANSFERENCIAS INTERNAS - Update regional/divisao, DON'T inactivate
     let transferenciasInternasCount = 0;
     if (transferencias_internas && transferencias_internas.length > 0) {
@@ -1461,11 +1524,12 @@ inativadosCount,
         reativadosCount,
         promovidosCount,
         afastadosIgnoradosCount,
+        afastamentosEncerradosCount,
         transferenciasInternasCount,
         ignoradosPorEscopo: ignoradosPorEscopo.length,
         ignoradosPorEscopoDetalhe: ignoradosPorEscopo.slice(0, 20),
         escopo: { tipo: escopo.tipo, regional_id: escopo.regional_id, divisao_id: escopo.divisao_id },
-        message: `${insertedCount} novos, ${updatedCount} atualizados, ${reativadosCount} retornos, ${inativadosCount} inativados, ${promovidosCount} promovidos, ${afastadosIgnoradosCount} afastados mantidos, ${transferenciasInternasCount} transferências`,
+        message: `${insertedCount} novos, ${updatedCount} atualizados, ${reativadosCount} retornos, ${inativadosCount} inativados, ${promovidosCount} promovidos, ${afastadosIgnoradosCount} afastados mantidos, ${afastamentosEncerradosCount} afastamentos encerrados, ${transferenciasInternasCount} transferências`,
         carga: {
           id: cargaData.id,
           data_carga: cargaData.data_carga,
