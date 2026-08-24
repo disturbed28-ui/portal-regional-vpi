@@ -276,7 +276,7 @@ const Agenda = () => {
       <EventDetailDialog
         event={selectedEvent}
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={handleDialogOpenChange}
       />
     </div>
   );
