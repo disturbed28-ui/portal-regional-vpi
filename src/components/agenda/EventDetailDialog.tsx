@@ -54,7 +54,9 @@ export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDial
     if (event.type) linhas.push(`🏷️ Tipo: ${event.type}`);
     if (event.division) linhas.push(`🛡️ Divisão: ${event.division}`);
     linhas.push("", "Contamos com a sua presença!");
-    if (event.htmlLink) linhas.push("", `🔗 Ver na agenda: ${event.htmlLink}`);
+
+    const linkPortal = `${window.location.origin}/agenda?evento=${encodeURIComponent(event.id)}`;
+    linhas.push("", `🔗 Ver no Portal: ${linkPortal}`);
     linhas.push("", "_Enviado pelo Portal Regional VP1_");
 
     const url = `https://wa.me/?text=${encodeURIComponent(linhas.join("\n"))}`;

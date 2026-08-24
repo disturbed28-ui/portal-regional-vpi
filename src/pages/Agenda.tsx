@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
 import { EventCard } from "@/components/agenda/EventCard";
@@ -31,6 +31,36 @@ const Agenda = () => {
   const [selectedRegional, setSelectedRegional] = useState<string>("todas");
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const eventoParam = searchParams.get("evento");
+  const [deepLinkTratado, setDeepLinkTratado] = useState(false);
+
+  // Deep link: abrir modal do evento compartilhado
+  useEffect(() => {
+    if (!eventoParam || deepLinkTratado || !events) return;
+    const evento = events.find((e) => e.id === eventoParam);
+    if (evento) {
+      setSelectedMonth(startOfMonth(new Date(evento.start)));
+      setSelectedRegional("todas");
+      setSelectedEvent(evento);
+      setDialogOpen(true);
+    } else {
+      toast({
+        title: "Evento não encontrado",
+        description: "O evento compartilhado não está mais disponível na agenda.",
+      });
+    }
+    setDeepLinkTratado(true);
+  }, [eventoParam, events, deepLinkTratado, toast]);
+
+  const handleDialogOpenChange = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open && searchParams.has("evento")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("evento");
+      setSearchParams(next, { replace: true });
+    }
+  };
 
   // Regionais que têm sigla cadastrada
   const regionaisComSigla = regionais?.filter(r => r.sigla) || [];
@@ -246,7 +276,7 @@ const Agenda = () => {
       <EventDetailDialog
         event={selectedEvent}
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={handleDialogOpenChange}
       />
     </div>
   );
