@@ -361,11 +361,6 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Pr
 
     setDecisionDialog(null);
     refetchDecisoes();
-
-    // Ao concluir etapa regional, redirecionar para o Histórico
-    if (isRegional) {
-      onDecisaoRegionalConcluida?.();
-    }
   };
 
   return (
