@@ -36,7 +36,6 @@ interface Props {
   regionalId: string | null;
   avaliadorNome: string | null;
   readOnly?: boolean;
-  onDecisaoRegionalConcluida?: () => void;
 }
 
 type DecisionDialogState = {
@@ -50,7 +49,7 @@ type DecisionDialogState = {
   ehDDIntegrante?: boolean;
 } | null;
 
-export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly, onDecisaoRegionalConcluida }: Props) {
+export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly }: Props) {
   const { integrantesPorDivisao, loading: loadingInt } = useIntegrantesGestao(userId);
   const { profile } = useProfile(userId);
   const { hasRole } = useUserRole(userId);
@@ -362,11 +361,6 @@ export function AvaliacaoTab({ userId, regionalId, avaliadorNome, readOnly, onDe
 
     setDecisionDialog(null);
     refetchDecisoes();
-
-    // Ao concluir etapa regional, redirecionar para o Histórico
-    if (isRegional) {
-      onDecisaoRegionalConcluida?.();
-    }
   };
 
   return (

@@ -60,7 +60,6 @@ function AvaliacaoTabsController({ userId, regionalId, avaliadorNome }: { userId
           userId={userId}
           regionalId={regionalId}
           avaliadorNome={avaliadorNome}
-          onDecisaoRegionalConcluida={() => setTab('historico')}
         />
       </TabsContent>
       <TabsContent value="historico" className="mt-4">
