@@ -1678,6 +1678,128 @@ export type Database = {
         }
         Relationships: []
       }
+      insight_participacoes: {
+        Row: {
+          cargo_grau_texto_snapshot: string | null
+          created_at: string
+          divisao_id_snapshot: string | null
+          grau_snapshot: string | null
+          id: string
+          insight_id: string
+          integrante_id: string
+          nome_colete_snapshot: string
+          status: Database["public"]["Enums"]["insight_status"]
+          updated_at: string
+        }
+        Insert: {
+          cargo_grau_texto_snapshot?: string | null
+          created_at?: string
+          divisao_id_snapshot?: string | null
+          grau_snapshot?: string | null
+          id?: string
+          insight_id: string
+          integrante_id: string
+          nome_colete_snapshot: string
+          status?: Database["public"]["Enums"]["insight_status"]
+          updated_at?: string
+        }
+        Update: {
+          cargo_grau_texto_snapshot?: string | null
+          created_at?: string
+          divisao_id_snapshot?: string | null
+          grau_snapshot?: string | null
+          id?: string
+          insight_id?: string
+          integrante_id?: string
+          nome_colete_snapshot?: string
+          status?: Database["public"]["Enums"]["insight_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insight_participacoes_insight_id_fkey"
+            columns: ["insight_id"]
+            isOneToOne: false
+            referencedRelation: "insights"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insight_participacoes_integrante_id_fkey"
+            columns: ["integrante_id"]
+            isOneToOne: false
+            referencedRelation: "integrantes_portal"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      insights: {
+        Row: {
+          atualizado_por: string | null
+          created_at: string
+          criado_por: string | null
+          data_insight: string
+          divisao_id: string
+          id: string
+          numero_insight: number
+          regional_id: string | null
+          responsavel_nome: string | null
+          updated_at: string
+        }
+        Insert: {
+          atualizado_por?: string | null
+          created_at?: string
+          criado_por?: string | null
+          data_insight: string
+          divisao_id: string
+          id?: string
+          numero_insight: number
+          regional_id?: string | null
+          responsavel_nome?: string | null
+          updated_at?: string
+        }
+        Update: {
+          atualizado_por?: string | null
+          created_at?: string
+          criado_por?: string | null
+          data_insight?: string
+          divisao_id?: string
+          id?: string
+          numero_insight?: number
+          regional_id?: string | null
+          responsavel_nome?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insights_divisao_id_fkey"
+            columns: ["divisao_id"]
+            isOneToOne: false
+            referencedRelation: "divisoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insights_divisao_id_fkey"
+            columns: ["divisao_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["divisao_id"]
+          },
+          {
+            foreignKeyName: "insights_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "regionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insights_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["regional_id"]
+          },
+        ]
+      }
       integrantes_afastados: {
         Row: {
           ativo: boolean
@@ -3639,6 +3761,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      insight_divisao_no_escopo: {
+        Args: { _divisao_id: string }
+        Returns: boolean
+      }
       is_conversation_participant: {
         Args: { _conversation_id: string }
         Returns: boolean
@@ -3697,6 +3823,7 @@ export type Database = {
         | "desistente"
         | "desistente_reportado"
         | "cancelado"
+      insight_status: "RESPONDEU" | "NAO_RESPONDEU" | "NAO_APLICAVEL"
       motivo_inativacao:
         | "transferido"
         | "falecido"
@@ -3856,6 +3983,7 @@ export const Constants = {
         "desistente_reportado",
         "cancelado",
       ],
+      insight_status: ["RESPONDEU", "NAO_RESPONDEU", "NAO_APLICAVEL"],
       motivo_inativacao: [
         "transferido",
         "falecido",
