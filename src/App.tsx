@@ -41,6 +41,7 @@ import AvaliacaoIntegrantes from "./pages/AvaliacaoIntegrantes";
 import Expansao from "./pages/Expansao";
 import ConsultaIntegrante from "./pages/ConsultaIntegrante";
 import Instalar from "./pages/Instalar";
+import ControleInsights from "./pages/ControleInsights";
 
 const queryClient = new QueryClient();
 
