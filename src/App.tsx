@@ -80,6 +80,7 @@ const App = () => (
                 <Route path="/formularios" element={<Formularios />} />
                 <Route path="/formularios/relatorio-semanal-divisao" element={<FormularioRelatorioSemanal />} />
                 <Route path="/formularios/acoes_sociais" element={<FormularioAcoesSociais />} />
+                <Route path="/formularios/controle-insights" element={<ControleInsights />} />
                 <Route path="/acoes-sociais" element={<AcoesSociais />} />
                 <Route path="/gestao-adm" element={<GestaoADM />} />
                 <Route path="/avaliacao-integrantes" element={<AvaliacaoIntegrantes />} />
