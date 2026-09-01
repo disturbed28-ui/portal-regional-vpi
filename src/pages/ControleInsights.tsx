@@ -1,10 +1,12 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RegistrarInsightTab } from "@/components/insights/RegistrarInsightTab";
+import { RegistrarInsightTab, type EdicaoInsight } from "@/components/insights/RegistrarInsightTab";
 import { HistoricoInsightsTab } from "@/components/insights/HistoricoInsightsTab";
 import { ParticipacaoInsightsTab } from "@/components/insights/ParticipacaoInsightsTab";
+
 
 /**
  * Controle de Insights — página interna vinculada ao módulo de Formulários.
