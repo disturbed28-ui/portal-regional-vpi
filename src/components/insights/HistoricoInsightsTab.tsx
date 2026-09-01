@@ -217,6 +217,26 @@ export const HistoricoInsightsTab = ({
                         </div>
                       ))}
                   </div>
+                  {onReabrir &&
+                    (insight.criado_por === escopo.userId ||
+                      insight.atualizado_por === escopo.userId ||
+                      escopo.nivelAcesso === "comando") && (
+                      <Button
+                        variant="outline"
+                        className="h-11 w-full text-xs"
+                        onClick={() =>
+                          onReabrir({
+                            dataInsight: insight.data_insight,
+                            numeroInsight: insight.numero_insight,
+                            divisaoId: insight.divisao_id,
+                          })
+                        }
+                      >
+                        <Pencil className="mr-1 h-4 w-4" />
+                        Reabrir para editar
+                      </Button>
+                    )}
+
                 </AccordionContent>
               </AccordionItem>
             );
