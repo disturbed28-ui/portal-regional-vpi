@@ -16,7 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Loader2, Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
 import { useEscopoInsights, useInsightsLista } from "@/hooks/useInsights";
 import {
   calcularParticipacao,
