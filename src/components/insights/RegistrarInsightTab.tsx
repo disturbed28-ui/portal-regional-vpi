@@ -28,12 +28,27 @@ import {
 } from "@/lib/insightsCalculo";
 import { StatusToggle } from "./StatusToggle";
 
-export const RegistrarInsightTab = () => {
+export interface EdicaoInsight {
+  dataInsight: string;
+  numeroInsight: number;
+  divisaoId: string;
+  token: number;
+}
+
+export const RegistrarInsightTab = ({ edicao }: { edicao?: EdicaoInsight | null }) => {
   const escopo = useEscopoInsights();
   const [dataInsight, setDataInsight] = useState(() => new Date().toISOString().slice(0, 10));
   const [numeroInsight, setNumeroInsight] = useState("");
   const [divisaoId, setDivisaoId] = useState<string>("");
   const [statusMap, setStatusMap] = useState<Record<string, InsightStatus>>({});
+
+  // Reabertura de um lançamento vindo do Histórico
+  useEffect(() => {
+    if (!edicao) return;
+    setDataInsight(edicao.dataInsight);
+    setNumeroInsight(String(edicao.numeroInsight));
+    setDivisaoId(edicao.divisaoId);
+  }, [edicao?.token]);
 
   // Pré-selecionar a divisão do usuário quando existir
   useEffect(() => {
@@ -44,6 +59,7 @@ export const RegistrarInsightTab = () => {
       if (padrao) setDivisaoId(padrao.id);
     }
   }, [escopo.divisoesDisponiveis, escopo.divisaoIdUsuario, divisaoId]);
+
 
   const numero = numeroInsight ? parseInt(numeroInsight, 10) : null;
   const cabecalhoPronto = !!dataInsight && !!numero && !!divisaoId;

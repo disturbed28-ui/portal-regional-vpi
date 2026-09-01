@@ -16,7 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Loader2, Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
 import { useEscopoInsights, useInsightsLista } from "@/hooks/useInsights";
 import {
   calcularParticipacao,
@@ -33,8 +35,13 @@ const formatarData = (iso: string) => {
 const formatarDataHora = (iso: string) =>
   new Date(iso).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
 
-export const HistoricoInsightsTab = () => {
+export const HistoricoInsightsTab = ({
+  onReabrir,
+}: {
+  onReabrir?: (dados: { dataInsight: string; numeroInsight: number; divisaoId: string }) => void;
+}) => {
   const escopo = useEscopoInsights();
+
   const [dataInicial, setDataInicial] = useState("");
   const [dataFinal, setDataFinal] = useState("");
   const [numero, setNumero] = useState("");
@@ -212,6 +219,26 @@ export const HistoricoInsightsTab = () => {
                         </div>
                       ))}
                   </div>
+                  {onReabrir &&
+                    (insight.criado_por === escopo.userId ||
+                      insight.atualizado_por === escopo.userId ||
+                      escopo.nivelAcesso === "comando") && (
+                      <Button
+                        variant="outline"
+                        className="h-11 w-full text-xs"
+                        onClick={() =>
+                          onReabrir({
+                            dataInsight: insight.data_insight,
+                            numeroInsight: insight.numero_insight,
+                            divisaoId: insight.divisao_id,
+                          })
+                        }
+                      >
+                        <Pencil className="mr-1 h-4 w-4" />
+                        Reabrir para editar
+                      </Button>
+                    )}
+
                 </AccordionContent>
               </AccordionItem>
             );

@@ -1,10 +1,12 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RegistrarInsightTab } from "@/components/insights/RegistrarInsightTab";
+import { RegistrarInsightTab, type EdicaoInsight } from "@/components/insights/RegistrarInsightTab";
 import { HistoricoInsightsTab } from "@/components/insights/HistoricoInsightsTab";
 import { ParticipacaoInsightsTab } from "@/components/insights/ParticipacaoInsightsTab";
+
 
 /**
  * Controle de Insights — página interna vinculada ao módulo de Formulários.
@@ -13,6 +15,8 @@ import { ParticipacaoInsightsTab } from "@/components/insights/ParticipacaoInsig
  */
 const ControleInsights = () => {
   const navigate = useNavigate();
+  const [aba, setAba] = useState("registrar");
+  const [edicao, setEdicao] = useState<EdicaoInsight | null>(null);
 
   return (
     <div className="min-h-screen bg-background">
@@ -27,7 +31,7 @@ const ControleInsights = () => {
           </div>
         </header>
 
-        <Tabs defaultValue="registrar">
+        <Tabs value={aba} onValueChange={setAba}>
           <TabsList className="mb-3 grid w-full grid-cols-3">
             <TabsTrigger value="registrar" className="text-xs">Registrar</TabsTrigger>
             <TabsTrigger value="historico" className="text-xs">Histórico</TabsTrigger>
@@ -35,11 +39,17 @@ const ControleInsights = () => {
           </TabsList>
 
           <TabsContent value="registrar">
-            <RegistrarInsightTab />
+            <RegistrarInsightTab edicao={edicao} />
           </TabsContent>
           <TabsContent value="historico">
-            <HistoricoInsightsTab />
+            <HistoricoInsightsTab
+              onReabrir={(dados) => {
+                setEdicao({ ...dados, token: Date.now() });
+                setAba("registrar");
+              }}
+            />
           </TabsContent>
+
           <TabsContent value="participacao">
             <ParticipacaoInsightsTab />
           </TabsContent>
