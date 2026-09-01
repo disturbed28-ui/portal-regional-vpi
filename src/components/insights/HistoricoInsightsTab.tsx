@@ -33,8 +33,13 @@ const formatarData = (iso: string) => {
 const formatarDataHora = (iso: string) =>
   new Date(iso).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
 
-export const HistoricoInsightsTab = () => {
+export const HistoricoInsightsTab = ({
+  onReabrir,
+}: {
+  onReabrir?: (dados: { dataInsight: string; numeroInsight: number; divisaoId: string }) => void;
+}) => {
   const escopo = useEscopoInsights();
+
   const [dataInicial, setDataInicial] = useState("");
   const [dataFinal, setDataFinal] = useState("");
   const [numero, setNumero] = useState("");
