@@ -23,8 +23,10 @@ export const RelatorioSemanalResumo = ({ regionalId, ano, mes, semana }: Relator
   // Buscar dados do relatório (mesma lógica da aba "Relatório")
   const { data: dadosRelatorio, isLoading: loadingRelatorio } = useRelatorioSemanalResumo(regionalId, ano, mes, semana);
 
-  // Meta de crescimento de 4% (acumulado dos períodos 1..semana)
-  const { meta, periodosLancados } = useMetaCrescimento(regionalId, ano, mes, semana);
+  // Meta de crescimento de 4% — a avaliação do Comando é pelo fechamento do MÊS,
+  // então acumulamos TODOS os períodos lançados do mês (não apenas até o período
+  // selecionado), para não gerar delta entre o período atual e o fechamento mensal.
+  const { meta, periodosLancados } = useMetaCrescimento(regionalId, ano, mes);
 
 
 
