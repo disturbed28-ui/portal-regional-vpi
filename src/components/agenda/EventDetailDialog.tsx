@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, MapPin, Tag, ExternalLink, Users, Crown, Skull, MessageCircle } from "lucide-react";
+import { Calendar, Clock, MapPin, Tag, ExternalLink, Users, Crown, Skull, MessageCircle, Navigation } from "lucide-react";
 import { ListaPresenca } from "./ListaPresenca";
 import { useTiposEvento } from "@/hooks/useTiposEvento";
 import { useAuth } from "@/hooks/useAuth";
@@ -145,9 +145,20 @@ export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDial
           {event.location && (
             <div className="flex items-start gap-3">
               <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
-              <div>
+              <div className="min-w-0">
                 <p className="font-medium">Local</p>
-                <p className="text-sm text-muted-foreground">{event.location}</p>
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-primary underline underline-offset-2 break-words inline-flex items-start gap-1"
+                >
+                  {event.location}
+                  <Navigation className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                </a>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Toque para abrir no app de navegação
+                </p>
               </div>
             </div>
           )}
