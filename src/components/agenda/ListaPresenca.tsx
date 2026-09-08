@@ -539,7 +539,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
   // ==========================================
 
   // Separar por status e ordenar - MEMOIZADO para evitar loop infinito
-  const { presentes, visitantes, todosPresentes, ausentes, totalDivisao } = useMemo(() => {
+  const { presentes, visitantes, todosPresentes, ausentes, naoJustificados, justificados, totalDivisao } = useMemo(() => {
     if (!presencas || presencas.length === 0) {
       return {
         presentes: [],
