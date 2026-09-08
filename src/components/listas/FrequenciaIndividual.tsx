@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -17,6 +18,7 @@ import { useDivisoesPorRegional } from "@/hooks/useDivisoesPorRegional";
 import { useRegionais } from "@/hooks/useRegionais";
 import { getNivelAcesso, romanToNumber } from "@/lib/grauUtils";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import * as XLSX from 'xlsx';
 
 interface FrequenciaIndividualProps {
