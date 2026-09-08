@@ -214,8 +214,10 @@ export const ParticipacaoInsightsTab = () => {
                       key={integrante.id}
                       className="flex items-center justify-between gap-2 rounded-md border p-2"
                     >
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-medium">{integrante.nome}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="whitespace-normal break-words text-xs font-medium">
+                          {integrante.nome}
+                        </p>
                         <p className="text-[10px] text-muted-foreground">
                           {integrante.resumo.respondeu}/{integrante.resumo.aplicaveis} aplicáveis
                         </p>
