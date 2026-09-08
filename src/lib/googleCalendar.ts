@@ -88,6 +88,19 @@ async function loadDivisoesCache() {
   return divisoesCache;
 }
 
+// Detectar sufixo ordinal da divisão (Cacapava II / Cacapava 2 => 2)
+function sufixoOrdinalDivisao(texto: string): number {
+  const t = removeSpecialCharacters(texto || '').toUpperCase();
+  // Ignorar siglas de regional (VP1, VP2, VP I...) para não confundir com o numeral da divisão
+  const limpo = t
+    .replace(/\bVP\s*(III|II|I|[123])\b/g, ' ')
+    .replace(/\bVALE\s*(?:DO\s*)?PARAIBA\s*(III|II|I|[123])\b/g, ' ');
+  if (/\b(IV|4)\b/.test(limpo)) return 4;
+  if (/\b(III|3)\b/.test(limpo)) return 3;
+  if (/\b(II|2)\b/.test(limpo)) return 2;
+  return 1;
+}
+
 // Fazer matching fuzzy de divisão com banco - retorna id E sigla da regional
 async function matchDivisaoToId(divisaoText: string): Promise<{ id: string | null; regionalSigla: string | null }> {
   const divisoes = await loadDivisoesCache();
@@ -122,8 +135,12 @@ async function matchDivisaoToId(divisaoText: string): Promise<{ id: string | nul
     }
   }
   
-  // 2. Match por contains
+  // Sufixo ordinal do texto buscado (ex.: CACAPAVA II => 2) para não confundir divisões homônimas
+  const sufixoBuscado = sufixoOrdinalDivisao(normalizado);
+
+  // 2. Match por contains (respeitando o sufixo ordinal)
   for (const div of divisoes) {
+    if (sufixoOrdinalDivisao(div.normalizado) !== sufixoBuscado) continue;
     if (div.normalizado.includes(normalizado) || normalizado.includes(div.normalizado)) {
       return { id: div.id, regionalSigla: div.regionalSigla };
     }
@@ -149,6 +166,7 @@ async function matchDivisaoToId(divisaoText: string): Promise<{ id: string | nul
   
   for (const div of divisoes) {
     const divNormalizada = div.normalizado;
+    if (sufixoOrdinalDivisao(divNormalizada) !== sufixoBuscado) continue;
     for (const [key, patterns] of Object.entries(keywords)) {
       if (divNormalizada.includes(key)) {
         for (const pattern of patterns) {
@@ -506,7 +524,22 @@ async function detectDivisionFromTitle(title: string): Promise<string> {
   if (temJac && temSul) return 'Divisao Jacarei Sul - SP';
   if (temJac && temCentro) return 'Divisao Jacarei Centro - SP';
   
-  if (temCacapava) return 'Divisao Cacapava - SP';
+  if (temCacapava) {
+    // Existem divisões homônimas numeradas (Cacapava, Cacapava II...). Respeitar o numeral do título.
+    const sufixoTitulo = sufixoOrdinalDivisao(normalized);
+    const divisoesCacapava = (await loadDivisoesCache()).filter(d => d.normalizado.includes('CACAPAVA'));
+    const escolhida =
+      divisoesCacapava.find(d => sufixoOrdinalDivisao(d.normalizado) === sufixoTitulo) ||
+      divisoesCacapava.find(d => sufixoOrdinalDivisao(d.normalizado) === 1);
+    if (escolhida) {
+      const nomeFormatado = escolhida.nome
+        .replace(/^DIVISAO\s+/i, '')
+        .replace(/\s*-\s*SP\s*$/i, '')
+        .trim();
+      return `Divisao ${nomeFormatado} - SP`;
+    }
+    return 'Divisao Cacapava - SP';
+  }
   
   // ===== FALLBACK DINÂMICO: buscar divisões do banco e tentar match no título =====
   const divisoes = await loadDivisoesCache();
