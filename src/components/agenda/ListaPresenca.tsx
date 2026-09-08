@@ -595,11 +595,21 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
       }))
       .sort(ordenarPorHierarquiaLocal);
 
+    // Ausentes sem justificativa = "não justificados"; com justificativa = "justificados"
+    const _naoJustificados = _ausentes.filter(
+      a => !a.justificativa_ausencia || a.justificativa_ausencia === 'nao_justificado'
+    );
+    const _justificados = _ausentes.filter(
+      a => a.justificativa_ausencia && a.justificativa_ausencia !== 'nao_justificado'
+    );
+
     return {
       presentes: _presentes,
       visitantes: _visitantes,
       todosPresentes: _todosPresentes,
       ausentes: _ausentes,
+      naoJustificados: _naoJustificados,
+      justificados: _justificados,
       totalDivisao: _presentes.length + _ausentes.length,
     };
   }, [presencas]);
@@ -842,15 +852,20 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
             )}
 
             {/* Contador - Responsivo */}
-            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 p-3 sm:p-4 bg-muted/50 rounded-lg">
+            <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 p-3 sm:p-4 bg-muted/50 rounded-lg">
               <div className="text-center min-w-[70px]">
                 <div className="text-2xl sm:text-3xl font-bold text-green-600 dark:text-green-500">{dadosFiltrados.presentes.length}</div>
                 <div className="text-xs sm:text-sm font-medium text-foreground/70">Presentes</div>
               </div>
               <div className="h-8 w-px bg-border hidden sm:block" />
               <div className="text-center min-w-[70px]">
-                <div className="text-2xl sm:text-3xl font-bold text-orange-600 dark:text-orange-500">{dadosFiltrados.ausentes.length}</div>
-                <div className="text-xs sm:text-sm font-medium text-foreground/70">Ausentes</div>
+                <div className="text-2xl sm:text-3xl font-bold text-amber-600 dark:text-amber-500">{dadosFiltrados.justificados.length}</div>
+                <div className="text-xs sm:text-sm font-medium text-foreground/70">Justificados</div>
+              </div>
+              <div className="h-8 w-px bg-border hidden sm:block" />
+              <div className="text-center min-w-[70px]">
+                <div className="text-2xl sm:text-3xl font-bold text-orange-600 dark:text-orange-500">{dadosFiltrados.naoJustificados.length}</div>
+                <div className="text-xs sm:text-sm font-medium text-foreground/70">Ausentes (não justificados)</div>
               </div>
               <div className="h-8 w-px bg-border hidden sm:block" />
               <div className="text-center min-w-[70px] w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-border/50">

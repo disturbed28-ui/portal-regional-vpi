@@ -524,7 +524,7 @@ export const ListasConsulta = ({
                 <span className="text-xl font-semibold text-amber-600">{estatisticas.justificados}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-red-600">Ausentes:</span>
+                <span className="text-red-600">Ausentes (não justificados):</span>
                 <span className="text-xl font-semibold text-red-600">{estatisticas.ausentes}</span>
               </div>
             </CardContent>
