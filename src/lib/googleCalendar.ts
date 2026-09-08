@@ -88,6 +88,19 @@ async function loadDivisoesCache() {
   return divisoesCache;
 }
 
+// Detectar sufixo ordinal da divisão (Cacapava II / Cacapava 2 => 2)
+function sufixoOrdinalDivisao(texto: string): number {
+  const t = removeSpecialCharacters(texto || '').toUpperCase();
+  // Ignorar siglas de regional (VP1, VP2, VP I...) para não confundir com o numeral da divisão
+  const limpo = t
+    .replace(/\bVP\s*(III|II|I|[123])\b/g, ' ')
+    .replace(/\bVALE\s*(?:DO\s*)?PARAIBA\s*(III|II|I|[123])\b/g, ' ');
+  if (/\b(IV|4)\b/.test(limpo)) return 4;
+  if (/\b(III|3)\b/.test(limpo)) return 3;
+  if (/\b(II|2)\b/.test(limpo)) return 2;
+  return 1;
+}
+
 // Fazer matching fuzzy de divisão com banco - retorna id E sigla da regional
 async function matchDivisaoToId(divisaoText: string): Promise<{ id: string | null; regionalSigla: string | null }> {
   const divisoes = await loadDivisoesCache();
