@@ -643,15 +643,22 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
 
   // Filtrar dados se houver filtro ativo
   const dadosFiltrados = useMemo(() => {
-    if (filtroDivisao === 'todas' || !presencasAgrupadasPorDivisao) {
-      return { presentes: todosPresentes, ausentes };
-    }
-    
-    const grupo = presencasAgrupadasPorDivisao[filtroDivisao];
-    return {
-      presentes: grupo?.presentes || [],
-      ausentes: grupo?.ausentes || [],
-    };
+    const base =
+      filtroDivisao === 'todas' || !presencasAgrupadasPorDivisao
+        ? { presentes: todosPresentes, ausentes }
+        : (() => {
+            const grupo = presencasAgrupadasPorDivisao[filtroDivisao];
+            return { presentes: grupo?.presentes || [], ausentes: grupo?.ausentes || [] };
+          })();
+
+    const _naoJustificados = base.ausentes.filter(
+      a => !a.justificativa_ausencia || a.justificativa_ausencia === 'nao_justificado'
+    );
+    const _justificados = base.ausentes.filter(
+      a => a.justificativa_ausencia && a.justificativa_ausencia !== 'nao_justificado'
+    );
+
+    return { ...base, naoJustificados: _naoJustificados, justificados: _justificados };
   }, [filtroDivisao, presencasAgrupadasPorDivisao, todosPresentes, ausentes]);
 
   // ==========================================
