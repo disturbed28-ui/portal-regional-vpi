@@ -135,8 +135,12 @@ async function matchDivisaoToId(divisaoText: string): Promise<{ id: string | nul
     }
   }
   
-  // 2. Match por contains
+  // Sufixo ordinal do texto buscado (ex.: CACAPAVA II => 2) para não confundir divisões homônimas
+  const sufixoBuscado = sufixoOrdinalDivisao(normalizado);
+
+  // 2. Match por contains (respeitando o sufixo ordinal)
   for (const div of divisoes) {
+    if (sufixoOrdinalDivisao(div.normalizado) !== sufixoBuscado) continue;
     if (div.normalizado.includes(normalizado) || normalizado.includes(div.normalizado)) {
       return { id: div.id, regionalSigla: div.regionalSigla };
     }
