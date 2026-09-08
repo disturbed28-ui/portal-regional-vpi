@@ -18,7 +18,6 @@ import { useDivisoesPorRegional } from "@/hooks/useDivisoesPorRegional";
 import { useRegionais } from "@/hooks/useRegionais";
 import { getNivelAcesso, romanToNumber } from "@/lib/grauUtils";
 import { cn } from "@/lib/utils";
-import { useIsMobile } from "@/hooks/use-mobile";
 import * as XLSX from 'xlsx';
 
 interface FrequenciaIndividualProps {
@@ -38,6 +37,7 @@ interface GrupoFrequencia {
 }
 
 export const FrequenciaIndividual = ({ grau, regionalId, divisaoId, isAdmin = false }: FrequenciaIndividualProps) => {
+  const isMobile = useIsMobile();
   const hoje = new Date();
   const [periodoPreset, setPeriodoPreset] = useState<PeriodoPreset>('ultimo_mes');
   const [dataInicio, setDataInicio] = useState<Date>(startOfDay(subMonths(hoje, 1)));
