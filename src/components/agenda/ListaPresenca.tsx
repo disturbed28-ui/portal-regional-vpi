@@ -43,6 +43,7 @@ import { useScreenAccess } from "@/hooks/useScreenAccess";
 import { useProfile } from "@/hooks/useProfile";
 import { useAfastamentosAtivos } from "@/hooks/useAfastamentosAtivos";
 import { AfastamentoBadge } from "@/components/shared/AfastamentoBadge";
+import { abreviarDivisao } from "@/lib/normalizarTextoHierarquia";
 
 interface ListaPresencaProps {
   event: CalendarEvent | null;
@@ -685,8 +686,9 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
               <AfastamentoBadge tipo={afastamentosMap.get(integrante.registro_id)} />
             )}
           </div>
-          <div className="text-xs text-muted-foreground mt-1 truncate">
-            {integrante.divisao_texto}
+          <div className="text-xs text-muted-foreground mt-1 truncate" title={integrante.divisao_texto}>
+            <span className="sm:hidden">{abreviarDivisao(integrante.divisao_texto)}</span>
+            <span className="hidden sm:inline">{integrante.divisao_texto}</span>
           </div>
           <div className="text-xs text-muted-foreground">
             {integrante.cargo_nome || '-'} • Grau {integrante.grau || '-'}
@@ -894,7 +896,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                   <SelectContent className="bg-popover">
                     <SelectItem value="todas">Todas as divisões</SelectItem>
                     {divisoesUnicas.map(d => (
-                      <SelectItem key={d} value={d}>{d}</SelectItem>
+                      <SelectItem key={d} value={d} title={d}>{abreviarDivisao(d)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -963,8 +965,10 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                       >
                         <div className="min-w-0 flex-1">
                           <div className="font-medium text-foreground truncate">{integrante.nome_colete}</div>
-                          <div className="text-xs sm:text-sm text-foreground/70 truncate">
-                            {integrante.divisao_texto} • {integrante.cargo_nome || 'Sem cargo'}
+                          <div className="text-xs sm:text-sm text-foreground/70 truncate" title={integrante.divisao_texto}>
+                            <span className="sm:hidden">{abreviarDivisao(integrante.divisao_texto)}</span>
+                            <span className="hidden sm:inline">{integrante.divisao_texto}</span>
+                            {' • '}{integrante.cargo_nome || 'Sem cargo'}
                           </div>
                         </div>
                         <UserCheck className="h-5 w-5 text-green-600 dark:text-green-500 flex-shrink-0 ml-2" />
@@ -1014,7 +1018,10 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                           ) : (
                             <ChevronRight className="h-4 w-4" />
                           )}
-                          <span className="font-medium text-sm truncate">{divisao}</span>
+                          <span className="font-medium text-sm truncate" title={divisao}>
+                            <span className="sm:hidden">{abreviarDivisao(divisao)}</span>
+                            <span className="hidden sm:inline">{divisao}</span>
+                          </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-green-600 border-green-600">
