@@ -166,6 +166,7 @@ async function matchDivisaoToId(divisaoText: string): Promise<{ id: string | nul
   
   for (const div of divisoes) {
     const divNormalizada = div.normalizado;
+    if (sufixoOrdinalDivisao(divNormalizada) !== sufixoBuscado) continue;
     for (const [key, patterns] of Object.entries(keywords)) {
       if (divNormalizada.includes(key)) {
         for (const pattern of patterns) {
