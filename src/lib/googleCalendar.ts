@@ -524,7 +524,22 @@ async function detectDivisionFromTitle(title: string): Promise<string> {
   if (temJac && temSul) return 'Divisao Jacarei Sul - SP';
   if (temJac && temCentro) return 'Divisao Jacarei Centro - SP';
   
-  if (temCacapava) return 'Divisao Cacapava - SP';
+  if (temCacapava) {
+    // Existem divisões homônimas numeradas (Cacapava, Cacapava II...). Respeitar o numeral do título.
+    const sufixoTitulo = sufixoOrdinalDivisao(normalized);
+    const divisoesCacapava = (await loadDivisoesCache()).filter(d => d.normalizado.includes('CACAPAVA'));
+    const escolhida =
+      divisoesCacapava.find(d => sufixoOrdinalDivisao(d.normalizado) === sufixoTitulo) ||
+      divisoesCacapava.find(d => sufixoOrdinalDivisao(d.normalizado) === 1);
+    if (escolhida) {
+      const nomeFormatado = escolhida.nome
+        .replace(/^DIVISAO\s+/i, '')
+        .replace(/\s*-\s*SP\s*$/i, '')
+        .trim();
+      return `Divisao ${nomeFormatado} - SP`;
+    }
+    return 'Divisao Cacapava - SP';
+  }
   
   // ===== FALLBACK DINÂMICO: buscar divisões do banco e tentar match no título =====
   const divisoes = await loadDivisoesCache();
