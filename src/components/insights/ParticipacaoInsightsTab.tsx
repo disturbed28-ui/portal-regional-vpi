@@ -198,10 +198,12 @@ export const ParticipacaoInsightsTab = () => {
                 value={divisao.id}
                 className="rounded-lg border bg-card px-3"
               >
-                <AccordionTrigger className="py-3 hover:no-underline">
-                  <div className="flex flex-1 items-center justify-between gap-2 pr-2 text-left">
-                    <span className="truncate text-sm font-semibold">{divisao.nome}</span>
-                    <Badge variant="secondary" className="shrink-0 text-[10px]">
+                <AccordionTrigger className="gap-2 py-3 text-left hover:no-underline">
+                  <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
+                    <span className="w-full whitespace-normal break-words text-sm font-semibold leading-snug">
+                      {divisao.nome}
+                    </span>
+                    <Badge variant="secondary" className="text-[10px]">
                       {formatarPercentual(divisao.resumo.percentual)}
                     </Badge>
                   </div>
@@ -212,8 +214,10 @@ export const ParticipacaoInsightsTab = () => {
                       key={integrante.id}
                       className="flex items-center justify-between gap-2 rounded-md border p-2"
                     >
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-medium">{integrante.nome}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="whitespace-normal break-words text-xs font-medium">
+                          {integrante.nome}
+                        </p>
                         <p className="text-[10px] text-muted-foreground">
                           {integrante.resumo.respondeu}/{integrante.resumo.aplicaveis} aplicáveis
                         </p>

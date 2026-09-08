@@ -206,11 +206,11 @@ export const HistoricoInsightsTab = ({
                           key={p.id}
                           className="flex items-center justify-between gap-2 rounded-md border p-2"
                         >
-                          <div className="min-w-0">
-                            <p className="truncate text-xs font-medium">
+                          <div className="min-w-0 flex-1">
+                            <p className="whitespace-normal break-words text-xs font-medium">
                               {p.nome_colete_snapshot}
                             </p>
-                            <p className="truncate text-[10px] text-muted-foreground">
+                            <p className="whitespace-normal break-words text-[10px] text-muted-foreground">
                               {p.cargo_grau_texto_snapshot ||
                                 (p.grau_snapshot ? `Grau ${p.grau_snapshot}` : "—")}
                             </p>
