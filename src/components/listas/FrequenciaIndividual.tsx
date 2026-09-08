@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -36,6 +37,7 @@ interface GrupoFrequencia {
 }
 
 export const FrequenciaIndividual = ({ grau, regionalId, divisaoId, isAdmin = false }: FrequenciaIndividualProps) => {
+  const isMobile = useIsMobile();
   const hoje = new Date();
   const [periodoPreset, setPeriodoPreset] = useState<PeriodoPreset>('ultimo_mes');
   const [dataInicio, setDataInicio] = useState<Date>(startOfDay(subMonths(hoje, 1)));
@@ -677,6 +679,75 @@ export const FrequenciaIndividual = ({ grau, regionalId, divisaoId, isAdmin = fa
                 <p className="text-center text-muted-foreground py-4 text-sm">
                   Nenhum dado encontrado
                 </p>
+              ) : isMobile ? (
+                /* Cards no mobile (9:18) — sem rolagem horizontal, botão de justificativas sempre visível */
+                <div className="space-y-2">
+                  {grupo.integrantes.map((integrante) => (
+                    <Card key={integrante.integrante_id}>
+                      <CardContent className="p-3 space-y-2">
+                        <button
+                          type="button"
+                          onClick={() => toggleRow(integrante.integrante_id)}
+                          className="w-full flex items-start justify-between gap-2 text-left"
+                          aria-expanded={expandedRows.has(integrante.integrante_id)}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-sm break-words leading-snug">{integrante.nome_colete}</p>
+                            <p className="text-xs text-muted-foreground break-words leading-snug mt-0.5">{integrante.divisao}</p>
+                          </div>
+                          <ChevronDown
+                            className={cn(
+                              "h-4 w-4 shrink-0 mt-0.5 transition-transform",
+                              expandedRows.has(integrante.integrante_id) && "rotate-180"
+                            )}
+                          />
+                        </button>
+
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="secondary" className="text-xs">
+                            {integrante.totalEventos} {integrante.totalEventos === 1 ? 'evento' : 'eventos'}
+                          </Badge>
+                          <Badge variant={getVariantAproveitamento(integrante.percentual)} className="text-xs">
+                            {integrante.percentual.toFixed(1)}%
+                          </Badge>
+                        </div>
+                        <Progress value={integrante.percentual} />
+
+                        {expandedRows.has(integrante.integrante_id) && (
+                          <div className="pt-1 space-y-2">
+                            <h4 className="font-medium text-sm text-muted-foreground">Detalhamento de Eventos</h4>
+                            {integrante.eventos.map((evento, idx) => (
+                              <div key={idx} className="flex flex-col text-sm p-2 bg-background rounded border gap-1.5">
+                                <div className="min-w-0">
+                                  <div className="font-medium break-words leading-snug">{evento.titulo}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {format(new Date(evento.data), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                                  </div>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <Badge variant={evento.status === 'presente' ? 'default' : 'secondary'} className="text-xs">
+                                    {evento.status}
+                                  </Badge>
+                                  {evento.justificativa && (
+                                    <Badge variant="outline" className="text-xs">{evento.justificativa}</Badge>
+                                  )}
+                                  <div className="text-right ml-auto">
+                                    <div className="text-xs text-muted-foreground">
+                                      Peso: {evento.pesoEvento.toFixed(2)} × {evento.pesoPresenca.toFixed(2)}
+                                    </div>
+                                    <div className="font-medium">
+                                      {evento.pontos.toFixed(2)} pts
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
