@@ -1018,7 +1018,10 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                           ) : (
                             <ChevronRight className="h-4 w-4" />
                           )}
-                          <span className="font-medium text-sm truncate">{divisao}</span>
+                          <span className="font-medium text-sm truncate" title={divisao}>
+                            <span className="sm:hidden">{abreviarDivisao(divisao)}</span>
+                            <span className="hidden sm:inline">{divisao}</span>
+                          </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-green-600 border-green-600">
