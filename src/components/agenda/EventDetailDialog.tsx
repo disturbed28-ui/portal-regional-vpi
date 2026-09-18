@@ -53,6 +53,9 @@ export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDial
     if (event.location) linhas.push(`📍 Local: ${event.location}`);
     if (event.type) linhas.push(`🏷️ Tipo: ${event.type}`);
     if (event.division) linhas.push(`🛡️ Divisão: ${event.division}`);
+    if (event.description) {
+      linhas.push("", `📝 *Descritivo:*`, event.description);
+    }
     linhas.push("", "Contamos com a sua presença!");
 
     const linkPortal = `${window.location.origin}/agenda?evento=${encodeURIComponent(event.id)}`;
