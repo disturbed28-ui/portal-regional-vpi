@@ -508,23 +508,14 @@ const Admin = () => {
                 Ver Detalhes
               </Button>
               {profile.profile_status === 'Analise' && (
-                <>
-                  <Button 
-                    size="sm" 
-                    onClick={() => openDialog(profile, 'aprovar')}
-                    className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
-                  >
-                    Aprovar
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="destructive"
-                    onClick={() => openDialog(profile, 'recusar')}
-                    className="w-full sm:w-auto"
-                  >
-                    Recusar
-                  </Button>
-                </>
+                <Button 
+                  size="sm" 
+                  variant="destructive"
+                  onClick={() => openDialog(profile, 'recusar')}
+                  className="w-full sm:w-auto"
+                >
+                  Recusar
+                </Button>
               )}
               {profile.profile_status === 'Ativo' && (
                 <Button 
