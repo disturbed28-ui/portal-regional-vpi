@@ -194,6 +194,7 @@ export const useSalvarInsight = () => {
         const { error } = await supabase
           .from("insights")
           .update({
+            data_insight: payload.dataInsight,
             responsavel_nome: payload.responsavelNome,
             atualizado_por: payload.userId,
           })
