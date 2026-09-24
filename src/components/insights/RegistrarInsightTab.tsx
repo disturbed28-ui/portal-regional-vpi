@@ -85,6 +85,8 @@ export const RegistrarInsightTab = ({ edicao }: { edicao?: EdicaoInsight | null 
 
   // Aviso de lançamento já existente no mesmo mês (mesma divisão + número)
   const [aceitoId, setAceitoId] = useState<string | null>(null);
+  // Lançamento em edição (mantido mesmo se a data mudar de mês)
+  const [idEdicao, setIdEdicao] = useState<string | null>(null);
   const pularAvisoRef = useRef(false);
   useEffect(() => {
     if (edicao) pularAvisoRef.current = true;
@@ -93,13 +95,23 @@ export const RegistrarInsightTab = ({ edicao }: { edicao?: EdicaoInsight | null 
     if (existente?.id && pularAvisoRef.current) {
       pularAvisoRef.current = false;
       setAceitoId(existente.id);
+      setIdEdicao(existente.id);
     }
   }, [existente?.id]);
-  const avisoAberto = !!existente?.id && existente.id !== aceitoId && !pularAvisoRef.current;
+  // Trocar divisão ou número encerra a edição
+  useEffect(() => {
+    setIdEdicao(null);
+  }, [divisaoId, numeroInsight]);
+  const avisoAberto =
+    !!existente?.id &&
+    existente.id !== aceitoId &&
+    existente.id !== idEdicao &&
+    !pularAvisoRef.current;
 
   const irParaEdicao = () => {
     if (!existente) return;
     setAceitoId(existente.id);
+    setIdEdicao(existente.id);
     setDataInsight(existente.data_insight);
   };
   const usarNovoNumero = () => {
@@ -112,6 +124,8 @@ export const RegistrarInsightTab = ({ edicao }: { edicao?: EdicaoInsight | null 
   // Carregar padrões (ou o lançamento existente) ao montar a lista
   useEffect(() => {
     if (!integrantes) return;
+    // Em edição com data movida para outro mês: preserva os status atuais
+    if (idEdicao && !existente) return;
     const base: Record<string, InsightStatus> = {};
     integrantes.forEach((i) => {
       base[i.id] = statusPadraoPorGrau(i.grau);
