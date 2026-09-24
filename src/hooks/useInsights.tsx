@@ -104,16 +104,24 @@ export const useInsightExistente = (
   numero: number | null,
   data: string | null
 ) => {
+  // Mesma divisão + mesmo número dentro do MÊS CIVIL da data informada
+  const mes = data ? data.slice(0, 7) : null;
   return useQuery({
-    queryKey: ["insight-existente", divisaoId, numero, data],
-    enabled: !!divisaoId && !!numero && !!data,
+    queryKey: ["insight-existente", divisaoId, numero, mes],
+    enabled: !!divisaoId && !!numero && !!mes,
     queryFn: async (): Promise<InsightRegistro | null> => {
+      const [a, m] = mes!.split("-").map(Number);
+      const inicio = `${mes}-01`;
+      const prox = m === 12 ? `${a + 1}-01-01` : `${a}-${String(m + 1).padStart(2, "0")}-01`;
       const { data: rows, error } = await supabase
         .from("insights")
         .select("*, insight_participacoes(*)")
         .eq("divisao_id", divisaoId!)
         .eq("numero_insight", numero!)
-        .eq("data_insight", data!)
+        .gte("data_insight", inicio)
+        .lt("data_insight", prox)
+        .order("data_insight", { ascending: true })
+        .limit(1)
         .maybeSingle();
 
       if (error) throw error;
