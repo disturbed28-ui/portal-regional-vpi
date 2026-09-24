@@ -146,7 +146,7 @@ export const RegistrarInsightTab = ({ edicao }: { edicao?: EdicaoInsight | null 
   };
 
   const handleSalvar = async () => {
-    if (!cabecalhoPronto || !integrantes?.length) return;
+    if (!cabecalhoPronto || !integrantes?.length || avisoAberto) return;
     try {
       await salvar.mutateAsync({
         insightId: existente?.id || null,
@@ -329,6 +329,24 @@ export const RegistrarInsightTab = ({ edicao }: { edicao?: EdicaoInsight | null 
           </div>
         </>
       )}
+
+      <AlertDialog open={avisoAberto}>
+        <AlertDialogContent className="w-[98vw] max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Insight já lançado neste mês</AlertDialogTitle>
+            <AlertDialogDescription>
+              O Insight nº {existente?.numero_insight} desta divisão já foi registrado em{" "}
+              {dataBR(existente?.data_insight)}
+              {existente?.responsavel_nome ? ` por ${existente.responsavel_nome}` : ""}. Para não
+              duplicar, edite o lançamento existente ou informe um novo número.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel onClick={usarNovoNumero}>Informar novo número</AlertDialogCancel>
+            <AlertDialogAction onClick={irParaEdicao}>Editar existente</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
