@@ -1,0 +1,1 @@
+revoke execute on function public.vincular_integrantes_orfaos_divisao() from public, anon, authenticated;
