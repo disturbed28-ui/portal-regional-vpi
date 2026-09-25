@@ -76,8 +76,8 @@ export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDial
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-lg sm:w-auto px-4 sm:px-6">
-        <DialogHeader>
+      <DialogContent className="w-[95vw] max-w-lg sm:w-auto px-4 sm:px-6 py-4 sm:py-6 max-h-[92dvh] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0 pr-6">
           <div className="flex items-start gap-2 mb-2 flex-wrap">
             <Badge 
               variant="outline"
@@ -124,7 +124,7 @@ export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDial
 
         </DialogHeader>
 
-        <div className="space-y-4 mt-4">
+        <div className="space-y-4 mt-4 overflow-y-auto min-h-0 flex-1">
           <div className="flex items-start gap-3">
             <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
             <div>
@@ -196,40 +196,42 @@ export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDial
             </div>
           )}
 
-          <div className="flex flex-col sm:flex-row gap-2 mt-4">
-            {/* Só renderiza botão se tiver permissão */}
-            {!loadingListaAccess && canSeeLista && (
-              <Button
-                variant="default"
-                className="w-full sm:flex-1"
-                onClick={() => setListaPresencaOpen(true)}
-              >
-                <Users className="mr-2 h-4 w-4" />
-                Lista de Presença
-              </Button>
-            )}
+        </div>
 
+        {/* Botões fixos fora da área de rolagem */}
+        <div className="flex-shrink-0 flex flex-col sm:flex-row gap-2 pt-3 mt-2 border-t">
+          {/* Só renderiza botão se tiver permissão */}
+          {!loadingListaAccess && canSeeLista && (
             <Button
               variant="default"
-              className="w-full sm:flex-1 bg-[#25D366] hover:bg-[#25D366]/90 text-white"
-              onClick={handleCompartilharWhatsApp}
+              className="w-full sm:flex-1"
+              onClick={() => setListaPresencaOpen(true)}
             >
-              <MessageCircle className="mr-2 h-4 w-4" />
-              Compartilhar
+              <Users className="mr-2 h-4 w-4" />
+              Lista de Presença
             </Button>
-            
-            
-            {event.htmlLink && (
-              <Button
-                variant="outline"
-                className="w-full sm:w-auto"
-                onClick={() => window.open(event.htmlLink, "_blank")}
-              >
-                <ExternalLink className="h-4 w-4 mr-2 sm:mr-0" />
-                <span className="sm:hidden">Abrir no Google</span>
-              </Button>
-            )}
-          </div>
+          )}
+
+          <Button
+            variant="default"
+            className="w-full sm:flex-1 bg-[#25D366] hover:bg-[#25D366]/90 text-white"
+            onClick={handleCompartilharWhatsApp}
+          >
+            <MessageCircle className="mr-2 h-4 w-4" />
+            Compartilhar
+          </Button>
+
+
+          {event.htmlLink && (
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => window.open(event.htmlLink, "_blank")}
+            >
+              <ExternalLink className="h-4 w-4 mr-2 sm:mr-0" />
+              <span className="sm:hidden">Abrir no Google</span>
+            </Button>
+          )}
         </div>
       </DialogContent>
 
