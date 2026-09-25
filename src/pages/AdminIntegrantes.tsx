@@ -69,6 +69,10 @@ const AdminIntegrantes = () => {
     data_carga: string;
     total_atualizados: number;
   } | null>(null);
+  const [semDivisao, setSemDivisao] = useState<{
+    data_carga: string;
+    itens: Array<{ registro_id: number | null; nome_colete: string; divisao_texto: string | null; regional_texto: string | null; tipo: string }>;
+  } | null>(null);
   const [showAtualizadosDialog, setShowAtualizadosDialog] = useState(false);
   const [showRemovidosDialog, setShowRemovidosDialog] = useState(false);
 const [removidosConfirmados, setRemovidosConfirmados] = useState<Array<{
@@ -120,6 +124,27 @@ const { ultimaCargaInfo, devedoresAtivos } = useMensalidades();
       navigate("/");
     }
   }, [loadingAccess, hasAccess, navigate, toast]);
+
+  // Carregar integrantes que ficaram sem divisão na última carga
+  useEffect(() => {
+    const carregarSemDivisao = async () => {
+      const { data } = await supabase
+        .from('cargas_historico')
+        .select('data_carga, dados_snapshot')
+        .eq('tipo_carga', 'integrantes')
+        .order('data_carga', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const itens = (data?.dados_snapshot as any)?.sem_divisao;
+      if (data && Array.isArray(itens) && itens.length > 0) {
+        setSemDivisao({ data_carga: data.data_carga, itens });
+      } else {
+        setSemDivisao(null);
+      }
+    };
+    carregarSemDivisao();
+  }, []);
 
   const handleOpenProfile = async (integrante: IntegrantePortal) => {
     // Se não está vinculado, mostrar mensagem
@@ -485,6 +510,21 @@ const { ultimaCargaInfo, devedoresAtivos } = useMensalidades();
         });
       }
 
+      // Integrantes cuja divisão não foi encontrada no cadastro
+      if (data?.semDivisaoCount > 0) {
+        setSemDivisao({
+          data_carga: data.carga?.data_carga || new Date().toISOString(),
+          itens: data.semDivisao || []
+        });
+        toast({
+          title: `${data.semDivisaoCount} integrante(s) sem divisão encontrada`,
+          description: "A divisão informada na planilha não existe no cadastro. Veja a lista no alerta abaixo das estatísticas.",
+          variant: "destructive",
+        });
+      } else {
+        setSemDivisao(null);
+      }
+
       toast({
         title: "Importacao concluida",
         description: data?.message || `${delta.novos.length} novos, ${delta.atualizados.length} atualizados`,
@@ -726,6 +766,30 @@ const { ultimaCargaInfo, devedoresAtivos } = useMensalidades();
             </div>
           </Card>
         </div>
+
+        {/* Alerta: integrantes sem divisão encontrada na última carga */}
+        {semDivisao && semDivisao.itens.length > 0 && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>
+              {semDivisao.itens.length} integrante(s) sem divisão encontrada — carga de {format(new Date(semDivisao.data_carga), 'dd/MM/yyyy HH:mm')}
+            </AlertTitle>
+            <AlertDescription>
+              <p className="mb-2">
+                A divisão informada na planilha não existe no cadastro de divisões. Cadastre a divisão e dê a carga novamente para vincular.
+              </p>
+              <ul className="space-y-1 text-sm">
+                {semDivisao.itens.map((item, idx) => (
+                  <li key={idx} className="break-words">
+                    <span className="font-medium">{item.nome_colete}</span>
+                    {item.registro_id != null && <span className="text-muted-foreground"> (reg. {item.registro_id})</span>}
+                    <span className="text-muted-foreground"> — divisão na planilha: {item.divisao_texto || '-'}</span>
+                  </li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Card de Mensalidades em Atraso */}
         <Card className="border-orange-200">

@@ -571,6 +571,21 @@ afastados_ignorados: z.array(z.object({
     let updatedCount = 0;
     let inativadosCount = 0;
     const deltasPendentes: any[] = [];
+    // Integrantes cujo texto de divisão não encontrou divisão cadastrada
+    const semDivisao: Array<{ registro_id: number | null; nome_colete: string; divisao_texto: string | null; regional_texto: string | null; tipo: string }> = [];
+    const registrarSemDivisao = (item: any, divisaoId: string | null, tipo: string) => {
+      const texto = (item.divisao_texto || '').toUpperCase();
+      if (!divisaoId && texto.includes('DIVISAO')) {
+        semDivisao.push({
+          registro_id: item.registro_id ?? null,
+          nome_colete: item.nome_colete || '',
+          divisao_texto: item.divisao_texto || null,
+          regional_texto: item.regional_texto || null,
+          tipo
+        });
+        console.log(`[SEM_DIVISAO] ${item.nome_colete} (${item.registro_id}) - divisão não encontrada: "${item.divisao_texto}"`);
+      }
+    };
 
     // Detectar novos ativos (também filtrar por escopo)
     let queryAtivos = supabase
@@ -649,7 +664,8 @@ afastados_ignorados: z.array(z.object({
         
         // Buscar IDs de hierarquia baseado no texto da divisão e regional
         const hierarquia = await buscarIdsHierarquia(supabase, item.divisao_texto, item.regional_texto);
-        
+        registrarSemDivisao(item, hierarquia.divisao_id, 'novo');
+
         // NORMALIZAR TEXTOS ANTES DE SALVAR
         // DERIVAR cargo_nome e grau a partir de cargo_grau_texto
         const parsedCargo = parseCargoGrau(item.cargo_grau_texto);
@@ -696,6 +712,7 @@ afastados_ignorados: z.array(z.object({
       for (const r of reativados as any[]) {
         try {
           const hierarquia = await buscarIdsHierarquia(supabase, r.divisao_texto, r.regional_texto);
+          registrarSemDivisao(r, hierarquia.divisao_id, 'reativado');
           const parsedCargo = parseCargoGrau(r.cargo_grau_texto || '');
 
           const { data: antes } = await supabase
@@ -813,6 +830,7 @@ afastados_ignorados: z.array(z.object({
         // Buscar IDs de hierarquia
         if (updateData.divisao_texto) {
           const hierarquia = await buscarIdsHierarquia(supabase, updateData.divisao_texto, updateData.regional_texto);
+          registrarSemDivisao(updateData, hierarquia.divisao_id, 'atualizado');
           updateDataEnriquecido.divisao_id = hierarquia.divisao_id;
           updateDataEnriquecido.regional_id = hierarquia.regional_id;
           
@@ -1393,6 +1411,7 @@ afastados_ignorados: z.array(z.object({
         cargo_grau_texto: i.cargo_grau_texto
       })),
       divisoes: Array.from(divisoesMap.values()),
+      sem_divisao: semDivisao,
       periodo: new Date().toISOString(),
       total_integrantes: integrantesAtivos?.length || 0
     };
@@ -1528,6 +1547,8 @@ inativadosCount,
         transferenciasInternasCount,
         ignoradosPorEscopo: ignoradosPorEscopo.length,
         ignoradosPorEscopoDetalhe: ignoradosPorEscopo.slice(0, 20),
+        semDivisaoCount: semDivisao.length,
+        semDivisao: semDivisao.slice(0, 100),
         escopo: { tipo: escopo.tipo, regional_id: escopo.regional_id, divisao_id: escopo.divisao_id },
         message: `${insertedCount} novos, ${updatedCount} atualizados, ${reativadosCount} retornos, ${inativadosCount} inativados, ${promovidosCount} promovidos, ${afastadosIgnoradosCount} afastados mantidos, ${afastamentosEncerradosCount} afastamentos encerrados, ${transferenciasInternasCount} transferências`,
         carga: {

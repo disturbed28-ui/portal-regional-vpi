@@ -487,7 +487,16 @@ export function useConsolidacaoIntegrantes(userId?: string) {
       }
       
       setLote(prev => ({ ...prev, etapa: 'concluido' }));
-      
+
+      if (data?.semDivisaoCount > 0) {
+        const nomes = (data.semDivisao || []).slice(0, 5).map((s: any) => s.nome_colete).join(', ');
+        toast({
+          title: `${data.semDivisaoCount} integrante(s) sem divisão encontrada`,
+          description: `A divisão informada não existe no cadastro: ${nomes}${data.semDivisaoCount > 5 ? '...' : ''}. Cadastre a divisão e repita a carga.`,
+          variant: "destructive"
+        });
+      }
+
       if (data?.ignoradosPorEscopo > 0) {
         toast({
           title: "Registros fora do seu escopo",
