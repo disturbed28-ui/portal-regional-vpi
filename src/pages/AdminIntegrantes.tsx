@@ -69,6 +69,10 @@ const AdminIntegrantes = () => {
     data_carga: string;
     total_atualizados: number;
   } | null>(null);
+  const [semDivisao, setSemDivisao] = useState<{
+    data_carga: string;
+    itens: Array<{ registro_id: number | null; nome_colete: string; divisao_texto: string | null; regional_texto: string | null; tipo: string }>;
+  } | null>(null);
   const [showAtualizadosDialog, setShowAtualizadosDialog] = useState(false);
   const [showRemovidosDialog, setShowRemovidosDialog] = useState(false);
 const [removidosConfirmados, setRemovidosConfirmados] = useState<Array<{
