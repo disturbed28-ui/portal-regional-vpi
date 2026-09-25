@@ -571,6 +571,21 @@ afastados_ignorados: z.array(z.object({
     let updatedCount = 0;
     let inativadosCount = 0;
     const deltasPendentes: any[] = [];
+    // Integrantes cujo texto de divisão não encontrou divisão cadastrada
+    const semDivisao: Array<{ registro_id: number | null; nome_colete: string; divisao_texto: string | null; regional_texto: string | null; tipo: string }> = [];
+    const registrarSemDivisao = (item: any, divisaoId: string | null, tipo: string) => {
+      const texto = (item.divisao_texto || '').toUpperCase();
+      if (!divisaoId && texto.includes('DIVISAO')) {
+        semDivisao.push({
+          registro_id: item.registro_id ?? null,
+          nome_colete: item.nome_colete || '',
+          divisao_texto: item.divisao_texto || null,
+          regional_texto: item.regional_texto || null,
+          tipo
+        });
+        console.log(`[SEM_DIVISAO] ${item.nome_colete} (${item.registro_id}) - divisão não encontrada: "${item.divisao_texto}"`);
+      }
+    };
 
     // Detectar novos ativos (também filtrar por escopo)
     let queryAtivos = supabase
