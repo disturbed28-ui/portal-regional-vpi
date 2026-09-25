@@ -347,6 +347,28 @@ const requestSchema = z.object({
       throw deactivateError;
     }
 
+    // 9b. Desativar registros órfãos (sem regional_id) de cargas anteriores,
+    // para os integrantes desta carga ou das regionais em escopo — evita duplicidade
+    const idsOrfaos = new Set<number>(mensalidades.map(m => m.registro_id));
+    if (!escopoDivisao) {
+      for (const [rid, reg] of integranteRegionalMap.entries()) {
+        if (regionaisArray.includes(reg)) idsOrfaos.add(rid);
+      }
+    }
+    const listaOrfaos = Array.from(idsOrfaos);
+    for (let i = 0; i < listaOrfaos.length; i += 500) {
+      const { error: orfaoError } = await supabase
+        .from('mensalidades_atraso')
+        .update({ ativo: false })
+        .eq('ativo', true)
+        .is('regional_id', null)
+        .in('registro_id', listaOrfaos.slice(i, i + 500));
+      if (orfaoError) {
+        console.error('[admin-import-mensalidades] Error deactivating orphan records:', orfaoError);
+        throw orfaoError;
+      }
+    }
+
     // 10. Marcar liquidações
     if (liquidacoesIds.length > 0) {
       console.log(`[admin-import-mensalidades] Marking ${liquidacoesIds.length} liquidations...`);
