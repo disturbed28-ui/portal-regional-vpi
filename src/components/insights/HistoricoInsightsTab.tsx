@@ -16,10 +16,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Pencil } from "lucide-react";
+import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
-import { useEscopoInsights, useInsightsLista } from "@/hooks/useInsights";
+import {
+  useEscopoInsights,
+  useInsightsLista,
+  useExcluirInsight,
+  type InsightRegistro,
+} from "@/hooks/useInsights";
 import {
   calcularParticipacao,
   formatarPercentual,
@@ -48,6 +64,24 @@ export const HistoricoInsightsTab = ({
   const [divisaoId, setDivisaoId] = useState("todas");
   const [buscaIntegrante, setBuscaIntegrante] = useState("");
   const [buscaResponsavel, setBuscaResponsavel] = useState("");
+  const [insightParaExcluir, setInsightParaExcluir] = useState<InsightRegistro | null>(null);
+
+  const excluirInsight = useExcluirInsight();
+
+  const confirmarExclusao = async () => {
+    if (!insightParaExcluir) return;
+    try {
+      await excluirInsight.mutateAsync(insightParaExcluir.id);
+      toast.success(
+        `Insight ${String(insightParaExcluir.numero_insight).padStart(3, "0")} excluído com sucesso.`,
+        { duration: 6000 }
+      );
+      setInsightParaExcluir(null);
+    } catch (e) {
+      console.error(e);
+      toast.error("Não foi possível excluir o Insight. Tente novamente.", { duration: 6000 });
+    }
+  };
 
   const divisoesEscopo = escopo.divisoesDisponiveis.map((d) => d.id);
   const nomesDivisao = useMemo(
@@ -219,25 +253,36 @@ export const HistoricoInsightsTab = ({
                         </div>
                       ))}
                   </div>
-                  {onReabrir &&
-                    (insight.criado_por === escopo.userId ||
-                      insight.atualizado_por === escopo.userId ||
-                      escopo.nivelAcesso === "comando") && (
+                  {(insight.criado_por === escopo.userId ||
+                    insight.atualizado_por === escopo.userId ||
+                    escopo.nivelAcesso === "comando") && (
+                    <div className="flex flex-col gap-2">
+                      {onReabrir && (
+                        <Button
+                          variant="outline"
+                          className="h-11 w-full text-xs"
+                          onClick={() =>
+                            onReabrir({
+                              dataInsight: insight.data_insight,
+                              numeroInsight: insight.numero_insight,
+                              divisaoId: insight.divisao_id,
+                            })
+                          }
+                        >
+                          <Pencil className="mr-1 h-4 w-4" />
+                          Reabrir para editar
+                        </Button>
+                      )}
                       <Button
-                        variant="outline"
+                        variant="destructive"
                         className="h-11 w-full text-xs"
-                        onClick={() =>
-                          onReabrir({
-                            dataInsight: insight.data_insight,
-                            numeroInsight: insight.numero_insight,
-                            divisaoId: insight.divisao_id,
-                          })
-                        }
+                        onClick={() => setInsightParaExcluir(insight)}
                       >
-                        <Pencil className="mr-1 h-4 w-4" />
-                        Reabrir para editar
+                        <Trash2 className="mr-1 h-4 w-4" />
+                        Excluir
                       </Button>
-                    )}
+                    </div>
+                  )}
 
                 </AccordionContent>
               </AccordionItem>
@@ -245,6 +290,53 @@ export const HistoricoInsightsTab = ({
           })}
         </Accordion>
       )}
+
+      <AlertDialog
+        open={!!insightParaExcluir}
+        onOpenChange={(open) => !open && setInsightParaExcluir(null)}
+      >
+        <AlertDialogContent className="w-[92vw] max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Insight?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {insightParaExcluir && (
+                <>
+                  Você está prestes a excluir o{" "}
+                  <strong>
+                    Insight {String(insightParaExcluir.numero_insight).padStart(3, "0")}
+                  </strong>{" "}
+                  de{" "}
+                  <strong>
+                    {nomesDivisao.get(insightParaExcluir.divisao_id) || "Divisão"}
+                  </strong>
+                  , do dia <strong>{formatarData(insightParaExcluir.data_insight)}</strong>.
+                  <br />
+                  <br />
+                  Todas as respostas dos integrantes serão apagadas junto. Essa ação não pode
+                  ser desfeita. Deseja realmente excluir?
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
+            <AlertDialogAction
+              className="h-11 w-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={confirmarExclusao}
+              disabled={excluirInsight.isPending}
+            >
+              {excluirInsight.isPending ? (
+                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-1 h-4 w-4" />
+              )}
+              Sim, excluir
+            </AlertDialogAction>
+            <AlertDialogCancel className="h-11 w-full" disabled={excluirInsight.isPending}>
+              Cancelar
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
