@@ -64,6 +64,24 @@ export const HistoricoInsightsTab = ({
   const [divisaoId, setDivisaoId] = useState("todas");
   const [buscaIntegrante, setBuscaIntegrante] = useState("");
   const [buscaResponsavel, setBuscaResponsavel] = useState("");
+  const [insightParaExcluir, setInsightParaExcluir] = useState<InsightRegistro | null>(null);
+
+  const excluirInsight = useExcluirInsight();
+
+  const confirmarExclusao = async () => {
+    if (!insightParaExcluir) return;
+    try {
+      await excluirInsight.mutateAsync(insightParaExcluir.id);
+      toast.success(
+        `Insight ${String(insightParaExcluir.numero_insight).padStart(3, "0")} excluído com sucesso.`,
+        { duration: 6000 }
+      );
+      setInsightParaExcluir(null);
+    } catch (e) {
+      console.error(e);
+      toast.error("Não foi possível excluir o Insight. Tente novamente.", { duration: 6000 });
+    }
+  };
 
   const divisoesEscopo = escopo.divisoesDisponiveis.map((d) => d.id);
   const nomesDivisao = useMemo(
