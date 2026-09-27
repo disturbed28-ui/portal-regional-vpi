@@ -238,3 +238,28 @@ export const useSalvarInsight = () => {
     },
   });
 };
+
+/** Exclui um lançamento de Insight e suas participações. */
+export const useExcluirInsight = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (insightId: string) => {
+      const { error: delPartError } = await supabase
+        .from("insight_participacoes")
+        .delete()
+        .eq("insight_id", insightId);
+      if (delPartError) throw delPartError;
+
+      const { error } = await supabase
+        .from("insights")
+        .delete()
+        .eq("id", insightId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["insights-lista"] });
+      queryClient.invalidateQueries({ queryKey: ["insight-existente"] });
+    },
+  });
+};
