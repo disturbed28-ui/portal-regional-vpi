@@ -290,6 +290,53 @@ export const HistoricoInsightsTab = ({
           })}
         </Accordion>
       )}
+
+      <AlertDialog
+        open={!!insightParaExcluir}
+        onOpenChange={(open) => !open && setInsightParaExcluir(null)}
+      >
+        <AlertDialogContent className="w-[92vw] max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Insight?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {insightParaExcluir && (
+                <>
+                  Você está prestes a excluir o{" "}
+                  <strong>
+                    Insight {String(insightParaExcluir.numero_insight).padStart(3, "0")}
+                  </strong>{" "}
+                  de{" "}
+                  <strong>
+                    {nomesDivisao.get(insightParaExcluir.divisao_id) || "Divisão"}
+                  </strong>
+                  , do dia <strong>{formatarData(insightParaExcluir.data_insight)}</strong>.
+                  <br />
+                  <br />
+                  Todas as respostas dos integrantes serão apagadas junto. Essa ação não pode
+                  ser desfeita. Deseja realmente excluir?
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
+            <AlertDialogAction
+              className="h-11 w-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={confirmarExclusao}
+              disabled={excluirInsight.isPending}
+            >
+              {excluirInsight.isPending ? (
+                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-1 h-4 w-4" />
+              )}
+              Sim, excluir
+            </AlertDialogAction>
+            <AlertDialogCancel className="h-11 w-full" disabled={excluirInsight.isPending}>
+              Cancelar
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
