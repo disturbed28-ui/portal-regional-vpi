@@ -16,10 +16,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Pencil } from "lucide-react";
+import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
-import { useEscopoInsights, useInsightsLista } from "@/hooks/useInsights";
+import {
+  useEscopoInsights,
+  useInsightsLista,
+  useExcluirInsight,
+  type InsightRegistro,
+} from "@/hooks/useInsights";
 import {
   calcularParticipacao,
   formatarPercentual,
