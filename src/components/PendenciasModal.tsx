@@ -1368,20 +1368,20 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle, onDispensarDados }
             {isEstagioVencido && detalhes && (() => {
               const d = detalhes as EstagioVencidoDetalhes;
               return (
-                <Card className="bg-red-50 dark:bg-red-950/30 border-red-500 border-2 ring-2 ring-red-400 animate-pulse">
+                <Card className="bg-destructive/10 border-destructive border-2 ring-2 ring-destructive/40 text-foreground">
                   <CardContent className="p-4 space-y-3">
-                    <div className="flex items-center gap-3 p-3 bg-red-100 dark:bg-red-900/40 rounded-lg border border-red-400">
+                    <div className="flex items-center gap-3 p-3 bg-destructive/15 rounded-lg border border-destructive/50">
                       <span className="text-3xl">🚨</span>
                       <div className="flex-1">
-                        <p className="font-bold text-red-800 dark:text-red-200 text-sm uppercase tracking-wide">
+                        <p className="font-bold text-destructive text-sm uppercase tracking-wide">
                           Estágio vencido há {d.dias_vencido} dia(s)
                         </p>
-                        <p className="text-xs text-red-700 dark:text-red-300 mt-1 font-medium">
+                        <p className="text-xs text-foreground mt-1 font-medium">
                           ⚠️ Solicitar flyer de encerramento no portal dos Insanos MC
                         </p>
                       </div>
                     </div>
-                    <div className="space-y-1 text-sm">
+                    <div className="space-y-1 text-sm text-foreground">
                       <p><span className="font-semibold">Cargo:</span> {d.cargo_estagio_nome} (Grau {d.grau_estagio})</p>
                       <p><span className="font-semibold">Divisão:</span> {d.divisao_texto}</p>
                       <p><span className="font-semibold">Término previsto:</span> {format(new Date(d.data_termino_previsto), 'dd/MM/yyyy', { locale: ptBR })}</p>
