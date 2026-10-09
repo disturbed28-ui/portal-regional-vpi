@@ -18,9 +18,8 @@ export const LABEL_DESTINATARIO: Record<TipoDestinatario, string> = {
 
 /**
  * Ordem de tentativa de destinatários conforme o cargo de quem viaja.
- * - Integrante de divisão: Subdiretor → Diretor de Divisão
+ * - Integrante de divisão (inclui Diretor de Divisão): Subdiretor → Diretor de Divisão
  * - Subdiretor: Diretor de Divisão → Operacional Regional
- * - Diretor de Divisão: Operacional Regional → Diretor Regional
  * - Integrante da Regional: Operacional Regional → Diretor Regional
  * - Operacional Regional: Diretor Regional
  */
@@ -29,7 +28,6 @@ export function ordemDestinatarios(cargo: string | null | undefined, temDivisao:
   if (c.includes("operacional") && c.includes("regional")) return ["diretor_regional"];
   if (!temDivisao) return ["operacional_regional", "diretor_regional"];
   if (c.includes("sub") && c.includes("diretor")) return ["diretor_divisao", "operacional_regional"];
-  if (c.includes("diretor") && c.includes("divis")) return ["operacional_regional", "diretor_regional"];
   return ["sub_diretor", "diretor_divisao"];
 }
 
