@@ -128,7 +128,7 @@ const ProtocoloViagem = () => {
   };
 
   const { data: destinatario, isLoading: carregandoDest } = useQuery({
-    queryKey: ["protocolo-destinatario", dadosIntegrante.cargo, dadosIntegrante.divisao_id, dadosIntegrante.regional_id],
+    queryKey: ["protocolo-destinatario", dadosIntegrante.cargo, dadosIntegrante.divisao_id, dadosIntegrante.regional_id, integrante?.grau],
     enabled: !!(dadosIntegrante.divisao_id || dadosIntegrante.regional_id),
     queryFn: () =>
       resolverDestinatario({
