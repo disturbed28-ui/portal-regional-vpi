@@ -136,6 +136,7 @@ const ProtocoloViagem = () => {
         divisaoId: dadosIntegrante.divisao_id,
         regionalId: dadosIntegrante.regional_id,
         integranteId: dadosIntegrante.integrante_id,
+        grau: integrante?.grau ?? null,
       }),
   });
 

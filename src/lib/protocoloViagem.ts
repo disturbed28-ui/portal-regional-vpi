@@ -2,6 +2,7 @@
  * Protocolo de Viagem — regras de destinatário e montagem da mensagem WhatsApp.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { romanToNumber } from "@/lib/grauUtils";
 
 export type TipoDestinatario =
   | "sub_diretor"
