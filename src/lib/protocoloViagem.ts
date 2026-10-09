@@ -17,15 +17,21 @@ export const LABEL_DESTINATARIO: Record<TipoDestinatario, string> = {
 };
 
 /**
- * Ordem de tentativa de destinatários conforme o cargo de quem viaja.
- * - Integrante de divisão (inclui Diretor de Divisão): Subdiretor → Diretor de Divisão
- * - Subdiretor: Diretor de Divisão → Operacional Regional
- * - Integrante da Regional: Operacional Regional → Diretor Regional
+ * Ordem de tentativa de destinatários conforme o cargo/grau de quem viaja.
+ * - Grau V (Regional): Operacional Regional → Diretor Regional
  * - Operacional Regional: Diretor Regional
+ * - Integrante de divisão (inclui Diretor e Subdiretor): Subdiretor → Diretor de Divisão
+ * - Integrante da Regional sem grau detectado: Operacional Regional → Diretor Regional
  */
-export function ordemDestinatarios(cargo: string | null | undefined, temDivisao: boolean): TipoDestinatario[] {
+export function ordemDestinatarios(
+  cargo: string | null | undefined,
+  temDivisao: boolean,
+  grau?: string | null,
+): TipoDestinatario[] {
   const c = (cargo || "").toLowerCase();
   if (c.includes("operacional") && c.includes("regional")) return ["diretor_regional"];
+  // Grau V é sempre nível regional, independente de ter divisão vinculada
+  if (grau && romanToNumber(grau) === 5) return ["operacional_regional", "diretor_regional"];
   if (!temDivisao) return ["operacional_regional", "diretor_regional"];
   if (c.includes("sub") && c.includes("diretor")) return ["diretor_divisao", "operacional_regional"];
   return ["sub_diretor", "diretor_divisao"];
@@ -59,8 +65,9 @@ export async function resolverDestinatario(params: {
   divisaoId: string | null;
   regionalId: string | null;
   integranteId: string | null;
+  grau?: string | null;
 }): Promise<Destinatario | null> {
-  const ordem = ordemDestinatarios(params.cargo, !!params.divisaoId);
+  const ordem = ordemDestinatarios(params.cargo, !!params.divisaoId, params.grau);
 
   for (let i = 0; i < ordem.length; i++) {
     const tipo = ordem[i];
