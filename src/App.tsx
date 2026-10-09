@@ -42,6 +42,7 @@ import Expansao from "./pages/Expansao";
 import ConsultaIntegrante from "./pages/ConsultaIntegrante";
 import Instalar from "./pages/Instalar";
 import ControleInsights from "./pages/ControleInsights";
+import ProtocoloViagem from "./pages/ProtocoloViagem";
 
 const queryClient = new QueryClient();
 
@@ -81,6 +82,7 @@ const App = () => (
                 <Route path="/formularios/relatorio-semanal-divisao" element={<FormularioRelatorioSemanal />} />
                 <Route path="/formularios/acoes_sociais" element={<FormularioAcoesSociais />} />
                 <Route path="/formularios/controle-insights" element={<ControleInsights />} />
+                <Route path="/formularios/protocolo-viagem" element={<ProtocoloViagem />} />
                 <Route path="/acoes-sociais" element={<AcoesSociais />} />
                 <Route path="/gestao-adm" element={<GestaoADM />} />
                 <Route path="/avaliacao-integrantes" element={<AvaliacaoIntegrantes />} />

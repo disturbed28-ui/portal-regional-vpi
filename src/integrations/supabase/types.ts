@@ -2797,6 +2797,138 @@ export type Database = {
           },
         ]
       }
+      protocolos_viagem: {
+        Row: {
+          acompanhado: boolean
+          autor_profile_id: string
+          cancelado_em: string | null
+          cidade_destino: string
+          cidade_origem: string
+          com_cores: boolean
+          created_at: string
+          data_retorno: string
+          data_saida: string
+          destinatario_cargo: string | null
+          destinatario_nome: string | null
+          destinatario_telefone: string | null
+          divisao_id: string | null
+          divisao_texto: string | null
+          grau_texto: string | null
+          hora_retorno: string
+          hora_saida: string
+          id: string
+          integrante_id: string | null
+          meio_transporte: string
+          meio_transporte_outro: string | null
+          mensagem: string | null
+          nome_colete: string
+          paradas: string[]
+          regional_id: string | null
+          regional_texto: string | null
+          status: string
+          telefone: string
+          updated_at: string
+        }
+        Insert: {
+          acompanhado?: boolean
+          autor_profile_id: string
+          cancelado_em?: string | null
+          cidade_destino: string
+          cidade_origem: string
+          com_cores?: boolean
+          created_at?: string
+          data_retorno: string
+          data_saida: string
+          destinatario_cargo?: string | null
+          destinatario_nome?: string | null
+          destinatario_telefone?: string | null
+          divisao_id?: string | null
+          divisao_texto?: string | null
+          grau_texto?: string | null
+          hora_retorno: string
+          hora_saida: string
+          id?: string
+          integrante_id?: string | null
+          meio_transporte: string
+          meio_transporte_outro?: string | null
+          mensagem?: string | null
+          nome_colete: string
+          paradas?: string[]
+          regional_id?: string | null
+          regional_texto?: string | null
+          status?: string
+          telefone: string
+          updated_at?: string
+        }
+        Update: {
+          acompanhado?: boolean
+          autor_profile_id?: string
+          cancelado_em?: string | null
+          cidade_destino?: string
+          cidade_origem?: string
+          com_cores?: boolean
+          created_at?: string
+          data_retorno?: string
+          data_saida?: string
+          destinatario_cargo?: string | null
+          destinatario_nome?: string | null
+          destinatario_telefone?: string | null
+          divisao_id?: string | null
+          divisao_texto?: string | null
+          grau_texto?: string | null
+          hora_retorno?: string
+          hora_saida?: string
+          id?: string
+          integrante_id?: string | null
+          meio_transporte?: string
+          meio_transporte_outro?: string | null
+          mensagem?: string | null
+          nome_colete?: string
+          paradas?: string[]
+          regional_id?: string | null
+          regional_texto?: string | null
+          status?: string
+          telefone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "protocolos_viagem_divisao_id_fkey"
+            columns: ["divisao_id"]
+            isOneToOne: false
+            referencedRelation: "divisoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "protocolos_viagem_divisao_id_fkey"
+            columns: ["divisao_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["divisao_id"]
+          },
+          {
+            foreignKeyName: "protocolos_viagem_integrante_id_fkey"
+            columns: ["integrante_id"]
+            isOneToOne: false
+            referencedRelation: "integrantes_portal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "protocolos_viagem_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "regionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "protocolos_viagem_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["regional_id"]
+          },
+        ]
+      }
       regionais: {
         Row: {
           comando_id: string
@@ -3791,6 +3923,10 @@ export type Database = {
       }
       normalizar_divisao_texto: { Args: { texto: string }; Returns: string }
       normalize_divisao_text: { Args: { texto: string }; Returns: string }
+      protocolo_viagem_no_escopo: {
+        Args: { _divisao_id: string; _regional_id: string }
+        Returns: boolean
+      }
       unaccent: { Args: { "": string }; Returns: string }
       user_grau_num: { Args: { _user_id: string }; Returns: number }
       user_has_screen_permission:
