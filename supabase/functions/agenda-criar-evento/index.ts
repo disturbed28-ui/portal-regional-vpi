@@ -77,7 +77,9 @@ Deno.serve(async (req) => {
 
     // 1. Resolver regional pela sigla
     let regionalId: string | null = null;
-    if (regional_sigla) {
+    const ehComando = String(escopo || '').toLowerCase() === 'comando'
+      || String(regional_sigla || '').toUpperCase() === 'CMD';
+    if (regional_sigla && !ehComando) {
       const { data: reg } = await supabaseAdmin
         .from('regionais')
         .select('id')
