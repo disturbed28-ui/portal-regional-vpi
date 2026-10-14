@@ -10,6 +10,8 @@ import { ModalCancelarSolicitacao } from './ModalCancelarSolicitacao';
 import { ModalEncerrarTreinamento } from './ModalEncerrarTreinamento';
 import { ReadOnlyBanner } from '@/components/ui/read-only-banner';
 import { supabase } from '@/integrations/supabase/client';
+import { DialogNotificarAprovacao } from '@/components/whatsapp/DialogNotificarAprovacao';
+import { resolverNotificacaoEncerramentoTreinamento, type NotificacaoFluxo } from '@/lib/notificacaoFluxoAprovacao';
 
 interface EncerramentoTreinamentoProps {
   userId: string | undefined;
@@ -28,6 +30,7 @@ export function EncerramentoTreinamento({ userId, readOnly = false }: Encerramen
   
   const [modalCancelar, setModalCancelar] = useState<TreinamentoEncerramento | null>(null);
   const [modalEncerrar, setModalEncerrar] = useState<TreinamentoEncerramento | null>(null);
+  const [notificacao, setNotificacao] = useState<NotificacaoFluxo | null>(null);
   const [dadosUsuario, setDadosUsuario] = useState<DadosUsuario>({ id: null, nome: '', cargo: null, divisao: null });
 
   // Buscar dados do usuário logado
@@ -94,7 +97,21 @@ export function EncerramentoTreinamento({ userId, readOnly = false }: Encerramen
     });
     
     if (success) {
+      const t = modalEncerrar;
       setModalEncerrar(null);
+      try {
+        const n = await resolverNotificacaoEncerramentoTreinamento({
+          integranteId: t.integrante_id,
+          cargoTreinamentoNome: t.cargo_treinamento_nome,
+          dataInicio: t.data_inicio_treinamento,
+          tipoEncerramento,
+          observacoes,
+          remetenteNome: dadosUsuario.nome,
+        });
+        if (n) setNotificacao(n);
+      } catch (e) {
+        console.error('[EncerramentoTreinamento] notificação', e);
+      }
     }
   }
 
@@ -119,6 +136,13 @@ export function EncerramentoTreinamento({ userId, readOnly = false }: Encerramen
             </p>
           </CardContent>
         </Card>
+        <DialogNotificarAprovacao
+          notificacao={notificacao}
+          open={!!notificacao}
+          onOpenChange={(o) => !o && setNotificacao(null)}
+          userId={userId}
+          remetenteNome={dadosUsuario.nome}
+        />
       </div>
     );
   }
@@ -256,6 +280,14 @@ export function EncerramentoTreinamento({ userId, readOnly = false }: Encerramen
           )}
         </>
       )}
+
+      <DialogNotificarAprovacao
+        notificacao={notificacao}
+        open={!!notificacao}
+        onOpenChange={(o) => !o && setNotificacao(null)}
+        userId={userId}
+        remetenteNome={dadosUsuario.nome}
+      />
     </div>
   );
 }
