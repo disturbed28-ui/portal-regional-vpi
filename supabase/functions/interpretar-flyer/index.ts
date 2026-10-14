@@ -40,15 +40,19 @@ Regras:
 - Ignore rodape institucional (nomes de comando, frases de lema, enderecos de sede).
 - tipos validos: "Reunião", "Pub", "Ação Social", "Bonde Insano", "Bate e Volta". Arrecadação e Doação de Sangue sao "Ação Social".
 - times especiais: se o texto mencionar Caveira, Lobo ou Urso/Ursinho (ex.: "Caveiras VP1", "Reunião Lobo"), preencha time_especial com "caveira", "lobo" ou "ursinho". Caso contrario null.
-- escopo: "divisao" (evento de uma divisao), "regional" (evento de regional inteira ou Comando Regional) ou "comando" (CMD / Comando geral).
-- regional_sigla: VP1, VP2, VP3, LN ou CMD, se identificavel (aceite romanos: "Vale do Paraiba II" = VP2). null se nao identificavel.
+- escopo (regra de hierarquia, siga estritamente):
+  * "divisao": o flyer cita uma divisao especifica.
+  * "regional": o flyer cita uma regional (ex.: "Regional Vale do Paraiba I", "VP2", "Litoral Norte") e NENHUMA divisao.
+  * "comando": o flyer cita "Comando Regional V", "Comando V", "CMD V", "CMD" ou Comando geral, sem regional nem divisao. "Comando Regional V" NAO e uma regional: e o COMANDO.
+  * Nomes de cidades no endereco do local NAO definem divisao nem regional.
+- regional_sigla: VP1, VP2, VP3 ou LN quando o flyer citar a regional; "CMD" quando escopo = "comando". Aceite romanos ("Vale do Paraiba II" = VP2). Nunca deduza a regional pela cidade do local. null se nao identificavel.
 - divisao_nome: nome da divisao sem o prefixo "Divisao" (ex.: "São José dos Campos Sul", "Caçapava II", "Pindamonhangaba 3"). null se nao houver.
 - data_evento: formato YYYY-MM-DD. Se o flyer nao informar o ano, use o ANO CORRENTE informado no contexto. Formatos comuns: "14/11", "14 de novembro", "sab. 08/11".
 - hora_inicio: formato HH:MM (24h). null se nao houver.
 - local: nome do local e/ou endereco completo do evento.
 - ponto_encontro: texto do P.E. (ponto de encontro) com horario, se houver. null se nao houver.
 - contato: nome/telefone do responsavel, se houver. null se nao houver.
-- titulo: titulo curto do evento no padrao "TIPO - DIVISAO/REGIONAL" (ex.: "Pub Insano - Divisão São José dos Campos Sul").
+- titulo: titulo curto no padrao "SIGLA - TIPO - DIVISAO" (ex.: "VP1 - Pub Insano - Divisão São José dos Campos Sul"); para regional sem divisao "VP1 - Pub Insano - Regional"; para comando "CMD - Pub Insano".
 - descricao: texto livre relevante do flyer (sem rodape institucional), preservando termos originais.
 
 Responda APENAS o JSON, sem markdown, sem explicacoes.`;
