@@ -188,10 +188,10 @@ export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDial
 
           {event.description && (
             <div className="flex items-start gap-3">
-              <div className="w-5" />
-              <div>
+              <div className="w-5 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
                 <p className="font-medium">Descricao</p>
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{event.description}</p>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{event.description}</p>
               </div>
             </div>
           )}
