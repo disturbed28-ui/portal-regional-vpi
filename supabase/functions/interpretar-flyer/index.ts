@@ -2,7 +2,35 @@ import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const AI_GATEWAY_URL = 'https://ai.gateway.lovable.dev/v1/chat/completions';
-const MODEL = 'google/gemini-2.5-flash';
+const MODEL = 'openai/gpt-6-astra';
+
+const RESULT_SCHEMA = {
+  type: 'json_schema' as const,
+  json_schema: {
+    name: 'interpretacao_flyer',
+    strict: true,
+    schema: {
+      type: 'object',
+      properties: {
+        eh_evento: { type: 'boolean' },
+        titulo: { type: ['string', 'null'] },
+        tipo: { type: ['string', 'null'] },
+        time_especial: { type: ['string', 'null'] },
+        escopo: { type: ['string', 'null'] },
+        regional_sigla: { type: ['string', 'null'] },
+        divisao_nome: { type: ['string', 'null'] },
+        data_evento: { type: ['string', 'null'] },
+        hora_inicio: { type: ['string', 'null'] },
+        local: { type: ['string', 'null'] },
+        ponto_encontro: { type: ['string', 'null'] },
+        contato: { type: ['string', 'null'] },
+        descricao: { type: ['string', 'null'] },
+      },
+      required: ['eh_evento', 'titulo', 'tipo', 'time_especial', 'escopo', 'regional_sigla', 'divisao_nome', 'data_evento', 'hora_inicio', 'local', 'ponto_encontro', 'contato', 'descricao'],
+      additionalProperties: false,
+    },
+  },
+};
 
 const PROMPT_SISTEMA = `Voce extrai dados de flyers/textos de eventos de um motoclube brasileiro e responde SOMENTE com JSON valido.
 
@@ -117,11 +145,12 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         model: MODEL,
+        reasoning_effort: 'low',
         messages: [
           { role: 'system', content: PROMPT_SISTEMA },
           { role: 'user', content: userContent },
         ],
-        response_format: { type: 'json_object' },
+        response_format: RESULT_SCHEMA,
       }),
     });
 
