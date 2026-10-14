@@ -345,6 +345,27 @@ export type Database = {
         }
         Relationships: []
       }
+      agenda_flyers: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          storage_path: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          storage_path: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          storage_path?: string
+        }
+        Relationships: []
+      }
       alertas_emails_log: {
         Row: {
           created_at: string | null

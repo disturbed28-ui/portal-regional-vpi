@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
       }, 409);
     }
 
-    // 5. Upload do flyer (se houver) e link assinado de longa duração
+    // 5. Upload do flyer (se houver) e link curto do portal (não expira)
     let flyerUrl: string | null = null;
     if (flyer_base64) {
       const mime = (flyer_mime as string) || 'image/jpeg';
@@ -169,10 +169,21 @@ Deno.serve(async (req) => {
       if (upErr) {
         console.error('[agenda-criar-evento] Erro upload flyer:', upErr);
       } else {
-        const { data: signed } = await supabaseAdmin.storage
-          .from('agenda-flyers')
-          .createSignedUrl(path, 60 * 60 * 24 * 365); // 1 ano
-        flyerUrl = signed?.signedUrl || null;
+        // Código curto (6 chars) que aponta para o arquivo; a função pública
+        // "flyer" assina a URL na hora do acesso, então o link nunca expira.
+        const alfabeto = 'abcdefghjkmnpqrstuvwxyz23456789';
+        let codigo = '';
+        for (let i = 0; i < 6; i++) {
+          codigo += alfabeto[crypto.getRandomValues(new Uint8Array(1))[0] % alfabeto.length];
+        }
+        const { error: linkErr } = await supabaseAdmin
+          .from('agenda_flyers')
+          .insert({ code: codigo, storage_path: path, created_by: user.id });
+        if (linkErr) {
+          console.error('[agenda-criar-evento] Erro ao criar link curto:', linkErr);
+        } else {
+          flyerUrl = `https://vp1.app.br/flyer/${codigo}`;
+        }
       }
     }
 

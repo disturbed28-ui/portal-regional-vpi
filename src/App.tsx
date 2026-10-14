@@ -30,6 +30,7 @@ import LinksUteis from "./pages/LinksUteis";
 import PoliticaPrivacidade from "./pages/PoliticaPrivacidade";
 import TermosServico from "./pages/TermosServico";
 import NotFound from "./pages/NotFound";
+import FlyerRedirect from "./pages/FlyerRedirect";
 import AdminFormularios from "./pages/AdminFormularios";
 import Formularios from "./pages/Formularios";
 import FormularioRelatorioSemanal from "./pages/FormularioRelatorioSemanal";
@@ -92,6 +93,7 @@ const App = () => (
                 <Route path="/cobranca-relatorios" element={<Navigate to="/relatorios?tab=cobranca" replace />} />
                 <Route path="/politica-privacidade" element={<PoliticaPrivacidade />} />
                 <Route path="/termos-servico" element={<TermosServico />} />
+                <Route path="/flyer/:code" element={<FlyerRedirect />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               </InstagramGuard>

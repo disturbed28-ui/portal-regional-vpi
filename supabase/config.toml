@@ -74,3 +74,6 @@ verify_jwt = false
 
 [functions.admin-import-desligados]
 verify_jwt = false
+
+[functions.flyer]
+verify_jwt = false
