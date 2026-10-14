@@ -39,7 +39,7 @@ Regras:
 - Se for evento, responda {"eh_evento": true, ...campos abaixo}.
 - Ignore rodape institucional (nomes de comando, frases de lema, enderecos de sede).
 - tipos validos: "Reunião", "Pub", "Ação Social", "Bonde Insano", "Bate e Volta". Arrecadação e Doação de Sangue sao "Ação Social".
-- times especiais: se o texto mencionar Caveira, Lobo ou Urso/Ursinho (ex.: "Caveiras VP1", "Reunião Lobo"), preencha time_especial com "caveira", "lobo" ou "ursinho". Caso contrario null.
+- times especiais: se o texto mencionar Caveira, Lobo ou Urso/Ursinho (ex.: "Caveiras VP1", "Reunião Lobo"), preencha time_especial com "caveira", "lobo" ou "ursinho". Caso contrario null. ATENCAO: nomes de LOCAL (ex.: "Garagem do Lobo", "Bar do Urso", "Rancho Caveira") NAO indicam time especial; so preencha quando o texto falar do time/grupo (ex.: "Reunião dos Lobos", "Caveiras VP1").
 - escopo (regra de hierarquia, siga estritamente):
   * "divisao": o flyer cita uma divisao especifica.
   * "regional": o flyer cita uma regional (ex.: "Regional Vale do Paraiba I", "VP2", "Litoral Norte") e NENHUMA divisao.
@@ -178,6 +178,24 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Não consegui interpretar o conteúdo. Tente novamente ou preencha manualmente.' }), {
         status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    // Completa a regional a partir da divisão cadastrada (a cidade do flyer pertence a uma regional conhecida)
+    if (resultado.eh_evento && resultado.divisao_nome) {
+      const norm = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/\s+/g, ' ').trim();
+      const alvo = norm(`DIVISAO ${resultado.divisao_nome.replace(/^divis[aã]o\s+/i, '')} - SP`);
+      const { data: divs } = await supabaseAdmin.from('divisoes').select('nome, regionais(sigla)');
+      const achada = (divs || []).find((d: { nome: string }) => norm(d.nome) === alvo) as
+        { nome: string; regionais: { sigla: string } | null } | undefined;
+      const sigla = achada?.regionais?.sigla;
+      if (sigla) {
+        resultado.regional_sigla = sigla;
+        resultado.escopo = 'divisao';
+        if (resultado.titulo) {
+          resultado.titulo = resultado.titulo.replace(/^(CMD|VP\d|LN)\s*-\s*/i, `${sigla} - `);
+          if (!resultado.titulo.startsWith(`${sigla} - `)) resultado.titulo = `${sigla} - ${resultado.titulo}`;
+        }
+      }
     }
 
     return new Response(JSON.stringify(resultado), {
