@@ -112,7 +112,7 @@ export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDial
               </Badge>
             )}
           </div>
-          <DialogTitle className="text-xl sm:text-2xl">{event.title}</DialogTitle>
+          <DialogTitle className="text-xl sm:text-2xl break-words [overflow-wrap:anywhere]">{event.title}</DialogTitle>
           {event.originalTitle && event.originalTitle !== event.title && (
             <p className="text-xs text-muted-foreground mt-1 text-left">
               Título original: {event.originalTitle}
@@ -124,7 +124,7 @@ export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDial
 
         </DialogHeader>
 
-        <div className="space-y-4 mt-4 overflow-y-auto min-h-0 flex-1">
+        <div className="space-y-4 mt-4 overflow-y-auto overflow-x-hidden min-h-0 flex-1">
           <div className="flex items-start gap-3">
             <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
             <div>
@@ -188,10 +188,10 @@ export function EventDetailDialog({ event, open, onOpenChange }: EventDetailDial
 
           {event.description && (
             <div className="flex items-start gap-3">
-              <div className="w-5" />
-              <div>
+              <div className="w-5 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
                 <p className="font-medium">Descricao</p>
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{event.description}</p>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{event.description}</p>
               </div>
             </div>
           )}
