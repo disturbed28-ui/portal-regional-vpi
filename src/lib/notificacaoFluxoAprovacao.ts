@@ -220,3 +220,78 @@ export async function resolverNotificacaoFluxo(
     moduloOrigem: isTreinamento ? "gestao_adm_treinamento" : "gestao_adm_estagio",
   };
 }
+
+async function buscarDiretorRegional(regionalId: string | null) {
+  if (!regionalId) return { nome: null as string | null, telefone: null as string | null, profileId: null as string | null };
+  const { data } = await supabase
+    .from("integrantes_portal")
+    .select("nome_colete, cargo_grau_texto, profile_id")
+    .eq("regional_id", regionalId)
+    .eq("ativo", true)
+    .ilike("cargo_grau_texto", "%diretor%regional%");
+  const titulares = (data ?? []).filter(
+    (r) => !String(r.cargo_grau_texto || "").toLowerCase().includes("sub"),
+  );
+  if (titulares.length === 0) return { nome: null, telefone: null, profileId: null };
+  const ids = titulares.map((r) => r.profile_id).filter((id): id is string => !!id);
+  const tel = new Map<string, string | null>();
+  if (ids.length) {
+    const { data: perfis } = await supabase.from("profiles").select("id, telefone").in("id", ids);
+    (perfis ?? []).forEach((p) => tel.set(p.id, p.telefone ?? null));
+  }
+  const e = titulares.find((r) => r.profile_id && tel.get(r.profile_id)) || titulares[0];
+  return {
+    nome: e.nome_colete ?? null,
+    telefone: e.profile_id ? tel.get(e.profile_id) ?? null : null,
+    profileId: e.profile_id ?? null,
+  };
+}
+
+/**
+ * Notificação de encerramento de treinamento: vai para o Diretor de Divisão
+ * do integrante; se a divisão não tiver diretor, vai para o Diretor Regional.
+ */
+export async function resolverNotificacaoEncerramentoTreinamento(params: {
+  integranteId: string;
+  cargoTreinamentoNome: string | null;
+  dataInicio: string | null;
+  tipoEncerramento: string;
+  observacoes: string;
+  remetenteNome?: string | null;
+}): Promise<NotificacaoFluxo | null> {
+  const { data: integ } = await supabase
+    .from("integrantes_portal")
+    .select("nome_colete, divisao_texto, divisao_id, regional_id")
+    .eq("id", params.integranteId)
+    .maybeSingle();
+  if (!integ) return null;
+
+  let diretor = await buscarDiretorDivisao(integ.divisao_id ?? null);
+  let cargo = "Diretor de Divisão";
+  if (!diretor.nome) {
+    diretor = await buscarDiretorRegional(integ.regional_id ?? null);
+    cargo = "Diretor Regional";
+  }
+
+  return {
+    concluido: true,
+    templateChave: "treinamento_encerrado",
+    destinatarioNome: diretor.nome || cargo,
+    destinatarioTelefone: diretor.telefone,
+    destinatarioProfileId: diretor.profileId,
+    destinatarioCargo: cargo,
+    payload: {
+      diretor: diretor.nome || "",
+      integrante: integ.nome_colete ?? "-",
+      divisao: integ.divisao_texto ?? "-",
+      cargo_treinamento: params.cargoTreinamentoNome ?? "-",
+      data_inicio: formatarData(params.dataInicio),
+      tipo_encerramento: params.tipoEncerramento,
+      observacoes: params.observacoes || "-",
+      remetente: params.remetenteNome ?? "",
+    },
+    divisaoId: integ.divisao_id ?? null,
+    regionalId: integ.regional_id ?? null,
+    moduloOrigem: "gestao_adm_treinamento",
+  };
+}
