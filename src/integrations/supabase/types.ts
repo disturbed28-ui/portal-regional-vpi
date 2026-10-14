@@ -1296,6 +1296,68 @@ export type Database = {
           },
         ]
       }
+      evento_autoria: {
+        Row: {
+          calendar_id: string
+          created_at: string | null
+          divisao_id: string | null
+          flyer_url: string | null
+          google_event_id: string
+          id: string
+          regional_id: string | null
+          user_id: string
+        }
+        Insert: {
+          calendar_id: string
+          created_at?: string | null
+          divisao_id?: string | null
+          flyer_url?: string | null
+          google_event_id: string
+          id?: string
+          regional_id?: string | null
+          user_id: string
+        }
+        Update: {
+          calendar_id?: string
+          created_at?: string | null
+          divisao_id?: string | null
+          flyer_url?: string | null
+          google_event_id?: string
+          id?: string
+          regional_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evento_autoria_divisao_id_fkey"
+            columns: ["divisao_id"]
+            isOneToOne: false
+            referencedRelation: "divisoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evento_autoria_divisao_id_fkey"
+            columns: ["divisao_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["divisao_id"]
+          },
+          {
+            foreignKeyName: "evento_autoria_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "regionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evento_autoria_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["regional_id"]
+          },
+        ]
+      }
       eventos_agenda: {
         Row: {
           created_at: string | null
