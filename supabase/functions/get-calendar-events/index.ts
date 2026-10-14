@@ -61,7 +61,6 @@ async function fetchAllEvents(
   let pageToken: string | undefined = undefined;
   do {
     const params = new URLSearchParams({
-      key: apiKey,
       timeMin,
       timeMax,
       singleEvents: 'true',
@@ -70,8 +69,13 @@ async function fetchAllEvents(
       showDeleted: 'true',
       ...(pageToken && { pageToken }),
     });
-    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params}`;
-    const response = await fetch(url);
+    const url = `https://connector-gateway.lovable.dev/google_calendar/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params}`;
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${Deno.env.get('LOVABLE_API_KEY') ?? ''}`,
+        'X-Connection-Api-Key': apiKey,
+      },
+    });
     if (!response.ok) {
       const body = await response.text();
       console.error(`[get-calendar-events] Google API ${response.status} for ${calendarId}: ${body}`);
