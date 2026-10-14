@@ -128,7 +128,7 @@ export function DialogNotificarAprovacao({
               <MessageCircle className="h-5 w-5 text-[#25D366]" />
             )}
             {notificacao?.concluido
-              ? "Notificar Diretor de Divisão"
+              ? `Notificar ${notificacao?.destinatarioCargo || "Diretor de Divisão"}`
               : "Notificar próximo aprovador"}
           </DialogTitle>
           <DialogDescription className="text-xs">
