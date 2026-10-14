@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, CalendarPlus } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { AdicionarEventoDialog } from "@/components/agenda/AdicionarEventoDialog";
 import { useCalendarEvents } from "@/hooks/useCalendarEvents";
 import { EventCard } from "@/components/agenda/EventCard";
 import { EventDetailDialog } from "@/components/agenda/EventDetailDialog";
@@ -25,6 +27,9 @@ const Agenda = () => {
   const { user } = useAuth();
   const { profile, loading: profileLoading } = useProfile(user?.id);
   const { hasAccess, loading: loadingAccess } = useScreenAccess('/agenda', user?.id);
+  const { hasAccess: podeAdicionarEvento } = useScreenAccess('/agenda/adicionar-evento', user?.id);
+  const queryClient = useQueryClient();
+  const [addEventoOpen, setAddEventoOpen] = useState(false);
   const { data: events, isLoading, error } = useCalendarEvents();
   const { regionais } = useRegionais();
   const [selectedMonth, setSelectedMonth] = useState(new Date());
@@ -190,7 +195,18 @@ const Agenda = () => {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-bold">Agenda com eventos das regionais</h1>
+          <h1 className="text-base sm:text-xl md:text-2xl lg:text-3xl font-bold flex-1">Agenda com eventos das regionais</h1>
+          {podeAdicionarEvento && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setAddEventoOpen(true)}
+              className="flex-shrink-0 text-primary-foreground hover:bg-primary-foreground/10"
+              aria-label="Adicionar evento"
+            >
+              <CalendarPlus className="h-5 w-5" />
+            </Button>
+          )}
         </div>
         
         {/* Seletor de Regional */}
@@ -277,6 +293,12 @@ const Agenda = () => {
         event={selectedEvent}
         open={dialogOpen}
         onOpenChange={handleDialogOpenChange}
+      />
+
+      <AdicionarEventoDialog
+        open={addEventoOpen}
+        onOpenChange={setAddEventoOpen}
+        onEventoCriado={() => queryClient.invalidateQueries({ queryKey: ["calendar-events"] })}
       />
     </div>
   );
