@@ -77,8 +77,9 @@ Deno.serve(async (req) => {
 
     // 1. Resolver regional pela sigla
     let regionalId: string | null = null;
-    const ehComando = String(escopo || '').toLowerCase() === 'comando'
-      || String(regional_sigla || '').toUpperCase() === 'CMD';
+    const siglaInf = String(regional_sigla || '').trim().toUpperCase();
+    // A regional escolhida na revisão prevalece sobre o escopo sugerido pela IA
+    const ehComando = siglaInf === 'CMD' || (!siglaInf && !divisao_nome && String(escopo || '').toLowerCase() === 'comando');
     if (regional_sigla && !ehComando) {
       const { data: reg } = await supabaseAdmin
         .from('regionais')
@@ -190,7 +191,18 @@ Deno.serve(async (req) => {
     };
     if (hora_inicio) {
       eventoGoogle.start = { dateTime: `${data_evento}T${hora_inicio}:00-03:00`, timeZone: TIMEZONE };
-      eventoGoogle.end = { dateTime: `${data_evento}T${hora_inicio}:00-03:00`, timeZone: TIMEZONE };
+      // Flyers não trazem hora de fim: reserva padrão de 2 horas
+      const [hh, mm] = (hora_inicio as string).split(':').map(Number);
+      const fimMin = hh * 60 + mm + 120;
+      let dataFim = data_evento as string;
+      if (fimMin >= 24 * 60) {
+        const d = new Date(`${data_evento}T12:00:00-03:00`);
+        d.setDate(d.getDate() + 1);
+        dataFim = d.toISOString().slice(0, 10);
+      }
+      const m = fimMin % (24 * 60);
+      const horaFim = `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+      eventoGoogle.end = { dateTime: `${dataFim}T${horaFim}:00-03:00`, timeZone: TIMEZONE };
     } else {
       // Evento de dia inteiro
       const fim = new Date(`${data_evento}T12:00:00-03:00`);
