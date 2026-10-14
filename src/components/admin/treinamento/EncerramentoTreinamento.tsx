@@ -136,6 +136,13 @@ export function EncerramentoTreinamento({ userId, readOnly = false }: Encerramen
             </p>
           </CardContent>
         </Card>
+        <DialogNotificarAprovacao
+          notificacao={notificacao}
+          open={!!notificacao}
+          onOpenChange={(o) => !o && setNotificacao(null)}
+          userId={userId}
+          remetenteNome={dadosUsuario.nome}
+        />
       </div>
     );
   }
