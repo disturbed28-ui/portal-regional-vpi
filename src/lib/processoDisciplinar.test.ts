@@ -1,3 +1,4 @@
+// @ts-expect-error bun test runtime
 import { describe, expect, it } from "bun:test";
 import { formatarNumeroPD, podeCancelar, podeDescartarRascunho } from "./processoDisciplinar";
 
