@@ -239,6 +239,7 @@ const TIPO_REGEX: Record<string, RegExp[]> = {
   'Reuniao': [/\bREUNIAO\b/g, /\bREUNIOES\b/g, /\bBATE[-\s]?PAPO\b/g],
   'Bate e Volta': [/\bBATE\s*E?\s*VOLTA\b/g, /\bBATE-VOLTA\b/g],
   'Bonde Insano': [/\bBONDE\s+INSANO\b/g, /\bBONDE\b/g, /\bVIAGEM\s+INSANA\b/g],
+  'Combate': [/\bCOMBATE\s+INSANO\b/g, /\bCOMBATE\b/g],
   'Caveira': [/\bCAVEIRAS?\b/g],
 };
 
@@ -416,6 +417,8 @@ async function parseEventComponents(originalTitle: string): Promise<ParsedEvent>
   
   if (isCaveira) {
     tipoEvento = 'Caveira';
+  } else if (/\b(combate|jiu[\s-]?jitsu|defesa pessoal)\b/.test(lower)) {
+    tipoEvento = 'Combate';
   } else if (lower.includes('pub')) {
     tipoEvento = 'PUB';
   } else if (lower.includes('acao social') || lower.includes('arrecadacao')) {
