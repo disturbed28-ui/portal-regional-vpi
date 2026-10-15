@@ -89,9 +89,18 @@ export function mensagemEmissao(numero: string, autor: string, divisao: string, 
   return `⚖️ *${numero} – PROCESSO DISCIPLINAR*\n_Emitido por ${autor} – ${divisao}_\n\n${blocoConteudo(c)}`;
 }
 
-export function mensagemEncaminhamento(numero: string, divisao: string, c: ConteudoPD, parecer: string | null): string {
+export function assinaturaRegional(nome: string | null | undefined): string {
+  return nome?.trim() ? `Responsável pela versão Regional: ${nome.trim()}` : "";
+}
+
+export function parecerAssinado(parecer: string | null, nome: string | null | undefined): string {
+  return [parecer?.trim(), assinaturaRegional(nome)].filter(Boolean).join("\n\n");
+}
+
+export function mensagemEncaminhamento(numero: string, divisao: string, c: ConteudoPD, parecer: string | null, responsavel?: string | null): string {
+  const textoParecer = parecerAssinado(parecer, responsavel);
   return `⚖️ *${numero} – VERSÃO REGIONAL*\n_Divisão de origem: ${divisao}_\n\n${blocoConteudo(c)}${
-    parecer ? `\n\n*Parecer Regional:*\n${parecer}` : ""
+    textoParecer ? `\n\n*Parecer Regional:*\n${textoParecer}` : ""
   }`;
 }
 

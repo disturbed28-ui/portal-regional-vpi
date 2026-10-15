@@ -1,6 +1,6 @@
 // @ts-expect-error bun test runtime
 import { describe, expect, it } from "bun:test";
-import { formatarNumeroPD, podeCancelar, podeDescartarRascunho } from "./processoDisciplinar";
+import { formatarNumeroPD, podeCancelar, podeDescartarRascunho, mensagemEncaminhamento, parecerAssinado } from "./processoDisciplinar";
 
 describe("numeração do PD", () => {
   it("formata como PD 001/2026", () => {
@@ -26,5 +26,24 @@ describe("cancelamento", () => {
     expect(podeDescartarRascunho("rascunho", true)).toBe(true);
     expect(podeDescartarRascunho("rascunho", false)).toBe(false);
     expect(podeDescartarRascunho("emitido", true)).toBe(false);
+  });
+});
+
+describe("versão enviada ao Comando", () => {
+  it("envia somente o conteúdo Regional revisado", () => {
+    const original = { titulo: "Ocorrência", envolvidos: [{ integrante_id: null, id_clube: 42, nome_colete: "LOBO" }],
+      local: "Sede", data_ocorrencia: "2026-10-15", hora_ocorrencia: "13:00", descricao: "Relato original não revisado",
+      houve_conciliacao: false, conciliacao_descricao: null };
+    const regional = { ...original, descricao: "Resumo revisado pelo Regional" };
+    const msg = mensagemEncaminhamento("PD 001/2026", "DIVISAO TESTE - SP", regional, "Parecer objetivo", "PIRATA");
+    expect(msg).toContain(regional.descricao);
+    expect(msg).not.toContain(original.descricao);
+    expect(msg).toContain("LOBO (ID 42)");
+    expect(original.descricao).toBe("Relato original não revisado");
+  });
+  it("coloca a identificação do responsável uma vez ao final do parecer", () => {
+    const texto = parecerAssinado("Parecer objetivo", "PIRATA");
+    expect(texto).toBe("Parecer objetivo\n\nResponsável pela versão Regional: PIRATA");
+    expect(texto.split("PIRATA").length - 1).toBe(1);
   });
 });

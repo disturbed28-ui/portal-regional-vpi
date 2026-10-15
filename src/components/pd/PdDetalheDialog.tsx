@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { buildWaMeLink } from "@/lib/whatsapp";
 import {
-  STATUS_LABEL, formatarNumeroPD, formatarDataHoraBR, podeCancelar, mensagemEncaminhamento, mensagemConclusao,
+  STATUS_LABEL, formatarNumeroPD, formatarDataHoraBR, podeCancelar, mensagemEncaminhamento, mensagemConclusao, assinaturaRegional,
   type PdStatus, type Envolvido,
 } from "@/lib/processoDisciplinar";
 import { PdConteudoView } from "./PdConteudoView";
@@ -43,12 +43,14 @@ export function PdDetalheDialog({ pdId, onClose }: { pdId: string | null; onClos
   const [dev, setDev] = useState({ decisao: "", acao: "", observacoes: "" });
   const [justificativa, setJustificativa] = useState("");
   const [linkEmissor, setLinkEmissor] = useState<string | null>(null);
+  const [linkCmd, setLinkCmd] = useState<string | null>(null);
 
   const { data: pd, refetch } = useQuery({
     queryKey: ["pd", pdId],
     enabled: !!pdId,
     queryFn: async () => {
-      const { data, error } = await supabase.from("processos_disciplinares").select("*").eq("id", pdId!).single();
+      if (!pdId) throw new Error("PD não informado");
+      const { data, error } = await supabase.from("processos_disciplinares").select("*").eq("id", pdId).single();
       if (error) throw error;
       return data;
     },
@@ -57,7 +59,8 @@ export function PdDetalheDialog({ pdId, onClose }: { pdId: string | null; onClos
     queryKey: ["pd-eventos", pdId],
     enabled: !!pdId,
     queryFn: async () => {
-      const { data } = await supabase.from("processos_disciplinares_eventos").select("*").eq("pd_id", pdId!).order("created_at");
+      if (!pdId) return [];
+      const { data } = await supabase.from("processos_disciplinares_eventos").select("*").eq("pd_id", pdId).order("created_at");
       return data ?? [];
     },
   });
@@ -65,7 +68,8 @@ export function PdDetalheDialog({ pdId, onClose }: { pdId: string | null; onClos
     queryKey: ["pd-pode-tratar", pd?.divisao_id, pd?.regional_id],
     enabled: !!pd,
     queryFn: async () => {
-      const { data } = await supabase.rpc("pd_pode_tratar", { _divisao_id: pd!.divisao_id as any, _regional_id: pd!.regional_id as any });
+      if (!pd) return false;
+      const { data } = await supabase.rpc("pd_pode_tratar", { _divisao_id: pd.divisao_id as any, _regional_id: pd.regional_id as any });
       return !!data;
     },
   });
@@ -73,12 +77,13 @@ export function PdDetalheDialog({ pdId, onClose }: { pdId: string | null; onClos
   const recarregar = () => { refetch(); refetchEv(); qc.invalidateQueries({ queryKey: ["pds"] }); };
 
   const acao = async (nome: string, dados: Record<string, unknown> = {}) => {
+    if (!pdId) return false;
     setOcupado(true);
-    const { error } = await supabase.rpc("pd_acao", { _id: pdId!, _acao: nome, _dados: dados as any });
+    const { data, error } = await supabase.rpc("pd_acao", { _id: pdId, _acao: nome, _dados: dados as any });
     setOcupado(false);
     if (error) { toast.error(error.message, toast6); return false; }
     recarregar();
-    return true;
+    return data;
   };
 
   // Marca "Em análise Regional" quando quem trata abre pela primeira vez
@@ -98,7 +103,24 @@ export function PdDetalheDialog({ pdId, onClose }: { pdId: string | null; onClos
     } else setVersao(null);
   }, [pd?.id, pd?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { setLinkEmissor(null); }, [pdId]);
+  useEffect(() => { setLinkEmissor(null); setLinkCmd(null); }, [pdId]);
+
+  const gerarVersao = async () => {
+    if (!pdId || ocupado) return;
+    setOcupado(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("pd-gerar-versao", { body: { pdId } });
+      if (error) {
+        const payload = error.context instanceof Response ? await error.context.json().catch(() => null) : null;
+        throw new Error(payload?.error || error.message);
+      }
+      if (data?.error) throw new Error(data.error);
+      recarregar();
+      toast.success("Versão Regional resumida pronta para revisão", toast6);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível gerar o resumo", toast6);
+    } finally { setOcupado(false); }
+  };
 
   if (!pd) return <Dialog open={!!pdId} onOpenChange={(o) => !o && onClose()}><DialogContent className="w-[98vw] max-w-2xl" /></Dialog>;
 
@@ -124,14 +146,25 @@ export function PdDetalheDialog({ pdId, onClose }: { pdId: string | null; onClos
     if (!versao) return;
     const e = errosConteudo(versao);
     if (e.length) { toast.error("Preencha: " + e.join(", "), toast6); return; }
-    const d = dadosVersao()!;
-    abrirLink(linkSemNumero(mensagemEncaminhamento(numero, pd.divisao_texto ?? "-", d as any, d.parecer)));
-    if (await acao("encaminhar", d)) toast.success("Encaminhado ao CMD Regional", toast6);
+    const d = dadosVersao();
+    if (!d) return;
+    const salvo = await acao("encaminhar", d);
+    if (!salvo) return;
+    const conteudoSalvo = {
+      titulo: salvo.regional_titulo ?? "", envolvidos: (salvo.regional_envolvidos as unknown as Envolvido[]) ?? [],
+      local: salvo.regional_local ?? "", data_ocorrencia: salvo.regional_data_ocorrencia ?? "",
+      hora_ocorrencia: salvo.regional_hora_ocorrencia, descricao: salvo.regional_descricao ?? "",
+      houve_conciliacao: !!salvo.regional_houve_conciliacao, conciliacao_descricao: salvo.regional_conciliacao_descricao,
+    };
+    const link = linkSemNumero(mensagemEncaminhamento(numero, salvo.divisao_texto ?? "-", conteudoSalvo, salvo.regional_parecer, salvo.regional_autor_nome));
+    setLinkCmd(link);
+    abrirLink(link);
+    toast.success("Versão Regional pronta para envio ao CMD", toast6);
   };
 
   const concluir = async () => {
     if (!(await acao("concluir"))) return;
-    const msg = mensagemConclusao(numero, pd.titulo, pd.devolutiva_decisao!, pd.devolutiva_acao!, pd.devolutiva_observacoes);
+    const msg = mensagemConclusao(numero, pd.titulo, pd.devolutiva_decisao ?? "", pd.devolutiva_acao ?? "", pd.devolutiva_observacoes);
     const { data: perfil } = await supabase.from("profiles").select("telefone").eq("id", pd.autor_profile_id).maybeSingle();
     setLinkEmissor((perfil?.telefone && buildWaMeLink(perfil.telefone, msg)) || linkSemNumero(msg));
     toast.success("PD concluído", toast6);
@@ -151,6 +184,9 @@ export function PdDetalheDialog({ pdId, onClose }: { pdId: string | null; onClos
         </DialogHeader>
 
         <div className="min-w-0 space-y-3">
+          {linkCmd && <Button size="lg" className="w-full gap-2" onClick={() => abrirLink(linkCmd)}>
+            <MessageCircle className="h-5 w-5" />Enviar versão Regional ao CMD
+          </Button>}
           {linkEmissor && (
             <Button size="lg" className="w-full gap-2" onClick={() => abrirLink(linkEmissor)}>
               <MessageCircle className="h-5 w-5" />Enviar conclusão ao emissor
@@ -167,10 +203,11 @@ export function PdDetalheDialog({ pdId, onClose }: { pdId: string | null; onClos
               <div className="space-y-1">
                 <Label className="text-sm">Parecer Regional (opcional)</Label>
                 <Textarea rows={4} value={versao.parecer} onChange={(e) => setVersao({ ...versao, parecer: e.target.value })} />
+                <p className="break-words text-xs text-muted-foreground">{assinaturaRegional(pd.regional_autor_nome)}</p>
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
                 <Button size="lg" variant="outline" className="gap-2" disabled={ocupado}
-                  onClick={async () => { if (await acao("salvar_versao", dadosVersao()!)) toast.success("Rascunho da versão Regional salvo", toast6); }}>
+                  onClick={async () => { const dados = dadosVersao(); if (dados && await acao("salvar_versao", dados)) toast.success("Rascunho da versão Regional salvo", toast6); }}>
                   <Save className="h-4 w-4" />Salvar rascunho
                 </Button>
                 <Button size="lg" className="gap-2" disabled={ocupado} onClick={encaminhar}>
@@ -185,6 +222,7 @@ export function PdDetalheDialog({ pdId, onClose }: { pdId: string | null; onClos
                 <div><p className="text-xs font-semibold uppercase text-muted-foreground">Parecer Regional</p>
                   <p className="whitespace-pre-wrap break-words text-sm">{pd.regional_parecer}</p></div>
               )}
+              <p className="whitespace-pre-wrap break-words text-sm">{assinaturaRegional(pd.regional_autor_nome)}</p>
             </Secao>
           )}
 
@@ -208,8 +246,8 @@ export function PdDetalheDialog({ pdId, onClose }: { pdId: string | null; onClos
           {podeTratar && (
             <div className="grid gap-2">
               {(status === "emitido" || status === "em_analise") && (
-                <Button size="lg" className="gap-2" disabled={ocupado} onClick={() => acao("gerar_versao")}>
-                  <FileText className="h-4 w-4" />Gerar versão Regional
+                <Button size="lg" className="gap-2" disabled={ocupado} onClick={gerarVersao}>
+                  <FileText className="h-4 w-4" />{ocupado ? "Preparando versão Regional…" : "Gerar versão Regional"}
                 </Button>
               )}
               {status === "aguardando_cmd" && (
