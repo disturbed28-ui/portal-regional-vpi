@@ -44,6 +44,7 @@ import ConsultaIntegrante from "./pages/ConsultaIntegrante";
 import Instalar from "./pages/Instalar";
 import ControleInsights from "./pages/ControleInsights";
 import ProtocoloViagem from "./pages/ProtocoloViagem";
+import ProcessoDisciplinar from "./pages/ProcessoDisciplinar";
 
 const queryClient = new QueryClient();
 
@@ -84,6 +85,7 @@ const App = () => (
                 <Route path="/formularios/acoes_sociais" element={<FormularioAcoesSociais />} />
                 <Route path="/formularios/controle-insights" element={<ControleInsights />} />
                 <Route path="/formularios/protocolo-viagem" element={<ProtocoloViagem />} />
+                <Route path="/formularios/processo-disciplinar" element={<ProcessoDisciplinar />} />
                 <Route path="/acoes-sociais" element={<AcoesSociais />} />
                 <Route path="/gestao-adm" element={<GestaoADM />} />
                 <Route path="/avaliacao-integrantes" element={<AvaliacaoIntegrantes />} />

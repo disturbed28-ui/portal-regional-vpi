@@ -15,6 +15,13 @@
       "when": 1791976530440,
       "tag": "0001_create_agenda_flyers_short_links",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792074416093,
+      "tag": "0002_processo_disciplinar",
+      "breakpoints": true
     }
   ]
 }
