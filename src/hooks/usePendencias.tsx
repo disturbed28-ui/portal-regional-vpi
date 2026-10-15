@@ -1139,6 +1139,47 @@ export const usePendencias = (
           todasPendencias.filter(p => p.tipo === 'expansao_baixa').length);
       }
 
+      // 5.4 PD – Processo Disciplinar: PDs emitidos em andamento no escopo do usuário
+      // O RLS da tabela já limita a visibilidade (divisão/regional/comando); aqui só filtramos
+      // os status em andamento. Roles sem acesso à tela de PD não consultam.
+      const rolesComPD = ['admin', 'diretor_regional', 'regional', 'diretor_divisao', 'adm_regional'];
+      if (userRole && rolesComPD.includes(userRole)) {
+        const { data: pdsAndamento, error: pdsError } = await supabase
+          .from('processos_disciplinares')
+          .select('id, numero, ano, titulo, status, autor_nome, divisao_texto, regional_texto, emitido_em, created_at')
+          .in('status', STATUS_EM_ANDAMENTO)
+          .order('emitido_em', { ascending: false });
+
+        if (pdsError) {
+          console.error('[usePendencias] Erro ao buscar PDs em andamento:', pdsError);
+        } else if (pdsAndamento) {
+          for (const pd of pdsAndamento) {
+            const statusPd = pd.status as PdStatus;
+            todasPendencias.push({
+              registro_id: 0,
+              nome_colete: pd.titulo,
+              divisao_texto: pd.divisao_texto || pd.regional_texto || '',
+              tipo: 'pd',
+              detalhe: `${formatarNumeroPD(pd.numero, pd.ano)} — ${STATUS_LABEL[statusPd] || pd.status}`,
+              data_ref: pd.emitido_em || pd.created_at,
+              detalhes_completos: {
+                pd_id: pd.id,
+                numero: pd.numero,
+                ano: pd.ano,
+                titulo: pd.titulo,
+                status: statusPd,
+                autor_nome: pd.autor_nome,
+                divisao_texto: pd.divisao_texto,
+                regional_texto: pd.regional_texto,
+                emitido_em: pd.emitido_em,
+              } as PdDetalhes,
+            });
+          }
+        }
+        console.log('[usePendencias] PDs em andamento encontrados:',
+          todasPendencias.filter(p => p.tipo === 'pd').length);
+      }
+
       // 6. Pendências de Ajuste de Roles (apenas para admin)
       // REGRA: admin com regionalId vê apenas integrantes da própria regional
       if (userRole === 'admin') {
