@@ -25,8 +25,9 @@ const RESULT_SCHEMA = {
         ponto_encontro: { type: ['string', 'null'] },
         contato: { type: ['string', 'null'] },
         descricao: { type: ['string', 'null'] },
+        dias_semana: { type: ['array', 'null'], items: { type: 'string', enum: ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'] } },
       },
-      required: ['eh_evento', 'titulo', 'tipo', 'time_especial', 'escopo', 'regional_sigla', 'divisao_nome', 'data_evento', 'hora_inicio', 'local', 'ponto_encontro', 'contato', 'descricao'],
+      required: ['eh_evento', 'titulo', 'tipo', 'time_especial', 'escopo', 'regional_sigla', 'divisao_nome', 'data_evento', 'hora_inicio', 'local', 'ponto_encontro', 'contato', 'descricao', 'dias_semana'],
       additionalProperties: false,
     },
   },
@@ -38,7 +39,7 @@ Regras:
 - Se o conteudo NAO for um evento (aniversario, aviso, homenagem, etc.), responda {"eh_evento": false}.
 - Se for evento, responda {"eh_evento": true, ...campos abaixo}.
 - Ignore rodape institucional (nomes de comando, frases de lema, enderecos de sede).
-- tipos validos: "Reunião", "Pub", "Ação Social", "Bonde Insano", "Bate e Volta". Arrecadação e Doação de Sangue sao "Ação Social".
+- tipos validos: "Reunião", "Pub", "Ação Social", "Bonde Insano", "Bate e Volta", "Combate". "Combate" = treino de luta (Combate Insano, Jiu-Jitsu, Defesa Pessoal). Arrecadação e Doação de Sangue sao "Ação Social".
 - times especiais: se o texto mencionar Caveira, Lobo ou Urso/Ursinho (ex.: "Caveiras VP1", "Reunião Lobo"), preencha time_especial com "caveira", "lobo" ou "ursinho". Caso contrario null. ATENCAO: nomes de LOCAL (ex.: "Garagem do Lobo", "Bar do Urso", "Rancho Caveira") NAO indicam time especial; so preencha quando o texto falar do time/grupo (ex.: "Reunião dos Lobos", "Caveiras VP1").
 - escopo (regra de hierarquia, siga estritamente):
   * "divisao": o flyer cita uma divisao especifica.
@@ -48,6 +49,8 @@ Regras:
 - regional_sigla: VP1, VP2, VP3 ou LN quando o flyer citar a regional; "CMD" quando escopo = "comando". Aceite romanos ("Vale do Paraiba II" = VP2). Nunca deduza a regional pela cidade do local. null se nao identificavel.
 - divisao_nome: nome da divisao sem o prefixo "Divisao" (ex.: "São José dos Campos Sul", "Caçapava II", "Pindamonhangaba 3"). null se nao houver.
 - data_evento: formato YYYY-MM-DD. Se o flyer nao informar o ano, use o ANO CORRENTE informado no contexto. Formatos comuns: "14/11", "14 de novembro", "sab. 08/11".
+- dias_semana: se o evento se repete toda semana (ex.: "Segundas e Quartas", "toda sexta"), liste os dias com codigos MO,TU,WE,TH,FR,SA,SU. Caso seja data unica, null. Em eventos semanais sem data especifica, data_evento = null.
+- Nomes de RUAS/AVENIDAS (ex.: "Av. Heitor Villa Lobos") tambem NAO indicam time especial.
 - hora_inicio: formato HH:MM (24h). null se nao houver.
 - local: nome do local e/ou endereco completo do evento.
 - ponto_encontro: texto do P.E. (ponto de encontro) com horario, se houver. null se nao houver.
@@ -71,6 +74,7 @@ interface ResultadoInterpretacao {
   ponto_encontro?: string | null;
   contato?: string | null;
   descricao?: string | null;
+  dias_semana?: string[] | null;
 }
 
 Deno.serve(async (req) => {

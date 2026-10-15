@@ -65,14 +65,31 @@ Deno.serve(async (req) => {
     const {
       titulo, tipo, time_especial, escopo, regional_sigla, divisao_nome,
       data_evento, hora_inicio, local, ponto_encontro, contato, descricao,
-      flyer_base64, flyer_mime, forcar_duplicidade,
+      flyer_base64, flyer_mime, forcar_duplicidade, repetir_ate,
     } = body as Record<string, string | boolean | undefined>;
+    const DIAS_VALIDOS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+    const diasSemana: string[] = Array.isArray(body.dias_semana)
+      ? (body.dias_semana as unknown[]).filter((d): d is string => typeof d === 'string' && DIAS_VALIDOS.includes(d))
+      : [];
+    if (diasSemana.length && repetir_ate && !/^\d{4}-\d{2}-\d{2}$/.test(repetir_ate as string)) {
+      return jsonRes({ error: 'Data "repetir até" inválida' }, 400);
+    }
 
     if (!titulo || !data_evento) {
       return jsonRes({ error: 'Título e data são obrigatórios' }, 400);
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(data_evento as string)) {
       return jsonRes({ error: 'Data inválida (use YYYY-MM-DD)' }, 400);
+    }
+
+    // Evento semanal: a primeira ocorrência é o primeiro dia escolhido a partir da data informada
+    let dataInicio = data_evento as string;
+    if (diasSemana.length) {
+      const d = new Date(`${dataInicio}T12:00:00Z`);
+      for (let i = 0; i < 7 && !diasSemana.includes(DIAS_VALIDOS[d.getUTCDay()]); i++) {
+        d.setUTCDate(d.getUTCDate() + 1);
+      }
+      dataInicio = d.toISOString().slice(0, 10);
     }
 
     // 1. Resolver regional pela sigla
@@ -133,8 +150,8 @@ Deno.serve(async (req) => {
     }
 
     // 4. Verificar duplicidade (mesmo dia, título parecido)
-    const timeMin = `${data_evento}T00:00:00-03:00`;
-    const timeMax = `${data_evento}T23:59:59-03:00`;
+    const timeMin = `${dataInicio}T00:00:00-03:00`;
+    const timeMax = `${dataInicio}T23:59:59-03:00`;
     const listResp = await gatewayFetch(
       `/calendars/${encodeURIComponent(calDestino.calendar_id)}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&maxResults=50`,
     );
@@ -161,7 +178,7 @@ Deno.serve(async (req) => {
     if (flyer_base64) {
       const mime = (flyer_mime as string) || 'image/jpeg';
       const ext = mime.includes('png') ? 'png' : 'jpg';
-      const path = `${data_evento}/${crypto.randomUUID()}.${ext}`;
+      const path = `${dataInicio}/${crypto.randomUUID()}.${ext}`;
       const bytes = Uint8Array.from(atob(flyer_base64 as string), (c) => c.charCodeAt(0));
       const { error: upErr } = await supabaseAdmin.storage
         .from('agenda-flyers')
@@ -201,13 +218,13 @@ Deno.serve(async (req) => {
       description: partesDescricao.join('\n\n') || undefined,
     };
     if (hora_inicio) {
-      eventoGoogle.start = { dateTime: `${data_evento}T${hora_inicio}:00-03:00`, timeZone: TIMEZONE };
+      eventoGoogle.start = { dateTime: `${dataInicio}T${hora_inicio}:00-03:00`, timeZone: TIMEZONE };
       // Flyers não trazem hora de fim: reserva padrão de 2 horas
       const [hh, mm] = (hora_inicio as string).split(':').map(Number);
       const fimMin = hh * 60 + mm + 120;
-      let dataFim = data_evento as string;
+      let dataFim = dataInicio;
       if (fimMin >= 24 * 60) {
-        const d = new Date(`${data_evento}T12:00:00-03:00`);
+        const d = new Date(`${dataInicio}T12:00:00-03:00`);
         d.setDate(d.getDate() + 1);
         dataFim = d.toISOString().slice(0, 10);
       }
@@ -216,11 +233,19 @@ Deno.serve(async (req) => {
       eventoGoogle.end = { dateTime: `${dataFim}T${horaFim}:00-03:00`, timeZone: TIMEZONE };
     } else {
       // Evento de dia inteiro
-      const fim = new Date(`${data_evento}T12:00:00-03:00`);
+      const fim = new Date(`${dataInicio}T12:00:00-03:00`);
       fim.setDate(fim.getDate() + 1);
       const fimStr = fim.toISOString().slice(0, 10);
-      eventoGoogle.start = { date: data_evento };
+      eventoGoogle.start = { date: dataInicio };
       eventoGoogle.end = { date: fimStr };
+    }
+
+    if (diasSemana.length) {
+      const ate = ((repetir_ate as string) || (() => {
+        const [a, m, d] = dataInicio.split('-').map(Number);
+        return new Date(Date.UTC(a, m - 1 + 3, d)).toISOString().slice(0, 10);
+      })()).replace(/-/g, '');
+      eventoGoogle.recurrence = [`RRULE:FREQ=WEEKLY;BYDAY=${diasSemana.join(',')};UNTIL=${ate}T235959Z`];
     }
 
     const createResp = await gatewayFetch(
