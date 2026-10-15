@@ -41,7 +41,7 @@ import {
   XCircle,
   Building2,
 } from "lucide-react";
-import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes, FlyerPendenteDetalhes, EstagioVencidoDetalhes, ExpansaoBaixaDetalhes, CadastroPendenteDetalhes } from "@/hooks/usePendencias";
+import type { Pendencia, MensalidadeDetalhes, AfastamentoDetalhes, DeltaDetalhes, EventoCanceladoDetalhes, TreinamentoAprovadorDetalhes, TreinamentoIntegranteDetalhes, EstagioAprovadorDetalhes, EstagioIntegranteDetalhes, AjusteRolesDetalhes, DesligamentoCompulsorioDetalhes, DadosDesatualizadosDetalhes, FlyerPendenteDetalhes, EstagioVencidoDetalhes, ExpansaoBaixaDetalhes, CadastroPendenteDetalhes, PdDetalhes } from "@/hooks/usePendencias";
 import { useMetaCrescimento } from "@/hooks/useMetaCrescimento";
 import { MetaCrescimentoAlerta } from "@/components/MetaCrescimentoAlerta";
 
@@ -1490,6 +1490,38 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle, onDispensarDados }
             })()}
 
 
+
+            {/* Card de PD – Processo Disciplinar */}
+            {isPd && detalhes && (() => {
+              const d = detalhes as PdDetalhes;
+              return (
+                <Card className="bg-background/50 border-rose-300 dark:border-rose-700">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center gap-3 p-3 bg-rose-50 dark:bg-rose-950/20 rounded-lg border border-rose-200 dark:border-rose-800">
+                      <span className="text-2xl">⚖️</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-rose-700 dark:text-rose-300 text-sm break-words">
+                          {d.titulo}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Emitido por {d.autor_nome}
+                          {d.emitido_em && ` em ${format(new Date(d.emitido_em), "dd/MM/yyyy", { locale: ptBR })}`}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => navigate('/formularios/processo-disciplinar')}
+                    >
+                      <ArrowRight className="h-4 w-4 mr-2" />
+                      Abrir tela de PD
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })()}
 
             {/* Card de Ajuste de Roles */}
             {isAjusteRoles && detalhes && <AjusteRolesDetalhesCard detalhes={detalhes as AjusteRolesDetalhes} />}
