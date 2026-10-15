@@ -1157,6 +1157,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle, onDispensarDados }
   const isEstagioVencido = pendencia.tipo === 'estagio_vencido';
   const isExpansaoBaixa = pendencia.tipo === 'expansao_baixa';
   const isCadastroPendente = pendencia.tipo === 'cadastro_pendente';
+  const isPd = pendencia.tipo === 'pd';
   const detalhes = pendencia.detalhes_completos;
   
   // LOG DE DEBUG TEMPORÁRIO
@@ -1191,6 +1192,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle, onDispensarDados }
     if (isFlyerPendente) return 'border-indigo-500';
     if (isExpansaoBaixa) return 'border-teal-500';
     if (isCadastroPendente) return 'border-sky-500';
+    if (isPd) return 'border-rose-500';
     if (isDelta) {
       const deltaDetalhes = detalhes as DeltaDetalhes | null;
       if (!deltaDetalhes) return 'border-gray-500';
@@ -1212,6 +1214,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle, onDispensarDados }
     if (isFlyerPendente) return '🖼️';
     if (isExpansaoBaixa) return '🧭';
     if (isCadastroPendente) return '👤';
+    if (isPd) return '⚖️';
     if (isEventoCancelado) {
       const eventDetalhes = detalhes as EventoCanceladoDetalhes;
       return eventDetalhes?.status === 'cancelled' ? '📅' : '❌';
@@ -1250,6 +1253,7 @@ const PendenciaItem = ({ pendencia, itemId, isOpen, onToggle, onDispensarDados }
     }
     if (isExpansaoBaixa) return 'Expansão';
     if (isCadastroPendente) return 'Cadastro Pendente';
+    if (isPd) return 'Processo Disciplinar';
     return 'Pendência';
   };
   
