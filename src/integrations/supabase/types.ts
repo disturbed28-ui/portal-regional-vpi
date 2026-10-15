@@ -2712,6 +2712,182 @@ export type Database = {
           },
         ]
       }
+      processos_disciplinares: {
+        Row: {
+          ano: number | null
+          autor_nome: string | null
+          autor_profile_id: string
+          cancelado_em: string | null
+          cancelado_por_nome: string | null
+          cancelado_por_profile_id: string | null
+          cancelamento_justificativa: string | null
+          conciliacao_descricao: string | null
+          concluido_em: string | null
+          created_at: string
+          data_ocorrencia: string
+          descricao: string
+          devolutiva_acao: string | null
+          devolutiva_decisao: string | null
+          devolutiva_em: string | null
+          devolutiva_observacoes: string | null
+          divisao_id: string | null
+          divisao_texto: string | null
+          emitido_em: string | null
+          encaminhado_em: string | null
+          envolvidos: Json
+          hora_ocorrencia: string | null
+          houve_conciliacao: boolean
+          id: string
+          local: string
+          numero: number | null
+          regional_atualizado_em: string | null
+          regional_autor_nome: string | null
+          regional_autor_profile_id: string | null
+          regional_conciliacao_descricao: string | null
+          regional_data_ocorrencia: string | null
+          regional_descricao: string | null
+          regional_envolvidos: Json | null
+          regional_hora_ocorrencia: string | null
+          regional_houve_conciliacao: boolean | null
+          regional_id: string | null
+          regional_local: string | null
+          regional_parecer: string | null
+          regional_texto: string | null
+          regional_titulo: string | null
+          status: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          ano?: number | null
+          autor_nome?: string | null
+          autor_profile_id: string
+          cancelado_em?: string | null
+          cancelado_por_nome?: string | null
+          cancelado_por_profile_id?: string | null
+          cancelamento_justificativa?: string | null
+          conciliacao_descricao?: string | null
+          concluido_em?: string | null
+          created_at?: string
+          data_ocorrencia: string
+          descricao: string
+          devolutiva_acao?: string | null
+          devolutiva_decisao?: string | null
+          devolutiva_em?: string | null
+          devolutiva_observacoes?: string | null
+          divisao_id?: string | null
+          divisao_texto?: string | null
+          emitido_em?: string | null
+          encaminhado_em?: string | null
+          envolvidos?: Json
+          hora_ocorrencia?: string | null
+          houve_conciliacao?: boolean
+          id?: string
+          local: string
+          numero?: number | null
+          regional_atualizado_em?: string | null
+          regional_autor_nome?: string | null
+          regional_autor_profile_id?: string | null
+          regional_conciliacao_descricao?: string | null
+          regional_data_ocorrencia?: string | null
+          regional_descricao?: string | null
+          regional_envolvidos?: Json | null
+          regional_hora_ocorrencia?: string | null
+          regional_houve_conciliacao?: boolean | null
+          regional_id?: string | null
+          regional_local?: string | null
+          regional_parecer?: string | null
+          regional_texto?: string | null
+          regional_titulo?: string | null
+          status?: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          ano?: number | null
+          autor_nome?: string | null
+          autor_profile_id?: string
+          cancelado_em?: string | null
+          cancelado_por_nome?: string | null
+          cancelado_por_profile_id?: string | null
+          cancelamento_justificativa?: string | null
+          conciliacao_descricao?: string | null
+          concluido_em?: string | null
+          created_at?: string
+          data_ocorrencia?: string
+          descricao?: string
+          devolutiva_acao?: string | null
+          devolutiva_decisao?: string | null
+          devolutiva_em?: string | null
+          devolutiva_observacoes?: string | null
+          divisao_id?: string | null
+          divisao_texto?: string | null
+          emitido_em?: string | null
+          encaminhado_em?: string | null
+          envolvidos?: Json
+          hora_ocorrencia?: string | null
+          houve_conciliacao?: boolean
+          id?: string
+          local?: string
+          numero?: number | null
+          regional_atualizado_em?: string | null
+          regional_autor_nome?: string | null
+          regional_autor_profile_id?: string | null
+          regional_conciliacao_descricao?: string | null
+          regional_data_ocorrencia?: string | null
+          regional_descricao?: string | null
+          regional_envolvidos?: Json | null
+          regional_hora_ocorrencia?: string | null
+          regional_houve_conciliacao?: boolean | null
+          regional_id?: string | null
+          regional_local?: string | null
+          regional_parecer?: string | null
+          regional_texto?: string | null
+          regional_titulo?: string | null
+          status?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      processos_disciplinares_eventos: {
+        Row: {
+          acao: string
+          created_at: string
+          descricao: string | null
+          id: string
+          pd_id: string
+          responsavel_nome: string | null
+          responsavel_profile_id: string | null
+        }
+        Insert: {
+          acao: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          pd_id: string
+          responsavel_nome?: string | null
+          responsavel_profile_id?: string | null
+        }
+        Update: {
+          acao?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          pd_id?: string
+          responsavel_nome?: string | null
+          responsavel_profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processos_disciplinares_eventos_pd_id_fkey"
+            columns: ["pd_id"]
+            isOneToOne: false
+            referencedRelation: "processos_disciplinares"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profile_history: {
         Row: {
           alterado_por: string | null
@@ -4006,6 +4182,64 @@ export type Database = {
       }
       normalizar_divisao_texto: { Args: { texto: string }; Returns: string }
       normalize_divisao_text: { Args: { texto: string }; Returns: string }
+      pd_acao: {
+        Args: { _acao: string; _dados?: Json; _id: string }
+        Returns: {
+          ano: number | null
+          autor_nome: string | null
+          autor_profile_id: string
+          cancelado_em: string | null
+          cancelado_por_nome: string | null
+          cancelado_por_profile_id: string | null
+          cancelamento_justificativa: string | null
+          conciliacao_descricao: string | null
+          concluido_em: string | null
+          created_at: string
+          data_ocorrencia: string
+          descricao: string
+          devolutiva_acao: string | null
+          devolutiva_decisao: string | null
+          devolutiva_em: string | null
+          devolutiva_observacoes: string | null
+          divisao_id: string | null
+          divisao_texto: string | null
+          emitido_em: string | null
+          encaminhado_em: string | null
+          envolvidos: Json
+          hora_ocorrencia: string | null
+          houve_conciliacao: boolean
+          id: string
+          local: string
+          numero: number | null
+          regional_atualizado_em: string | null
+          regional_autor_nome: string | null
+          regional_autor_profile_id: string | null
+          regional_conciliacao_descricao: string | null
+          regional_data_ocorrencia: string | null
+          regional_descricao: string | null
+          regional_envolvidos: Json | null
+          regional_hora_ocorrencia: string | null
+          regional_houve_conciliacao: boolean | null
+          regional_id: string | null
+          regional_local: string | null
+          regional_parecer: string | null
+          regional_texto: string | null
+          regional_titulo: string | null
+          status: string
+          titulo: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "processos_disciplinares"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      pd_pode_tratar: {
+        Args: { _divisao_id: string; _regional_id: string }
+        Returns: boolean
+      }
       protocolo_viagem_no_escopo: {
         Args: { _divisao_id: string; _regional_id: string }
         Returns: boolean
