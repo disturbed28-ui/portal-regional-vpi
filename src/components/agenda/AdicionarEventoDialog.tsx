@@ -25,6 +25,30 @@ interface Interpretacao {
   ponto_encontro?: string | null;
   contato?: string | null;
   descricao?: string | null;
+  dias_semana?: string[] | null;
+  repetir_ate?: string | null;
+}
+
+const DIAS = [
+  { v: "MO", l: "Seg" }, { v: "TU", l: "Ter" }, { v: "WE", l: "Qua" },
+  { v: "TH", l: "Qui" }, { v: "FR", l: "Sex" }, { v: "SA", l: "Sáb" }, { v: "SU", l: "Dom" },
+];
+
+function hojeISO() {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+}
+
+// Eventos semanais valem por 3 meses a partir do início, salvo ajuste na revisão
+export function repetirAtePadrao(inicio: string): string {
+  const [a, m, d] = inicio.split("-").map(Number);
+  const dt = new Date(Date.UTC(a, m - 1 + 3, d));
+  return dt.toISOString().slice(0, 10);
+}
+
+function somarDuasHoras(hora: string): string {
+  const [h, m] = hora.split(":").map(Number);
+  const t = (h * 60 + m + 120) % 1440;
+  return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
 }
 
 interface Props {
@@ -35,7 +59,7 @@ interface Props {
 
 type Etapa = "entrada" | "revisao" | "sucesso";
 
-const TIPOS = ["Reunião", "Pub", "Ação Social", "Bonde Insano", "Bate e Volta"];
+const TIPOS = ["Reunião", "Pub", "Ação Social", "Bonde Insano", "Bate e Volta", "Combate"];
 const TIMES = [
   { value: "nenhum", label: "Nenhum (agenda regional)" },
   { value: "caveira", label: "Caveira" },
@@ -134,6 +158,10 @@ export function AdicionarEventoDialog({ open, onOpenChange, onEventoCriado }: Pr
       if (!interp.eh_evento) {
         toast.error("Este conteúdo não parece ser um evento. Verifique o flyer enviado.");
         return;
+      }
+      if (interp.dias_semana && interp.dias_semana.length > 0) {
+        if (!interp.data_evento) interp.data_evento = hojeISO();
+        interp.repetir_ate = repetirAtePadrao(interp.data_evento);
       }
       setForm(interp);
       setEtapa("revisao");
@@ -322,13 +350,65 @@ export function AdicionarEventoDialog({ open, onOpenChange, onEventoCriado }: Pr
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label>Horário</Label>
+                  <Label>Horário de início</Label>
                   <Input
                     type="time"
                     value={form.hora_inicio || ""}
                     onChange={(e) => set("hora_inicio", e.target.value)}
                   />
+                  {form.hora_inicio && (
+                    <p className="text-xs text-muted-foreground">
+                      Na agenda: {form.hora_inicio} às {somarDuasHoras(form.hora_inicio)}
+                    </p>
+                  )}
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Repetir toda semana (opcional)</Label>
+                <div className="flex flex-wrap gap-1">
+                  {DIAS.map((d) => {
+                    const ativo = (form.dias_semana || []).includes(d.v);
+                    return (
+                      <Button
+                        key={d.v}
+                        type="button"
+                        size="sm"
+                        variant={ativo ? "default" : "outline"}
+                        className="h-8 px-2"
+                        onClick={() =>
+                          setForm((f) => {
+                            if (!f) return f;
+                            const atual = f.dias_semana || [];
+                            const dias = ativo ? atual.filter((x) => x !== d.v) : [...atual, d.v];
+                            return {
+                              ...f,
+                              dias_semana: dias,
+                              repetir_ate: dias.length
+                                ? f.repetir_ate || repetirAtePadrao(f.data_evento || hojeISO())
+                                : null,
+                            };
+                          })
+                        }
+                      >
+                        {d.l}
+                      </Button>
+                    );
+                  })}
+                </div>
+                {(form.dias_semana || []).length > 0 && (
+                  <div className="space-y-1">
+                    <Label>Repetir até</Label>
+                    <Input
+                      type="date"
+                      value={form.repetir_ate || ""}
+                      onChange={(e) => set("repetir_ate", e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Padrão de 3 meses. Se mudar, apague o evento e cadastre o flyer novo.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-1">
