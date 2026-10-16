@@ -28,6 +28,7 @@ import {
   useIntegrantesDivisaoInsight,
   useInsightExistente,
   useSalvarInsight,
+  textoNumeroInsight,
 } from "@/hooks/useInsights";
 import {
   InsightStatus,
@@ -40,7 +41,7 @@ import { StatusToggle } from "./StatusToggle";
 
 export interface EdicaoInsight {
   dataInsight: string;
-  numeroInsight: number;
+  numeroInsight: string;
   divisaoId: string;
   token: number;
 }
@@ -56,7 +57,7 @@ export const RegistrarInsightTab = ({ edicao }: { edicao?: EdicaoInsight | null 
   useEffect(() => {
     if (!edicao) return;
     setDataInsight(edicao.dataInsight);
-    setNumeroInsight(String(edicao.numeroInsight));
+    setNumeroInsight(edicao.numeroInsight);
     setDivisaoId(edicao.divisaoId);
   }, [edicao?.token]);
 
@@ -71,14 +72,14 @@ export const RegistrarInsightTab = ({ edicao }: { edicao?: EdicaoInsight | null 
   }, [escopo.divisoesDisponiveis, escopo.divisaoIdUsuario, divisaoId]);
 
 
-  const numero = numeroInsight ? parseInt(numeroInsight, 10) : null;
-  const cabecalhoPronto = !!dataInsight && !!numero && !!divisaoId;
+  const numeroTexto = numeroInsight.trim();
+  const cabecalhoPronto = !!dataInsight && !!numeroTexto && !!divisaoId;
 
   const { data: integrantes, isLoading: loadingIntegrantes } =
     useIntegrantesDivisaoInsight(cabecalhoPronto ? divisaoId : null);
   const { data: existente, isLoading: loadingExistente } = useInsightExistente(
     divisaoId || null,
-    numero,
+    numeroTexto,
     dataInsight || null
   );
   const salvar = useSalvarInsight();
@@ -164,7 +165,7 @@ export const RegistrarInsightTab = ({ edicao }: { edicao?: EdicaoInsight | null 
     try {
       await salvar.mutateAsync({
         insightId: existente?.id || null,
-        numeroInsight: numero!,
+        numeroInsight: numeroTexto,
         dataInsight,
         divisaoId,
         regionalId: escopo.regionalId,
@@ -219,10 +220,7 @@ export const RegistrarInsightTab = ({ edicao }: { edicao?: EdicaoInsight | null 
             <Label htmlFor="numero-insight" className="text-xs">Nº do Insight</Label>
             <Input
               id="numero-insight"
-              type="number"
-              inputMode="numeric"
-              min={1}
-              placeholder="Ex.: 37"
+              placeholder="Ex.: 37, 13.1 ou S1"
               className="h-11"
               value={numeroInsight}
               onChange={(e) => setNumeroInsight(e.target.value)}
@@ -349,7 +347,8 @@ export const RegistrarInsightTab = ({ edicao }: { edicao?: EdicaoInsight | null 
           <AlertDialogHeader>
             <AlertDialogTitle>Insight já lançado neste mês</AlertDialogTitle>
             <AlertDialogDescription>
-              O Insight nº {existente?.numero_insight} desta divisão já foi registrado em{" "}
+              O Insight nº {existente ? textoNumeroInsight(existente) : ""} desta divisão já foi
+              registrado em{" "}
               {dataBR(existente?.data_insight)}
               {existente?.responsavel_nome ? ` por ${existente.responsavel_nome}` : ""}. Para não
               duplicar, edite o lançamento existente ou informe um novo número.
