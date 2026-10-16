@@ -163,7 +163,7 @@ export const RegistrarInsightTab = ({ edicao }: { edicao?: EdicaoInsight | null 
   const handleSalvar = async () => {
     if (!cabecalhoPronto || !integrantes?.length || avisoAberto) return;
     try {
-      await salvar.mutateAsync({
+      const idSalvo = await salvar.mutateAsync({
         insightId: existente?.id || null,
         numeroInsight: numeroTexto,
         dataInsight,
@@ -180,6 +180,9 @@ export const RegistrarInsightTab = ({ edicao }: { edicao?: EdicaoInsight | null 
           status: statusMap[i.id] || statusPadraoPorGrau(i.grau),
         })),
       });
+      // O lançamento recém-salvo não deve ser tratado como duplicata
+      setAceitoId(idSalvo);
+      setIdEdicao(idSalvo);
       toast.success(
         existente ? "Lançamento atualizado com sucesso" : "Insight registrado com sucesso",
         { duration: 6000, dismissible: false }
