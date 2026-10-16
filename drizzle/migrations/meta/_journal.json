@@ -29,6 +29,13 @@
       "when": 1792081896759,
       "tag": "0003_pd_resumo_regional",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792191102267,
+      "tag": "0004_insights_numero_texto",
+      "breakpoints": true
     }
   ]
 }
