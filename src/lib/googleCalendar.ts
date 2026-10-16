@@ -689,7 +689,12 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
     console.log('[fetchCalendarEvents] Eventos:', allEvents.length, '| Ativos:', activeEvents.length);
 
     // Sincronizar em background (não bloquear retorno)
-    syncEventsWithDatabase(allEvents).catch(err => 
+    syncEventsWithDatabase(allEvents, {
+      complete: data.complete === true,
+      timeMin: data.timeMin,
+      timeMax: data.timeMax,
+      hiddenIds: new Set<string>(data.hiddenIds || []),
+    }).catch(err => 
       console.error('[syncEventsWithDatabase] Erro:', err)
     );
 
@@ -700,7 +705,31 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
   }
 }
 
-async function syncEventsWithDatabase(events: CalendarEvent[]) {
+interface SyncInfo {
+  complete: boolean;
+  timeMin?: string;
+  timeMax?: string;
+  hiddenIds: Set<string>;
+}
+
+/**
+ * Só é seguro concluir que um evento foi apagado no Google quando a leitura veio
+ * completa (todas as agendas responderam), o evento está dentro da janela lida
+ * e não foi apenas escondido do usuário por regra de visibilidade.
+ */
+export function podeMarcarRemovido(
+  dbEvent: { evento_id: string; data_evento: string },
+  info: SyncInfo,
+): boolean {
+  if (!info.complete || !info.timeMin || !info.timeMax) return false;
+  if (info.hiddenIds.has(dbEvent.evento_id)) return false;
+  const t = new Date(dbEvent.data_evento).getTime();
+  const min = new Date(info.timeMin).getTime() + 24 * 3600 * 1000;
+  const max = new Date(info.timeMax).getTime() - 24 * 3600 * 1000;
+  return t >= min && t <= max;
+}
+
+async function syncEventsWithDatabase(events: CalendarEvent[], info: SyncInfo) {
   try {
     console.log('[syncEventsWithDatabase] Iniciando sincronização de eventos...');
     
@@ -728,6 +757,7 @@ async function syncEventsWithDatabase(events: CalendarEvent[]) {
       
       // CENÁRIO 1: Evento NÃO existe mais no Google (foi deletado)
       if (!calendarEvent && !googleEventIds.has(dbEvent.evento_id)) {
+        if (!podeMarcarRemovido(dbEvent, info)) continue;
         // Só marca como removido se ainda estiver como 'active'
         if (dbEvent.status === 'active' || !dbEvent.status) {
           console.log(`[syncEventsWithDatabase] ⚠️ Evento removido do Google: ${dbEvent.titulo}`);
