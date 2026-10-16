@@ -136,7 +136,6 @@ export const HistoricoInsightsTab = ({
           <div className="space-y-1">
             <Label className="text-xs">Nº do Insight</Label>
             <Input
-              type="number"
               className="h-11"
               placeholder="Todos"
               value={numero}
