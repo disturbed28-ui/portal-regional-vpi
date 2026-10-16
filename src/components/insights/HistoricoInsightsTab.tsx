@@ -34,6 +34,7 @@ import {
   useEscopoInsights,
   useInsightsLista,
   useExcluirInsight,
+  textoNumeroInsight,
   type InsightRegistro,
 } from "@/hooks/useInsights";
 import {
@@ -51,10 +52,13 @@ const formatarData = (iso: string) => {
 const formatarDataHora = (iso: string) =>
   new Date(iso).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
 
+const exibirNumero = (texto: string) =>
+  /^\d+$/.test(texto) ? texto.padStart(3, "0") : texto;
+
 export const HistoricoInsightsTab = ({
   onReabrir,
 }: {
-  onReabrir?: (dados: { dataInsight: string; numeroInsight: number; divisaoId: string }) => void;
+  onReabrir?: (dados: { dataInsight: string; numeroInsight: string; divisaoId: string }) => void;
 }) => {
   const escopo = useEscopoInsights();
 
@@ -73,7 +77,7 @@ export const HistoricoInsightsTab = ({
     try {
       await excluirInsight.mutateAsync(insightParaExcluir.id);
       toast.success(
-        `Insight ${String(insightParaExcluir.numero_insight).padStart(3, "0")} excluído com sucesso.`,
+        `Insight ${exibirNumero(textoNumeroInsight(insightParaExcluir))} excluído com sucesso.`,
         { duration: 6000 }
       );
       setInsightParaExcluir(null);
@@ -93,7 +97,7 @@ export const HistoricoInsightsTab = ({
     {
       dataInicial: dataInicial || null,
       dataFinal: dataFinal || null,
-      numeroInsight: numero ? parseInt(numero, 10) : null,
+      numeroInsight: numero.trim() || null,
       divisaoId: divisaoId === "todas" ? null : divisaoId,
       divisoesEscopo,
     },
@@ -132,8 +136,6 @@ export const HistoricoInsightsTab = ({
           <div className="space-y-1">
             <Label className="text-xs">Nº do Insight</Label>
             <Input
-              type="number"
-              inputMode="numeric"
               className="h-11"
               placeholder="Todos"
               value={numero}
@@ -207,7 +209,7 @@ export const HistoricoInsightsTab = ({
                   <div className="flex-1 space-y-1 pr-2 text-left">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold">
-                        Insight {String(insight.numero_insight).padStart(3, "0")}
+                        Insight {exibirNumero(textoNumeroInsight(insight))}
                       </span>
                       <Badge variant="secondary" className="text-[10px]">
                         {formatarPercentual(resumo.percentual)}
@@ -264,7 +266,7 @@ export const HistoricoInsightsTab = ({
                           onClick={() =>
                             onReabrir({
                               dataInsight: insight.data_insight,
-                              numeroInsight: insight.numero_insight,
+                              numeroInsight: textoNumeroInsight(insight),
                               divisaoId: insight.divisao_id,
                             })
                           }
@@ -303,7 +305,7 @@ export const HistoricoInsightsTab = ({
                 <>
                   Você está prestes a excluir o{" "}
                   <strong>
-                    Insight {String(insightParaExcluir.numero_insight).padStart(3, "0")}
+                    Insight {exibirNumero(textoNumeroInsight(insightParaExcluir))}
                   </strong>{" "}
                   de{" "}
                   <strong>
