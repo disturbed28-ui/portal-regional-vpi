@@ -177,6 +177,8 @@ Deno.serve(async (req) => {
     const timeMax = monthsAfter.toISOString();
 
     // 5. Buscar eventos em paralelo, aplicando regras de restrição por calendário
+    let complete = true;
+    const hiddenIds: string[] = [];
     const perCalendarResults = await Promise.all(
       calendars.map(async (cal) => {
         try {
@@ -194,12 +196,14 @@ Deno.serve(async (req) => {
               const eventSigla = extractRegionalSiglaFromTitle(title);
               if (eventSigla && eventSigla === userRegionalSigla) return true;
             }
+            if (event.id) hiddenIds.push(event.id);
             return false;
           });
           console.log(`[get-calendar-events] "${cal.nome}": ${events.length} → ${filtered.length} eventos`);
           return filtered;
         } catch (err) {
           console.error(`[get-calendar-events] Falha ao buscar agenda "${cal.nome}":`, err);
+          complete = false;
           return [];
         }
       })
@@ -220,7 +224,7 @@ Deno.serve(async (req) => {
 
     console.log(`[get-calendar-events] Total mesclado: ${merged.length} eventos (${calendars.length} agendas)`);
 
-    return new Response(JSON.stringify({ items: merged }), {
+    return new Response(JSON.stringify({ items: merged, complete, timeMin, timeMax, hiddenIds }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
