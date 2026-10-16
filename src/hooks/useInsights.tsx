@@ -33,7 +33,8 @@ export interface ParticipacaoRegistro {
 
 export interface InsightRegistro {
   id: string;
-  numero_insight: number;
+  numero_insight: number | null;
+  numero_insight_texto: string;
   data_insight: string;
   divisao_id: string;
   regional_id: string | null;
@@ -44,6 +45,11 @@ export interface InsightRegistro {
   updated_at: string;
   insight_participacoes: ParticipacaoRegistro[];
 }
+
+/** Número do Insight em texto (ex.: 13.1, S1); preenchido também para os lançamentos antigos. */
+export const textoNumeroInsight = (
+  r: Pick<InsightRegistro, "numero_insight_texto" | "numero_insight">
+) => r.numero_insight_texto ?? (r.numero_insight != null ? String(r.numero_insight) : "");
 
 /** Escopo de divisões que o usuário autenticado pode lançar/consultar. */
 export const useEscopoInsights = () => {
@@ -101,7 +107,7 @@ export const useIntegrantesDivisaoInsight = (divisaoId: string | null) => {
 /** Verifica lançamento duplicado: divisão + número + data. */
 export const useInsightExistente = (
   divisaoId: string | null,
-  numero: number | null,
+  numero: string | null,
   data: string | null
 ) => {
   // Mesma divisão + mesmo número dentro do MÊS CIVIL da data informada
@@ -117,7 +123,7 @@ export const useInsightExistente = (
         .from("insights")
         .select("*, insight_participacoes(*)")
         .eq("divisao_id", divisaoId!)
-        .eq("numero_insight", numero!)
+        .eq("numero_insight_texto", numero!)
         .gte("data_insight", inicio)
         .lt("data_insight", prox)
         .order("data_insight", { ascending: true })
@@ -133,7 +139,7 @@ export const useInsightExistente = (
 export interface FiltrosInsights {
   dataInicial?: string | null;
   dataFinal?: string | null;
-  numeroInsight?: number | null;
+  numeroInsight?: string | null;
   divisaoId?: string | null;
   divisoesEscopo: string[];
 }
@@ -147,7 +153,7 @@ export const useInsightsLista = (filtros: FiltrosInsights, habilitado = true) =>
         .from("insights")
         .select("*, insight_participacoes(*)")
         .order("data_insight", { ascending: false })
-        .order("numero_insight", { ascending: false });
+        .order("numero_insight", { ascending: false, nullsFirst: false });
 
       if (filtros.divisaoId) {
         query = query.eq("divisao_id", filtros.divisaoId);
@@ -156,7 +162,8 @@ export const useInsightsLista = (filtros: FiltrosInsights, habilitado = true) =>
       }
       if (filtros.dataInicial) query = query.gte("data_insight", filtros.dataInicial);
       if (filtros.dataFinal) query = query.lte("data_insight", filtros.dataFinal);
-      if (filtros.numeroInsight) query = query.eq("numero_insight", filtros.numeroInsight);
+      if (filtros.numeroInsight)
+        query = query.eq("numero_insight_texto", filtros.numeroInsight);
 
       const { data, error } = await query;
       if (error) throw error;
@@ -167,7 +174,7 @@ export const useInsightsLista = (filtros: FiltrosInsights, habilitado = true) =>
 
 export interface SalvarInsightPayload {
   insightId?: string | null;
-  numeroInsight: number;
+  numeroInsight: string;
   dataInsight: string;
   divisaoId: string;
   regionalId: string | null;
@@ -210,7 +217,10 @@ export const useSalvarInsight = () => {
         const { data, error } = await supabase
           .from("insights")
           .insert({
-            numero_insight: payload.numeroInsight,
+            numero_insight_texto: payload.numeroInsight,
+            numero_insight: /^\d+$/.test(payload.numeroInsight)
+              ? parseInt(payload.numeroInsight, 10)
+              : null,
             data_insight: payload.dataInsight,
             divisao_id: payload.divisaoId,
             regional_id: payload.regionalId,
