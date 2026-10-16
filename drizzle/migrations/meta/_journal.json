@@ -36,6 +36,13 @@
       "when": 1792191102267,
       "tag": "0004_insights_numero_texto",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792191574564,
+      "tag": "0005_insights_numero_texto_nullable",
+      "breakpoints": true
     }
   ]
 }

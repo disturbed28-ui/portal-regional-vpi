@@ -1823,7 +1823,7 @@ export type Database = {
           data_insight: string
           divisao_id: string
           id: string
-          numero_insight: number
+          numero_insight: number | null
           numero_insight_texto: string
           regional_id: string | null
           responsavel_nome: string | null
@@ -1836,7 +1836,7 @@ export type Database = {
           data_insight: string
           divisao_id: string
           id?: string
-          numero_insight: number
+          numero_insight?: number | null
           numero_insight_texto: string
           regional_id?: string | null
           responsavel_nome?: string | null
@@ -1849,7 +1849,7 @@ export type Database = {
           data_insight?: string
           divisao_id?: string
           id?: string
-          numero_insight?: number
+          numero_insight?: number | null
           numero_insight_texto?: string
           regional_id?: string | null
           responsavel_nome?: string | null
