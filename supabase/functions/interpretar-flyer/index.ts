@@ -47,7 +47,7 @@ Regras:
   * "comando": o flyer cita "Comando Regional V", "Comando V", "CMD V", "CMD" ou Comando geral, sem regional nem divisao. "Comando Regional V" NAO e uma regional: e o COMANDO.
   * Nomes de cidades no endereco do local NAO definem divisao nem regional.
 - regional_sigla: VP1, VP2, VP3 ou LN quando o flyer citar a regional; "CMD" quando escopo = "comando". Aceite romanos ("Vale do Paraiba II" = VP2). Nunca deduza a regional pela cidade do local. null se nao identificavel.
-- divisao_nome: nome da divisao sem o prefixo "Divisao" (ex.: "São José dos Campos Sul", "Caçapava II", "Pindamonhangaba 3"). null se nao houver.
+- divisao_nome: nome da divisao sem o prefixo "Divisao" (ex.: "São José dos Campos Sul", "Caçapava II", "Pindamonhangaba 3"). Inclua SEMPRE a cidade quando o nome for generico: "Extremo Sul" sozinho e ambiguo (existe em Sao Jose dos Campos/VP1 e em Jacarei/VP3) — escreva "Jacarei Extremo Sul" ou "Sao Jose dos Campos Extremo Sul" conforme a cidade indicada no flyer. null se nao houver.
 - data_evento: formato YYYY-MM-DD. Se o flyer nao informar o ano, use o ANO CORRENTE informado no contexto. Formatos comuns: "14/11", "14 de novembro", "sab. 08/11".
 - dias_semana: se o evento se repete toda semana (ex.: "Segundas e Quartas", "toda sexta"), liste os dias com codigos MO,TU,WE,TH,FR,SA,SU. Caso seja data unica, null. Em eventos semanais sem data especifica, data_evento = null.
 - Nomes de RUAS/AVENIDAS (ex.: "Av. Heitor Villa Lobos") tambem NAO indicam time especial.
@@ -189,8 +189,18 @@ Deno.serve(async (req) => {
       const norm = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/\s+/g, ' ').trim();
       const alvo = norm(`DIVISAO ${resultado.divisao_nome.replace(/^divis[aã]o\s+/i, '')} - SP`);
       const { data: divs } = await supabaseAdmin.from('divisoes').select('nome, regionais(sigla)');
-      const achada = (divs || []).find((d: { nome: string }) => norm(d.nome) === alvo) as
+      let achada = (divs || []).find((d: { nome: string }) => norm(d.nome) === alvo) as
         { nome: string; regionais: { sigla: string } | null } | undefined;
+      // Sem match exato, tentar match parcial — so vale se for unico (nome generico
+      // como "Extremo Sul" existe em mais de uma regional e nao deve ser adivinhado)
+      if (!achada) {
+        const termo = norm(String(resultado.divisao_nome).replace(/^divis[aã]o\s+/i, ''));
+        const parciais = (divs || []).filter((d: { nome: string }) => {
+          const n = norm(d.nome).replace(/^DIVISAO\s+/, '').replace(/\s*-\s*SP\s*$/, '');
+          return n.includes(termo) || termo.includes(n);
+        });
+        if (parciais.length === 1) achada = parciais[0];
+      }
       const sigla = achada?.regionais?.sigla;
       if (sigla) {
         resultado.regional_sigla = sigla;
