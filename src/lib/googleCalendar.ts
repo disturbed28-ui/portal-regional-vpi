@@ -102,9 +102,12 @@ function sufixoOrdinalDivisao(texto: string): number {
 }
 
 // Fazer matching fuzzy de divisão com banco - retorna id E sigla da regional
-async function matchDivisaoToId(divisaoText: string): Promise<{ id: string | null; regionalSigla: string | null }> {
+// siglaHint: sigla detectada no título (VP1/VP2/VP3/LN) — desempata divisões homônimas
+// (ex.: "Extremo Sul" existe em SJC/VP1 e em Jacareí/VP3)
+async function matchDivisaoToId(divisaoText: string, siglaHint?: string | null): Promise<{ id: string | null; regionalSigla: string | null }> {
   const divisoes = await loadDivisoesCache();
   const normalizado = removeSpecialCharacters(divisaoText).toUpperCase();
+  const mencionaJacarei = /\bJAC\b|JACAREI/.test(normalizado);
   
   // CASO ESPECIAL: "Regional VP1/VP2/VP3/LN"
   const siglaMatch = normalizado.match(/^REGIONAL\s*(VP1|VP2|VP3|LN)$/i);
@@ -138,9 +141,17 @@ async function matchDivisaoToId(divisaoText: string): Promise<{ id: string | nul
   // Sufixo ordinal do texto buscado (ex.: CACAPAVA II => 2) para não confundir divisões homônimas
   const sufixoBuscado = sufixoOrdinalDivisao(normalizado);
 
-  // 2. Match por contains (respeitando o sufixo ordinal)
-  for (const div of divisoes) {
+  // Com sigla do título, priorizar divisões daquela regional (desempate de homônimas)
+  const candidatas = siglaHint
+    ? [...divisoes].sort((a, b) => Number(b.regionalSigla === siglaHint) - Number(a.regionalSigla === siglaHint))
+    : divisoes;
+
+  // 2. Match por contains (respeitando o sufixo ordinal e a cidade)
+  for (const div of candidatas) {
     if (sufixoOrdinalDivisao(div.normalizado) !== sufixoBuscado) continue;
+    // "Extremo Sul" de SJC não pode casar com texto que menciona Jacareí (e vice-versa)
+    const divEhJacarei = div.normalizado.includes('JACAREI');
+    if (divEhJacarei !== mencionaJacarei) continue;
     if (div.normalizado.includes(normalizado) || normalizado.includes(div.normalizado)) {
       return { id: div.id, regionalSigla: div.regionalSigla };
     }
@@ -158,15 +169,19 @@ async function matchDivisaoToId(divisaoText: string): Promise<{ id: string | nul
     'SAO JOSE DOS CAMPOS LESTE': ['SJC LESTE', 'SJCLESTE', 'LESTE SJC', 'DIV LESTE', 'SAO JOSE LESTE'],
     'SAO JOSE DOS CAMPOS NORTE': ['SJC NORTE', 'SJCNORTE', 'NORTE SJC', 'SAO JOSE NORTE'],
     'SAO JOSE DOS CAMPOS SUL': ['SJC SUL', 'SJCSUL', 'SUL SJC', 'SAO JOSE SUL'],
+    'JACAREI EXTREMO SUL': ['EXTREMO SUL JACAREI', 'EXT SUL JACAREI', 'EXT. SUL JACAREI', 'JAC EXTREMO SUL', 'JACAREI EXT SUL'],
     'SAO JOSE DOS CAMPOS EXTREMO SUL': ['EXT SUL', 'EXTSUL', 'EXT. SUL SJC', 'EXTREMO SUL', 'EXT. SUL'],
     'SAO JOSE DOS CAMPOS EXTREMO NORTE': ['EXT NORTE', 'EXTNORTE', 'EXT. NORTE SJC', 'EXTREMO NORTE', 'EXT. NORTE'],
     'SAO JOSE DOS CAMPOS EXTREMO LESTE': ['EXT LESTE', 'EXTLESTE', 'EXT. LESTE SJC', 'EXTREMO LESTE', 'EXT. LESTE'],
     'SAO JOSE DOS CAMPOS OESTE': ['SJC OESTE', 'SJCOESTE', 'OESTE SJC', 'OESTE SAO JOSE', 'SAO JOSE OESTE']
   };
   
-  for (const div of divisoes) {
+  for (const div of candidatas) {
     const divNormalizada = div.normalizado;
     if (sufixoOrdinalDivisao(divNormalizada) !== sufixoBuscado) continue;
+    // Mesma proteção de cidade do passo 2 (Extremo Sul SJC x Jacareí)
+    const divEhJacarei = divNormalizada.includes('JACAREI');
+    if (divEhJacarei !== mencionaJacarei) continue;
     for (const [key, patterns] of Object.entries(keywords)) {
       if (divNormalizada.includes(key)) {
         for (const pattern of patterns) {
@@ -511,7 +526,9 @@ async function detectDivisionFromTitle(title: string): Promise<string> {
   const temCentro = normalized.includes('centro');
   const temExtremo = normalized.includes('extremo') || normalized.includes('ext');
   
-  if (temExtremo && temSul) return 'Divisao Sao Jose dos Campos Extremo Sul - SP';
+  // Cidade manda: "Extremo Sul Jacareí" (VP3) não pode cair em SJC Extremo Sul (VP1)
+  if (temJac && temExtremo && temSul) return 'Divisao Jacarei Extremo Sul - SP';
+  if (!temJac && temExtremo && temSul) return 'Divisao Sao Jose dos Campos Extremo Sul - SP';
   if (temExtremo && temNorte) return 'Divisao Sao Jose dos Campos Extremo Norte - SP';
   if (temExtremo && temLeste) return 'Divisao Sao Jose dos Campos Extremo Leste - SP';
   
@@ -642,7 +659,8 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
         const googleStatus = item.status || 'confirmed';
         
         const components = await parseEventComponents(originalTitle);
-        const matchResult = await matchDivisaoToId(components.divisao);
+        const siglaTitulo = detectRegionalSiglaFromTitle(originalTitle);
+        const matchResult = await matchDivisaoToId(components.divisao, siglaTitulo);
         components.divisaoId = matchResult.id;
         
         if (components.isCaveira && components.regionalSigla) {

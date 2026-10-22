@@ -121,6 +121,22 @@ Deno.serve(async (req) => {
       if (divExistente) {
         divisaoId = divExistente.id;
       } else {
+        // Antes de criar, tentar match parcial dentro da regional escolhida
+        // (evita duplicar divisões quando o flyer traz o nome incompleto, ex.: "Extremo Sul")
+        const termo = normalizar(String(divisao_nome)).replace(/[%_,]/g, ' ').replace(/\s+/g, ' ').trim();
+        const { data: divsRegional } = await supabaseAdmin
+          .from('divisoes')
+          .select('id, nome, nome_ascii')
+          .eq('regional_id', regionalId);
+        const parcial = (divsRegional || []).find((d: { nome: string; nome_ascii: string | null }) => {
+          const n = normalizar(d.nome_ascii || d.nome);
+          return n.includes(termo) || termo.includes(n.replace(/^DIVISAO\s+/, '').replace(/\s*-\s*SP\s*$/, ''));
+        });
+        if (parcial) {
+          divisaoId = parcial.id;
+        }
+      }
+      if (!divisaoId) {
         const slug = nomeNorm.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
         const { data: novaDiv, error: divErr } = await supabaseAdmin
           .from('divisoes')
