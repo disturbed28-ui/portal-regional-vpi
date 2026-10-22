@@ -176,9 +176,12 @@ async function matchDivisaoToId(divisaoText: string, siglaHint?: string | null):
     'SAO JOSE DOS CAMPOS OESTE': ['SJC OESTE', 'SJCOESTE', 'OESTE SJC', 'OESTE SAO JOSE', 'SAO JOSE OESTE']
   };
   
-  for (const div of divisoes) {
+  for (const div of candidatas) {
     const divNormalizada = div.normalizado;
     if (sufixoOrdinalDivisao(divNormalizada) !== sufixoBuscado) continue;
+    // Mesma proteção de cidade do passo 2 (Extremo Sul SJC x Jacareí)
+    const divEhJacarei = divNormalizada.includes('JACAREI');
+    if (divEhJacarei !== mencionaJacarei) continue;
     for (const [key, patterns] of Object.entries(keywords)) {
       if (divNormalizada.includes(key)) {
         for (const pattern of patterns) {
