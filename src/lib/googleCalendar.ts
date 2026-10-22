@@ -511,7 +511,9 @@ async function detectDivisionFromTitle(title: string): Promise<string> {
   const temCentro = normalized.includes('centro');
   const temExtremo = normalized.includes('extremo') || normalized.includes('ext');
   
-  if (temExtremo && temSul) return 'Divisao Sao Jose dos Campos Extremo Sul - SP';
+  // Cidade manda: "Extremo Sul Jacareí" (VP3) não pode cair em SJC Extremo Sul (VP1)
+  if (temJac && temExtremo && temSul) return 'Divisao Jacarei Extremo Sul - SP';
+  if (!temJac && temExtremo && temSul) return 'Divisao Sao Jose dos Campos Extremo Sul - SP';
   if (temExtremo && temNorte) return 'Divisao Sao Jose dos Campos Extremo Norte - SP';
   if (temExtremo && temLeste) return 'Divisao Sao Jose dos Campos Extremo Leste - SP';
   
