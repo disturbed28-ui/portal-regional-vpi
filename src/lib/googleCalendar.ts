@@ -141,9 +141,17 @@ async function matchDivisaoToId(divisaoText: string, siglaHint?: string | null):
   // Sufixo ordinal do texto buscado (ex.: CACAPAVA II => 2) para não confundir divisões homônimas
   const sufixoBuscado = sufixoOrdinalDivisao(normalizado);
 
-  // 2. Match por contains (respeitando o sufixo ordinal)
-  for (const div of divisoes) {
+  // Com sigla do título, priorizar divisões daquela regional (desempate de homônimas)
+  const candidatas = siglaHint
+    ? [...divisoes].sort((a, b) => Number(b.regionalSigla === siglaHint) - Number(a.regionalSigla === siglaHint))
+    : divisoes;
+
+  // 2. Match por contains (respeitando o sufixo ordinal e a cidade)
+  for (const div of candidatas) {
     if (sufixoOrdinalDivisao(div.normalizado) !== sufixoBuscado) continue;
+    // "Extremo Sul" de SJC não pode casar com texto que menciona Jacareí (e vice-versa)
+    const divEhJacarei = div.normalizado.includes('JACAREI');
+    if (divEhJacarei !== mencionaJacarei) continue;
     if (div.normalizado.includes(normalizado) || normalizado.includes(div.normalizado)) {
       return { id: div.id, regionalSigla: div.regionalSigla };
     }
