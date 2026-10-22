@@ -659,7 +659,8 @@ export async function fetchCalendarEvents(): Promise<CalendarEvent[]> {
         const googleStatus = item.status || 'confirmed';
         
         const components = await parseEventComponents(originalTitle);
-        const matchResult = await matchDivisaoToId(components.divisao);
+        const siglaTitulo = detectRegionalSiglaFromTitle(originalTitle);
+        const matchResult = await matchDivisaoToId(components.divisao, siglaTitulo);
         components.divisaoId = matchResult.id;
         
         if (components.isCaveira && components.regionalSigla) {
