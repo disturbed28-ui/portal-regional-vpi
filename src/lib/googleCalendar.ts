@@ -102,9 +102,12 @@ function sufixoOrdinalDivisao(texto: string): number {
 }
 
 // Fazer matching fuzzy de divisão com banco - retorna id E sigla da regional
-async function matchDivisaoToId(divisaoText: string): Promise<{ id: string | null; regionalSigla: string | null }> {
+// siglaHint: sigla detectada no título (VP1/VP2/VP3/LN) — desempata divisões homônimas
+// (ex.: "Extremo Sul" existe em SJC/VP1 e em Jacareí/VP3)
+async function matchDivisaoToId(divisaoText: string, siglaHint?: string | null): Promise<{ id: string | null; regionalSigla: string | null }> {
   const divisoes = await loadDivisoesCache();
   const normalizado = removeSpecialCharacters(divisaoText).toUpperCase();
+  const mencionaJacarei = /\bJAC\b|JACAREI/.test(normalizado);
   
   // CASO ESPECIAL: "Regional VP1/VP2/VP3/LN"
   const siglaMatch = normalizado.match(/^REGIONAL\s*(VP1|VP2|VP3|LN)$/i);
