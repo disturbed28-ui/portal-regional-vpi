@@ -367,10 +367,11 @@ function ReportarBotao({ c, statusReportado, templateChave, label }: {
     status: STATUS_META[c.status].label,
     observacao: c.baixa_observacao || "—",
     data_contato: fmtData(c.contato_em) || "—",
+    expansao_nome: c.expansao_nome || "",
   };
   const corpo = tpl
     ? renderTemplate(tpl.corpo, payload)
-    : `Olá ${c.expansao_nome || ""}, o candidato ${c.nome_colete} (${c.nome_completo}) está com status: ${STATUS_META[c.status].label}.`;
+    : `Fala meu irmão ${c.expansao_nome || ""}, informo que o candidato ${c.nome_colete} (${c.nome_completo}) está com status: ${STATUS_META[c.status].label}.`;
 
   return (
     <BotaoEnviarWhatsApp
