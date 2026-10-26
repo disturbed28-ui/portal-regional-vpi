@@ -195,7 +195,21 @@ export function useEncerramentoTreinamento(userId: string | undefined) {
         };
       });
 
-      setTreinamentos(mapped);
+      // Do mais antigo ao mais novo: os treinamentos mais próximos do encerramento ficam no topo.
+      const inicioDe = (t: TreinamentoEncerramento) => {
+        const inicio = t.data_inicio_treinamento ? new Date(t.data_inicio_treinamento).getTime() : NaN;
+        return Number.isNaN(inicio) ? Number.MAX_SAFE_INTEGER : inicio;
+      };
+      const encerramentoDe = (t: TreinamentoEncerramento) => {
+        const fim = t.data_termino_previsto ? new Date(t.data_termino_previsto).getTime() : NaN;
+        return Number.isNaN(fim) ? inicioDe(t) : fim;
+      };
+
+      setTreinamentos(
+        [...mapped].sort(
+          (a, b) => encerramentoDe(a) - encerramentoDe(b) || inicioDe(a) - inicioDe(b)
+        )
+      );
     } catch (error) {
       console.error('Erro ao buscar treinamentos:', error);
     } finally {

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { eventosDaFrequencia, numeroOuPadrao, pesoDoEvento } from "@/lib/frequenciaEventos";
 
 interface FrequenciaParams {
   dataInicio: Date;
@@ -93,7 +94,7 @@ export const useFrequenciaPonderada = ({
       hoje.setHours(23, 59, 59, 999);
       const dataFimReal = dataFim > hoje ? hoje : dataFim;
       
-      const { data: eventos, error: eventosError } = await supabase
+      const { data: eventosBrutos, error: eventosError } = await supabase
         .from('eventos_agenda')
         .select(`
           id,
@@ -101,6 +102,7 @@ export const useFrequenciaPonderada = ({
           data_evento,
           divisao_id,
           regional_id,
+          tipo_evento,
           tipo_evento_peso
         `)
         .gte('data_evento', dataInicio.toISOString())
@@ -110,6 +112,9 @@ export const useFrequenciaPonderada = ({
         console.error('[useFrequenciaPonderada] Erro ao buscar eventos:', eventosError);
         throw eventosError;
       }
+
+      // Combate (Jiu-Jitsu / Defesa Pessoal) não entra no cálculo da frequência.
+      const eventos = eventosDaFrequencia(eventosBrutos);
 
       console.log('[useFrequenciaPonderada] Eventos encontrados:', eventos?.length);
       console.log('[useFrequenciaPonderada] IDs dos eventos:', eventos?.map(e => e.id));
@@ -276,7 +281,7 @@ export const useFrequenciaPonderada = ({
           return;
         }
 
-        const pesoEvento = pesosMap.get(evento.tipo_evento_peso || '') || 1;
+        const pesoEvento = pesoDoEvento(evento.tipo_evento_peso, pesosMap);
         
         let pesoPresenca = 1;
         let justificativaReal: string | null = null;
@@ -284,7 +289,7 @@ export const useFrequenciaPonderada = ({
         if (p.status === 'ausente') {
           // Mapear justificativa_ausencia para formato padronizado
           justificativaReal = mapearJustificativa(p.justificativa_ausencia, p.justificativa_tipo);
-          pesoPresenca = justificativasMap.get(justificativaReal) || 0.001;
+          pesoPresenca = numeroOuPadrao(justificativasMap.get(justificativaReal), 0.001);
         }
 
         const pontos = pesoEvento * pesoPresenca;

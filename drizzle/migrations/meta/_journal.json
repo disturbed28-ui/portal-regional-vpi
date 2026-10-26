@@ -50,6 +50,13 @@
       "when": 1792926404385,
       "tag": "0006_expansao_mensagens_fala_meu_irmao",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793043924730,
+      "tag": "0007_evento_tipo_peso_trigger",
+      "breakpoints": true
     }
   ]
 }
