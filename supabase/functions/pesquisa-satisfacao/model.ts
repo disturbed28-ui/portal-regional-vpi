@@ -1,22 +1,28 @@
 // @ts-expect-error Deno resolves npm specifiers; Bun tests alias this to the project dependency.
 import { z } from 'npm:zod@3.25.76';
 
+// Open questions shown in the form. Indexes 4 and 6 are optional.
 export const PERGUNTAS = [
   'Qual ou quais são seus objetivos dentro do INSANOS MC?',
   'O que te motiva a participar da divisão avaliada?',
-  'Qual o seu sentimento hoje a respeito da divisão avaliada?',
   'Quais os pontos negativos que você vê hoje na divisão avaliada?',
   'Quais os pontos positivos que você vê hoje na divisão avaliada?',
   'Como seria um motoclube ideal para você participar?',
   'Se você fosse o diretor dessa divisão, o que faria para melhorar?',
   'Observações gerais: o que gostaria de registrar para a melhoria contínua da divisão?',
 ];
-export const CABECALHO = ['Data/hora', 'Comando ID', 'Comando', 'Regional ID', 'Regional', 'Divisão ID', 'Divisão', 'Nota de satisfação (1-5)', ...PERGUNTAS];
+export const OPCIONAIS = [4, 6];
+// Sheet columns are fixed: the retired "sentimento" column (K) stays in place, left blank for new
+// answers, and the new scores are appended at Q-S so existing rows never shift.
+export const CABECALHO = ['Data/hora', 'Comando ID', 'Comando', 'Regional ID', 'Regional', 'Divisão ID', 'Divisão', 'Nota de satisfação (1-5)',
+  PERGUNTAS[0], PERGUNTAS[1], 'Qual o seu sentimento hoje a respeito da divisão avaliada?', PERGUNTAS[2], PERGUNTAS[3], PERGUNTAS[4], PERGUNTAS[5], PERGUNTAS[6],
+  'Nota de pertencimento (1-5)', 'Nota de liderança e comunicação (1-5)', 'Nota de atividades e integração (1-5)'];
+const nota = z.number().int().min(1).max(5);
 export const respostaSchema = z.object({
   comandoId: z.string().uuid(), regionalId: z.string().uuid(), divisaoId: z.string().uuid(),
-  nota: z.number().int().min(1).max(5),
-  respostas: z.array(z.string().max(5000).transform(s => s.trim())).length(8)
-    .refine(rs => rs.every((r, i) => i === 5 || r.length > 0), 'Preencha as perguntas obrigatórias.'),
+  nota, pertencimento: nota, lideranca: nota, atividades: nota,
+  respostas: z.array(z.string().max(5000).transform(s => s.trim())).length(7)
+    .refine(rs => rs.every((r, i) => OPCIONAIS.includes(i) || r.length > 0), 'Preencha as perguntas obrigatórias.'),
 }).strict();
 export interface Hierarquia {
   comandos: { id: string; nome: string }[];
@@ -42,6 +48,8 @@ export function linhaDaResposta(input: unknown, dados: Hierarquia, agora = new D
   if (!comando || !regional || !divisao) throw new Error('Seleção hierárquica inválida.');
   // Sheets dates are serials in the spreadsheet's local timezone (São Paulo).
   const data = (agora.getTime() - 3 * 3600000) / 86400000 + 25569;
+  const r = payload.respostas.map(t => /^[=+\-@]/.test(t) ? "'" + t : t);
   return [data, comando.id, comando.nome, regional.id, regional.nome, divisao.id, divisao.nome,
-    payload.nota, ...payload.respostas.map(r => /^[=+\-@]/.test(r) ? "'" + r : r)];
+    payload.nota, r[0], r[1], '', r[2], r[3], r[4], r[5], r[6],
+    payload.pertencimento, payload.lideranca, payload.atividades];
 }
