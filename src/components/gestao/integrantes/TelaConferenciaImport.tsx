@@ -25,6 +25,11 @@ import {
 import { LoteProcessamento, MotivoRemovido } from "@/hooks/useConsolidacaoIntegrantes";
 import { ExportarDadosProcessados } from "./ExportarDadosProcessados";
 import { ModalMotivoRemovido } from "./ModalMotivoRemovido";
+import { ModalNovasDivisoes } from "./ModalNovasDivisoes";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { detectarDivisoesNovas, type DivisaoNova, type RegionalBase } from "@/lib/estruturaNovasDivisoes";
+import { normalizarRegionalTexto } from "@/lib/normalizarTextoHierarquia";
 
 interface TelaConferenciaImportProps {
   lote: LoteProcessamento;
@@ -57,6 +62,77 @@ export function TelaConferenciaImport({
 }: TelaConferenciaImportProps) {
   const [modalMotivoAberto, setModalMotivoAberto] = useState(false);
   const [removidoSelecionado, setRemovidoSelecionado] = useState<any>(null);
+  const [pendentesDiv, setPendentesDiv] = useState<DivisaoNova[]>([]);
+  const [regionaisBase, setRegionaisBase] = useState<RegionalBase[]>([]);
+  const [preparando, setPreparando] = useState(false);
+
+  const criarDivisoes = async (lista: DivisaoNova[]) => {
+    for (const d of lista) {
+      let regionalId = d.regional_id;
+      if (!regionalId && d.criarRegional && d.comando_id) {
+        const { data, error } = await supabase.from("regionais")
+          .insert({ nome: normalizarRegionalTexto(d.regionalTexto), comando_id: d.comando_id })
+          .select("id").single();
+        if (error) throw error;
+        regionalId = data.id;
+      }
+      if (!regionalId) continue;
+      const { error } = await supabase.from("divisoes").insert({ nome: d.divisao, regional_id: regionalId });
+      if (error) throw error;
+    }
+  };
+
+  const executarComEstrutura = async () => {
+    if (lote.modoSimulacao || !lote.delta) return onExecutarImportacao();
+    setPreparando(true);
+    try {
+      const d: any = lote.delta;
+      const linhas = [
+        ...d.novos.filter((n: any) => lote.selecao.novos.has(n.id_integrante)),
+        ...d.atualizados.filter((a: any) => lote.selecao.atualizados.has(a.antigo.id)).map((a: any) => a.novo),
+        ...(d.reativados || []).filter((r: any) => lote.selecao.atualizados.has(r.antigo.id)).map((r: any) => r.novo),
+      ];
+      const [{ data: divs }, { data: regs }, { data: cmds }] = await Promise.all([
+        supabase.from("divisoes").select("id,nome"),
+        supabase.from("regionais").select("id,nome,sigla,comando_id").order("nome"),
+        supabase.from("comandos").select("id,nome"),
+      ]);
+      const novas = detectarDivisoesNovas(linhas, divs || [], regs || [], cmds || []);
+      const automaticas = novas.filter((n) => n.regional_id || n.criarRegional);
+      const manuais = novas.filter((n) => !n.regional_id && !n.criarRegional);
+      await criarDivisoes(automaticas);
+      if (automaticas.length) {
+        toast.success(`${automaticas.length} divisão(ões) nova(s) criada(s): ${automaticas.map((a) => a.divisao).join(", ")}`, { duration: 6000, dismissible: false });
+      }
+      if (manuais.length) {
+        setRegionaisBase(regs || []);
+        setPendentesDiv(manuais);
+        return;
+      }
+      await onExecutarImportacao();
+    } catch (e: any) {
+      console.error("criar divisões da carga", e);
+      toast.error("Não foi possível criar as divisões novas", { duration: 6000, dismissible: false });
+    } finally {
+      setPreparando(false);
+    }
+  };
+
+  const confirmarManuais = async (escolhas: Record<string, string>) => {
+    const lista = pendentesDiv.map((p) => ({ ...p, regional_id: escolhas[p.divisao] }));
+    setPendentesDiv([]);
+    setPreparando(true);
+    try {
+      await criarDivisoes(lista);
+      toast.success(`${lista.length} divisão(ões) criada(s)`, { duration: 6000, dismissible: false });
+      await onExecutarImportacao();
+    } catch (e) {
+      console.error(e);
+      toast.error("Não foi possível criar as divisões novas", { duration: 6000, dismissible: false });
+    } finally {
+      setPreparando(false);
+    }
+  };
   
   const delta = lote.delta;
   const consolidacao = lote.consolidacao;
