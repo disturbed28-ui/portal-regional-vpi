@@ -1,3 +1,4 @@
+// @ts-expect-error bun test runtime
 import { describe, expect, test } from "bun:test";
 import { detectarDivisoesNovas } from "./estruturaNovasDivisoes";
 
