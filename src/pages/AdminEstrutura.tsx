@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { SincronizarPlanilhaEstrutura } from "@/components/admin/SincronizarPlanilhaEstrutura";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -272,6 +273,8 @@ const AdminEstrutura = () => {
             <p className="text-sm text-muted-foreground">Gerencie comandos, regionais e divisões</p>
           </div>
         </div>
+
+        <SincronizarPlanilhaEstrutura />
 
         <Tabs defaultValue="comandos" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
