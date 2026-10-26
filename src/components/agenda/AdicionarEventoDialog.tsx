@@ -59,7 +59,7 @@ interface Props {
 
 type Etapa = "entrada" | "revisao" | "sucesso";
 
-const TIPOS = ["Reunião", "Pub", "Ação Social", "Bonde Insano", "Bate e Volta", "Combate"];
+const TIPOS = ["Reunião", "Pub", "Ação Social", "Bonde Insano", "Bate e Volta", "Combate", "Coletamento", "Graduação"];
 const TIMES = [
   { value: "nenhum", label: "Nenhum (agenda regional)" },
   { value: "caveira", label: "Caveira" },

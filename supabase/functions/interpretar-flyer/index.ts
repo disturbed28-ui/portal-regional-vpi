@@ -39,7 +39,7 @@ Regras:
 - Se o conteudo NAO for um evento (aniversario, aviso, homenagem, etc.), responda {"eh_evento": false}.
 - Se for evento, responda {"eh_evento": true, ...campos abaixo}.
 - Ignore rodape institucional (nomes de comando, frases de lema, enderecos de sede).
-- tipos validos: "Reunião", "Pub", "Ação Social", "Bonde Insano", "Bate e Volta", "Combate". "Combate" = treino de luta (Combate Insano, Jiu-Jitsu, Defesa Pessoal). Arrecadação e Doação de Sangue sao "Ação Social".
+- tipos validos: "Reunião", "Pub", "Ação Social", "Bonde Insano", "Bate e Volta", "Combate", "Coletamento", "Graduação". "Coletamento" = entrega de coletes (semestral, comemoracao). "Graduação" = cerimonia/comemoracao de graduacao de integrantes. Use esses dois mesmo que o flyer tambem fale em pub/festa. "Combate" = treino de luta (Combate Insano, Jiu-Jitsu, Defesa Pessoal). Arrecadação e Doação de Sangue sao "Ação Social".
 - times especiais: se o texto mencionar Caveira, Lobo ou Urso/Ursinho (ex.: "Caveiras VP1", "Reunião Lobo"), preencha time_especial com "caveira", "lobo" ou "ursinho". Caso contrario null. ATENCAO: nomes de LOCAL (ex.: "Garagem do Lobo", "Bar do Urso", "Rancho Caveira") NAO indicam time especial; so preencha quando o texto falar do time/grupo (ex.: "Reunião dos Lobos", "Caveiras VP1").
 - escopo (regra de hierarquia, siga estritamente):
   * "divisao": o flyer cita uma divisao especifica.

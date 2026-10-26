@@ -249,6 +249,8 @@ function detectRegionalSiglaFromTitle(title: string): string | null {
 
 // Padrões do tipo de evento que devem sair do texto residual
 const TIPO_REGEX: Record<string, RegExp[]> = {
+  'Coletamento': [/\bCOLETAMENTOS?\b/g, /\bENTREGA\s+DE\s+COLETES?\b/g],
+  'Graduacao': [/\bGRADUACAO\b/g, /\bGRADUACOES\b/g],
   'PUB': [/\bPUBS?\b/g],
   'Acao Social': [/\bACAO\s+SOCIAL\b/g, /\bACOES\s+SOCIAIS\b/g, /\bARRECADACAO\b/g],
   'Reuniao': [/\bREUNIAO\b/g, /\bREUNIOES\b/g, /\bBATE[-\s]?PAPO\b/g],
@@ -434,6 +436,10 @@ async function parseEventComponents(originalTitle: string): Promise<ParsedEvent>
     tipoEvento = 'Caveira';
   } else if (/\b(combate|jiu[\s-]?jitsu|defesa pessoal)\b/.test(lower)) {
     tipoEvento = 'Combate';
+  } else if (/\bcoletamentos?\b/.test(lower) || /entrega de coletes?/.test(lower)) {
+    tipoEvento = 'Coletamento';
+  } else if (/\bgraduac(ao|oes)\b/.test(lower)) {
+    tipoEvento = 'Graduacao';
   } else if (lower.includes('pub')) {
     tipoEvento = 'PUB';
   } else if (lower.includes('acao social') || lower.includes('arrecadacao')) {
