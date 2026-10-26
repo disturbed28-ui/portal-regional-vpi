@@ -634,11 +634,11 @@ export function TelaConferenciaImport({
         ) : (
           <Button
             className="w-full"
-            onClick={onExecutarImportacao}
-            disabled={!podeConfirmar}
+            onClick={executarComEstrutura}
+            disabled={!podeConfirmar || preparando}
             variant={lote.modoSimulacao ? "secondary" : "default"}
           >
-            {loading ? (
+            {loading || preparando ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
                 Processando...
@@ -663,6 +663,14 @@ export function TelaConferenciaImport({
           </p>
         )}
       </div>
+
+      <ModalNovasDivisoes
+        open={pendentesDiv.length > 0}
+        pendentes={pendentesDiv}
+        regionais={regionaisBase}
+        onCancelar={() => setPendentesDiv([])}
+        onConfirmar={confirmarManuais}
+      />
 
       {/* Modal de Motivo */}
       {removidoSelecionado && (
