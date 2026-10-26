@@ -1,3 +1,4 @@
+// @ts-expect-error Deno resolves npm specifiers; Bun tests alias this to the project dependency.
 import { z } from 'npm:zod@3.25.76';
 
 export const PERGUNTAS = [

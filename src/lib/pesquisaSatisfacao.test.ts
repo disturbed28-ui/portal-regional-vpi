@@ -1,3 +1,4 @@
+// @ts-expect-error bun test runtime
 import { describe, test, expect, mock } from 'bun:test';
 import * as zod from 'zod';
 mock.module('npm:zod@3.25.76', () => zod);
