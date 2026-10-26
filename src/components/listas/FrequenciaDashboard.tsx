@@ -12,6 +12,7 @@ import { ptBR } from "date-fns/locale";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { getNivelAcesso } from "@/lib/grauUtils";
 import { useDivisoesPorRegional } from "@/hooks/useDivisoesPorRegional";
+import { eventosDaFrequencia, pesoDoEvento } from "@/lib/frequenciaEventos";
 
 interface FrequenciaDashboardProps {
   grau?: string | null;
@@ -110,6 +111,7 @@ export const FrequenciaDashboard = ({ grau, regionalId, divisaoId, isAdmin = fal
           titulo,
           data_evento,
           divisao_id,
+          tipo_evento,
           tipo_evento_peso,
           divisoes(nome),
           presencas(
@@ -143,7 +145,8 @@ export const FrequenciaDashboard = ({ grau, regionalId, divisaoId, isAdmin = fal
       const { data, error } = await query;
       
       if (error) throw error;
-      return data;
+      // Combate (Jiu-Jitsu / Defesa Pessoal) não entra no cálculo da frequência.
+      return eventosDaFrequencia(data);
     },
     enabled: nivelAcesso === 'comando' || divisaoIdsDaRegional.length > 0 || !!divisaoId
   });
@@ -202,7 +205,7 @@ export const FrequenciaDashboard = ({ grau, regionalId, divisaoId, isAdmin = fal
       const mesAno = format(new Date(evento.data_evento), 'MMM/yyyy', { locale: ptBR });
       
       // Peso do tipo de evento (default 1 se não configurado)
-      const pesoEvento = pesosEvento[evento.tipo_evento_peso || ''] || 1;
+      const pesoEvento = pesoDoEvento(evento.tipo_evento_peso, pesosEvento);
 
       if (!eventosPorMes[mesAno]) {
         eventosPorMes[mesAno] = { presentes: 0, injustificados: 0, justificados: 0 };
