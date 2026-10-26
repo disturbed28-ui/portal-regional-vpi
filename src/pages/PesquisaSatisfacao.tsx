@@ -20,15 +20,22 @@ async function chamar(payload?: unknown): Promise<any> {
   if (!res.ok) throw new Error(data.error || 'Não foi possível acessar a pesquisa.');
   return data;
 }
-const notas = ['Muito insatisfeito', 'Insatisfeito', 'Neutro', 'Satisfeito', 'Muito satisfeito'];
-const rostos = ['😞', '🙁', '😐', '🙂', '😄'];
+const OPCIONAIS = [4, 6];
+const ruimExcelente = ['Muito ruim', 'Ruim', 'Regular', 'Boa', 'Excelente'];
+const ESCALAS = [
+  { key: 'nota', titulo: 'De modo geral, qual é o seu nível de satisfação com a divisão que você está avaliando?', rotulos: ['Muito insatisfeito', 'Insatisfeito', 'Neutro', 'Satisfeito', 'Muito satisfeito'] },
+  { key: 'pertencimento', titulo: 'Quanto você se sente acolhido, valorizado e parte da divisão que está avaliando?', rotulos: ['Nada', 'Pouco', 'Moderadamente', 'Muito', 'Totalmente'] },
+  { key: 'lideranca', titulo: 'Como você avalia a atuação da diretoria da divisão em relação à comunicação, organização e atenção aos integrantes?', rotulos: ruimExcelente },
+  { key: 'atividades', titulo: 'Como você avalia as oportunidades de participação em rolês, encontros e atividades promovidas pela divisão?', rotulos: ruimExcelente },
+] as const;
+type Chave = typeof ESCALAS[number]['key'];
 
 export default function PesquisaSatisfacao() {
   const [dados, setDados] = useState<Dados>();
   const [comando, setComando] = useState('');
   const [regional, setRegional] = useState('');
   const [divisao, setDivisao] = useState('');
-  const [nota, setNota] = useState('');
+  const [notas, setNotas] = useState<Record<Chave, string>>({ nota: '', pertencimento: '', lideranca: '', atividades: '' });
   const [respostas, setRespostas] = useState<string[]>([]);
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -47,12 +54,16 @@ export default function PesquisaSatisfacao() {
   async function enviar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (enviando || enviado || !dados) return;
-    if (respostas.some((r, i) => i !== 5 && !r.trim())) {
+    if (respostas.some((r, i) => !OPCIONAIS.includes(i) && !r.trim())) {
       setErro('Preencha as perguntas obrigatórias.'); return;
     }
     setEnviando(true); setErro('');
     try {
-      const result = await chamar({ comandoId: comando, regionalId: regional, divisaoId: divisao, nota: Number(nota), respostas });
+      const result = await chamar({
+        comandoId: comando, regionalId: regional, divisaoId: divisao,
+        nota: Number(notas.nota), pertencimento: Number(notas.pertencimento), lideranca: Number(notas.lideranca), atividades: Number(notas.atividades),
+        respostas,
+      });
       if (result.ok !== true) throw new Error('Não foi possível confirmar o envio.');
       setEnviado(true);
     } catch (e) { setErro(e instanceof Error ? e.message : 'Não foi possível enviar.'); }
@@ -62,35 +73,43 @@ export default function PesquisaSatisfacao() {
     <section className="pesquisa-panel">
       <h1>Pesquisa de Satisfação Interna</h1>
       <p className="pesquisa-muted">Sua opinião contribui para melhorar nossas divisões. Responda com sinceridade.</p>
-      <div className="pesquisa-notice"><strong>Pesquisa anônima.</strong> Não solicitamos nome, nome de colete, ID ou e-mail. O formulário não envia informações de identificação do integrante junto às respostas.</div>
+      <div className="pesquisa-notice">Esta pesquisa é anônima. Para preservar o anonimato de todos, evite mencionar nomes ou informações que identifiquem pessoas nas respostas.</div>
     </section>
-    {dados && !enviado && <form className="pesquisa-panel" onSubmit={enviar}>
+    {dados && !enviado && <form onSubmit={enviar}>
       <fieldset disabled={enviando}>
-        <h2>Selecione a divisão avaliada</h2>
-        <label htmlFor="pesquisa-comando">Comando <span className="pesquisa-req">*</span></label>
-        <select id="pesquisa-comando" required value={comando} onChange={e => { setComando(e.target.value); setRegional(''); setDivisao(''); }}>
-          <option value="">Selecione o comando</option>{dados.comandos.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-        </select>
-        <label htmlFor="pesquisa-regional">Regional <span className="pesquisa-req">*</span></label>
-        <select id="pesquisa-regional" required disabled={!comando || enviando} value={regional} onChange={e => { setRegional(e.target.value); setDivisao(''); }}>
-          <option value="">Selecione a regional</option>{dados.regionais.filter(r => r.comandoId === comando).map(r => <option key={r.id} value={r.id}>{r.nome}</option>)}
-        </select>
-        <label htmlFor="pesquisa-divisao">Divisão <span className="pesquisa-req">*</span></label>
-        <select id="pesquisa-divisao" required disabled={!regional || enviando} value={divisao} onChange={e => setDivisao(e.target.value)}>
-          <option value="">Selecione a divisão</option>{dados.divisoes.filter(d => d.regionalId === regional).map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
-        </select>
-        <fieldset className="pesquisa-rating">
-          <legend>De modo geral, qual é o seu nível de satisfação com a divisão avaliada? <span className="pesquisa-req">*</span></legend>
-          <div className="pesquisa-notas">{notas.map((n, i) => <label key={n}>
-            <input type="radio" name="nota" required value={i + 1} checked={nota === String(i + 1)} onChange={e => setNota(e.target.value)} />
-            <span>{i + 1} {rostos[i]}</span><span>{n}</span>
-          </label>)}</div>
-        </fieldset>
-        {dados.perguntas.map((q, i) => <div key={q}>
-          <label htmlFor={`pesquisa-q${i}`}>{i + 1}. {q}{i !== 5 && <span className="pesquisa-req"> *</span>}</label>
-          <textarea id={`pesquisa-q${i}`} required={i !== 5} maxLength={5000} value={respostas[i] || ''} onChange={e => setRespostas(rs => rs.map((r, j) => i === j ? e.target.value : r))} />
-        </div>)}
-        <Button className="pesquisa-enviar" type="submit" disabled={enviando}>{enviando ? 'Enviando...' : 'Enviar avaliação anônima'}</Button>
+        <section className="pesquisa-panel">
+          <h2>Divisão avaliada</h2>
+          <label htmlFor="pesquisa-comando">Comando <span className="pesquisa-req">*</span></label>
+          <select id="pesquisa-comando" required value={comando} onChange={e => { setComando(e.target.value); setRegional(''); setDivisao(''); }}>
+            <option value="">Selecione o comando</option>{dados.comandos.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+          </select>
+          <label htmlFor="pesquisa-regional">Regional <span className="pesquisa-req">*</span></label>
+          <select id="pesquisa-regional" required disabled={!comando || enviando} value={regional} onChange={e => { setRegional(e.target.value); setDivisao(''); }}>
+            <option value="">Selecione a regional</option>{dados.regionais.filter(r => r.comandoId === comando).map(r => <option key={r.id} value={r.id}>{r.nome}</option>)}
+          </select>
+          <label htmlFor="pesquisa-divisao">Divisão <span className="pesquisa-req">*</span></label>
+          <select id="pesquisa-divisao" required disabled={!regional || enviando} value={divisao} onChange={e => setDivisao(e.target.value)}>
+            <option value="">Selecione a divisão</option>{dados.divisoes.filter(d => d.regionalId === regional).map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
+          </select>
+        </section>
+        <section className="pesquisa-panel">
+          <h2>Avaliação (1 a 5)</h2>
+          {ESCALAS.map((esc, n) => <fieldset key={esc.key} className="pesquisa-rating">
+            <legend>{n + 1}. {esc.titulo} <span className="pesquisa-req">*</span></legend>
+            <div className="pesquisa-notas">{esc.rotulos.map((rot, i) => <label key={rot}>
+              <input type="radio" name={esc.key} required value={i + 1} checked={notas[esc.key] === String(i + 1)} onChange={e => setNotas(s => ({ ...s, [esc.key]: e.target.value }))} />
+              <strong>{i + 1}</strong><span>{rot}</span>
+            </label>)}</div>
+          </fieldset>)}
+        </section>
+        <section className="pesquisa-panel">
+          <h2>Respostas abertas</h2>
+          {dados.perguntas.map((q, i) => <div key={q}>
+            <label htmlFor={`pesquisa-q${i}`}>{i + 1}. {q}{OPCIONAIS.includes(i) ? <span className="pesquisa-opc"> (opcional)</span> : <span className="pesquisa-req"> *</span>}</label>
+            <textarea id={`pesquisa-q${i}`} required={!OPCIONAIS.includes(i)} maxLength={5000} value={respostas[i] || ''} onChange={e => setRespostas(rs => rs.map((r, j) => i === j ? e.target.value : r))} />
+          </div>)}
+          <Button className="pesquisa-enviar" type="submit" disabled={enviando}>{enviando ? 'Enviando...' : 'Enviar avaliação anônima'}</Button>
+        </section>
       </fieldset>
     </form>}
     {enviado && <section className="pesquisa-panel pesquisa-success" role="status">Avaliação enviada. Obrigado pela contribuição!</section>}

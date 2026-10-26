@@ -1,36 +1,42 @@
+/* Uses the portal's own color tokens (index.css); only survey-specific accents are defined here. */
 .pesquisa-satisfacao {
-  --background: 216 29% 97%; --foreground: 214 33% 17%;
-  --card: 0 0% 100%; --card-foreground: 214 33% 17%;
-  --primary: 216 58% 21%; --primary-foreground: 0 0% 100%;
-  --muted-foreground: 214 15% 38%; --border: 218 17% 82%;
-  --ring: 216 58% 21%; --survey-notice: 217 100% 96%;
-  --survey-notice-border: 213 56% 44%; --survey-error: 4 74% 40%;
-  --survey-success: 162 90% 24%; --survey-shadow: 217 54% 11% / .07;
+  --survey-notice: 217 33% 20%; --survey-error: 0 84% 65%; --survey-success: 142 70% 55%;
   background: hsl(var(--background)); color: hsl(var(--foreground));
-  font-family: Arial, sans-serif; min-height: 100dvh; padding: 22px 12px;
-  overflow-wrap: anywhere; letter-spacing: 0;
+  min-height: 100dvh; padding: 12px 8px 32px; overflow-wrap: anywhere; overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
 }
-.pesquisa-wrap { max-width: 700px; margin: auto; min-width: 0; }
-.pesquisa-panel { background: hsl(var(--card)); border-radius: 14px; padding: 24px; margin-bottom: 16px; box-shadow: 0 2px 12px hsl(var(--survey-shadow)); }
-.pesquisa-satisfacao h1 { font-size: 24px; font-weight: 700; margin: 0 0 12px; line-height: 1.25; }
-.pesquisa-satisfacao h2 { font-size: 24px; font-weight: 700; margin: 0 0 16px; line-height: 1.25; }
-.pesquisa-muted { color: hsl(var(--muted-foreground)); line-height: 1.55; margin: 0 0 16px; }
-.pesquisa-notice { background: hsl(var(--survey-notice)); border-left: 4px solid hsl(var(--survey-notice-border)); padding: 14px; border-radius: 6px; line-height: 1.5; }
-.pesquisa-satisfacao label { display: block; font-weight: 600; margin: 18px 0 8px; }
-.pesquisa-satisfacao select, .pesquisa-satisfacao textarea { width: 100%; max-width: 100%; min-width: 0; padding: 12px; border: 1px solid hsl(var(--border)); border-radius: 8px; font: inherit; font-size: 16px; background: hsl(var(--card)); color: hsl(var(--foreground)); }
-.pesquisa-satisfacao select { text-overflow: ellipsis; }
-.pesquisa-satisfacao textarea { min-height: 90px; resize: vertical; }
+.pesquisa-satisfacao *, .pesquisa-satisfacao *::before, .pesquisa-satisfacao *::after { box-sizing: border-box; }
+.pesquisa-wrap { width: 100%; max-width: 680px; margin: 0 auto; min-width: 0; }
+.pesquisa-panel { background: hsl(var(--card)); color: hsl(var(--card-foreground)); border: 1px solid hsl(var(--border)); border-radius: 12px; padding: 16px 14px; margin-bottom: 12px; }
+.pesquisa-satisfacao h1 { font-size: 20px; font-weight: 700; margin: 0 0 8px; line-height: 1.25; }
+.pesquisa-satisfacao h2 { font-size: 17px; font-weight: 700; margin: 0 0 4px; line-height: 1.3; }
+.pesquisa-muted { color: hsl(var(--muted-foreground)); font-size: 14px; line-height: 1.5; margin: 0 0 12px; }
+.pesquisa-notice { background: hsl(var(--survey-notice)); border-left: 3px solid hsl(var(--primary)); color: hsl(var(--muted-foreground)); padding: 10px 12px; border-radius: 6px; font-size: 13px; line-height: 1.45; }
+.pesquisa-satisfacao label { display: block; font-weight: 600; font-size: 15px; line-height: 1.4; margin: 14px 0 6px; }
+.pesquisa-satisfacao select, .pesquisa-satisfacao textarea { display: block; width: 100%; max-width: 100%; min-width: 0; padding: 10px 12px; border: 1px solid hsl(var(--border)); border-radius: 8px; font: inherit; font-size: 16px; background: hsl(var(--input)); color: hsl(var(--foreground)); }
+.pesquisa-satisfacao select:disabled { opacity: .5; }
+.pesquisa-satisfacao select { text-overflow: ellipsis; min-height: 44px; }
+.pesquisa-satisfacao textarea { min-height: 80px; resize: vertical; }
+.pesquisa-satisfacao select:focus, .pesquisa-satisfacao textarea:focus { outline: 2px solid hsl(var(--primary)); outline-offset: 1px; }
 .pesquisa-satisfacao fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
-.pesquisa-satisfacao .pesquisa-rating { margin-top: 18px; }
-.pesquisa-rating legend { font-weight: 600; margin-bottom: 8px; }
-.pesquisa-notas { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
-.pesquisa-notas label { margin: 0; cursor: pointer; text-align: center; border: 1px solid hsl(var(--border)); border-radius: 8px; padding: 12px 5px; font-weight: normal; line-height: 1.35; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.pesquisa-notas input { display: block; margin: 0 auto 2px; accent-color: hsl(var(--primary)); width: 18px; height: 18px; }
-.pesquisa-notas label:has(input:checked) { border-color: hsl(var(--primary)); box-shadow: inset 0 0 0 1px hsl(var(--primary)); background: hsl(var(--survey-notice)); }
-.pesquisa-satisfacao .pesquisa-enviar { margin-top: 20px; width: 100%; height: auto; min-height: 48px; padding: 14px 20px; font-size: 16px; font-weight: 700; white-space: normal; }
+.pesquisa-satisfacao .pesquisa-rating { margin-top: 16px; }
+.pesquisa-rating legend { font-weight: 600; font-size: 15px; line-height: 1.4; margin-bottom: 8px; padding: 0; }
+.pesquisa-notas { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+.pesquisa-satisfacao .pesquisa-notas label { margin: 0; cursor: pointer; text-align: center; border: 1px solid hsl(var(--border)); border-radius: 8px; padding: 8px 2px; font-weight: normal; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; min-height: 60px; background: hsl(var(--input)); }
+.pesquisa-notas input { position: absolute; opacity: 0; pointer-events: none; }
+.pesquisa-notas strong { font-size: 18px; line-height: 1.1; }
+.pesquisa-notas span { font-size: 10.5px; line-height: 1.15; color: hsl(var(--muted-foreground)); overflow-wrap: normal; word-break: break-word; hyphens: auto; }
+.pesquisa-notas label:has(input:checked) { border-color: hsl(var(--primary)); background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+.pesquisa-notas label:has(input:checked) span { color: hsl(var(--primary-foreground)); }
+.pesquisa-notas label:has(input:focus-visible) { outline: 2px solid hsl(var(--primary)); outline-offset: 2px; }
+.pesquisa-satisfacao .pesquisa-enviar { margin-top: 18px; width: 100%; height: auto; min-height: 48px; padding: 12px 16px; font-size: 16px; font-weight: 700; white-space: normal; }
 .pesquisa-error, .pesquisa-req { color: hsl(var(--survey-error)); }
+.pesquisa-opc { color: hsl(var(--muted-foreground)); font-weight: normal; font-size: 13px; }
 .pesquisa-success { color: hsl(var(--survey-success)); font-weight: bold; }
-@media (max-width: 480px) {
-  .pesquisa-panel { padding: 20px 16px; }
-  .pesquisa-notas { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (min-width: 640px) {
+  .pesquisa-satisfacao { padding: 28px 16px 40px; }
+  .pesquisa-panel { padding: 24px; margin-bottom: 16px; }
+  .pesquisa-satisfacao h1 { font-size: 24px; }
+  .pesquisa-notas { gap: 8px; }
+  .pesquisa-notas span { font-size: 12px; }
 }

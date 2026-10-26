@@ -53,14 +53,14 @@ Deno.serve(async req => {
     let input: unknown;
     try { input = JSON.parse(text); } catch { return json({ error: 'Dados inválidos.' }, 400); }
     const parsed = respostaSchema.safeParse(input);
-    if (!parsed.success) return json({ error: 'Verifique a divisão, a nota de 1 a 5 e as perguntas obrigatórias (até 5000 caracteres).' }, 400);
+    if (!parsed.success) return json({ error: 'Verifique a divisão, as quatro notas de 1 a 5 e as perguntas obrigatórias (até 5000 caracteres).' }, 400);
     const dados = await estrutura();
     let linha: ReturnType<typeof linhaDaResposta>;
     try { linha = linhaDaResposta(parsed.data, dados); } catch { return json({ error: 'Seleção hierárquica inválida.' }, 400); }
     // Fail closed rather than creating or changing the existing spreadsheet structure.
-    const header = await gateway(`/spreadsheets/${RESPOSTAS_ID}/values/${ABA}!A1:P1`);
+    const header = await gateway(`/spreadsheets/${RESPOSTAS_ID}/values/${ABA}!A1:S1`);
     if (JSON.stringify(header.values?.[0]) !== JSON.stringify(CABECALHO)) return json({ error: 'A estrutura da planilha não corresponde à pesquisa. Nenhuma resposta foi gravada.' }, 409);
-    const result = await gateway(`/spreadsheets/${RESPOSTAS_ID}/values/${ABA}!A:P:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
+    const result = await gateway(`/spreadsheets/${RESPOSTAS_ID}/values/${ABA}!A:S:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
       method: 'POST', body: JSON.stringify({ values: [linha] }),
     });
     if (result.updates?.updatedRows !== 1) return json({ error: 'Não foi possível confirmar o envio. Não reenvie antes de verificar.' }, 502);
