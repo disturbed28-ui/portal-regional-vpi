@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'npm:zod@3.25.76';
 
 export const PERGUNTAS = [
   'Qual ou quais são seus objetivos dentro do INSANOS MC?',

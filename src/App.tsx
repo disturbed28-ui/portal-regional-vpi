@@ -45,6 +45,7 @@ import Instalar from "./pages/Instalar";
 import ControleInsights from "./pages/ControleInsights";
 import ProtocoloViagem from "./pages/ProtocoloViagem";
 import ProcessoDisciplinar from "./pages/ProcessoDisciplinar";
+import PesquisaSatisfacao from "./pages/PesquisaSatisfacao";
 
 const queryClient = new QueryClient();
 
@@ -53,8 +54,10 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <AuthProvider>
-        <BrowserRouter>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/pesquisa-satisfacao" element={<PesquisaSatisfacao />} />
+          <Route path="*" element={<AuthProvider>
           <AccessLogProvider>
             <AutoImportProvider>
               <InstagramGuard>
@@ -101,8 +104,9 @@ const App = () => (
               </InstagramGuard>
             </AutoImportProvider>
           </AccessLogProvider>
-        </BrowserRouter>
-      </AuthProvider>
+          </AuthProvider>} />
+        </Routes>
+      </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );
