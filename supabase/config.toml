@@ -77,3 +77,6 @@ verify_jwt = false
 
 [functions.flyer]
 verify_jwt = false
+
+[functions.sync-estrutura-sheets]
+verify_jwt = false
