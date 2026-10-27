@@ -3,7 +3,8 @@ import { CABECALHO, hierarquiaDasAbas, linhaDaResposta, respostaSchema, type Hie
 
 const GATEWAY = 'https://connector-gateway.lovable.dev/google_sheets/v4';
 const ESTRUTURA_ID = '1zCMp1nWkqDITH6jpytZdiyB4DxtosDJXCASLcllKSJ8';
-const RESPOSTAS_ID = '1MnmWc8Y0Vnnyg3iTkpO0cbQdM3AG7ysDVvxEC2TrZlk';
+// Mutável: se a planilha de respostas for apagada, uma nova é criada e o ID passa a valer nesta instância.
+let respostasId = '1MnmWc8Y0Vnnyg3iTkpO0cbQdM3AG7ysDVvxEC2TrZlk';
 const ABA = "'Respostas Pesquisa'";
 let cache: { dados: Hierarquia; ate: number } | undefined;
 let carregando: Promise<Hierarquia> | undefined;
@@ -57,10 +58,28 @@ Deno.serve(async req => {
     const dados = await estrutura();
     let linha: ReturnType<typeof linhaDaResposta>;
     try { linha = linhaDaResposta(parsed.data, dados); } catch { return json({ error: 'Seleção hierárquica inválida.' }, 400); }
-    // Fail closed rather than creating or changing the existing spreadsheet structure.
-    const header = await gateway(`/spreadsheets/${RESPOSTAS_ID}/values/${ABA}!A1:S1`);
-    if (JSON.stringify(header.values?.[0]) !== JSON.stringify(CABECALHO)) return json({ error: 'A estrutura da planilha não corresponde à pesquisa. Nenhuma resposta foi gravada.' }, 409);
-    const result = await gateway(`/spreadsheets/${RESPOSTAS_ID}/values/${ABA}!A:S:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
+    // Planilha limpa (sem títulos): recria o cabeçalho. Planilha apagada (404): cria uma nova.
+    let header: { values?: unknown[][] };
+    try {
+      header = await gateway(`/spreadsheets/${respostasId}/values/${ABA}!A1:S1`);
+    } catch (error) {
+      if (!(error instanceof ProviderError) || error.status !== 404) throw error;
+      const criada = await gateway('/spreadsheets', {
+        method: 'POST',
+        body: JSON.stringify({
+          properties: { title: 'Respostas - Pesquisa de Satisfação VP1', locale: 'pt_BR' },
+          sheets: [{ properties: { title: 'Respostas Pesquisa', gridProperties: { frozenRowCount: 1 } } }],
+        }),
+      });
+      respostasId = criada.spreadsheetId;
+      header = { values: [] };
+    }
+    if (JSON.stringify(header.values?.[0]) !== JSON.stringify(CABECALHO)) {
+      await gateway(`/spreadsheets/${respostasId}/values/${ABA}!A1:S1?valueInputOption=RAW`, {
+        method: 'PUT', body: JSON.stringify({ values: [CABECALHO] }),
+      });
+    }
+    const result = await gateway(`/spreadsheets/${respostasId}/values/${ABA}!A:S:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
       method: 'POST', body: JSON.stringify({ values: [linha] }),
     });
     if (result.updates?.updatedRows !== 1) return json({ error: 'Não foi possível confirmar o envio. Não reenvie antes de verificar.' }, 502);
