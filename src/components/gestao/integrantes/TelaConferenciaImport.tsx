@@ -1,3 +1,4 @@
+import { listarMudancasIntegrante } from "@/lib/excelParser";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -430,8 +431,18 @@ export function TelaConferenciaImport({
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{item.novo.nome_colete}</p>
                         <p className="text-xs text-muted-foreground truncate">
-                          {item.novo.divisao} • {item.novo.cargo_grau}
+                          {item.novo.divisao}
                         </p>
+                        <ul className="mt-1 space-y-1">
+                          {listarMudancasIntegrante(item.antigo, item.novo).map((m) => (
+                            <li key={m.label} className="text-xs leading-snug break-words">
+                              <span className="font-medium">{m.label}:</span>{' '}
+                              <span className="text-destructive line-through">{m.anterior}</span>
+                              {' → '}
+                              <span className="text-primary font-semibold">{m.novo}</span>
+                            </li>
+                          ))}
+                        </ul>
                       </div>
                     </div>
                   ))
