@@ -272,10 +272,15 @@ function compararCampos(antigo: any, novo: any): CampoAlterado[] {
   ];
 
   for (const campo of camposComparar) {
+    // Campo não enviado pela carga = não foi alterado (evita registrar "Social → vazio")
+    if (!(campo in novo) || novo[campo] === undefined) continue;
     const valorAntigo = antigo[campo];
     const valorNovo = novo[campo];
-    
-    if (valorAntigo !== valorNovo) {
+    const iguais = (typeof valorAntigo === 'string' || typeof valorNovo === 'string')
+      ? normalizarTexto(String(valorAntigo ?? '')) === normalizarTexto(String(valorNovo ?? ''))
+      : (valorAntigo ?? null) === (valorNovo ?? null);
+
+    if (!iguais) {
       mudancas.push({
         campo,
         anterior: String(valorAntigo ?? ''),
