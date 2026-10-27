@@ -54,14 +54,14 @@ Deno.serve(async req => {
     let input: unknown;
     try { input = JSON.parse(text); } catch { return json({ error: 'Dados inválidos.' }, 400); }
     const parsed = respostaSchema.safeParse(input);
-    if (!parsed.success) return json({ error: 'Verifique a divisão, as quatro notas de 1 a 5 e as perguntas obrigatórias (até 5000 caracteres).' }, 400);
+    if (!parsed.success) return json({ error: 'Verifique a divisão, as quatro notas de 1 a 5, as atividades (até duas; "Outros" exige texto) e as perguntas obrigatórias (até 5000 caracteres).' }, 400);
     const dados = await estrutura();
     let linha: ReturnType<typeof linhaDaResposta>;
     try { linha = linhaDaResposta(parsed.data, dados); } catch { return json({ error: 'Seleção hierárquica inválida.' }, 400); }
     // Planilha limpa (sem títulos): recria o cabeçalho. Planilha apagada (404): cria uma nova.
     let header: { values?: unknown[][] };
     try {
-      header = await gateway(`/spreadsheets/${respostasId}/values/${ABA}!A1:S1`);
+      header = await gateway(`/spreadsheets/${respostasId}/values/${ABA}!A1:AC1`);
     } catch (error) {
       if (!(error instanceof ProviderError) || error.status !== 404) throw error;
       const criada = await gateway('/spreadsheets', {
@@ -75,11 +75,11 @@ Deno.serve(async req => {
       header = { values: [] };
     }
     if (JSON.stringify(header.values?.[0]) !== JSON.stringify(CABECALHO)) {
-      await gateway(`/spreadsheets/${respostasId}/values/${ABA}!A1:S1?valueInputOption=RAW`, {
+      await gateway(`/spreadsheets/${respostasId}/values/${ABA}!A1:AC1?valueInputOption=RAW`, {
         method: 'PUT', body: JSON.stringify({ values: [CABECALHO] }),
       });
     }
-    const result = await gateway(`/spreadsheets/${respostasId}/values/${ABA}!A:S:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
+    const result = await gateway(`/spreadsheets/${respostasId}/values/${ABA}!A:AC:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
       method: 'POST', body: JSON.stringify({ values: [linha] }),
     });
     if (result.updates?.updatedRows !== 1) return json({ error: 'Não foi possível confirmar o envio. Não reenvie antes de verificar.' }, 502);
