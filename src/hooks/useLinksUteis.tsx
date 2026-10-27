@@ -189,13 +189,18 @@ export const useLinksUteisGrupos = (apenasAtivos: boolean = false) => {
   };
 
   const reorderGrupos = async (updates: { id: string; ordem: number }[]) => {
-    const promises = updates.map(u =>
-      supabase.from('links_uteis_grupos').update({ ordem: u.ordem }).eq('id', u.id)
-    );
-    const results = await Promise.all(promises);
-    const erro = results.find(r => r.error);
-    if (erro?.error) {
-      toast({ title: "Erro", description: "Falha ao reordenar grupos", variant: "destructive" });
+    // Mostra a nova ordem na hora, sem esperar o servidor
+    const ordemPorId = new Map(updates.map(u => [u.id, u.ordem]));
+    setGrupos(prev => [...prev]
+      .map(g => ordemPorId.has(g.id) ? { ...g, ordem: ordemPorId.get(g.id)! } : g)
+      .sort((a, b) => a.ordem - b.ordem));
+    const results = await Promise.all(updates.map(u =>
+      supabase.from('links_uteis_grupos').update({ ordem: u.ordem }).eq('id', u.id).select('id')
+    ));
+    const falhou = results.some(r => r.error || !r.data || r.data.length === 0);
+    await fetchGrupos();
+    if (falhou) {
+      toast({ title: "Erro", description: "Não foi possível salvar a nova ordem dos grupos (sem permissão?)", variant: "destructive" });
       return false;
     }
     return true;
