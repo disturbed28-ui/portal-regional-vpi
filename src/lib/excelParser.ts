@@ -338,6 +338,50 @@ const detectarRegionalDaCarga = (excelData: ExcelIntegrante[]): string => {
   return maiorRegional;
 };
 
+export interface MudancaIntegrante {
+  label: string;
+  anterior: string;
+  novo: string;
+}
+
+const simNao = (v: boolean | null | undefined) => (v ? 'Sim' : 'Não');
+const vazio = (v: string | null | undefined) => (v && String(v).trim() ? String(v) : '—');
+
+/**
+ * Lista o "de → para" de cada campo que mudou entre o portal e a planilha.
+ * É a mesma regra usada para decidir se o integrante entra em "Alterados".
+ */
+export function listarMudancasIntegrante(antigo: any, novo: ExcelIntegrante): MudancaIntegrante[] {
+  const out: MudancaIntegrante[] = [];
+  const textos: [string, any, any][] = [
+    ['Nome de colete', antigo.nome_colete, novo.nome_colete],
+    ['Comando', antigo.comando_texto, novo.comando],
+    ['Regional', antigo.regional_texto, novo.regional],
+    ['Divisão', antigo.divisao_texto, novo.divisao],
+    ['Cargo / Grau', antigo.cargo_grau_texto, novo.cargo_grau],
+    ['Estágio', antigo.cargo_estagio, novo.cargo_estagio || null],
+  ];
+  for (const [label, a, n] of textos) {
+    if (normalizarParaComparacao(a) !== normalizarParaComparacao(n)) {
+      out.push({ label, anterior: vazio(a), novo: vazio(n) });
+    }
+  }
+  const flags: [string, string][] = [
+    ['Sgt. Armas', 'sgt_armas'], ['Caveira', 'caveira'], ['Caveira suplente', 'caveira_suplente'],
+    ['Batedor', 'batedor'], ['Ursinho', 'ursinho'], ['Lobo', 'lobo'],
+    ['Tem moto', 'tem_moto'], ['Tem carro', 'tem_carro'],
+  ];
+  for (const [label, k] of flags) {
+    const a = antigo[k];
+    const n = (novo as any)[k] || false;
+    if (a !== n) out.push({ label, anterior: simNao(a), novo: simNao(n) });
+  }
+  if (antigo.data_entrada !== (novo.data_entrada || null)) {
+    out.push({ label: 'Data de entrada', anterior: vazio(antigo.data_entrada), novo: vazio(novo.data_entrada) });
+  }
+  return out;
+}
+
 export const processDelta = (
   excelData: ExcelIntegrante[],
   dbData: IntegrantePortal[],
@@ -428,23 +472,7 @@ export const processDelta = (
       // Novo integrante
       novos.push(excelItem);
     } else {
-      // Verificar se houve mudança (usando comparação normalizada para textos)
-      const mudou =
-        normalizarParaComparacao(dbItem.nome_colete) !== normalizarParaComparacao(excelItem.nome_colete) ||
-        normalizarParaComparacao(dbItem.comando_texto) !== normalizarParaComparacao(excelItem.comando) ||
-        normalizarParaComparacao(dbItem.regional_texto) !== normalizarParaComparacao(excelItem.regional) ||
-        normalizarParaComparacao(dbItem.divisao_texto) !== normalizarParaComparacao(excelItem.divisao) ||
-        normalizarParaComparacao(dbItem.cargo_grau_texto) !== normalizarParaComparacao(excelItem.cargo_grau) ||
-        normalizarParaComparacao(dbItem.cargo_estagio) !== normalizarParaComparacao(excelItem.cargo_estagio || null) ||
-        dbItem.sgt_armas !== (excelItem.sgt_armas || false) ||
-        dbItem.caveira !== (excelItem.caveira || false) ||
-        dbItem.caveira_suplente !== (excelItem.caveira_suplente || false) ||
-        dbItem.batedor !== (excelItem.batedor || false) ||
-        dbItem.ursinho !== (excelItem.ursinho || false) ||
-        dbItem.lobo !== (excelItem.lobo || false) ||
-        dbItem.tem_moto !== (excelItem.tem_moto || false) ||
-        dbItem.tem_carro !== (excelItem.tem_carro || false) ||
-        dbItem.data_entrada !== (excelItem.data_entrada || null);
+      const mudou = listarMudancasIntegrante(dbItem, excelItem).length > 0;
 
       if (mudou) {
         atualizados.push({ antigo: dbItem, novo: excelItem });
