@@ -75,6 +75,13 @@ Deno.serve(async req => {
       header = { values: [] };
     }
     if (JSON.stringify(header.values?.[0]) !== JSON.stringify(CABECALHO)) {
+      // Garante colunas suficientes (A:AC) antes de gravar o cabeçalho ampliado.
+      const meta = await gateway(`/spreadsheets/${respostasId}?fields=sheets.properties`);
+      const aba = (meta.sheets || []).find((s: any) => s.properties?.title === 'Respostas Pesquisa')?.properties;
+      const faltam = aba ? CABECALHO.length - (aba.gridProperties?.columnCount || 0) : 0;
+      if (faltam > 0) await gateway(`/spreadsheets/${respostasId}:batchUpdate`, {
+        method: 'POST', body: JSON.stringify({ requests: [{ appendDimension: { sheetId: aba.sheetId, dimension: 'COLUMNS', length: faltam } }] }),
+      });
       await gateway(`/spreadsheets/${respostasId}/values/${ABA}!A1:AC1?valueInputOption=RAW`, {
         method: 'PUT', body: JSON.stringify({ values: [CABECALHO] }),
       });
