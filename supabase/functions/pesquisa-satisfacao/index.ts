@@ -57,9 +57,14 @@ Deno.serve(async req => {
     const dados = await estrutura();
     let linha: ReturnType<typeof linhaDaResposta>;
     try { linha = linhaDaResposta(parsed.data, dados); } catch { return json({ error: 'Seleção hierárquica inválida.' }, 400); }
-    // Fail closed rather than creating or changing the existing spreadsheet structure.
+    // Se a planilha existir mas estiver sem os títulos (ex.: conteúdo apagado), recria o cabeçalho.
+    // Se a planilha não existir (404), falha: nunca criamos uma planilha nova do zero.
     const header = await gateway(`/spreadsheets/${RESPOSTAS_ID}/values/${ABA}!A1:S1`);
-    if (JSON.stringify(header.values?.[0]) !== JSON.stringify(CABECALHO)) return json({ error: 'A estrutura da planilha não corresponde à pesquisa. Nenhuma resposta foi gravada.' }, 409);
+    if (JSON.stringify(header.values?.[0]) !== JSON.stringify(CABECALHO)) {
+      await gateway(`/spreadsheets/${RESPOSTAS_ID}/values/${ABA}!A1:S1?valueInputOption=RAW`, {
+        method: 'PUT', body: JSON.stringify({ values: [CABECALHO] }),
+      });
+    }
     const result = await gateway(`/spreadsheets/${RESPOSTAS_ID}/values/${ABA}!A:S:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
       method: 'POST', body: JSON.stringify({ values: [linha] }),
     });
