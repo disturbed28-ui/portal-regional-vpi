@@ -16,6 +16,7 @@ import { TabelaComparativa } from '@/components/relatorios/TabelaComparativa';
 import { RelatorioSemanalDivisaoAba } from '@/components/relatorios/RelatorioSemanalDivisaoAba';
 import { IntegrantesTab } from '@/components/relatorios/IntegrantesTab';
 import { HistoricoMovimentacoes } from '@/components/relatorios/HistoricoMovimentacoes';
+import { PesquisaSatisfacaoTab } from '@/components/relatorios/PesquisaSatisfacaoTab';
 import { CobrancaRelatoriosTab } from '@/components/relatorios/CobrancaRelatoriosTab';
 import { useRelatoriosPendentesCount } from '@/hooks/useRelatoriosPendentesCount';
 import { formatarDataBrasil } from '@/lib/timezone';
@@ -39,6 +40,7 @@ const Relatorios = () => {
   const { hasAccess, loading: loadingAccess } = useScreenAccess("/relatorios", user?.id);
   const { hasAccess: hasAccessSemanalAba, loading: loadingAccessSemanalAba } = useScreenAccess('/relatorios/semanal-divisao', user?.id);
   const { hasAccess: hasAccessIntegrantes } = useScreenAccess('/relatorios/integrantes', user?.id);
+  const { hasAccess: hasAccessPesquisa } = useScreenAccess('/relatorios/pesquisa-satisfacao', user?.id);
   const { hasAccess: hasAccessCobranca } = useScreenAccess('/relatorios/cobranca', user?.id);
   const [searchParams, setSearchParams] = useSearchParams();
   const tabFromUrl = searchParams.get('tab');
@@ -254,6 +256,11 @@ const Relatorios = () => {
                   Integrantes
                 </TabsTrigger>
               )}
+              {hasAccessPesquisa && (
+                <TabsTrigger value="pesquisa" className="flex-shrink-0 px-3 py-1.5 text-xs sm:text-sm whitespace-nowrap">
+                  Pesquisa de Satisfação
+                </TabsTrigger>
+              )}
               <TabsTrigger value="evolucao" className="flex-shrink-0 px-3 py-1.5 text-xs sm:text-sm whitespace-nowrap">
                 Evolução
               </TabsTrigger>
@@ -288,6 +295,12 @@ const Relatorios = () => {
           {hasAccessCobranca && (
             <TabsContent value="cobranca" className="mt-3 sm:mt-6">
               <CobrancaRelatoriosTab />
+            </TabsContent>
+          )}
+
+          {hasAccessPesquisa && (
+            <TabsContent value="pesquisa" className="mt-3 sm:mt-6">
+              <PesquisaSatisfacaoTab />
             </TabsContent>
           )}
 
