@@ -2605,6 +2605,60 @@ export type Database = {
           },
         ]
       }
+      pesquisa_analises: {
+        Row: {
+          chave: string
+          created_at: string
+          divisao_id: string | null
+          erro: string | null
+          gerado_em: string | null
+          hash_dados: string | null
+          hash_processando: string | null
+          id: string
+          lease_ate: string | null
+          n_respostas: number
+          periodo_fim: string
+          periodo_inicio: string
+          regional_id: string
+          resultado: Json | null
+          updated_at: string
+        }
+        Insert: {
+          chave: string
+          created_at?: string
+          divisao_id?: string | null
+          erro?: string | null
+          gerado_em?: string | null
+          hash_dados?: string | null
+          hash_processando?: string | null
+          id?: string
+          lease_ate?: string | null
+          n_respostas?: number
+          periodo_fim: string
+          periodo_inicio: string
+          regional_id: string
+          resultado?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          chave?: string
+          created_at?: string
+          divisao_id?: string | null
+          erro?: string | null
+          gerado_em?: string | null
+          hash_dados?: string | null
+          hash_processando?: string | null
+          id?: string
+          lease_ate?: string | null
+          n_respostas?: number
+          periodo_fim?: string
+          periodo_inicio?: string
+          regional_id?: string
+          resultado?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       presencas: {
         Row: {
           confirmado_em: string | null
