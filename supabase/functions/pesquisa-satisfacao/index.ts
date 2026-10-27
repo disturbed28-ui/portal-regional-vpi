@@ -58,15 +58,28 @@ Deno.serve(async req => {
     const dados = await estrutura();
     let linha: ReturnType<typeof linhaDaResposta>;
     try { linha = linhaDaResposta(parsed.data, dados); } catch { return json({ error: 'Seleção hierárquica inválida.' }, 400); }
-    // Se a planilha existir mas estiver sem os títulos (ex.: conteúdo apagado), recria o cabeçalho.
-    // Se a planilha não existir (404), falha: nunca criamos uma planilha nova do zero.
-    const header = await gateway(`/spreadsheets/${RESPOSTAS_ID}/values/${ABA}!A1:S1`);
+    // Planilha limpa (sem títulos): recria o cabeçalho. Planilha apagada (404): cria uma nova.
+    let header: { values?: unknown[][] };
+    try {
+      header = await gateway(`/spreadsheets/${respostasId}/values/${ABA}!A1:S1`);
+    } catch (error) {
+      if (!(error instanceof ProviderError) || error.status !== 404) throw error;
+      const criada = await gateway('/spreadsheets', {
+        method: 'POST',
+        body: JSON.stringify({
+          properties: { title: 'Respostas - Pesquisa de Satisfação VP1', locale: 'pt_BR' },
+          sheets: [{ properties: { title: 'Respostas Pesquisa', gridProperties: { frozenRowCount: 1 } } }],
+        }),
+      });
+      respostasId = criada.spreadsheetId;
+      header = { values: [] };
+    }
     if (JSON.stringify(header.values?.[0]) !== JSON.stringify(CABECALHO)) {
-      await gateway(`/spreadsheets/${RESPOSTAS_ID}/values/${ABA}!A1:S1?valueInputOption=RAW`, {
+      await gateway(`/spreadsheets/${respostasId}/values/${ABA}!A1:S1?valueInputOption=RAW`, {
         method: 'PUT', body: JSON.stringify({ values: [CABECALHO] }),
       });
     }
-    const result = await gateway(`/spreadsheets/${RESPOSTAS_ID}/values/${ABA}!A:S:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
+    const result = await gateway(`/spreadsheets/${respostasId}/values/${ABA}!A:S:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
       method: 'POST', body: JSON.stringify({ values: [linha] }),
     });
     if (result.updates?.updatedRows !== 1) return json({ error: 'Não foi possível confirmar o envio. Não reenvie antes de verificar.' }, 502);
