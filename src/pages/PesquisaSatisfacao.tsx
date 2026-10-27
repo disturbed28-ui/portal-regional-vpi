@@ -7,6 +7,8 @@ interface Dados {
   regionais: { id: string; comandoId: string; nome: string }[];
   divisoes: { id: string; regionalId: string; nome: string }[];
   perguntas: string[];
+  atividades: { codigo: string; rotulo: string }[];
+  perguntaAtividades: string;
 }
 const endpoint = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pesquisa-satisfacao`;
 async function chamar(payload?: unknown): Promise<any> {
@@ -37,6 +39,19 @@ export default function PesquisaSatisfacao() {
   const [divisao, setDivisao] = useState('');
   const [notas, setNotas] = useState<Record<Chave, string>>({ nota: '', pertencimento: '', lideranca: '', atividades: '' });
   const [respostas, setRespostas] = useState<string[]>([]);
+  const [sugeridas, setSugeridas] = useState<string[]>([]);
+  const [outros, setOutros] = useState('');
+  const [avisoAtv, setAvisoAtv] = useState('');
+  function alternar(codigo: string) {
+    setAvisoAtv('');
+    setSugeridas(sel => {
+      if (sel.includes(codigo)) return sel.filter(c => c !== codigo);
+      if (codigo === 'NENHUMA') return ['NENHUMA'];
+      const base = sel.filter(c => c !== 'NENHUMA');
+      if (base.length >= 2) { setAvisoAtv('Você já selecionou duas opções. Desmarque uma para escolher outra.'); return sel; }
+      return [...base, codigo];
+    });
+  }
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
@@ -57,12 +72,14 @@ export default function PesquisaSatisfacao() {
     if (respostas.some((r, i) => !OPCIONAIS.includes(i) && !r.trim())) {
       setErro('Preencha as perguntas obrigatórias.'); return;
     }
+    if (sugeridas.length === 0) { setErro('Selecione pelo menos uma atividade.'); return; }
+    if (sugeridas.includes('OUTROS') && !outros.trim()) { setErro('Especifique a atividade em "Outros".'); return; }
     setEnviando(true); setErro('');
     try {
       const result = await chamar({
         comandoId: comando, regionalId: regional, divisaoId: divisao,
         nota: Number(notas.nota), pertencimento: Number(notas.pertencimento), lideranca: Number(notas.lideranca), atividades: Number(notas.atividades),
-        respostas,
+        respostas, atividadesSugeridas: sugeridas, atividadeOutros: sugeridas.includes('OUTROS') ? outros : '',
       });
       if (result.ok !== true) throw new Error('Não foi possível confirmar o envio.');
       setEnviado(true);
@@ -101,6 +118,21 @@ export default function PesquisaSatisfacao() {
               <strong>{i + 1}</strong><span>{rot}</span>
             </label>)}</div>
           </fieldset>)}
+        </section>
+        <section className="pesquisa-panel">
+          <fieldset className="pesquisa-atividades">
+            <legend>5. {dados.perguntaAtividades} <span className="pesquisa-req">*</span></legend>
+            <p className="pesquisa-muted">Selecione até duas opções.</p>
+            {dados.atividades.map(a => <label key={a.codigo} className="pesquisa-check">
+              <input type="checkbox" name="atividades" value={a.codigo} checked={sugeridas.includes(a.codigo)} onChange={() => alternar(a.codigo)} />
+              <span>{a.rotulo}</span>
+            </label>)}
+            {avisoAtv && <p className="pesquisa-aviso" role="status">{avisoAtv}</p>}
+            {sugeridas.includes('OUTROS') && <>
+              <label htmlFor="pesquisa-outros">Qual atividade? <span className="pesquisa-req">*</span></label>
+              <textarea id="pesquisa-outros" required maxLength={500} value={outros} onChange={e => setOutros(e.target.value)} />
+            </>}
+          </fieldset>
         </section>
         <section className="pesquisa-panel">
           <h2>Respostas abertas</h2>

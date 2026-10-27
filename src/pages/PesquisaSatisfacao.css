@@ -33,6 +33,11 @@
 .pesquisa-error, .pesquisa-req { color: hsl(var(--survey-error)); }
 .pesquisa-opc { color: hsl(var(--muted-foreground)); font-weight: normal; font-size: 13px; }
 .pesquisa-success { color: hsl(var(--survey-success)); font-weight: bold; }
+.pesquisa-atividades legend { font-weight: 600; font-size: 15px; line-height: 1.4; margin-bottom: 4px; padding: 0; }
+.pesquisa-satisfacao .pesquisa-check { display: flex; align-items: center; gap: 12px; margin: 0 0 6px; min-height: 48px; padding: 10px 12px; border: 1px solid hsl(var(--border)); border-radius: 8px; background: hsl(var(--input)); font-weight: normal; cursor: pointer; }
+.pesquisa-check input { width: 22px; height: 22px; flex: none; accent-color: hsl(var(--primary)); }
+.pesquisa-check:has(input:checked) { border-color: hsl(var(--primary)); }
+.pesquisa-aviso { color: hsl(var(--primary)); font-size: 13px; margin: 4px 0 0; }
 @media (min-width: 640px) {
   .pesquisa-satisfacao { padding: 28px 16px 40px; }
   .pesquisa-panel { padding: 24px; margin-bottom: 16px; }

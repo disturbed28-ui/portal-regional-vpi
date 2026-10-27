@@ -7,7 +7,7 @@ const c = '11111111-1111-4111-8111-111111111111';
 const r = '22222222-2222-4222-8222-222222222222';
 const d = '33333333-3333-4333-8333-333333333333';
 const dados = { comandos: [{ id: c, nome: 'Comando V' }], regionais: [{ id: r, comandoId: c, nome: 'VP1', sigla: 'VP1' }], divisoes: [{ id: d, regionalId: r, nome: 'DIVISAO TESTE - SP' }], perguntas: PERGUNTAS };
-const payload = { comandoId: c, regionalId: r, divisaoId: d, nota: 5, pertencimento: 4, lideranca: 3, atividades: 2, respostas: PERGUNTAS.map(() => 'Resposta') };
+const payload = { comandoId: c, regionalId: r, divisaoId: d, nota: 5, pertencimento: 4, lideranca: 3, atividades: 2, respostas: PERGUNTAS.map(() => 'Resposta'), atividadesSugeridas: ['ENCONTROS'] };
 describe('Pesquisa pública', () => {
   test('nota admite somente inteiros de 1 a 5', () => {
     for (const nota of [1, 2, 3, 4, 5]) expect(respostaSchema.safeParse({ ...payload, nota }).success).toBe(true);
@@ -23,7 +23,7 @@ describe('Pesquisa pública', () => {
   test('rejeita identidade de integrante no envio', () => {
     for (const key of ['nome', 'email', 'integranteId', 'userId']) expect(respostaSchema.safeParse({ ...payload, [key]: 'identidade' }).success).toBe(false);
     const linha = linhaDaResposta(payload, dados);
-    expect(linha).toHaveLength(19); expect(linha[10]).toBe(''); expect(linha.slice(16)).toEqual([4, 3, 2]); expect(linha.slice(1, 8)).toEqual([c, 'Comando V', r, 'VP1', d, 'DIVISAO TESTE - SP', 5]);
+    expect(linha).toHaveLength(29); expect(linha[10]).toBe(''); expect(linha.slice(16, 19)).toEqual([4, 3, 2]); expect(linha.slice(1, 8)).toEqual([c, 'Comando V', r, 'VP1', d, 'DIVISAO TESTE - SP', 5]);
   });
   test('as quatro notas são obrigatórias, de 1 a 5', () => {
     for (const k of ['pertencimento', 'lideranca', 'atividades']) { expect(respostaSchema.safeParse({ ...payload, [k]: 6 }).success).toBe(false); const { [k]: _, ...sem } = payload as any; expect(respostaSchema.safeParse(sem).success).toBe(false); }
@@ -39,5 +39,23 @@ describe('Pesquisa pública', () => {
   test('texto não vira fórmula e data mantém célula numérica', () => {
     const linha = linhaDaResposta({ ...payload, respostas: ['=1+1', '+cmd', '-cmd', '@cmd', '', 'ok', 'ok'] }, dados, new Date('2026-10-26T23:17:00Z'));
     expect(typeof linha[0]).toBe('number'); expect(linha.slice(8, 13)).toEqual(["'=1+1", "'+cmd", '', "'-cmd", "'@cmd"]);
+  });
+});describe('Pergunta de atividades', () => {
+  const base = { comandoId: c, regionalId: r, divisaoId: d, nota: 5, pertencimento: 4, lideranca: 3, atividades: 2, respostas: PERGUNTAS.map(() => 'Resposta') };
+  test('uma ou duas opções; zero ou três rejeitadas', () => {
+    expect(respostaSchema.safeParse({ ...base, atividadesSugeridas: ['ACOES_SOCIAIS'] }).success).toBe(true);
+    expect(respostaSchema.safeParse({ ...base, atividadesSugeridas: ['ACOES_SOCIAIS', 'ENCONTROS'] }).success).toBe(true);
+    expect(respostaSchema.safeParse({ ...base, atividadesSugeridas: [] }).success).toBe(false);
+    expect(respostaSchema.safeParse({ ...base, atividadesSugeridas: ['ACOES_SOCIAIS', 'ENCONTROS', 'BATE_VOLTAS'] }).success).toBe(false);
+  });
+  test('Nenhuma é exclusiva', () => {
+    expect(respostaSchema.safeParse({ ...base, atividadesSugeridas: ['NENHUMA'] }).success).toBe(true);
+    expect(respostaSchema.safeParse({ ...base, atividadesSugeridas: ['NENHUMA', 'ENCONTROS'] }).success).toBe(false);
+  });
+  test('Outros exige texto e grava colunas T a AC sem mexer nas anteriores', () => {
+    expect(respostaSchema.safeParse({ ...base, atividadesSugeridas: ['OUTROS'] }).success).toBe(false);
+    const linha = linhaDaResposta({ ...base, atividadesSugeridas: ['ACOES_SOCIAIS', 'OUTROS'], atividadeOutros: 'Trilha' }, dados);
+    expect(linha).toHaveLength(29); expect(linha.slice(16, 19)).toEqual([4, 3, 2]);
+    expect(linha.slice(19)).toEqual(['ACOES_SOCIAIS; OUTROS', 'Trilha', 1, 0, 0, 0, 0, 0, 0, 1]);
   });
 });
