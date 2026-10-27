@@ -13,7 +13,8 @@ export const PERGUNTAS = [
 ];
 export const OPCIONAIS = [4, 6];
 // Sheet columns are fixed: the retired "sentimento" column (K) stays in place, left blank for new
-// answers, and the new scores are appended at Q-S so existing rows never shift.
+// answers, and the new scores are appended at Q-S so existing rows never shift. If the sheet was
+// wiped, the function rewrites this header before appending; a missing spreadsheet still fails.
 export const CABECALHO = ['Data/hora', 'Comando ID', 'Comando', 'Regional ID', 'Regional', 'Divisão ID', 'Divisão', 'Nota de satisfação (1-5)',
   PERGUNTAS[0], PERGUNTAS[1], 'Qual o seu sentimento hoje a respeito da divisão avaliada?', PERGUNTAS[2], PERGUNTAS[3], PERGUNTAS[4], PERGUNTAS[5], PERGUNTAS[6],
   'Nota de pertencimento (1-5)', 'Nota de liderança e comunicação (1-5)', 'Nota de atividades e integração (1-5)'];
