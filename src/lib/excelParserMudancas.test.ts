@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+// @ts-expect-error bun test runtime
+import { describe, it, expect } from 'bun:test';
 import { listarMudancasIntegrante } from './excelParser';
 
 const antigo = {
