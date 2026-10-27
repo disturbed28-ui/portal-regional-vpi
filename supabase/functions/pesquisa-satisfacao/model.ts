@@ -15,10 +15,6 @@ export const OPCIONAIS = [4, 6];
 // Sheet columns are fixed: the retired "sentimento" column (K) stays in place, left blank for new
 // answers, and the new scores are appended at Q-S so existing rows never shift. If the sheet was
 // wiped, the function rewrites this header before appending; a missing spreadsheet still fails.
-export const CABECALHO = ['Data/hora', 'Comando ID', 'Comando', 'Regional ID', 'Regional', 'Divisão ID', 'Divisão', 'Nota de satisfação (1-5)',
-  PERGUNTAS[0], PERGUNTAS[1], 'Qual o seu sentimento hoje a respeito da divisão avaliada?', PERGUNTAS[2], PERGUNTAS[3], PERGUNTAS[4], PERGUNTAS[5], PERGUNTAS[6],
-  'Nota de pertencimento (1-5)', 'Nota de liderança e comunicação (1-5)', 'Nota de atividades e integração (1-5)',
-  'Atividades sugeridas (códigos)', 'Atividade sugerida - Outros (texto)', ...ATIVIDADES.map(a => `Atividade: ${a.rotulo}`)];
 // Activity question (multi-choice, max 2). Stored in T (codes), U (Outros text) and one 0/1 column per
 // option (V-AC) so counts and percentages per option, division and regional are simple sums.
 export const ATIVIDADES = [
@@ -33,6 +29,10 @@ export const ATIVIDADES = [
 ] as const;
 export const PERGUNTA_ATIVIDADES = 'Que tipo de atividade você considera que sua divisão deveria promover com mais frequência?';
 const codigos = ATIVIDADES.map(a => a.codigo) as [string, ...string[]];
+export const CABECALHO = ['Data/hora', 'Comando ID', 'Comando', 'Regional ID', 'Regional', 'Divisão ID', 'Divisão', 'Nota de satisfação (1-5)',
+  PERGUNTAS[0], PERGUNTAS[1], 'Qual o seu sentimento hoje a respeito da divisão avaliada?', PERGUNTAS[2], PERGUNTAS[3], PERGUNTAS[4], PERGUNTAS[5], PERGUNTAS[6],
+  'Nota de pertencimento (1-5)', 'Nota de liderança e comunicação (1-5)', 'Nota de atividades e integração (1-5)',
+  'Atividades sugeridas (códigos)', 'Atividade sugerida - Outros (texto)', ...ATIVIDADES.map(a => `Atividade: ${a.rotulo}`)];
 const nota = z.number().int().min(1).max(5);
 export const respostaSchema = z.object({
   comandoId: z.string().uuid(), regionalId: z.string().uuid(), divisaoId: z.string().uuid(),
