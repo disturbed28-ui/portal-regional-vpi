@@ -23,7 +23,7 @@ describe('Pesquisa pública', () => {
   test('rejeita identidade de integrante no envio', () => {
     for (const key of ['nome', 'email', 'integranteId', 'userId']) expect(respostaSchema.safeParse({ ...payload, [key]: 'identidade' }).success).toBe(false);
     const linha = linhaDaResposta(payload, dados);
-    expect(linha).toHaveLength(29); expect(linha[10]).toBe(''); expect(linha.slice(16)).toEqual([4, 3, 2]); expect(linha.slice(1, 8)).toEqual([c, 'Comando V', r, 'VP1', d, 'DIVISAO TESTE - SP', 5]);
+    expect(linha).toHaveLength(29); expect(linha[10]).toBe(''); expect(linha.slice(16, 19)).toEqual([4, 3, 2]); expect(linha.slice(1, 8)).toEqual([c, 'Comando V', r, 'VP1', d, 'DIVISAO TESTE - SP', 5]);
   });
   test('as quatro notas são obrigatórias, de 1 a 5', () => {
     for (const k of ['pertencimento', 'lideranca', 'atividades']) { expect(respostaSchema.safeParse({ ...payload, [k]: 6 }).success).toBe(false); const { [k]: _, ...sem } = payload as any; expect(respostaSchema.safeParse(sem).success).toBe(false); }
