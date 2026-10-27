@@ -12,4 +12,4 @@
 - [x] Preservar formulário fornecido em rota pública isolada e adaptada para celulares.
 - [x] Integrar leitura de estrutura e gravação anônima na planilha existente pelo servidor.
 - [x] Testar validações, seleção dinâmica e envio com leitura de confirmação.
-- [ ] Recriar os títulos das colunas se a planilha for limpa; criar planilha nova se ela for apagada.
+- [x] Recriar os títulos das colunas se a planilha for limpa; criar planilha nova se ela for apagada.
