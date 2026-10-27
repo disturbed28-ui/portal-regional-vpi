@@ -3,7 +3,8 @@ import { CABECALHO, hierarquiaDasAbas, linhaDaResposta, respostaSchema, type Hie
 
 const GATEWAY = 'https://connector-gateway.lovable.dev/google_sheets/v4';
 const ESTRUTURA_ID = '1zCMp1nWkqDITH6jpytZdiyB4DxtosDJXCASLcllKSJ8';
-const RESPOSTAS_ID = '1MnmWc8Y0Vnnyg3iTkpO0cbQdM3AG7ysDVvxEC2TrZlk';
+// Mutável: se a planilha de respostas for apagada, uma nova é criada e o ID passa a valer nesta instância.
+let respostasId = '1MnmWc8Y0Vnnyg3iTkpO0cbQdM3AG7ysDVvxEC2TrZlk';
 const ABA = "'Respostas Pesquisa'";
 let cache: { dados: Hierarquia; ate: number } | undefined;
 let carregando: Promise<Hierarquia> | undefined;
