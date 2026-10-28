@@ -87,7 +87,7 @@ const SecaoSaidas = ({
       )}
 
       <div className="space-y-2">
-        <p className="text-sm text-muted-foreground">Houve saída de integrantes neste período?</p>
+        <p className="text-sm text-muted-foreground">Houve saída de integrantes neste mês?</p>
         <div className="flex gap-2">
           <Button
             type="button"
@@ -965,7 +965,7 @@ const FormularioRelatorioSemanal = () => {
       integrante_id: m.integrante_id || "",
       nome_colete: m.nome_colete,
       data_entrada: m.data_movimentacao.split("T")[0],
-      motivo_entrada: m.tipo === "RETORNO_AFASTAMENTO" ? "Retorno de afastamento" : m.tipo === "REATIVACAO" ? "Reativado" : m.detalhes === "Novo integrante" ? "Novo" : "Transferido",
+      motivo_entrada: m.tipo === "RETORNO_AFASTAMENTO" || m.tipo === "REATIVACAO" ? "Retorno" : m.detalhes === "Novo integrante" ? "Novo" : "Transferido",
       possui_carro: false,
       possui_moto: false,
       nenhum: true,
@@ -978,7 +978,7 @@ const FormularioRelatorioSemanal = () => {
       integrante_id: m.integrante_id || "",
       nome_colete: m.nome_colete,
       data_saida: m.data_movimentacao.split("T")[0],
-      motivo_codigo: m.tipo === "AFASTAMENTO" ? "AFASTAMENTO" : m.tipo === "INATIVACAO" ? "INATIVACAO" : "TRANSFERENCIA",
+      motivo_codigo: m.tipo === "AFASTAMENTO" ? "afastado" : m.tipo === "INATIVACAO" ? "INATIVACAO" : "TRANSFERENCIA",
       justificativa: m.detalhes || "",
       tem_moto: false,
       tem_carro: false,

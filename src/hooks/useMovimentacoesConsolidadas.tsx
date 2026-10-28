@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizarDivisao } from "@/lib/normalizeText";
+import { retornoEfetivoCMD } from "@/lib/movimentacoesMensaisCMD";
 
 export type TipoMovimentacaoConsolidada = 'ENTRADA' | 'SAIDA' | 'INATIVACAO' | 'REATIVACAO' | 'AFASTAMENTO' | 'RETORNO_AFASTAMENTO';
 
@@ -238,7 +239,7 @@ export const useMovimentacoesConsolidadas = (options: UseMovimentacoesConsolidad
             saidas.push({ ...base, id: `afastamento_${afastamento.id}`, tipo: 'AFASTAMENTO', data_movimentacao: afastamento.data_afastamento, origem_divisao: afastamento.divisao_texto, detalhes: 'Afastamento' });
           }
           // Only a recorded return counts, never a predicted return or dismissal.
-          if (afastamento.motivo_baixa === 'retornou' && afastamento.data_retorno_efetivo && afastamento.data_retorno_efetivo >= inicioMes && afastamento.data_retorno_efetivo <= fimMes) {
+          if (retornoEfetivoCMD(afastamento.motivo_baixa, afastamento.data_retorno_efetivo) && afastamento.data_retorno_efetivo && afastamento.data_retorno_efetivo >= inicioMes && afastamento.data_retorno_efetivo <= fimMes) {
             entradas.push({ ...base, id: `retorno_${afastamento.id}`, tipo: 'RETORNO_AFASTAMENTO', data_movimentacao: afastamento.data_retorno_efetivo, destino_divisao: afastamento.divisao_texto, detalhes: 'Retorno de afastamento' });
           }
         }

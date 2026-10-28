@@ -1,9 +1,15 @@
 // @ts-expect-error bun test runtime
 import { describe, it, expect } from 'bun:test';
 import { calcularPeriodoAtual, calcularPeriodoAnterior } from './normalizeText';
-import { incorporarMovimentosCMD, periodoMensalCMD } from './movimentacoesMensaisCMD';
+import { incorporarMovimentosCMD, periodoMensalCMD, retornoEfetivoCMD } from './movimentacoesMensaisCMD';
 
 describe('movimentações mensais do CMD', () => {
+  it('inclui retorno confirmado manualmente ou pela carga, não previsão ou desligamento', () => {
+    expect(retornoEfetivoCMD('retornou', '2026-10-20')).toBe(true);
+    expect(retornoEfetivoCMD('retorno_detectado_carga', '2026-10-20')).toBe(true);
+    expect(retornoEfetivoCMD('desligamento', '2026-10-20')).toBe(false);
+    expect(retornoEfetivoCMD('retornou', null)).toBe(false);
+  });
   it('os três períodos de outubro enxergam de 1 a 31, incluindo movimentos fora do período', () => {
     for (const dia of [5, 15, 28]) {
       const periodo = calcularPeriodoAtual(new Date(2026, 9, dia));

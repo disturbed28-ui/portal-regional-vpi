@@ -1,5 +1,9 @@
 import { fromZonedTime } from 'date-fns-tz';
 
+export function retornoEfetivoCMD(motivo: string | null, data: string | null) {
+  return Boolean(data && (motivo === 'retornou' || motivo === 'retorno_detectado_carga'));
+}
+
 export function periodoMensalCMD(referencia: { ano_referencia: number; mes_referencia: number }) {
   const { ano_referencia: ano, mes_referencia: mes } = referencia;
   const dataInicio = fromZonedTime(new Date(ano, mes - 1, 1, 0, 0, 0, 0), 'America/Sao_Paulo');
