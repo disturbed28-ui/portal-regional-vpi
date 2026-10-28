@@ -8,6 +8,10 @@
 # Gestão ADM — Treinamentos
 - [x] Aba Encerramento: listar do treinamento mais antigo ao mais novo (os mais próximos de encerrar primeiro).
 
+# Gestão ADM — Estágios
+- [x] Aba Encerramento: listar do estágio que vence primeiro para o que vence por último (4 testes e ordem conferida na tela).
+
+
 # Pesquisa de satisfação pública
 - [x] Relatório: comparar respostas com efetivo ativo por escopo e destacar meta de 80%; 13 testes passaram e leitura real confirmou 59/167 na Vale 1.
 - [ ] Conferência visual autenticada do indicador: conta de teste bloqueada pela permissão da página Relatórios; nenhuma permissão alterada.
