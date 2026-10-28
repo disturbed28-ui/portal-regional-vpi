@@ -26,8 +26,8 @@ export async function lerMovimentacoesCMD(supabase: any, options: UseMovimentaco
 const normalizarDivisao = normalizarDivisaoCMD;
       const divisaoNorm = normalizarDivisao(options.divisao);
 
-      const lerPaginas = async <T,>(consulta: (inicio: number, fim: number) => PromiseLike<{ data: T[] | null; error: unknown }>) => {
-        const itens: T[] = [];
+      const lerPaginas = async (consulta: (inicio: number, fim: number) => PromiseLike<{ data: any[] | null; error: unknown }>) => {
+        const itens: any[] = [];
         for (let inicio = 0; ; inicio += 1000) {
           const { data, error } = await consulta(inicio, inicio + 999);
           if (error) throw error;
