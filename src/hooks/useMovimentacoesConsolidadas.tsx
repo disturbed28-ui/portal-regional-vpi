@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizarDivisao } from "@/lib/normalizeText";
 
-export type TipoMovimentacaoConsolidada = 'ENTRADA' | 'SAIDA' | 'INATIVACAO' | 'REATIVACAO';
+export type TipoMovimentacaoConsolidada = 'ENTRADA' | 'SAIDA' | 'INATIVACAO' | 'REATIVACAO' | 'AFASTAMENTO' | 'RETORNO_AFASTAMENTO';
 
 export interface MovimentacaoConsolidada {
   id: string;
@@ -20,6 +20,7 @@ interface UseMovimentacoesConsolidadasOptions {
   divisao: string;
   dataInicio: Date;
   dataFim: Date;
+  incluirAfastamentos?: boolean;
 }
 
 /**
@@ -29,7 +30,7 @@ interface UseMovimentacoesConsolidadasOptions {
  */
 export const useMovimentacoesConsolidadas = (options: UseMovimentacoesConsolidadasOptions | null) => {
   return useQuery({
-    queryKey: ['movimentacoes-consolidadas', options?.divisao, options?.dataInicio?.toISOString(), options?.dataFim?.toISOString()],
+    queryKey: ['movimentacoes-consolidadas', options?.divisao, options?.dataInicio?.toISOString(), options?.dataFim?.toISOString(), options?.incluirAfastamentos],
     queryFn: async (): Promise<{ entradas: MovimentacaoConsolidada[]; saidas: MovimentacaoConsolidada[] }> => {
       if (!options?.divisao || !options?.dataInicio || !options?.dataFim) {
         return { entradas: [], saidas: [] };
@@ -37,8 +38,18 @@ export const useMovimentacoesConsolidadas = (options: UseMovimentacoesConsolidad
 
       const divisaoNorm = normalizarDivisao(options.divisao);
 
+      const lerPaginas = async <T,>(consulta: (inicio: number, fim: number) => PromiseLike<{ data: T[] | null; error: unknown }>) => {
+        const itens: T[] = [];
+        for (let inicio = 0; ; inicio += 1000) {
+          const { data, error } = await consulta(inicio, inicio + 999);
+          if (error) throw error;
+          itens.push(...(data || []));
+          if (!data || data.length < 1000) return { data: itens, error: null };
+        }
+      };
+
       // 1. Buscar mudanças de divisão no período
-      const { data: mudancasDivisao, error: errorDivisao } = await supabase
+      const { data: mudancasDivisao, error: errorDivisao } = await lerPaginas((inicio, fim) => supabase
         .from('atualizacoes_carga')
         .select(`
           id,
@@ -53,7 +64,7 @@ export const useMovimentacoesConsolidadas = (options: UseMovimentacoesConsolidad
         .eq('campo_alterado', 'divisao_texto')
         .gte('created_at', options.dataInicio.toISOString())
         .lte('created_at', options.dataFim.toISOString())
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false }).order('id').range(inicio, fim));
 
       if (errorDivisao) {
         console.error('[useMovimentacoesConsolidadas] Erro ao buscar mudanças de divisão:', errorDivisao);
@@ -61,7 +72,7 @@ export const useMovimentacoesConsolidadas = (options: UseMovimentacoesConsolidad
       }
 
       // 2. Buscar inativações e reativações no período
-      const { data: mudancasAtivo, error: errorAtivo } = await supabase
+      const { data: mudancasAtivo, error: errorAtivo } = await lerPaginas((inicio, fim) => supabase
         .from('atualizacoes_carga')
         .select(`
           id,
@@ -76,7 +87,7 @@ export const useMovimentacoesConsolidadas = (options: UseMovimentacoesConsolidad
         .eq('campo_alterado', 'ativo')
         .gte('created_at', options.dataInicio.toISOString())
         .lte('created_at', options.dataFim.toISOString())
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false }).order('id').range(inicio, fim));
 
       if (errorAtivo) {
         console.error('[useMovimentacoesConsolidadas] Erro ao buscar mudanças de ativo:', errorAtivo);
@@ -92,10 +103,10 @@ export const useMovimentacoesConsolidadas = (options: UseMovimentacoesConsolidad
       let integrantesMap = new Map<string, { divisao: string }>();
       
       if (integranteIds.size > 0) {
-        const { data: integrantes } = await supabase
+        const { data: integrantes } = await lerPaginas((inicio, fim) => supabase
           .from('integrantes_portal')
           .select('id, divisao_texto')
-          .in('id', Array.from(integranteIds));
+          .in('id', Array.from(integranteIds)).order('id').range(inicio, fim));
         
         (integrantes || []).forEach(i => {
           integrantesMap.set(i.id, { divisao: i.divisao_texto });
@@ -185,11 +196,11 @@ export const useMovimentacoesConsolidadas = (options: UseMovimentacoesConsolidad
 
       // 5b. Integrantes NOVOS: a carga cria o cadastro sem registrar mudança de campo,
       // então entram aqui pela data de criação no período
-      const { data: novos, error: errorNovos } = await supabase
+      const { data: novos, error: errorNovos } = await lerPaginas((inicio, fim) => supabase
         .from('integrantes_portal')
         .select('id, registro_id, nome_colete, divisao_texto, created_at')
         .gte('created_at', options.dataInicio.toISOString())
-        .lte('created_at', options.dataFim.toISOString());
+        .lte('created_at', options.dataFim.toISOString()).order('id').range(inicio, fim));
       if (errorNovos) {
         console.error('[useMovimentacoesConsolidadas] Erro ao buscar novos integrantes:', errorNovos);
         throw errorNovos;
@@ -209,6 +220,29 @@ export const useMovimentacoesConsolidadas = (options: UseMovimentacoesConsolidad
           detalhes: 'Novo integrante'
         });
       });
+
+      // Afastamentos keep ativo=true, so they need their own source in CMD.
+      if (options.incluirAfastamentos) {
+        const { formatInTimeZone } = await import('date-fns-tz');
+        const inicioMes = formatInTimeZone(options.dataInicio, 'America/Sao_Paulo', 'yyyy-MM-dd');
+        const fimMes = formatInTimeZone(options.dataFim, 'America/Sao_Paulo', 'yyyy-MM-dd');
+        const { data: afastamentos } = await lerPaginas((inicio, fim) => supabase
+          .from('integrantes_afastados')
+          .select('id, registro_id, nome_colete, divisao_texto, data_afastamento, data_retorno_efetivo, motivo_baixa')
+          .or(`and(data_afastamento.gte.${inicioMes},data_afastamento.lte.${fimMes}),and(data_retorno_efetivo.gte.${inicioMes},data_retorno_efetivo.lte.${fimMes})`)
+          .order('id').range(inicio, fim));
+        for (const afastamento of afastamentos) {
+          if (normalizarDivisao(afastamento.divisao_texto) !== divisaoNorm) continue;
+          const base = { integrante_id: null, registro_id: afastamento.registro_id, nome_colete: afastamento.nome_colete };
+          if (afastamento.data_afastamento >= inicioMes && afastamento.data_afastamento <= fimMes) {
+            saidas.push({ ...base, id: `afastamento_${afastamento.id}`, tipo: 'AFASTAMENTO', data_movimentacao: afastamento.data_afastamento, origem_divisao: afastamento.divisao_texto, detalhes: 'Afastamento' });
+          }
+          // Only a recorded return counts, never a predicted return or dismissal.
+          if (afastamento.motivo_baixa === 'retornou' && afastamento.data_retorno_efetivo && afastamento.data_retorno_efetivo >= inicioMes && afastamento.data_retorno_efetivo <= fimMes) {
+            entradas.push({ ...base, id: `retorno_${afastamento.id}`, tipo: 'RETORNO_AFASTAMENTO', data_movimentacao: afastamento.data_retorno_efetivo, destino_divisao: afastamento.divisao_texto, detalhes: 'Retorno de afastamento' });
+          }
+        }
+      }
 
       // 6. Deduplicar por identificador único
       const deduplicar = (lista: MovimentacaoConsolidada[]): MovimentacaoConsolidada[] => {
