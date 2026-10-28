@@ -64,4 +64,7 @@ describe('histórico completo de movimentações', () => {
   it('falha fechado quando a regional não tem divisão correspondente', () => {
     expect(filtrarEscopoHistorico([movimento('ENTRADA_NOVO', { divisao_atual: centro })], { regional: 'Outra Regional' }, [])).toEqual([]);
   });
+  it('não quebra com um registro antigo sem data', () => {
+    expect(deduplicarHistorico([movimento('ENTRADA_NOVO', { data_movimentacao: null as unknown as string })])).toEqual([]);
+  });
 });
