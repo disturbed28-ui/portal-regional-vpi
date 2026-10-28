@@ -9,6 +9,8 @@
 - [x] Aba Encerramento: listar do treinamento mais antigo ao mais novo (os mais próximos de encerrar primeiro).
 
 # Pesquisa de satisfação pública
+- [x] Relatório: comparar respostas com efetivo ativo por escopo e destacar meta de 80%; 13 testes passaram e leitura real confirmou 59/167 na Vale 1.
+- [ ] Conferência visual autenticada do indicador: conta de teste bloqueada pela permissão da página Relatórios; nenhuma permissão alterada.
 - [x] Preservar formulário fornecido em rota pública isolada e adaptada para celulares.
 - [x] Integrar leitura de estrutura e gravação anônima na planilha existente pelo servidor.
 - [x] Testar validações, seleção dinâmica e envio com leitura de confirmação.
