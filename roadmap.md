@@ -1,5 +1,5 @@
 # Histórico de movimentações
-- [ ] Reforçar saldo regional: afastados continuam integrantes; transferências internas e retornos de afastamento ficam somente no detalhamento divisional.
+- [x] Reforçar saldo regional: afastados continuam integrantes; transferências internas e retornos de afastamento ficam somente no detalhamento divisional. 30 testes passaram e leitura mensal real conferida; validação visual continua bloqueada pelo acesso da sessão a Relatórios.
 - [x] Painkiller ativo em Caçapava II/Vale 1: transferência de 28/09 estava salva em outubro; filtrar lançamentos datados pelo mês real sem apagar o registro. Leitura autenticada confirmou exclusão de outubro e 27 testes passaram; exportação atualizada.
 - [x] Preservar lançamentos manuais e contar uma única vez o mesmo movimento encontrado depois automaticamente; testes para Helom e Júlio.
 - [x] Separar transferências internas (saldo regional zero) de entradas/saídas efetivas; leitura real confirmou Júlio em 21/10, Minero e Helom uma vez cada.
