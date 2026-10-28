@@ -62,8 +62,10 @@ export function deduplicarHistorico(movimentos: MovimentoHistorico[]) {
     // Transfers retain source/destination; two different transfers on the same day are distinct.
     const transfer = ['MUDANCA_DIVISAO', 'MUDANCA_REGIONAL', 'ENTRADA_TRANSFERENCIA', 'SAIDA_TRANSFERENCIA'].includes(m.tipo_movimentacao);
     const local = transfer ? `${normalizarDivisao(m.valor_anterior || m.divisao_origem || '')}|${normalizarDivisao(m.valor_novo || m.divisao_destino || '')}` : '';
-    const dia = new Date(m.data_movimentacao).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
-    const chave = `${m.registro_id || m.nome_colete}|${familia(m.tipo_movimentacao)}|${dia}|${local}`;
+    const data = new Date(m.data_movimentacao);
+    if (m.data_movimentacao.length === 10) data.setUTCHours(12);
+    const dia = data.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+    const chave = `${m.registro_id || m.nome_colete}|${familia(m.tipo_movimentacao)}|${m.tipo_movimentacao === 'ENTRADA_NOVO' ? '' : dia}|${local}`;
     const index = vistos.get(chave);
     if (index === undefined) {
       vistos.set(chave, resultado.length);
