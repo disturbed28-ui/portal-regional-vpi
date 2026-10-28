@@ -1,4 +1,10 @@
 # Frequência — pesos por tipo de evento
+# Relatório CMD — movimentações mensais
+- [ ] Consultar todas as movimentações do mês de referência sem alterar os demais itens do período.
+- [ ] Incluir afastamentos/retornos e incorporar deltas sem apagar edições manuais.
+- [ ] Testar limites de mês, atualização incremental e conferir a tela autenticada.
+
+# Frequência — pesos por tipo de evento
 - [x] Graduação com o mesmo peso do Coletamento (1,0).
 - [x] Ligar o tipo do evento ao peso automaticamente (gatilho no banco).
 - [x] Preencher o peso dos eventos que já existem.
