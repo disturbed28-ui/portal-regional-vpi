@@ -1,4 +1,5 @@
 # Histórico de movimentações
+- [ ] Preservar lançamentos manuais e contar uma única vez o mesmo movimento encontrado depois automaticamente.
 - [ ] Separar transferências internas (saldo regional zero) de entradas/saídas efetivas e conferir a saída de Júlio no mês correto.
 - [ ] Capturar entradas novas, saídas, transferências, reativações e afastamentos/retornos em todas as fontes, com paginação e sem duplicação.
 - [ ] Testar as categorias e conferir os registros reais no histórico sem ampliar permissões.
