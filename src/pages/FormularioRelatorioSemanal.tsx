@@ -1020,7 +1020,8 @@ const FormularioRelatorioSemanal = () => {
             integrante_id: m.integrante_id || "",
             nome_colete: m.nome_colete,
             data_entrada: dataReal || dataFallback,
-            motivo_entrada: m.tipo === "REATIVACAO" ? "Reativado" : "Transferido",
+            motivo_entrada:
+              m.tipo === "REATIVACAO" ? "Reativado" : m.detalhes === "Novo integrante" ? "Novo" : "Transferido",
             possui_carro: false,
             possui_moto: false,
             nenhum: true,
