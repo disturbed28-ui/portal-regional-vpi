@@ -62,6 +62,20 @@ describe('entradas mensais CMD Centro e Extremo Norte SJC', () => {
   it('afastamento e retorno de afastamento não são perda ou ganho de efetivo regional', () => {
     expect(totaisEfetivosRegionalCMD([{ entradas: [{ tipo_movimentacao: 'RETORNO_AFASTAMENTO' }], saidas: [{ motivo_codigo: 'AFASTAMENTO' }] }])).toEqual({ entradas: 0, saidas: 0, saldo: 0 });
   });
+  it('transferência manual de Painkiller entre Caçapava e Caçapava II não vira baixa regional sem flag', () => {
+    const saida = { integrante_id: 'painkiller', nome_colete: 'Painkiller', data_saida: '2026-09-28', motivo_codigo: 'transferido' };
+    const entrada = { integrante_id: 'painkiller', nome_colete: 'Painkiller', data_entrada: '2026-09-28', motivo_entrada: 'Transferido' };
+    const divisoes = [{ entradas: [], saidas: [saida] }, { entradas: [entrada], saidas: [] }];
+    expect(totaisEfetivosRegionalCMD(divisoes)).toEqual({ entradas: 0, saidas: 0, saldo: 0 });
+    expect(divisoes[0].saidas).toEqual([saida]);
+    expect(divisoes[1].entradas).toEqual([entrada]);
+  });
+  it('suspensão indevidamente representada como inativação não reduz efetivo regional', () => {
+    expect(totaisEfetivosRegionalCMD([{ entradas: [], saidas: [{ motivo_codigo: 'INATIVACAO', motivo_inativacao: 'afastado' }] }])).toEqual({ entradas: 0, saidas: 0, saldo: 0 });
+  });
+  it('retorno de suspensão não aumenta efetivo regional e desligamento de afastado é baixa real', () => {
+    expect(totaisEfetivosRegionalCMD([{ entradas: [{ motivo_entrada: 'Retorno de suspensão' }], saidas: [{ motivo_codigo: 'INATIVACAO', motivo_inativacao: 'desligado' }] }])).toEqual({ entradas: 0, saidas: 1, saldo: -1 });
+  });
   it('captura desligamento manual de Júlio mesmo sem delta automático', async () => {
     const rows: Record<string, any[]> = {
       integrantes_portal: [{ id: 'julio', registro_id: 187453, nome_colete: 'Júlio', divisao_texto: 'DIVISAO SAO JOSE DOS CAMPOS EXTREMO NORTE - SP', created_at: '2025-10-30T00:00:00Z' }],

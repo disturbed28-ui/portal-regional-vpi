@@ -71,7 +71,30 @@ export function unirMovimentosMensaisCMD(manuais: any[], detectados: any[], camp
 }
 
 export function totaisEfetivosRegionalCMD(divisoes: { entradas: any[]; saidas: any[] }[]) {
-  const entradas = divisoes.flatMap(d => d.entradas).filter(m => !m.transferencia_interna && m.tipo_movimentacao !== 'RETORNO_AFASTAMENTO' && !normalizarDivisaoCMD(m.motivo_entrada || '').includes('AFAST'));
-  const saidas = divisoes.flatMap(d => d.saidas).filter(m => !m.transferencia_interna && m.motivo_codigo !== 'AFASTAMENTO' && !normalizarDivisaoCMD(m.motivo_codigo || '').includes('AFAST'));
+  const todasEntradas = divisoes.flatMap(d => d.entradas);
+  const todasSaidas = divisoes.flatMap(d => d.saidas);
+  const afastamento = (m: any) => m.afastamento === true || /AFAST|SUSPENS/.test(normalizarDivisaoCMD(`${m.tipo_movimentacao || ''} ${m.motivo_codigo || ''} ${m.motivo_entrada || ''} ${m.motivo_inativacao || ''}`));
+  const transferido = (m: any) => /TRANSF/.test(normalizarDivisaoCMD(`${m.motivo_codigo || ''} ${m.motivo_entrada || ''}`)) || ['SAIDA', 'ENTRADA'].includes(m.tipo_movimentacao) && !!m.origem_divisao && !!m.destino_divisao;
+  const interna = (m: any) => {
+    if (m.transferencia_interna) return true;
+    // Legacy manual records may not have the flag: both regional division sides
+    // of the same transfer still cancel without counting as regional admissions/losses.
+    if (!transferido(m)) return false;
+    return todasEntradas.some(e => transferido(e) && mesmaTransferenciaCMD(m, e)) && todasSaidas.some(s => transferido(s) && mesmaTransferenciaCMD(m, s));
+  };
+  const entradas = todasEntradas.filter(m => !interna(m) && !afastamento(m));
+  const saidas = todasSaidas.filter(m => !interna(m) && !afastamento(m));
   return { entradas: entradas.length, saidas: saidas.length, saldo: entradas.length - saidas.length };
+}
+
+function mesmaTransferenciaCMD(a: any, b: any) {
+  const mesmaPessoa = a.integrante_id && b.integrante_id ? a.integrante_id === b.integrante_id : !!a.nome_colete && normalizarDivisaoCMD(a.nome_colete) === normalizarDivisaoCMD(b.nome_colete);
+  if (!mesmaPessoa) return false;
+  const dataA = a.data_entrada || a.data_saida;
+  const dataB = b.data_entrada || b.data_saida;
+  if (!dataA || dataA !== dataB) return false;
+  for (const campo of ['origem_divisao', 'destino_divisao']) {
+    if (a[campo] && b[campo] && normalizarDivisaoCMD(a[campo]) !== normalizarDivisaoCMD(b[campo])) return false;
+  }
+  return true;
 }
