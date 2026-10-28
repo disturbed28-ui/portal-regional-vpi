@@ -1,8 +1,9 @@
 # Histórico de movimentações
-- [ ] Preservar lançamentos manuais e contar uma única vez o mesmo movimento encontrado depois automaticamente.
-- [ ] Separar transferências internas (saldo regional zero) de entradas/saídas efetivas e conferir a saída de Júlio no mês correto.
-- [ ] Capturar entradas novas, saídas, transferências, reativações e afastamentos/retornos em todas as fontes, com paginação e sem duplicação.
-- [ ] Testar as categorias e conferir os registros reais no histórico sem ampliar permissões.
+- [x] Preservar lançamentos manuais e contar uma única vez o mesmo movimento encontrado depois automaticamente; testes para Helom e Júlio.
+- [x] Separar transferências internas (saldo regional zero) de entradas/saídas efetivas; leitura real confirmou Júlio em 21/10, Minero e Helom uma vez cada.
+- [x] Capturar entradas novas, saídas, transferências, reativações e afastamentos/retornos em todas as fontes, com paginação; leitura autenticada real retornou 1.277 movimentos.
+- [x] Testar as categorias e o resumo mensal: 25 testes passaram; exportação atualizada.
+- [ ] Conferir histórico e resumo pela interface: a sessão disponível é redirecionada de Relatórios para início; nenhuma permissão ampliada.
 
 # Relatório CMD — movimentações mensais
 - [x] Resumo, meta e exportação usam a leitura mensal compartilhada: leitura autenticada real confirmou Minero/Centro SJC e Helom/Extremo Norte SJC uma vez cada; 11 testes passaram e função de exportação implantada.
