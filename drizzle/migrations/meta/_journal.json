@@ -78,6 +78,13 @@
       "when": 1793194944457,
       "tag": "0010_pd_pendencias_apenas_responsaveis",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793194978366,
+      "tag": "0011_pd_pendencias_status_reais",
+      "breakpoints": true
     }
   ]
 }
