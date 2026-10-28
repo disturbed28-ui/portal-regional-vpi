@@ -1,8 +1,8 @@
-# Frequência — pesos por tipo de evento
 # Relatório CMD — movimentações mensais
-- [ ] Consultar todas as movimentações do mês de referência sem alterar os demais itens do período.
-- [ ] Incluir afastamentos/retornos e incorporar deltas sem apagar edições manuais.
-- [ ] Testar limites de mês, atualização incremental e conferir a tela autenticada.
+- [x] Consultar as movimentações do mês de referência sem alterar os demais itens do período; consultas paginadas.
+- [x] Incluir afastamentos/retornos e incorporar deltas sem apagar edições manuais.
+- [x] Testar limites de mês, virada de ano, retornos e atualização incremental: 7 testes passaram.
+- [ ] Conferir movimentações reais na tela: a conta autenticada disponível não retornou integrante ativo vinculado, impedindo carregar divisão e formulário; precisa de sessão de responsável vinculado.
 
 # Frequência — pesos por tipo de evento
 - [x] Graduação com o mesmo peso do Coletamento (1,0).
