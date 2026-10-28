@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { DivisaoRelatorio, TotaisRelatorio } from './useRelatorioData';
 import { normalizeText } from '@/lib/normalizeText';
-import { movimentosMensaisRegionalCMD } from '../../supabase/functions/_shared/resumo-movimentacoes-cmd';
+import { movimentosMensaisRegionalCMD, totaisEfetivosRegionalCMD } from '../../supabase/functions/_shared/resumo-movimentacoes-cmd';
 
 interface RelatorioSemanalResumoData {
   divisoes: DivisaoRelatorio[];
@@ -332,6 +332,10 @@ export const useRelatorioSemanalResumo = (regionalId: string, ano?: number, mes?
         }
       );
 
+      const efetivos = totaisEfetivosRegionalCMD(movimentosMensais);
+      totais.entrada = efetivos.entradas;
+      totais.saida = efetivos.saidas;
+      totais.saldo = efetivos.saldo;
       return {
         divisoes,
         totais,
