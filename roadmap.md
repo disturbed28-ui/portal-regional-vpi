@@ -1,3 +1,7 @@
+# Pendências de PD
+- [x] Restringir aviso ao Diretor responsável da divisão e ao Diretor/Operacional Regional Grau V da regional correspondente; servidor valida cargo/vínculo/matriz, sem avisos antigos. Dez regras de acesso e sete testes de PD passaram; sessão Comando recebeu zero avisos.
+- [ ] Conferir cartão com um PD pendente na sessão de um responsável: sessão disponível é Comando e corretamente não recebe avisos; falta publicar a mudança da janela no portal.
+
 # Histórico de movimentações
 - [x] Reforçar saldo regional: afastados continuam integrantes; transferências internas e retornos de afastamento ficam somente no detalhamento divisional. 30 testes passaram e leitura mensal real conferida; validação visual continua bloqueada pelo acesso da sessão a Relatórios.
 - [x] Painkiller ativo em Caçapava II/Vale 1: transferência de 28/09 estava salva em outubro; filtrar lançamentos datados pelo mês real sem apagar o registro. Leitura autenticada confirmou exclusão de outubro e 27 testes passaram; exportação atualizada.

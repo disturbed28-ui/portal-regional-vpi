@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.pd_responsavel_pendencia(text,text,uuid,uuid,uuid,uuid) TO authenticated; COMMENT ON FUNCTION public.pd_responsavel_pendencia(text,text,uuid,uuid,uuid,uuid) IS 'Pure predicate only: reads no user data and confers no access. pd_pendencias_responsavel supplies server-read membership values.';

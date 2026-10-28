@@ -4293,8 +4293,20 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      pd_pendencias_responsavel: { Args: never; Returns: Json }
       pd_pode_tratar: {
         Args: { _divisao_id: string; _regional_id: string }
+        Returns: boolean
+      }
+      pd_responsavel_pendencia: {
+        Args: {
+          _cargo: string
+          _divisao_pd: string
+          _divisao_usuario: string
+          _grau: string
+          _regional_pd: string
+          _regional_usuario: string
+        }
         Returns: boolean
       }
       protocolo_viagem_no_escopo: {
