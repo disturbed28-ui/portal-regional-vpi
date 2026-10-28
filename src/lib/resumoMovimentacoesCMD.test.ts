@@ -52,4 +52,25 @@ describe('entradas mensais CMD Centro e Extremo Norte SJC', () => {
   it('afastamento e retorno de afastamento não são perda ou ganho de efetivo regional', () => {
     expect(totaisEfetivosRegionalCMD([{ entradas: [{ tipo_movimentacao: 'RETORNO_AFASTAMENTO' }], saidas: [{ motivo_codigo: 'AFASTAMENTO' }] }])).toEqual({ entradas: 0, saidas: 0, saldo: 0 });
   });
+  it('captura desligamento manual de Júlio mesmo sem delta automático', async () => {
+    const rows: Record<string, any[]> = {
+      integrantes_portal: [{ id: 'julio', registro_id: 187453, nome_colete: 'Júlio', divisao_texto: 'DIVISAO SAO JOSE DOS CAMPOS EXTREMO NORTE - SP', created_at: '2025-10-30T00:00:00Z' }],
+      integrantes_historico: [{ id: 'saida', integrante_id: 'julio', dados_anteriores: { ativo: true }, dados_novos: { ativo: false }, created_at: '2026-10-21T10:33:45Z', observacao: 'Solicitou desligamento' }],
+    };
+    const db = { from(tabela: string) {
+      let data = rows[tabela] || [];
+      const q: any = {};
+      q.select = q.order = () => q;
+      q.in = (campo: string, valores: unknown[]) => { data = data.filter(x => valores.includes(x[campo])); return q; };
+      q.eq = (campo: string, valor: unknown) => { data = data.filter(x => x[campo] === valor); return q; };
+      q.gte = (campo: string, valor: string) => { data = data.filter(x => x[campo] >= valor); return q; };
+      q.lte = (campo: string, valor: string) => { data = data.filter(x => x[campo] <= valor); return q; };
+      q.range = async (a: number, b: number) => ({ data: data.slice(a, b + 1), error: null });
+      return q;
+    } };
+    const movimentos = await lerMovimentacoesCMD(db, { divisao: 'DIVISAO SAO JOSE DOS CAMPOS EXTREMO NORTE - SP', dataInicio: new Date('2026-10-01T03:00:00Z'), dataFim: new Date('2026-11-01T02:59:59.999Z') });
+    expect(movimentos.saidas.map(m => m.nome_colete)).toEqual(['Júlio']);
+    expect(movimentos.saidas[0].data_movimentacao).toBe('2026-10-21T10:33:45Z');
+    expect(movimentos.entradas).toHaveLength(0);
+  });
 });
