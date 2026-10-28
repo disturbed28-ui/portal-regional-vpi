@@ -1453,7 +1453,7 @@ const FormularioRelatorioSemanal = () => {
           )}
 
           <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">Houve entrada de integrantes neste período?</p>
+            <p className="text-sm text-muted-foreground">Houve entrada de integrantes neste mês?</p>
             <div className="flex gap-2">
               <Button
                 type="button"
