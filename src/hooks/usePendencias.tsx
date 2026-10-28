@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { STATUS_EM_ANDAMENTO, STATUS_LABEL, formatarNumeroPD, type PdStatus } from '@/lib/processoDisciplinar';
+import { STATUS_LABEL, formatarNumeroPD, type PdStatus } from '@/lib/processoDisciplinar';
 
 interface MensalidadeDetalhes {
   cargo_grau_texto: string | null;
@@ -220,7 +220,7 @@ export const usePendencias = (
   // Cache de 5 minutos (ao invés de diário)
   const getCacheKey = () => {
     const cacheTime = Math.floor(Date.now() / (5 * 60 * 1000)); // 5 minutos
-      return `pendencias_v11_${userId}_${userRole}_${regionalId || 'no_reg'}_${divisaoId || 'no_div'}_${registroId || 'all'}_${cacheTime}`;
+      return `pendencias_v12_${userId}_${userRole}_${regionalId || 'no_reg'}_${divisaoId || 'no_div'}_${registroId || 'all'}_${cacheTime}`;
   };
 
   useEffect(() => {
@@ -255,7 +255,7 @@ export const usePendencias = (
 
     // Limpar caches antigos (versões anteriores)
     Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('pendencias_') && !key.includes('_v11_')) {
+      if (key.startsWith('pendencias_') && !key.includes('_v12_')) {
         console.log('[usePendencias] Removendo cache antigo:', key);
         localStorage.removeItem(key);
       }
@@ -263,7 +263,8 @@ export const usePendencias = (
 
     // Cache de 5 minutos (nova versão v5)
     const cacheKey = getCacheKey();
-    const cached = localStorage.getItem(cacheKey);
+    // PDs nunca usam cache: cargo/divisão podem mudar durante os cinco minutos.
+    const cached = null;
     
     console.log('[usePendencias] Cache key:', cacheKey);
     console.log('[usePendencias] Cache encontrado:', !!cached);
@@ -1139,16 +1140,12 @@ export const usePendencias = (
           todasPendencias.filter(p => p.tipo === 'expansao_baixa').length);
       }
 
-      // 5.4 PD – Processo Disciplinar: PDs emitidos em andamento no escopo do usuário
-      // O RLS da tabela já limita a visibilidade (divisão/regional/comando); aqui só filtramos
-      // os status em andamento. Roles sem acesso à tela de PD não consultam.
-      const rolesComPD = ['admin', 'diretor_regional', 'regional', 'diretor_divisao', 'adm_regional'];
-      if (userRole && rolesComPD.includes(userRole)) {
-        const { data: pdsAndamento, error: pdsError } = await supabase
-          .from('processos_disciplinares')
-          .select('id, numero, ano, titulo, status, autor_nome, divisao_texto, regional_texto, emitido_em, created_at')
-          .in('status', STATUS_EM_ANDAMENTO)
-          .order('emitido_em', { ascending: false });
+      // 5.4 PD: servidor valida cargo atual, vínculo ativo, matriz e divisão/regional.
+      {
+        const { data: pdsResultado, error: pdsError } = await supabase.rpc('pd_pendencias_responsavel');
+        const pdsAndamento = Array.isArray(pdsResultado)
+          ? pdsResultado as unknown as Array<PdDetalhes & { id: string; created_at: string }>
+          : [];
 
         if (pdsError) {
           console.error('[usePendencias] Erro ao buscar PDs em andamento:', pdsError);
@@ -1489,7 +1486,7 @@ export const usePendencias = (
       console.log('[usePendencias] Salvando no cache:', cacheKey);
 
       setPendencias(todasPendencias);
-      localStorage.setItem(cacheKey, JSON.stringify(todasPendencias));
+      localStorage.setItem(cacheKey, JSON.stringify(todasPendencias.filter(p => p.tipo !== 'pd')));
       setLoading(false);
     };
 
