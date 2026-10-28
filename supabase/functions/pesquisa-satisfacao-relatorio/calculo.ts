@@ -79,7 +79,30 @@ export function parseLinhas(rows: unknown[][]): Resposta[] {
   return out;
 }
 
-export function indicadores(rs: Resposta[]) {
+export function participacao(respostas: number, integrantesAtivos: number) {
+  const proporcao = integrantesAtivos > 0 ? respostas / integrantesAtivos : null;
+  return {
+    integrantesAtivos,
+    percentual: proporcao === null ? null : Math.round(proporcao * 1000) / 10,
+    metaAtingida: proporcao !== null && proporcao >= 0.8,
+  };
+}
+
+export function contarEfetivo(
+  integrantes: { ativo: boolean | null; regional_id: string | null; divisao_id: string | null }[],
+  regionalId: string, divisaoId: string | null,
+) {
+  const porDivisao = new Map<string, number>();
+  let total = 0;
+  for (const i of integrantes) {
+    if (i.ativo !== true || i.regional_id !== regionalId || (divisaoId && i.divisao_id !== divisaoId)) continue;
+    total++;
+    if (i.divisao_id) porDivisao.set(i.divisao_id, (porDivisao.get(i.divisao_id) || 0) + 1);
+  }
+  return { total, porDivisao };
+}
+
+export function indicadores(rs: Resposta[], integrantesAtivos?: number) {
   const medias = INDICADORES.map(i => {
     const vals = rs.map(r => r.notas[i.chave]).filter((n): n is number => n !== null);
     return { chave: i.chave, rotulo: i.rotulo, avaliacoes: vals.length,
@@ -93,6 +116,7 @@ export function indicadores(rs: Resposta[]) {
     .sort((a, b) => b.quantidade - a.quantidade);
   const nenhuma = contagem('NENHUMA');
   return { respostas: rs.length, medias, atividades,
+    ...(integrantesAtivos === undefined ? {} : { participacao: participacao(rs.length, integrantesAtivos) }),
     programacaoAdequada: { quantidade: nenhuma, percentual: pct(nenhuma) },
     respondentesAtividades: comAtividade.length };
 }

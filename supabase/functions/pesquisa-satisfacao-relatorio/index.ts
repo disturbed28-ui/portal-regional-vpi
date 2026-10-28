@@ -4,7 +4,7 @@ import { z } from 'npm:zod@3';
 import { createOpenAI } from 'npm:@ai-sdk/openai@3';
 import { streamText, Output } from 'npm:ai@6';
 import { createLovableAiGatewayRunIdFetch, getLovableAiGatewayRunId } from './run-id.ts';
-import { hashDe, indicadores, noPeriodo, parseLinhas, textoParaIa, type Resposta } from './calculo.ts';
+import { contarEfetivo, hashDe, indicadores, noPeriodo, parseLinhas, textoParaIa, type Resposta } from './calculo.ts';
 
 // Authenticated management report for the public satisfaction survey. Scope is derived from the
 // caller's profile/roles on the server; browser filters are only accepted inside that scope.
@@ -204,7 +204,19 @@ Deno.serve(async req => {
     const todas = (await lerRespostas()).filter(r => r.regionalId === regionalId && noPeriodo(r, inicio, fim));
     const nomes = new Map<string, string>(divisoesPermitidas.map((d: any) => [d.id, d.nome]));
     const rs = divisaoId ? todas.filter(r => r.divisaoId === divisaoId) : todas;
-    const ind = indicadores(rs);
+    // Only read scope IDs, never member identity or any link to anonymous answers.
+    const integrantes: { ativo: boolean | null; regional_id: string | null; divisao_id: string | null }[] = [];
+    for (let offset = 0; ; offset += 1000) {
+      let query = admin.from('integrantes_portal').select('ativo, regional_id, divisao_id')
+        .eq('ativo', true).eq('regional_id', regionalId).order('id').range(offset, offset + 999);
+      if (divisaoId) query = query.eq('divisao_id', divisaoId);
+      const { data, error } = await query;
+      if (error) throw new Error('Não foi possível consultar o efetivo atual.');
+      integrantes.push(...(data || []));
+      if ((data || []).length < 1000) break;
+    }
+    const efetivo = contarEfetivo(integrantes, regionalId, divisaoId);
+    const ind = indicadores(rs, efetivo.total);
     const amostraOk = (l: Resposta[]) => l.length >= minimo;
     // "Outros" texts are free text: shown only when the sample reaches the minimum.
     const outrosTextos = (l: Resposta[]) => amostraOk(l) ? l.map(r => r.outros).filter(Boolean) : [];
@@ -218,7 +230,7 @@ Deno.serve(async req => {
       // Per-division analyses for the consolidated view; bounded so one request never fans out widely.
       let disparos = 0;
       for (const [id, l] of [...grupos.entries()].sort((a, b) => b[1].length - a[1].length)) {
-        const item: Record<string, unknown> = { divisaoId: id, nome: nomes.get(id) || l[0].divisao, indicadores: indicadores(l) };
+        const item: Record<string, unknown> = { divisaoId: id, nome: nomes.get(id) || l[0].divisao, indicadores: indicadores(l, efetivo.porDivisao.get(id) || 0) };
         if (amostraOk(l) && disparos < 4) { item.analise = await analise(req, admin, { ...p, divisaoId: id }, l, minimo, nomes); disparos++; }
         else item.analise = amostraOk(l) ? { estado: 'processando' } : { estado: 'amostra_insuficiente', minimo };
         lista.push(item);

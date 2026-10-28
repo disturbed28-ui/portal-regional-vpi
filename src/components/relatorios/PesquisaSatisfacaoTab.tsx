@@ -19,6 +19,7 @@ type Analise = {
 };
 type Ind = {
   respostas: number; respondentesAtividades: number;
+  participacao?: { integrantesAtivos: number; percentual: number | null; metaAtingida: boolean };
   medias: { chave: string; rotulo: string; media: number | null; avaliacoes: number }[];
   atividades: { codigo: string; rotulo: string; quantidade: number; percentual: number }[];
   programacaoAdequada: { quantidade: number; percentual: number };
@@ -113,13 +114,13 @@ export function PesquisaSatisfacaoTab() {
           <Indicadores ind={d.indicadores} />
           {d.indicadores.respostas > 0 && <Atividades ind={d.indicadores} outros={d.outros || []} />}
           {d.indicadores.respostas > 0 && (
-            <BlocoAnalise titulo={divisaoId ? 'Análise da divisão' : 'Diagnóstico consolidado da regional'} a={d.analise!} regional={!divisaoId} />
+            d.analise && <BlocoAnalise titulo={divisaoId ? 'Análise da divisão' : 'Diagnóstico consolidado da regional'} a={d.analise} regional={!divisaoId} />
           )}
           {!divisaoId && (d.divisoes?.length || 0) > 0 && (
             <Card>
               <CardHeader className="p-3 pb-1"><CardTitle className="text-sm">Divisão por divisão</CardTitle></CardHeader>
               <CardContent className="p-3 pt-1 space-y-2">
-                {d.divisoes!.map(v => <DivisaoItem key={v.divisaoId} v={v} />)}
+                {d.divisoes?.map(v => <DivisaoItem key={v.divisaoId} v={v} />)}
               </CardContent>
             </Card>
           )}
@@ -149,7 +150,15 @@ function Indicadores({ ind }: { ind: Ind }) {
     <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
       <Card className="col-span-2 lg:col-span-1"><CardContent className="p-3">
         <p className="text-xs text-muted-foreground">Respostas válidas</p>
-        <p className="text-2xl font-bold">{ind.respostas}</p>
+        <p className={`text-2xl font-bold break-words ${corParticipacao(ind)}`}>
+          {ind.respostas}{ind.participacao && <> de {ind.participacao.integrantesAtivos}</>}
+        </p>
+        {ind.participacao && <>
+          <p className={`text-xs font-bold ${corParticipacao(ind)}`}>
+            {ind.participacao.percentual === null ? 'Sem efetivo ativo' : `${fmt(ind.participacao.percentual)}% · Meta 80%`}
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-1" title="Pesquisa anônima: quantidade de respostas, não pessoas únicas identificadas.">Respostas no período / integrantes ativos hoje</p>
+        </>}
       </CardContent></Card>
       {ind.medias.map((m, i) => (
         <Card key={m.chave} className={i === 0 ? 'border-primary/60' : ''}><CardContent className="p-3">
@@ -160,6 +169,11 @@ function Indicadores({ ind }: { ind: Ind }) {
       ))}
     </div>
   );
+}
+
+function corParticipacao(ind: Ind) {
+  if (!ind.participacao || ind.participacao.percentual === null) return 'text-muted-foreground';
+  return ind.participacao.metaAtingida ? 'text-success' : 'text-warning';
 }
 
 function Atividades({ ind, outros }: { ind: Ind; outros: string[] }) {
@@ -262,7 +276,11 @@ function DivisaoItem({ v }: { v: { nome: string; indicadores: Ind; analise: Anal
         <span className="min-w-0">
           <span className="text-xs font-semibold break-words">{nomeCurto(v.nome)}</span>
           <span className="block text-[11px] text-muted-foreground">
-            {v.indicadores.respostas} resp. · {v.indicadores.medias.map(m => `${m.rotulo.split(' ')[0]} ${fmt(m.media)}`).join(' · ')}
+            <span className={`font-bold ${corParticipacao(v.indicadores)}`}>
+              {v.indicadores.respostas}{v.indicadores.participacao && <> de {v.indicadores.participacao.integrantesAtivos}</>} resp.
+              {v.indicadores.participacao?.percentual != null && <> · {fmt(v.indicadores.participacao.percentual)}%</>}
+            </span>
+            {' · '}{v.indicadores.medias.map(m => `${m.rotulo.split(' ')[0]} ${fmt(m.media)}`).join(' · ')}
           </span>
           {v.analise.estado === 'ok' || v.analise.estado === 'desatualizada' ? (
             <span className="block text-[11px] mt-0.5">
