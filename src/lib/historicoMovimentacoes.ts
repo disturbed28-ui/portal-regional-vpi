@@ -59,6 +59,7 @@ export function deduplicarHistorico(movimentos: MovimentoHistorico[]) {
   const resultado: MovimentoHistorico[] = [];
   const vistos = new Map<string, number>();
   for (const m of movimentos) {
+    if (!m.data_movimentacao || !Number.isFinite(Date.parse(m.data_movimentacao))) continue;
     // Transfers retain source/destination; two different transfers on the same day are distinct.
     const transfer = ['MUDANCA_DIVISAO', 'MUDANCA_REGIONAL', 'ENTRADA_TRANSFERENCIA', 'SAIDA_TRANSFERENCIA'].includes(m.tipo_movimentacao);
     const local = transfer ? `${normalizarDivisao(m.valor_anterior || m.divisao_origem || '')}|${normalizarDivisao(m.valor_novo || m.divisao_destino || '')}` : '';
