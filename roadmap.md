@@ -1,4 +1,5 @@
 # Histórico de movimentações
+- [ ] Conferir Painkiller/Caçapava II na Vale 1 e corrigir eventual classificação como baixa regional.
 - [x] Preservar lançamentos manuais e contar uma única vez o mesmo movimento encontrado depois automaticamente; testes para Helom e Júlio.
 - [x] Separar transferências internas (saldo regional zero) de entradas/saídas efetivas; leitura real confirmou Júlio em 21/10, Minero e Helom uma vez cada.
 - [x] Capturar entradas novas, saídas, transferências, reativações e afastamentos/retornos em todas as fontes, com paginação; leitura autenticada real retornou 1.277 movimentos.
