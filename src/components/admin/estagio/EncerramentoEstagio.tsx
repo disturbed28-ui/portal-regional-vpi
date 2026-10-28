@@ -6,6 +6,8 @@ import { Loader2, User, Building2, MapPin, Briefcase, GraduationCap, Calendar, C
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useEncerramentoEstagio, EstagioEncerramento } from '@/hooks/useEncerramentoEstagio';
+import { ordenarPorVencimento } from '@/lib/ordenaEstagiosEncerramento';
+
 import { ModalCancelarSolicitacao } from '@/components/admin/treinamento/ModalCancelarSolicitacao';
 import { ModalEncerrarEstagio } from './ModalEncerrarEstagio';
 import { ReadOnlyBanner } from '@/components/ui/read-only-banner';
