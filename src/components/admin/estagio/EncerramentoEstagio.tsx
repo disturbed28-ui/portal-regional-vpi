@@ -26,29 +26,10 @@ interface DadosUsuario {
 export function EncerramentoEstagio({ userId, readOnly = false }: EncerramentoEstagioProps) {
   const { estagios, loading, operando, cancelarSolicitacao, encerrarEstagio } = useEncerramentoEstagio(userId);
 
-  // Agrupar por divisão; ordenar grupos pelo término previsto mais próximo de hoje (asc).
-  // Dentro de cada divisão também ordena por término previsto asc. Sem data vai pro final.
-  const estagiosOrdenados = useMemo(() => {
-    const INF = Number.POSITIVE_INFINITY;
-    const getTime = (d: string | null) => (d ? new Date(d).getTime() : INF);
+  // Ordenar do estágio que vence primeiro para o que vence por último, sem agrupar por divisão,
+  // para não precisar rolar a lista toda atrás de quem está vencendo.
+  const estagiosOrdenados = useMemo(() => ordenarPorVencimento(estagios), [estagios]);
 
-    const grupos = new Map<string, { minTime: number; itens: EstagioEncerramento[] }>();
-    for (const e of estagios) {
-      const key = e.integrante_divisao_texto || '—';
-      const t = getTime(e.data_termino_previsto);
-      const g = grupos.get(key);
-      if (g) {
-        g.itens.push(e);
-        if (t < g.minTime) g.minTime = t;
-      } else {
-        grupos.set(key, { minTime: t, itens: [e] });
-      }
-    }
-
-    return Array.from(grupos.values())
-      .sort((a, b) => a.minTime - b.minTime)
-      .flatMap(g => g.itens.sort((a, b) => getTime(a.data_termino_previsto) - getTime(b.data_termino_previsto)));
-  }, [estagios]);
   
   const [modalCancelar, setModalCancelar] = useState<EstagioEncerramento | null>(null);
   const [modalEncerrar, setModalEncerrar] = useState<EstagioEncerramento | null>(null);
