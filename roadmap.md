@@ -1,4 +1,5 @@
 # Histórico de movimentações
+- [x] Painkiller ativo em Caçapava II/Vale 1: transferência de 28/09 estava salva em outubro; filtrar lançamentos datados pelo mês real sem apagar o registro. Leitura autenticada confirmou exclusão de outubro e 27 testes passaram; exportação atualizada.
 - [x] Preservar lançamentos manuais e contar uma única vez o mesmo movimento encontrado depois automaticamente; testes para Helom e Júlio.
 - [x] Separar transferências internas (saldo regional zero) de entradas/saídas efetivas; leitura real confirmou Júlio em 21/10, Minero e Helom uma vez cada.
 - [x] Capturar entradas novas, saídas, transferências, reativações e afastamentos/retornos em todas as fontes, com paginação; leitura autenticada real retornou 1.277 movimentos.

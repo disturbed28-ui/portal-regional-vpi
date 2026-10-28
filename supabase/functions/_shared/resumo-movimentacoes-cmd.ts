@@ -22,9 +22,21 @@ export async function movimentosMensaisRegionalCMD(db: any, regionalId: string, 
     const entradasDetectadas = movimentos.entradas.map(m => ({ integrante_id: m.integrante_id, nome_colete: m.nome_colete, data_entrada: m.data_movimentacao.split('T')[0], motivo_entrada: m.detalhes === 'Novo integrante' ? 'Novo' : ['REATIVACAO', 'RETORNO_AFASTAMENTO'].includes(m.tipo) ? 'Retorno' : 'Transferido', _chave_dedup: m.id, tipo_movimentacao: m.tipo, transferencia_interna: m.tipo === 'ENTRADA' && !!m.origem_divisao && nomesRegionais.has(normalizarDivisaoCMD(m.origem_divisao)), origem_divisao: m.origem_divisao, destino_divisao: m.destino_divisao }));
     const saidasDetectadas = movimentos.saidas.map(m => ({ integrante_id: m.integrante_id, nome_colete: m.nome_colete, data_saida: m.data_movimentacao.split('T')[0], motivo_codigo: m.tipo, justificativa: m.detalhes, _chave_dedup: m.id, transferencia_interna: m.tipo === 'SAIDA' && !!m.destino_divisao && nomesRegionais.has(normalizarDivisaoCMD(m.destino_divisao)), origem_divisao: m.origem_divisao, destino_divisao: m.destino_divisao }));
     return { divisao_id: div.id, divisao_nome: div.nome,
-      entradas: unirMovimentosMensaisCMD(registros.flatMap(r => r.entradas_json || []), entradasDetectadas, 'data_entrada'),
-      saidas: unirMovimentosMensaisCMD(registros.flatMap(r => r.saidas_json || []), saidasDetectadas, 'data_saida') };
+      entradas: unirMovimentosMensaisCMD(filtrarMovimentosMesCMD(registros.flatMap(r => r.entradas_json || []), 'data_entrada', ano, mes), entradasDetectadas, 'data_entrada'),
+      saidas: unirMovimentosMensaisCMD(filtrarMovimentosMesCMD(registros.flatMap(r => r.saidas_json || []), 'data_saida', ano, mes), saidasDetectadas, 'data_saida') };
   }));
+}
+
+export function filtrarMovimentosMesCMD<T extends Record<string, any>>(itens: T[], campo: 'data_entrada' | 'data_saida', ano: number, mes: number): T[] {
+  return itens.filter(item => {
+    // Undated legacy/manual items remain attached to the saved report month.
+    if (!item[campo]) return true;
+    const data = new Date(item[campo]);
+    if (!Number.isFinite(data.getTime())) return false;
+    if (String(item[campo]).length === 10) return data.getUTCFullYear() === ano && data.getUTCMonth() + 1 === mes;
+    const local = new Date(data.getTime() - 3 * 3600000);
+    return local.getUTCFullYear() === ano && local.getUTCMonth() + 1 === mes;
+  });
 }
 
 export function unirMovimentosMensaisCMD(manuais: any[], detectados: any[], campoData: 'data_entrada' | 'data_saida') {
