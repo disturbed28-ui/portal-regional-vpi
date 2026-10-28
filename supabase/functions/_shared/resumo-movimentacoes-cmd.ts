@@ -59,7 +59,7 @@ export function unirMovimentosMensaisCMD(manuais: any[], detectados: any[], camp
 }
 
 export function totaisEfetivosRegionalCMD(divisoes: { entradas: any[]; saidas: any[] }[]) {
-  const entradas = divisoes.flatMap(d => d.entradas).filter(m => !m.transferencia_interna && m.tipo_movimentacao !== 'RETORNO_AFASTAMENTO');
-  const saidas = divisoes.flatMap(d => d.saidas).filter(m => !m.transferencia_interna && m.motivo_codigo !== 'AFASTAMENTO');
+  const entradas = divisoes.flatMap(d => d.entradas).filter(m => !m.transferencia_interna && m.tipo_movimentacao !== 'RETORNO_AFASTAMENTO' && !normalizarDivisaoCMD(m.motivo_entrada || '').includes('AFAST'));
+  const saidas = divisoes.flatMap(d => d.saidas).filter(m => !m.transferencia_interna && m.motivo_codigo !== 'AFASTAMENTO' && !normalizarDivisaoCMD(m.motivo_codigo || '').includes('AFAST'));
   return { entradas: entradas.length, saidas: saidas.length, saldo: entradas.length - saidas.length };
 }

@@ -126,7 +126,7 @@ const normalizarDivisao = normalizarDivisaoCMD;
             if (!depois.ativo && normalizarDivisao(origem) === divisaoNorm) saidas.push({ ...base, tipo: 'INATIVACAO', origem_divisao: origem, detalhes: h.observacao || 'Inativado' });
             if (depois.ativo && normalizarDivisao(destino) === divisaoNorm) entradas.push({ ...base, tipo: 'REATIVACAO', destino_divisao: destino, detalhes: h.observacao || 'Reativado' });
           }
-          if (typeof antes.divisao_texto === 'string' && typeof depois.divisao_texto === 'string' && normalizarDivisao(origem) !== normalizarDivisao(destino)) {
+          if (typeof antes.divisao_texto === 'string' && typeof depois.divisao_texto === 'string' && normalizarDivisao(origem) !== normalizarDivisao(destino) && antes.ativo !== false) {
             if (normalizarDivisao(origem) === divisaoNorm) saidas.push({ ...base, tipo: 'SAIDA', origem_divisao: origem, destino_divisao: destino, detalhes: `Transferido para: ${destino}` });
             if (normalizarDivisao(destino) === divisaoNorm) entradas.push({ ...base, tipo: 'ENTRADA', origem_divisao: origem, destino_divisao: destino, detalhes: `Veio de: ${origem}` });
           }
