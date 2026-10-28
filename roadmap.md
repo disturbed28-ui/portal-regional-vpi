@@ -1,3 +1,6 @@
+# Pendências de PD
+- [ ] Restringir aviso ao Diretor responsável da divisão e ao Diretor/Operacional Regional Grau V da regional correspondente; validar no servidor e impedir reaproveitamento de avisos antigos.
+
 # Histórico de movimentações
 - [x] Reforçar saldo regional: afastados continuam integrantes; transferências internas e retornos de afastamento ficam somente no detalhamento divisional. 30 testes passaram e leitura mensal real conferida; validação visual continua bloqueada pelo acesso da sessão a Relatórios.
 - [x] Painkiller ativo em Caçapava II/Vale 1: transferência de 28/09 estava salva em outubro; filtrar lançamentos datados pelo mês real sem apagar o registro. Leitura autenticada confirmou exclusão de outubro e 27 testes passaram; exportação atualizada.
