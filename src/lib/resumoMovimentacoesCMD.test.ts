@@ -1,7 +1,7 @@
 // @ts-expect-error bun test runtime
 import { describe, it, expect } from 'bun:test';
 import { lerMovimentacoesCMD } from '../../supabase/functions/_shared/movimentacoes-cmd';
-import { unirMovimentosMensaisCMD, totaisEfetivosRegionalCMD } from '../../supabase/functions/_shared/resumo-movimentacoes-cmd';
+import { unirMovimentosMensaisCMD, totaisEfetivosRegionalCMD, filtrarMovimentosMesCMD } from '../../supabase/functions/_shared/resumo-movimentacoes-cmd';
 
 describe('entradas mensais CMD Centro e Extremo Norte SJC', () => {
   const novos = [
@@ -36,6 +36,16 @@ describe('entradas mensais CMD Centro e Extremo Norte SJC', () => {
     expect(totaisEfetivosRegionalCMD(divisoes)).toEqual({ entradas: 0, saidas: 0, saldo: 0 });
     expect(divisoes[0].saidas).toHaveLength(1);
     expect(divisoes[1].entradas).toHaveLength(1);
+  });
+  it('Painkiller transferido em 28/09 não é saída de outubro mesmo salvo no relatório de outubro', () => {
+    const salvo = { nome_colete: 'Painkiller', data_saida: '2026-09-28', motivo_codigo: 'transferido' };
+    expect(filtrarMovimentosMesCMD([salvo], 'data_saida', 2026, 10)).toEqual([]);
+    expect(filtrarMovimentosMesCMD([salvo], 'data_saida', 2026, 9)).toEqual([salvo]);
+  });
+  it('preserva o desligamento de Júlio em outubro e lançamentos manuais ainda sem data', () => {
+    const julio = { nome_colete: 'Júlio', data_saida: '2026-10-21' };
+    const manual = { nome_colete: 'Outro' };
+    expect(filtrarMovimentosMesCMD([julio, manual], 'data_saida', 2026, 10)).toEqual([julio, manual]);
   });
   it('transferência para outra regional é saída efetiva na origem e entrada no destino', () => {
     expect(totaisEfetivosRegionalCMD([{ entradas: [], saidas: [{ transferencia_interna: false }] }])).toEqual({ entradas: 0, saidas: 1, saldo: -1 });
