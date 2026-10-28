@@ -9,6 +9,7 @@
 - [x] Aba Encerramento: listar do treinamento mais antigo ao mais novo (os mais próximos de encerrar primeiro).
 
 # Pesquisa de satisfação pública
+- [ ] Relatório: comparar respostas com efetivo ativo por escopo e destacar meta de 80%; testar cálculo e tela.
 - [x] Preservar formulário fornecido em rota pública isolada e adaptada para celulares.
 - [x] Integrar leitura de estrutura e gravação anônima na planilha existente pelo servidor.
 - [x] Testar validações, seleção dinâmica e envio com leitura de confirmação.
