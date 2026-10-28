@@ -163,7 +163,7 @@ export const RelatorioSemanalResumo = ({ regionalId, ano, mes, semana }: Relator
                           <TableCell>
                             {entrada.data_entrada && format(new Date(entrada.data_entrada), 'dd/MM/yyyy', { locale: ptBR })}
                           </TableCell>
-                          <TableCell>{entrada.motivo_entrada || '-'}</TableCell>
+                          <TableCell>{entrada.transferencia_interna ? 'Transferência interna (sem entrada efetiva regional)' : entrada.motivo_entrada || '-'}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -196,7 +196,7 @@ export const RelatorioSemanalResumo = ({ regionalId, ano, mes, semana }: Relator
                           <TableCell>
                             {saida.data_saida && format(new Date(saida.data_saida), 'dd/MM/yyyy', { locale: ptBR })}
                           </TableCell>
-                          <TableCell>{saida.justificativa || saida.motivo_codigo || '-'}</TableCell>
+                          <TableCell>{saida.transferencia_interna ? 'Transferência interna (sem baixa regional)' : saida.justificativa || saida.motivo_codigo || '-'}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

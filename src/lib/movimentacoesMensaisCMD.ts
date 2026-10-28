@@ -1,4 +1,5 @@
 import { fromZonedTime } from 'date-fns-tz';
+import { unirMovimentosMensaisCMD } from '../../supabase/functions/_shared/resumo-movimentacoes-cmd';
 
 export function retornoEfetivoCMD(motivo: string | null, data: string | null) {
   return Boolean(data && (motivo === 'retornou' || motivo === 'retorno_detectado_carga'));
@@ -21,18 +22,6 @@ type ItemMovimento = {
 
 // Keep existing/manual edits; only append newly detected movements in each block.
 export function incorporarMovimentosCMD<T extends ItemMovimento>(existentes: T[], detectados: T[]): T[] {
-  const chave = (item: T) => {
-    const nome = (item.nome_colete || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
-    return `${item.integrante_id || nome}|${item.data_entrada || item.data_saida || ''}`;
-  };
-  const vistos = new Set(existentes.map(chave));
-  const ids = new Set(existentes.map(item => item._chave_dedup).filter(Boolean));
-  const novos = detectados.filter(item => {
-    const identificador = chave(item);
-    if ((item._chave_dedup && ids.has(item._chave_dedup)) || vistos.has(identificador)) return false;
-    vistos.add(identificador);
-    if (item._chave_dedup) ids.add(item._chave_dedup);
-    return true;
-  });
-  return novos.length ? [...existentes, ...novos] : existentes;
+  const campo = [...existentes, ...detectados].some(i => i.data_saida) ? 'data_saida' : 'data_entrada';
+  return unirMovimentosMensaisCMD(existentes, detectados, campo) as T[];
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { movimentosMensaisRegionalCMD } from '../../supabase/functions/_shared/resumo-movimentacoes-cmd';
+import { movimentosMensaisRegionalCMD, totaisEfetivosRegionalCMD } from '../../supabase/functions/_shared/resumo-movimentacoes-cmd';
 import {
   calcularMetaCrescimento,
   normalizarNomeDivisao,
@@ -89,8 +89,7 @@ export const useMetaCrescimento = (
           .eq('mes_referencia', mes);
 
         const movimentos = await movimentosMensaisRegionalCMD(supabase, regionalId, ano, mes);
-        const entradas = movimentos.reduce((total, div) => total + div.entradas.length, 0);
-        const saidas = movimentos.reduce((total, div) => total + div.saidas.length, 0);
+        const { entradas, saidas } = totaisEfetivosRegionalCMD(movimentos);
         const periodos = new Set<number>();
 
         (relatorios || []).forEach((r: any) => {

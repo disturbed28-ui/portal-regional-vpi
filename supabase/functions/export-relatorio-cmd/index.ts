@@ -1,4 +1,4 @@
-import { movimentosMensaisRegionalCMD } from '../_shared/resumo-movimentacoes-cmd.ts';
+import { movimentosMensaisRegionalCMD, totaisEfetivosRegionalCMD } from '../_shared/resumo-movimentacoes-cmd.ts';
 import ExcelJS from 'npm:exceljs@4.4.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -316,13 +316,10 @@ async function fetchDadosRelatorio(
 
   // Read live monthly movements independently of period submissions.
   const movimentosMes = await movimentosMensaisRegionalCMD(supabase, regional_id, ano, mes);
-  let acumEntradas = 0;
-  let acumSaidas = 0;
+  const efetivosRegional = totaisEfetivosRegionalCMD(movimentosMes);
   for (const div of divisoesCompletas) {
     const mensal = movimentosMes.find(m => m.divisao_id === div.divisao_id);
     if (!mensal) continue;
-    acumEntradas += mensal.entradas.length;
-    acumSaidas += mensal.saidas.length;
     div.relatorio = { ...(div.relatorio || { id: '', divisao_relatorio_id: div.divisao_id, divisao_relatorio_texto: div.divisao_nome, inadimplencias_json: [], conflitos_json: [], acoes_sociais_json: [], estatisticas_divisao_json: {} }), entradas_json: mensal.entradas, saidas_json: mensal.saidas };
   }
   const periodosSet = new Set([1, 2, 3]);
@@ -343,8 +340,8 @@ async function fetchDadosRelatorio(
     mapIntegranteIdToRegistro,
     mapNomeColeteToRegistro,
     acumulado_mes: {
-      entradas: acumEntradas,
-      saidas: acumSaidas,
+      entradas: efetivosRegional.entradas,
+      saidas: efetivosRegional.saidas,
       periodos: Array.from(periodosSet).sort(),
     },
   };
@@ -398,6 +395,7 @@ function adicionarBlocoMovimentacao(wsData: any[][], dados: DadosRelatorio, row:
   });
   
   wsData[row++] = ['TOTAL', totalEntradas, totalSaidas, totalEntradas - totalSaidas];
+  wsData[row++] = ['MOVIMENTOS EFETIVOS DA REGIONAL', dados.acumulado_mes.entradas, dados.acumulado_mes.saidas, dados.acumulado_mes.entradas - dados.acumulado_mes.saidas];
   wsData[row++] = [];
   return row;
 }

@@ -104,6 +104,35 @@ const normalizarDivisao = normalizarDivisaoCMD;
       const entradas: MovimentacaoConsolidada[] = [];
       const saidas: MovimentacaoConsolidada[] = [];
 
+      // Manual actions are authoritative movements even before the next load.
+      const { data: historicoManual } = await lerPaginas((inicio, fim) => supabase
+        .from('integrantes_historico')
+        .select('id,integrante_id,dados_anteriores,dados_novos,observacao,created_at')
+        .gte('created_at', options.dataInicio.toISOString()).lte('created_at', options.dataFim.toISOString())
+        .order('created_at').order('id').range(inicio, fim));
+      const idsManuais = [...new Set(historicoManual.map(h => h.integrante_id).filter(Boolean))];
+      if (idsManuais.length) {
+        const { data: pessoasManuais } = await lerPaginas((inicio, fim) => supabase.from('integrantes_portal')
+          .select('id,registro_id,nome_colete,divisao_texto').in('id', idsManuais).order('id').range(inicio, fim));
+        const pessoas = new Map(pessoasManuais.map(p => [p.id, p]));
+        for (const h of historicoManual) {
+          const pessoa: any = pessoas.get(h.integrante_id);
+          const antes = h.dados_anteriores || {};
+          const depois = h.dados_novos || {};
+          const origem = antes.divisao_texto || pessoa?.divisao_texto;
+          const destino = depois.divisao_texto || origem;
+          const base = { id: `manual_${h.id}`, integrante_id: h.integrante_id, registro_id: pessoa?.registro_id || antes.registro_id || depois.registro_id || 0, nome_colete: pessoa?.nome_colete || antes.nome_colete || depois.nome_colete || '', data_movimentacao: h.created_at };
+          if (typeof antes.ativo === 'boolean' && typeof depois.ativo === 'boolean' && antes.ativo !== depois.ativo) {
+            if (!depois.ativo && normalizarDivisao(origem) === divisaoNorm) saidas.push({ ...base, tipo: 'INATIVACAO', origem_divisao: origem, detalhes: h.observacao || 'Inativado' });
+            if (depois.ativo && normalizarDivisao(destino) === divisaoNorm) entradas.push({ ...base, tipo: 'REATIVACAO', destino_divisao: destino, detalhes: h.observacao || 'Reativado' });
+          }
+          if (typeof antes.divisao_texto === 'string' && typeof depois.divisao_texto === 'string' && normalizarDivisao(origem) !== normalizarDivisao(destino) && antes.ativo !== false) {
+            if (normalizarDivisao(origem) === divisaoNorm) saidas.push({ ...base, tipo: 'SAIDA', origem_divisao: origem, destino_divisao: destino, detalhes: `Transferido para: ${destino}` });
+            if (normalizarDivisao(destino) === divisaoNorm) entradas.push({ ...base, tipo: 'ENTRADA', origem_divisao: origem, destino_divisao: destino, detalhes: `Veio de: ${origem}` });
+          }
+        }
+      }
+
       // 4. Processar mudanças de divisão
       (mudancasDivisao || []).forEach(item => {
         const anteriorNorm = normalizarDivisao(item.valor_anterior || '');
@@ -147,6 +176,7 @@ const normalizarDivisao = normalizarDivisaoCMD;
       (mudancasAtivo || []).forEach(item => {
         // Só válido se tem valor_novo explícito
         if (item.valor_novo !== 'true' && item.valor_novo !== 'false') return;
+        if (!['true', 'false'].includes(item.valor_anterior) || item.valor_anterior === item.valor_novo) return;
 
         // Verificar se integrante é/era desta divisão
         const infoAtual = item.integrante_id ? integrantesMap.get(item.integrante_id) : null;
@@ -236,7 +266,7 @@ const normalizarDivisao = normalizarDivisaoCMD;
       const deduplicar = (lista: MovimentacaoConsolidada[]): MovimentacaoConsolidada[] => {
         const vistos = new Set<string>();
         return lista.filter(m => {
-          const chave = `${m.registro_id}_${m.tipo}_${m.data_movimentacao.split('T')[0]}`;
+          const chave = `${m.registro_id || m.integrante_id || m.nome_colete}_${m.tipo}_${m.data_movimentacao.split('T')[0]}_${normalizarDivisao(m.origem_divisao || '')}_${normalizarDivisao(m.destino_divisao || '')}`;
           if (vistos.has(chave)) return false;
           vistos.add(chave);
           return true;
