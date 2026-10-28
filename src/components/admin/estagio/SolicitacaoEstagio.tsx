@@ -25,7 +25,7 @@ import { IntegranteEstagioCard } from './IntegranteEstagioCard';
 import { ReadOnlyBanner } from '@/components/ui/read-only-banner';
 import { DialogNotificarAprovacao } from '@/components/whatsapp/DialogNotificarAprovacao';
 import { useNotificacaoAprovacaoFluxo } from '@/hooks/useNotificacaoAprovacaoFluxo';
-import { format, addMonths } from 'date-fns';
+import { format, addMonths, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
@@ -511,7 +511,7 @@ export function SolicitacaoEstagio({ userId, readOnly = false }: SolicitacaoEsta
                   <div className="p-3 bg-muted/50 rounded-lg text-sm">
                     <span className="text-muted-foreground">Término previsto: </span>
                     <span className="font-medium">
-                      {format(addMonths(dataInicioEstagio, parseInt(tempoEstagioMeses)), "dd/MM/yyyy", { locale: ptBR })}
+                      {format(addDays(addMonths(dataInicioEstagio, parseInt(tempoEstagioMeses)), 1), "dd/MM/yyyy", { locale: ptBR })}
                     </span>
                   </div>
                 )}
