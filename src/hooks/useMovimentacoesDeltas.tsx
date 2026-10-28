@@ -41,7 +41,7 @@ interface UseMovimentacoesDeltasOptions {
 }
 
 // Mapeamento tipo_delta + acao_resolucao -> tipo_movimentacao
-function mapearTipoMovimentacao(
+export function mapearTipoMovimentacao(
   tipoDelta: string,
   acao: string | null,
   observacao: string | null
@@ -129,7 +129,8 @@ function mapearTipoMovimentacao(
     },
   };
   
-  return mapa[tipoDelta]?.[acao || ''] || 'OUTRO';
+  const padroes: Record<string, TipoMovimentacaoExpandida> = { NOVO_ATIVOS: 'ENTRADA_NOVO', SUMIU_ATIVOS: 'SAIDA_DESLIGAMENTO', NOVO_AFASTADOS: 'AFASTAMENTO_NOVO' };
+  return mapa[tipoDelta]?.[acao || ''] || (!acao ? padroes[tipoDelta] : undefined) || 'OUTRO';
 }
 
 // Hook para buscar movimentações baseadas em deltas resolvidos
