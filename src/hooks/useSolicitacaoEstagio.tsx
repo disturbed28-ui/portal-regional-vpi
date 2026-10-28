@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { addMonths } from 'date-fns';
+import { addDays, addMonths } from 'date-fns';
 
 interface IntegranteEstagio {
   id: string;
@@ -111,7 +111,8 @@ export function useSolicitacaoEstagio() {
         .single();
 
       // Calcular data de término previsto
-      const dataTerminoPrevisto = addMonths(params.dataInicioEstagio, params.tempoEstagioMeses);
+      // SLA + 1 dia: o portal do clube não permite encerrar no último dia do estágio
+      const dataTerminoPrevisto = addDays(addMonths(params.dataInicioEstagio, params.tempoEstagioMeses), 1);
 
       // 1. Criar solicitação
       const { data: solCriada, error: solError } = await supabase
