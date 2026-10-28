@@ -1,4 +1,6 @@
+// @ts-expect-error bun test runtime
 import { describe, it, expect } from 'bun:test';
+
 import { ordenarPorVencimento } from './ordenaEstagiosEncerramento';
 
 type Item = {
