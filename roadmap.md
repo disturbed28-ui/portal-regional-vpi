@@ -1,3 +1,7 @@
+# Histórico de movimentações
+- [ ] Capturar entradas novas, saídas, transferências, reativações e afastamentos/retornos em todas as fontes, com paginação e sem duplicação.
+- [ ] Testar as categorias e conferir os registros reais no histórico sem ampliar permissões.
+
 # Relatório CMD — movimentações mensais
 - [x] Resumo, meta e exportação usam a leitura mensal compartilhada: leitura autenticada real confirmou Minero/Centro SJC e Helom/Extremo Norte SJC uma vez cada; 11 testes passaram e função de exportação implantada.
 - [ ] Validar resumo e arquivo exportado pela interface: a sessão disponível é redirecionada para início ao abrir Relatórios, por falta de acesso à tela; nenhuma permissão foi ampliada.
