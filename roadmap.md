@@ -1,5 +1,6 @@
 # Relatório CMD — movimentações mensais
-- [ ] Corrigir resumo e exportação para incluir Minero/Centro SJC e Helom/Extremo Norte SJC mesmo sem envio do período, sem duplicar registros mensais.
+- [x] Resumo, meta e exportação usam a leitura mensal compartilhada: leitura autenticada real confirmou Minero/Centro SJC e Helom/Extremo Norte SJC uma vez cada; 11 testes passaram e função de exportação implantada.
+- [ ] Validar resumo e arquivo exportado pela interface: a sessão disponível é redirecionada para início ao abrir Relatórios, por falta de acesso à tela; nenhuma permissão foi ampliada.
 - [x] Consultar as movimentações do mês de referência sem alterar os demais itens do período; consultas paginadas.
 - [x] Incluir afastamentos/retornos e incorporar deltas sem apagar edições manuais.
 - [x] Testar limites de mês, virada de ano, retornos e atualização incremental: 7 testes passaram.
