@@ -183,6 +183,33 @@ export const useMovimentacoesConsolidadas = (options: UseMovimentacoesConsolidad
         }
       });
 
+      // 5b. Integrantes NOVOS: a carga cria o cadastro sem registrar mudança de campo,
+      // então entram aqui pela data de criação no período
+      const { data: novos, error: errorNovos } = await supabase
+        .from('integrantes_portal')
+        .select('id, registro_id, nome_colete, divisao_texto, created_at')
+        .gte('created_at', options.dataInicio.toISOString())
+        .lte('created_at', options.dataFim.toISOString());
+      if (errorNovos) {
+        console.error('[useMovimentacoesConsolidadas] Erro ao buscar novos integrantes:', errorNovos);
+        throw errorNovos;
+      }
+      const jaListados = new Set(entradas.map(e => e.integrante_id).filter(Boolean));
+      (novos || []).forEach((n: any) => {
+        if (normalizarDivisao(n.divisao_texto || '') !== divisaoNorm) return;
+        if (jaListados.has(n.id)) return;
+        entradas.push({
+          id: `novo_${n.id}`,
+          integrante_id: n.id,
+          registro_id: n.registro_id,
+          nome_colete: n.nome_colete,
+          tipo: 'ENTRADA',
+          data_movimentacao: n.created_at,
+          destino_divisao: n.divisao_texto,
+          detalhes: 'Novo integrante'
+        });
+      });
+
       // 6. Deduplicar por identificador único
       const deduplicar = (lista: MovimentacaoConsolidada[]): MovimentacaoConsolidada[] => {
         const vistos = new Set<string>();
