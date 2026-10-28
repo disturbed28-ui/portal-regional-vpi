@@ -7,8 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar, Search, ArrowRightLeft, ArrowRight, ChevronLeft, ChevronRight, RefreshCw, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useMovimentacoesComFiltro } from '@/hooks/useMovimentacoesIntegrantes';
-import { useMovimentacoesDeltas, type MovimentacaoDelta, type TipoMovimentacaoExpandida } from '@/hooks/useMovimentacoesDeltas';
+import { useHistoricoMovimentacoesCompleto } from '@/hooks/useHistoricoMovimentacoesCompleto';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface HistoricoMovimentacoesProps {
@@ -68,75 +67,16 @@ export const HistoricoMovimentacoes = ({
   const filtroIntegrantesDivisao = nivelAcesso === 'divisao' ? divisaoUsuario : undefined;
   const filtroIntegrantesRegional = nivelAcesso === 'regional' ? regionalUsuario : undefined;
 
-  // Tipos para filtro do hook de carga (tipos antigos)
-  const tiposCarga = ['MUDANCA_DIVISAO', 'MUDANCA_REGIONAL', 'INATIVACAO', 'REATIVACAO'];
-  const tiposDeltas = TIPOS_MOVIMENTACAO
-    .map(t => t.value)
-    .filter(t => !tiposCarga.includes(t) && t !== 'TODOS');
-
-  // Hook para movimentações de carga (divisão, regional, ativo)
-  const { data: movimentacoesCarga, isLoading: loadingCarga, refetch: refetchCarga } = useMovimentacoesComFiltro({
-    integrantesDaDivisao: filtroIntegrantesDivisao,
-    integrantesDaRegional: filtroIntegrantesRegional,
-    tipos: tipoFiltro !== 'TODOS' && tiposCarga.includes(tipoFiltro) ? [tipoFiltro] : undefined,
+  const { data: historico = [], isLoading, isError, refetch } = useHistoricoMovimentacoesCompleto({
+    divisao: filtroIntegrantesDivisao,
+    regional: filtroIntegrantesRegional,
   });
-
-  // Hook para movimentações de deltas resolvidos
-  const { data: movimentacoesDeltas, isLoading: loadingDeltas, refetch: refetchDeltas } = useMovimentacoesDeltas({
-    integrantesDaDivisao: filtroIntegrantesDivisao,
-    integrantesDaRegional: filtroIntegrantesRegional,
-    tipos: tipoFiltro !== 'TODOS' && tiposDeltas.includes(tipoFiltro) ? [tipoFiltro] : undefined,
-  });
-
-  const isLoading = loadingCarga || loadingDeltas;
-
-  const refetch = () => {
-    refetchCarga();
-    refetchDeltas();
-  };
-
-  // Unificar e ordenar movimentações
-  const movimentacoesUnificadas = useMemo((): MovimentacaoUnificada[] => {
-    const unificadas: MovimentacaoUnificada[] = [];
-
-    // Adicionar movimentações de carga
-    if (movimentacoesCarga && (tipoFiltro === 'TODOS' || tiposCarga.includes(tipoFiltro))) {
-      movimentacoesCarga.forEach(m => {
-        unificadas.push({
-          id: m.id,
-          nome_colete: m.nome_colete,
-          tipo_movimentacao: m.tipo_movimentacao,
-          data_movimentacao: m.data_movimentacao,
-          valor_anterior: m.valor_anterior,
-          valor_novo: m.valor_novo,
-          divisao_atual: m.divisao_atual,
-          origem: 'carga',
-        });
-      });
-    }
-
-    // Adicionar movimentações de deltas
-    if (movimentacoesDeltas && (tipoFiltro === 'TODOS' || tiposDeltas.includes(tipoFiltro))) {
-      movimentacoesDeltas.forEach(m => {
-        unificadas.push({
-          id: m.id,
-          nome_colete: m.nome_colete,
-          tipo_movimentacao: m.tipo_movimentacao,
-          data_movimentacao: m.data_movimentacao,
-          divisao_atual: m.divisao_texto,
-          detalhes: m.detalhes,
-          origem: 'delta',
-        });
-      });
-    }
-
-    // Ordenar por data decrescente
-    unificadas.sort((a, b) => 
-      new Date(b.data_movimentacao).getTime() - new Date(a.data_movimentacao).getTime()
-    );
-
-    return unificadas;
-  }, [movimentacoesCarga, movimentacoesDeltas, tipoFiltro]);
+  const movimentacoesUnificadas = useMemo(() => historico.filter(m => {
+    if (tipoFiltro === 'TODOS') return true;
+    if (['SAIDA_AFASTAMENTO', 'AFASTAMENTO_NOVO'].includes(tipoFiltro)) return ['SAIDA_AFASTAMENTO', 'AFASTAMENTO_NOVO'].includes(m.tipo_movimentacao);
+    if (['AFASTAMENTO_RETORNO', 'ENTRADA_RETORNO_AFASTAMENTO'].includes(tipoFiltro)) return ['AFASTAMENTO_RETORNO', 'ENTRADA_RETORNO_AFASTAMENTO'].includes(m.tipo_movimentacao);
+    return m.tipo_movimentacao === tipoFiltro;
+  }), [historico, tipoFiltro]);
 
   // Filtrar por nome localmente
   const movimentacoesFiltradas = useMemo(() => {
@@ -272,6 +212,8 @@ export const HistoricoMovimentacoes = ({
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
+        ) : isError ? (
+          <div className="text-center py-12 text-destructive">Não foi possível carregar o histórico completo. Tente atualizar.</div>
         ) : movimentacoesFiltradas.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             Nenhuma movimentação encontrada
