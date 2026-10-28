@@ -1,3 +1,4 @@
+import { movimentosMensaisRegionalCMD } from '../_shared/resumo-movimentacoes-cmd.ts';
 import ExcelJS from 'npm:exceljs@4.4.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -102,11 +103,12 @@ async function fetchDadosRelatorio(
   regional_id: string,
   ano: number,
   mes: number,
-  semana: number
+  semana: number,
+  authorization: string
 ): Promise<DadosRelatorio> {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, { global: { headers: { Authorization: authorization } } });
 
   console.log('[Fetch Dados] Buscando para:', { regional_id, ano, mes, semana });
 
@@ -312,23 +314,18 @@ async function fetchDadosRelatorio(
 
   console.log('[Fetch Dados] Candidatos expansão no relatório:', expansaoFiltrada.length);
 
-  // 8. Acumulado do mês (períodos 1..semana) para a meta de 4% de crescimento
-  const { data: relatoriosMes } = await supabase
-    .from('relatorios_semanais_divisao')
-    .select('semana_no_mes, entradas_json, saidas_json')
-    .eq('regional_relatorio_id', regional_id)
-    .eq('ano_referencia', ano)
-    .eq('mes_referencia', mes)
-    .lte('semana_no_mes', semana);
-
+  // Read live monthly movements independently of period submissions.
+  const movimentosMes = await movimentosMensaisRegionalCMD(supabase, regional_id, ano, mes);
   let acumEntradas = 0;
   let acumSaidas = 0;
-  const periodosSet = new Set<number>();
-  (relatoriosMes || []).forEach((r: any) => {
-    periodosSet.add(r.semana_no_mes);
-    acumEntradas += ((r.entradas_json as any[]) || []).length;
-    acumSaidas += ((r.saidas_json as any[]) || []).length;
-  });
+  for (const div of divisoesCompletas) {
+    const mensal = movimentosMes.find(m => m.divisao_id === div.divisao_id);
+    if (!mensal) continue;
+    acumEntradas += mensal.entradas.length;
+    acumSaidas += mensal.saidas.length;
+    div.relatorio = { ...(div.relatorio || { id: '', divisao_relatorio_id: div.divisao_id, divisao_relatorio_texto: div.divisao_nome, inadimplencias_json: [], conflitos_json: [], acoes_sociais_json: [], estatisticas_divisao_json: {} }), entradas_json: mensal.entradas, saidas_json: mensal.saidas };
+  }
+  const periodosSet = new Set([1, 2, 3]);
 
   return {
     regional_nome: regional.nome,
@@ -1113,12 +1110,18 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const authorization = req.headers.get('Authorization') || '';
+    const authClient = createClient(Deno.env.get('SUPABASE_URL') || '', Deno.env.get('SUPABASE_ANON_KEY') || '', { global: { headers: { Authorization: authorization } } });
+    const { data: authData, error: authError } = await authClient.auth.getUser();
+    if (authError || !authData.user) return new Response(JSON.stringify({ error: 'Não autenticado' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    const { data: permitido } = await authClient.rpc('user_has_screen_permission', { _user_id: authData.user.id, _screen_route: '/relatorios/semanal-divisao' });
+    if (!permitido) return new Response(JSON.stringify({ error: 'Sem permissão' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     const { regional_id, ano, mes, semana } = await req.json();
 
     console.log('[Export CMD] Parâmetros:', { regional_id, ano, mes, semana });
 
     // Validar parâmetros
-    if (!regional_id || !ano || !mes || !semana) {
+    if (typeof regional_id !== 'string' || !/^[0-9a-f-]{36}$/i.test(regional_id) || !Number.isInteger(ano) || ano < 2000 || ano > 2100 || !Number.isInteger(mes) || mes < 1 || mes > 12 || ![1, 2, 3].includes(semana)) {
       return new Response(
         JSON.stringify({ error: 'Parâmetros obrigatórios: regional_id, ano, mes, semana' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -1127,7 +1130,7 @@ Deno.serve(async (req) => {
 
     // Buscar dados (1 query principal)
     console.log('[Export CMD] Buscando dados...');
-    const dados = await fetchDadosRelatorio(regional_id, ano, mes, semana);
+    const dados = await fetchDadosRelatorio(regional_id, ano, mes, semana, authorization);
 
     // Gerar XLSX em memória
     console.log('[Export CMD] Gerando XLSX...');
