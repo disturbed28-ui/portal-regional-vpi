@@ -73,8 +73,8 @@ export const RelatorioSemanalResumo = ({ regionalId, ano, mes, semana }: Relator
   if (!dadosRelatorio) return null;
 
   // Consolidar dados dos formulários
-  const entradasDetalhadas: any[] = [];
-  const saidasDetalhadas: any[] = [];
+  const entradasDetalhadas = dadosRelatorio.movimentosMensais.flatMap(d => d.entradas.map(e => ({ ...e, divisao: d.divisao_nome })));
+  const saidasDetalhadas = dadosRelatorio.movimentosMensais.flatMap(d => d.saidas.map(s => ({ ...s, divisao: d.divisao_nome })));
   const inadimplencias: any[] = [];
   const conflitosInternos: any[] = [];
   const conflitosExternos: any[] = [];
@@ -82,14 +82,6 @@ export const RelatorioSemanalResumo = ({ regionalId, ano, mes, semana }: Relator
 
   relatoriosSemanais?.forEach(relatorio => {
     const divisaoNome = relatorio.divisao_relatorio_texto;
-    
-    // Entradas
-    const entradas = (relatorio.entradas_json as any[]) || [];
-    entradas.forEach(e => entradasDetalhadas.push({ ...e, divisao: divisaoNome }));
-    
-    // Saídas
-    const saidas = (relatorio.saidas_json as any[]) || [];
-    saidas.forEach(s => saidasDetalhadas.push({ ...s, divisao: divisaoNome }));
     
     // Inadimplências
     const inad = (relatorio.inadimplencias_json as any[]) || [];

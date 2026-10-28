@@ -2,11 +2,13 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { DivisaoRelatorio, TotaisRelatorio } from './useRelatorioData';
 import { normalizeText } from '@/lib/normalizeText';
+import { movimentosMensaisRegionalCMD } from '../../supabase/functions/_shared/resumo-movimentacoes-cmd';
 
 interface RelatorioSemanalResumoData {
   divisoes: DivisaoRelatorio[];
   totais: TotaisRelatorio;
   dataCarga?: string;
+  movimentosMensais: Awaited<ReturnType<typeof movimentosMensaisRegionalCMD>>;
 }
 
 export const useRelatorioSemanalResumo = (regionalId: string, ano?: number, mes?: number, semana?: number) => {
@@ -66,18 +68,7 @@ export const useRelatorioSemanalResumo = (regionalId: string, ano?: number, mes?
         .eq('ativo', true)
         .eq('regional_id', regionalId);
 
-      // 4. Buscar relatórios semanais do período (para entradas/saídas)
-      let relatoriosSemanais: any[] = [];
-      if (ano && mes && semana) {
-        const { data: relatoriosData = [] } = await supabase
-          .from('relatorios_semanais_divisao')
-          .select('divisao_relatorio_texto, entradas_json, saidas_json')
-          .eq('regional_relatorio_id', regionalId)
-          .eq('ano_referencia', ano)
-          .eq('mes_referencia', mes)
-          .eq('semana_no_mes', semana);
-        relatoriosSemanais = relatoriosData;
-      }
+      const movimentosMensais = await movimentosMensaisRegionalCMD(supabase, regionalId, ano || hoje.getFullYear(), mes || hoje.getMonth() + 1);
 
       // 5. Buscar apenas mensalidades ATIVAS e NÃO LIQUIDADAS
       const { data: mensalidadesData = [] } = await supabase
@@ -177,12 +168,12 @@ export const useRelatorioSemanalResumo = (regionalId: string, ano?: number, mes?
 
       // Mapear entradas/saídas dos relatórios semanais por divisão
       const entradasSaidasPorDivisao = new Map<string, { entradas: number; saidas: number }>();
-      relatoriosSemanais.forEach((rel: any) => {
-        const divisao = rel.divisao_relatorio_texto?.toUpperCase();
+      movimentosMensais.forEach((rel) => {
+        const divisao = rel.divisao_nome?.toUpperCase();
         if (divisao) {
           entradasSaidasPorDivisao.set(divisao, {
-            entradas: (rel.entradas_json || []).length,
-            saidas: (rel.saidas_json || []).length
+            entradas: rel.entradas.length,
+            saidas: rel.saidas.length
           });
         }
       });
@@ -345,6 +336,7 @@ export const useRelatorioSemanalResumo = (regionalId: string, ano?: number, mes?
         divisoes,
         totais,
         dataCarga: ultimaCarga?.data_carga,
+        movimentosMensais,
       };
     },
     enabled: !!regionalId,
