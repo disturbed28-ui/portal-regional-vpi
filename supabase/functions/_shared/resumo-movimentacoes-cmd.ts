@@ -30,7 +30,7 @@ export async function movimentosMensaisRegionalCMD(db: any, regionalId: string, 
 export function unirMovimentosMensaisCMD(manuais: any[], detectados: any[], campoData: 'data_entrada' | 'data_saida') {
   const normalizarPessoa = (item: any) => normalizarDivisaoCMD(item.nome_colete);
   const tipo = (item: any) => {
-    const texto = normalizarDivisaoCMD(`${item.motivo_entrada || ''} ${item.motivo_codigo || ''} ${item.justificativa || ''} ${item.tipo_movimentacao || ''}`);
+    const texto = normalizarDivisaoCMD(`${item.motivo_entrada || ''} ${item.motivo_codigo || ''} ${item.tipo_movimentacao || ''}`);
     if (texto.includes('AFAST')) return 'afastamento';
     if (texto.includes('RETOR') || texto.includes('REATIV')) return 'retorno';
     if (texto.includes('TRANSF') || ['ENTRADA', 'SAIDA'].includes(item.motivo_codigo)) return 'transferencia';
