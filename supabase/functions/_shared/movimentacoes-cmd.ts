@@ -12,6 +12,8 @@ export interface MovimentacaoConsolidada {
   origem_divisao?: string | null;
   destino_divisao?: string | null;
   detalhes?: string;
+  afastamento?: boolean;
+  motivo_inativacao?: string | null;
 }
 
 export interface UseMovimentacoesConsolidadasOptions {
@@ -121,7 +123,9 @@ const normalizarDivisao = normalizarDivisaoCMD;
           const depois = h.dados_novos || {};
           const origem = antes.divisao_texto || pessoa?.divisao_texto;
           const destino = depois.divisao_texto || origem;
-          const base = { id: `manual_${h.id}`, integrante_id: h.integrante_id, registro_id: pessoa?.registro_id || antes.registro_id || depois.registro_id || 0, nome_colete: pessoa?.nome_colete || antes.nome_colete || depois.nome_colete || '', data_movimentacao: h.created_at };
+          const contexto = normalizarDivisaoCMD(`${antes.motivo_inativacao || ''} ${depois.motivo_inativacao || ''} ${h.observacao || ''}`);
+          const afastamento = /AFAST|SUSPENS/.test(contexto) && !['desligado', 'expulso', 'transferido', 'falecido'].includes(depois.motivo_inativacao || '');
+          const base = { id: `manual_${h.id}`, integrante_id: h.integrante_id, registro_id: pessoa?.registro_id || antes.registro_id || depois.registro_id || 0, nome_colete: pessoa?.nome_colete || antes.nome_colete || depois.nome_colete || '', data_movimentacao: h.created_at, afastamento, motivo_inativacao: depois.motivo_inativacao || antes.motivo_inativacao || null };
           if (typeof antes.ativo === 'boolean' && typeof depois.ativo === 'boolean' && antes.ativo !== depois.ativo) {
             if (!depois.ativo && normalizarDivisao(origem) === divisaoNorm) saidas.push({ ...base, tipo: 'INATIVACAO', origem_divisao: origem, detalhes: h.observacao || 'Inativado' });
             if (depois.ativo && normalizarDivisao(destino) === divisaoNorm) entradas.push({ ...base, tipo: 'REATIVACAO', destino_divisao: destino, detalhes: h.observacao || 'Reativado' });

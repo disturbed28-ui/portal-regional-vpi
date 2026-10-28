@@ -21,9 +21,13 @@ export async function movimentosMensaisRegionalCMD(db: any, regionalId: string, 
     const nomesRegionais = new Set((divisoes || []).map((d: any) => normalizarDivisaoCMD(d.nome)));
     const entradasDetectadas = movimentos.entradas.map(m => ({ integrante_id: m.integrante_id, nome_colete: m.nome_colete, data_entrada: m.data_movimentacao.split('T')[0], motivo_entrada: m.detalhes === 'Novo integrante' ? 'Novo' : ['REATIVACAO', 'RETORNO_AFASTAMENTO'].includes(m.tipo) ? 'Retorno' : 'Transferido', _chave_dedup: m.id, tipo_movimentacao: m.tipo, transferencia_interna: m.tipo === 'ENTRADA' && !!m.origem_divisao && nomesRegionais.has(normalizarDivisaoCMD(m.origem_divisao)), origem_divisao: m.origem_divisao, destino_divisao: m.destino_divisao }));
     const saidasDetectadas = movimentos.saidas.map(m => ({ integrante_id: m.integrante_id, nome_colete: m.nome_colete, data_saida: m.data_movimentacao.split('T')[0], motivo_codigo: m.tipo, justificativa: m.detalhes, _chave_dedup: m.id, transferencia_interna: m.tipo === 'SAIDA' && !!m.destino_divisao && nomesRegionais.has(normalizarDivisaoCMD(m.destino_divisao)), origem_divisao: m.origem_divisao, destino_divisao: m.destino_divisao }));
+    const contexto = (item: any, campo: 'data_entrada' | 'data_saida') => {
+      const movimento = [...movimentos.entradas, ...movimentos.saidas].find(m => m.id === item._chave_dedup || m.integrante_id && m.integrante_id === item.integrante_id && m.data_movimentacao.split('T')[0] === item[campo]);
+      return movimento ? { ...item, afastamento: movimento.afastamento, motivo_inativacao: movimento.motivo_inativacao } : item;
+    };
     return { divisao_id: div.id, divisao_nome: div.nome,
-      entradas: unirMovimentosMensaisCMD(filtrarMovimentosMesCMD(registros.flatMap(r => r.entradas_json || []), 'data_entrada', ano, mes), entradasDetectadas, 'data_entrada'),
-      saidas: unirMovimentosMensaisCMD(filtrarMovimentosMesCMD(registros.flatMap(r => r.saidas_json || []), 'data_saida', ano, mes), saidasDetectadas, 'data_saida') };
+      entradas: unirMovimentosMensaisCMD(filtrarMovimentosMesCMD(registros.flatMap(r => r.entradas_json || []), 'data_entrada', ano, mes), entradasDetectadas, 'data_entrada').map(item => contexto(item, 'data_entrada')),
+      saidas: unirMovimentosMensaisCMD(filtrarMovimentosMesCMD(registros.flatMap(r => r.saidas_json || []), 'data_saida', ano, mes), saidasDetectadas, 'data_saida').map(item => contexto(item, 'data_saida')) };
   }));
 }
 
