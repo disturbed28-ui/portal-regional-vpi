@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { getNivelAcesso } from "@/lib/grauUtils";
+import { cargosDoHistorico, correspondeCargoHistorico, lerTodasPaginasHistorico } from "@/lib/historicoFormacao";
 
 export interface TreinamentoHistorico {
   id: string;
@@ -40,6 +41,7 @@ export const useHistoricoTreinamento = ({ userId }: UseHistoricoTreinamentoParam
   const [filtroStatus, setFiltroStatus] = useState<"todos" | "em_andamento" | "concluido">("em_andamento");
   const [filtroDivisao, setFiltroDivisao] = useState<string>("todas");
   const [filtroNome, setFiltroNome] = useState("");
+  const [filtroCargo, setFiltroCargo] = useState("todos");
 
   useEffect(() => {
     if (!userId) return;
@@ -90,8 +92,7 @@ export const useHistoricoTreinamento = ({ userId }: UseHistoricoTreinamentoParam
           solicitacoesQuery = solicitacoesQuery.eq("divisao_id", userDivisaoId);
         }
 
-        const { data: solicitacoes, error: solicitacoesError } = await solicitacoesQuery;
-        if (solicitacoesError) throw solicitacoesError;
+        const solicitacoes = await lerTodasPaginasHistorico(solicitacoesQuery.order("id"));
 
         // 2. Buscar histórico de treinamentos concluídos
         let historicoQuery = supabase
@@ -119,8 +120,7 @@ export const useHistoricoTreinamento = ({ userId }: UseHistoricoTreinamentoParam
             )
           `);
 
-        const { data: historico, error: historicoError } = await historicoQuery;
-        if (historicoError) throw historicoError;
+        const historico = await lerTodasPaginasHistorico(historicoQuery.order("id"));
 
         // Combinar resultados
         const treinamentosFormatados: TreinamentoHistorico[] = [];
@@ -188,6 +188,7 @@ export const useHistoricoTreinamento = ({ userId }: UseHistoricoTreinamentoParam
   // Aplicar filtros locais
   const treinamentosFiltrados = useMemo(() => {
     return treinamentos.filter((t) => {
+      if (!correspondeCargoHistorico(t.cargo_treinamento_id, filtroCargo)) return false;
       // Filtro de status
       if (filtroStatus === "em_andamento" && t.status !== "Em Andamento") return false;
       if (filtroStatus === "concluido" && t.status !== "Concluído") return false;
@@ -202,7 +203,7 @@ export const useHistoricoTreinamento = ({ userId }: UseHistoricoTreinamentoParam
 
       return true;
     });
-  }, [treinamentos, filtroStatus, filtroDivisao, filtroNome]);
+  }, [treinamentos, filtroStatus, filtroDivisao, filtroNome, filtroCargo]);
 
   // Agrupar por divisão
   const treinamentosPorDivisao = useMemo(() => {
@@ -235,6 +236,10 @@ export const useHistoricoTreinamento = ({ userId }: UseHistoricoTreinamentoParam
   }, [treinamentos]);
 
   return {
+    registrosExportacao: treinamentos,
+    cargosDisponiveis: cargosDoHistorico(treinamentos.map((t) => ({ id: t.cargo_treinamento_id, nome: t.cargo_treinamento_nome }))),
+    filtroCargo,
+    setFiltroCargo,
     treinamentosPorDivisao,
     divisoesDisponiveis,
     loading,

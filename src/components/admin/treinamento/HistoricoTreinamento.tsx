@@ -7,7 +7,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, FileText, Loader2 } from "lucide-react";
+import { Search, FileText, Loader2, FileDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { exportarHistoricoFormacao } from "@/lib/exportarHistoricoFormacao";
+import { toast } from "sonner";
 import { useHistoricoTreinamento } from "@/hooks/useHistoricoTreinamento";
 import { DivisaoTreinamentoCard } from "./DivisaoTreinamentoCard";
 import { ReadOnlyBanner } from "@/components/ui/read-only-banner";
@@ -30,6 +33,10 @@ export const HistoricoTreinamento = ({ userId, readOnly = false }: HistoricoTrei
     filtroNome,
     setFiltroNome,
     totalRegistros,
+    cargosDisponiveis,
+    filtroCargo,
+    setFiltroCargo,
+    registrosExportacao,
   } = useHistoricoTreinamento({ userId });
 
   if (loading) {
@@ -94,6 +101,16 @@ export const HistoricoTreinamento = ({ userId, readOnly = false }: HistoricoTrei
             </Select>
           </div>
 
+          <Select value={filtroCargo} onValueChange={setFiltroCargo}>
+            <SelectTrigger aria-label="Cargo treinado" className="h-10 text-sm min-w-0 [&>span]:truncate">
+              <SelectValue placeholder="Cargo treinado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os cargos treinados</SelectItem>
+              {cargosDisponiveis.map((cargo) => <SelectItem key={cargo.id} value={cargo.id}>{cargo.nome}</SelectItem>)}
+            </SelectContent>
+          </Select>
+
           {/* Linha 2: Busca por nome */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -104,6 +121,14 @@ export const HistoricoTreinamento = ({ userId, readOnly = false }: HistoricoTrei
               className="pl-9 h-9 text-sm"
             />
           </div>
+
+          <Button variant="outline" className="w-full min-h-10 gap-2" disabled={registrosExportacao.length === 0}
+            onClick={() => {
+              try { exportarHistoricoFormacao(registrosExportacao, "Treinamento"); }
+              catch { toast.error("Não foi possível exportar o histórico."); }
+            }}>
+            <FileDown className="h-4 w-4 shrink-0" /> Exportar tudo para Excel
+          </Button>
 
           {/* Contador */}
           <div className="text-xs text-muted-foreground text-center">

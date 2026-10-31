@@ -1,3 +1,7 @@
+# Históricos de Treinamento e Estágio
+- [x] Adicionar filtro pelo cargo treinado/estagiado, preservando os demais filtros e acesso; filtros conferidos na sessão autenticada e no celular de 360 px sem rolagem horizontal.
+- [x] Exportar todo o histórico autorizado para Excel; downloads reais conferidos (9 treinamentos e 26 estágios, incluindo andamento/concluídos e todos os cargos). Quatro testes passaram; falta publicar a tela no portal.
+
 # Agenda — filtro regional
 - [x] Manter eventos do Comando ao selecionar uma regional, preservando filtro de mês e acesso a eventos especiais; seis testes passaram e Agenda autenticada confirmou Coletamento CMD em 22/11 junto com VP1. Falta publicar a alteração no portal.
 
