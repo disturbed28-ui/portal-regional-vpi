@@ -1,3 +1,6 @@
+# Agenda — filtro regional
+- [x] Manter eventos do Comando ao selecionar uma regional, preservando filtro de mês e acesso a eventos especiais; seis testes passaram e Agenda autenticada confirmou Coletamento CMD em 22/11 junto com VP1. Falta publicar a alteração no portal.
+
 # Pendências de PD
 - [x] Restringir aviso ao Diretor responsável da divisão e ao Diretor/Operacional Regional Grau V da regional correspondente; servidor valida cargo/vínculo/matriz, sem avisos antigos. Dez regras de acesso e sete testes de PD passaram; sessão Comando recebeu zero avisos.
 - [ ] Conferir cartão com um PD pendente na sessão de um responsável: sessão disponível é Comando e corretamente não recebe avisos; falta publicar a mudança da janela no portal.

@@ -12,6 +12,7 @@ import { AlertCircle } from "lucide-react";
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, isWithinInterval, isBefore, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarEvent } from "@/lib/googleCalendar";
+import { correspondeRegionalAgenda } from "@/lib/filtroRegionalAgenda";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -98,9 +99,8 @@ const Agenda = () => {
     // Filtro por mês
     const isInMonth = isWithinInterval(eventDate, { start: monthStart, end: monthEnd });
     
-    // Filtro por regional
-    const matchesRegional = selectedRegional === "todas" 
-      || event.normalizedComponents?.regionalSigla === selectedRegional;
+    // Eventos do Comando permanecem visíveis para evitar conflitos de datas.
+    const matchesRegional = correspondeRegionalAgenda(event, selectedRegional);
     
     return isInMonth && matchesRegional;
   }) || [];
@@ -218,7 +218,7 @@ const Agenda = () => {
             <SelectContent>
               <SelectItem value="todas">Todas as regionais</SelectItem>
               {regionaisComSigla.map((regional) => (
-                <SelectItem key={regional.id} value={regional.sigla!}>
+                <SelectItem key={regional.id} value={regional.sigla ?? ""}>
                   [{regional.sigla}] {regional.nome}
                 </SelectItem>
               ))}
