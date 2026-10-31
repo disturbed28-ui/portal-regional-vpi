@@ -1,3 +1,6 @@
+# Agenda — filtro regional
+- [ ] Manter eventos do Comando ao selecionar uma regional, preservando filtros de mês e busca; testar e conferir na Agenda.
+
 # Pendências de PD
 - [x] Restringir aviso ao Diretor responsável da divisão e ao Diretor/Operacional Regional Grau V da regional correspondente; servidor valida cargo/vínculo/matriz, sem avisos antigos. Dez regras de acesso e sete testes de PD passaram; sessão Comando recebeu zero avisos.
 - [ ] Conferir cartão com um PD pendente na sessão de um responsável: sessão disponível é Comando e corretamente não recebe avisos; falta publicar a mudança da janela no portal.
