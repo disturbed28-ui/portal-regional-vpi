@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { getNivelAcesso } from "@/lib/grauUtils";
+import { cargosDoHistorico, correspondeCargoHistorico, lerTodasPaginasHistorico } from "@/lib/historicoFormacao";
 
 export interface EstagioHistorico {
   id: string;
@@ -42,6 +43,7 @@ export const useHistoricoEstagio = ({ userId }: UseHistoricoEstagioParams) => {
   const [filtroStatus, setFiltroStatus] = useState<"todos" | "em_andamento" | "concluido">("em_andamento");
   const [filtroDivisao, setFiltroDivisao] = useState<string>("todas");
   const [filtroNome, setFiltroNome] = useState("");
+  const [filtroCargo, setFiltroCargo] = useState("todos");
 
   useEffect(() => {
     if (!userId) return;
@@ -95,11 +97,10 @@ export const useHistoricoEstagio = ({ userId }: UseHistoricoEstagioParams) => {
           solicitacoesQuery = solicitacoesQuery.eq("divisao_id", userDivisaoId);
         }
 
-        const { data: solicitacoes, error: solicitacoesError } = await solicitacoesQuery;
-        if (solicitacoesError) throw solicitacoesError;
+        const solicitacoes = await lerTodasPaginasHistorico(solicitacoesQuery.order("id"));
 
         // 2. Buscar histórico de estágios concluídos
-        const { data: historico, error: historicoError } = await supabase
+        const historicoQuery = supabase
           .from("estagios_historico")
           .select(`
             id,
@@ -128,7 +129,7 @@ export const useHistoricoEstagio = ({ userId }: UseHistoricoEstagioParams) => {
             )
           `);
 
-        if (historicoError) throw historicoError;
+        const historico = await lerTodasPaginasHistorico(historicoQuery.order("id"));
 
         // Combinar resultados
         const estagiosFormatados: EstagioHistorico[] = [];
@@ -200,6 +201,7 @@ export const useHistoricoEstagio = ({ userId }: UseHistoricoEstagioParams) => {
   // Aplicar filtros locais
   const estagiosFiltrados = useMemo(() => {
     return estagios.filter((e) => {
+      if (!correspondeCargoHistorico(e.cargo_estagio_id, filtroCargo)) return false;
       // Filtro de status
       if (filtroStatus === "em_andamento" && e.status !== "Em Andamento") return false;
       if (filtroStatus === "concluido" && e.status !== "Concluído") return false;
@@ -214,7 +216,7 @@ export const useHistoricoEstagio = ({ userId }: UseHistoricoEstagioParams) => {
 
       return true;
     });
-  }, [estagios, filtroStatus, filtroDivisao, filtroNome]);
+  }, [estagios, filtroStatus, filtroDivisao, filtroNome, filtroCargo]);
 
   // Agrupar por divisão
   const estagiosPorDivisao = useMemo(() => {
@@ -247,6 +249,10 @@ export const useHistoricoEstagio = ({ userId }: UseHistoricoEstagioParams) => {
   }, [estagios]);
 
   return {
+    registrosExportacao: estagios,
+    cargosDisponiveis: cargosDoHistorico(estagios.map((e) => ({ id: e.cargo_estagio_id, nome: e.cargo_estagio_nome }))),
+    filtroCargo,
+    setFiltroCargo,
     estagiosPorDivisao,
     divisoesDisponiveis,
     loading,
