@@ -20,6 +20,8 @@ import {
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ACOMPANHANTES, TIPOS_AVISO, intervaloHistorico, montarMensagemAviso, validarAviso, type TipoAviso, type Acompanhante } from "@/lib/avisoDeslocamento";
 import { buildWaMeLink, formatPhoneBR, logEnvioWhatsApp } from "@/lib/whatsapp";
 import {
   LABEL_DESTINATARIO, montarMensagemProtocolo, resolverDestinatario, formatarDataBR,
@@ -28,6 +30,9 @@ import {
 
 interface FormState {
   id: string | null;
+  tipo_aviso: TipoAviso;
+  acompanhante_tipo: Acompanhante | null;
+  contato_regional: boolean | null;
   cidade_origem: string;
   cidade_destino: string;
   paradas: string[];
@@ -43,6 +48,7 @@ interface FormState {
 }
 
 const vazio = (tel = ""): FormState => ({
+  tipo_aviso: "protocolo_viagem", acompanhante_tipo: null, contato_regional: null,
   id: null, cidade_origem: "", cidade_destino: "", paradas: [""],
   data_saida: "", hora_saida: "", data_retorno: "", hora_retorno: "",
   meio_transporte: null, meio_transporte_outro: "", acompanhado: null, com_cores: null, telefone: tel,
@@ -50,12 +56,12 @@ const vazio = (tel = ""): FormState => ({
 
 function Secao({ icon: Icon, titulo, children }: { icon: any; titulo: string; children: React.ReactNode }) {
   return (
-    <Card className="space-y-3 p-4">
+    <section className="space-y-3 border-b p-4">
       <h2 className="flex items-center gap-2 text-base font-bold text-primary">
         <Icon className="h-5 w-5" /> {titulo}
       </h2>
       {children}
-    </Card>
+    </section>
   );
 }
 
@@ -95,15 +101,17 @@ const ProtocoloViagem = () => {
   const [aba, setAba] = useState("registrar");
   const [form, setForm] = useState<FormState>(vazio());
   const [enviando, setEnviando] = useState(false);
+  const protocolo = form.tipo_aviso === "protocolo_viagem";
 
   const { data: integrante } = useQuery({
     queryKey: ["protocolo-integrante", user?.id],
     enabled: !!user?.id,
     queryFn: async () => {
+      if (!user) return null;
       const { data } = await supabase
         .from("integrantes_portal")
         .select("id, nome_colete, grau, cargo_nome, cargo_grau_texto, divisao_id, regional_id, divisao_texto, regional_texto")
-        .eq("profile_id", user!.id)
+        .eq("profile_id", user.id)
         .eq("ativo", true)
         .maybeSingle();
       return data;
@@ -111,7 +119,8 @@ const ProtocoloViagem = () => {
   });
 
   useEffect(() => {
-    if (profile?.telefone && !form.telefone && !form.id) setForm((f) => ({ ...f, telefone: profile.telefone! }));
+    const telefone = profile?.telefone;
+    if (telefone && !form.telefone && !form.id) setForm((f) => ({ ...f, telefone }));
   }, [profile?.telefone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const dadosIntegrante = {
@@ -144,6 +153,10 @@ const ProtocoloViagem = () => {
 
   const erros = useMemo(() => {
     const e: string[] = [];
+    if (!protocolo) {
+      if (!form.meio_transporte) e.push("Veículo");
+      return [...e, ...validarAviso({ ...form, ...dadosIntegrante, tipo_aviso: form.tipo_aviso as "dentro_regional" | "entre_regionais", meio_transporte: form.meio_transporte ?? "moto" })];
+    }
     if (!dadosIntegrante.nome_colete) e.push("Nome de colete não encontrado no seu cadastro");
     if (!form.cidade_origem.trim()) e.push("Cidade de origem");
     if (!form.cidade_destino.trim()) e.push("Cidade de destino");
@@ -158,29 +171,29 @@ const ProtocoloViagem = () => {
     if (form.com_cores === null) e.push("Com as Cores");
     if (!formatPhoneBR(form.telefone) || form.telefone.replace(/\D/g, "").length < 10) e.push("Telefone / WhatsApp");
     return e;
-  }, [form, dadosIntegrante.nome_colete]);
+  }, [form, dadosIntegrante.nome_colete, protocolo]);
 
   const handleEnviar = async () => {
     if (erros.length) {
       toast.error("Preencha: " + erros.join(", "), { duration: 6000, dismissible: false });
       return;
     }
-    if (!destinatario?.telefone || !user) return;
+    if (!destinatario?.telefone || !user || !form.meio_transporte) return;
 
     const paradas = form.paradas.map((p) => p.trim()).filter(Boolean);
-    const mensagem = montarMensagemProtocolo({
+    const mensagem = protocolo ? montarMensagemProtocolo({
       ...dadosIntegrante,
       cidade_origem: form.cidade_origem.trim(),
       cidade_destino: form.cidade_destino.trim(),
       paradas,
       data_saida: form.data_saida, hora_saida: form.hora_saida,
       data_retorno: form.data_retorno, hora_retorno: form.hora_retorno,
-      meio_transporte: form.meio_transporte!,
+      meio_transporte: form.meio_transporte,
       meio_transporte_outro: form.meio_transporte_outro,
       acompanhado: !!form.acompanhado, com_cores: !!form.com_cores,
       telefone: form.telefone,
-    });
-    const link = buildWaMeLink(destinatario.telefone, form.id ? `✏️ *PROTOCOLO ATUALIZADO*\n\n${mensagem}` : mensagem);
+    }) : montarMensagemAviso({ ...form, ...dadosIntegrante, tipo_aviso: form.tipo_aviso as "dentro_regional" | "entre_regionais", meio_transporte: form.meio_transporte });
+    const link = buildWaMeLink(destinatario.telefone, form.id ? `✏️ *${protocolo ? "PROTOCOLO" : "AVISO"} ATUALIZADO*\n\n${mensagem}` : mensagem);
     if (!link) return;
 
     // Abre o WhatsApp primeiro (evita bloqueio de pop-up), depois registra.
@@ -200,22 +213,22 @@ const ProtocoloViagem = () => {
       regional_texto: dadosIntegrante.regional_texto,
       cidade_origem: form.cidade_origem.trim(),
       cidade_destino: form.cidade_destino.trim(),
-      paradas,
-      data_saida: form.data_saida, hora_saida: form.hora_saida,
-      data_retorno: form.data_retorno, hora_retorno: form.hora_retorno,
-      meio_transporte: form.meio_transporte!,
+      meio_transporte: form.meio_transporte,
       meio_transporte_outro: form.meio_transporte === "outros" ? form.meio_transporte_outro.trim() : null,
-      acompanhado: !!form.acompanhado, com_cores: !!form.com_cores,
-      telefone: form.telefone,
       destinatario_nome: destinatario.nome,
       destinatario_cargo: LABEL_DESTINATARIO[destinatario.tipo],
       destinatario_telefone: destinatario.telefone,
       mensagem,
       status: "enviado",
     };
-    const { error } = form.id
-      ? await supabase.from("protocolos_viagem").update(registro).eq("id", form.id)
-      : await supabase.from("protocolos_viagem").insert(registro);
+    const completo = { ...registro, paradas, data_saida: form.data_saida, hora_saida: form.hora_saida,
+      data_retorno: form.data_retorno, hora_retorno: form.hora_retorno,
+      acompanhado: !!form.acompanhado, com_cores: !!form.com_cores, telefone: form.telefone };
+    const simples = { ...registro, tipo_aviso: form.tipo_aviso, acompanhante_tipo: form.tipo_aviso === "entre_regionais" ? form.acompanhante_tipo : null,
+      contato_regional: form.tipo_aviso === "entre_regionais" ? form.contato_regional : null };
+    const { error } = protocolo
+      ? form.id ? await supabase.from("protocolos_viagem").update(completo).eq("id", form.id) : await supabase.from("protocolos_viagem").insert(completo)
+      : form.id ? await supabase.from("avisos_deslocamento").update(simples).eq("id", form.id) : await supabase.from("avisos_deslocamento").insert(simples);
     setEnviando(false);
 
     if (error) {
@@ -229,13 +242,13 @@ const ProtocoloViagem = () => {
       destinatario_nome: destinatario.nome,
       destinatario_telefone: destinatario.telefone,
       template_chave: "protocolo_viagem",
-      template_titulo: "Protocolo de Viagem",
+      template_titulo: TIPOS_AVISO[form.tipo_aviso],
       mensagem_renderizada: mensagem,
       modulo_origem: "protocolo_viagem",
       regional_id: dadosIntegrante.regional_id,
       divisao_id: dadosIntegrante.divisao_id,
     });
-    toast.success(form.id ? "Protocolo atualizado e salvo no histórico" : "Protocolo salvo no histórico", { duration: 6000, dismissible: false });
+    toast.success(form.id ? "Aviso atualizado e salvo no histórico" : "Aviso salvo no histórico", { duration: 6000, dismissible: false });
     qc.invalidateQueries({ queryKey: ["protocolos-viagem"] });
     setForm(vazio(form.telefone));
   };
@@ -249,9 +262,8 @@ const ProtocoloViagem = () => {
           </Button>
           <div>
             <h1 className="flex items-center gap-2 text-lg font-bold leading-tight">
-              <Route className="h-5 w-5 text-primary" /> Protocolo de Viagem
+              <Route className="h-5 w-5 shrink-0 text-primary" /> Aviso de Deslocamento
             </h1>
-            <p className="text-xs text-muted-foreground">Cadastro de deslocamento do integrante</p>
           </div>
         </header>
 
@@ -262,9 +274,15 @@ const ProtocoloViagem = () => {
           </TabsList>
 
           <TabsContent value="registrar" className="space-y-3">
+            <Campo label="Tipo de aviso">
+              <Select value={form.tipo_aviso} disabled={!!form.id} onValueChange={(tipo) => setForm({ ...vazio(form.telefone), tipo_aviso: tipo as TipoAviso })}>
+                <SelectTrigger aria-label="Tipo de aviso"><SelectValue /></SelectTrigger>
+                <SelectContent>{Object.entries(TIPOS_AVISO).map(([valor, label]) => <SelectItem key={valor} value={valor}>{label}</SelectItem>)}</SelectContent>
+              </Select>
+            </Campo>
             {form.id && (
               <div className="flex items-center justify-between gap-2 rounded-md border border-primary/40 bg-primary/10 p-3 text-sm">
-                <span>Editando protocolo já enviado. Ao enviar, a versão atualizada vai para o responsável.</span>
+                <span>Editando aviso já enviado.</span>
                 <Button size="sm" variant="ghost" onClick={() => setForm(vazio(form.telefone))}>Cancelar</Button>
               </div>
             )}
@@ -277,13 +295,13 @@ const ProtocoloViagem = () => {
             </Secao>
 
             <Secao icon={MapPin} titulo="Rota">
-              <Campo label="Cidade de origem" obrigatorio>
+              <Campo label={form.tipo_aviso === "dentro_regional" ? "Bairro / cidade de origem" : "Cidade de origem"} obrigatorio>
                 <Input maxLength={80} placeholder="Ex.: São José dos Campos" value={form.cidade_origem} onChange={(e) => set("cidade_origem", e.target.value)} />
               </Campo>
-              <Campo label="Cidade de destino" obrigatorio>
+              <Campo label={form.tipo_aviso === "dentro_regional" ? "Bairro / cidade de destino" : "Cidade de destino"} obrigatorio>
                 <Input maxLength={80} placeholder="Ex.: Rio de Janeiro" value={form.cidade_destino} onChange={(e) => set("cidade_destino", e.target.value)} />
               </Campo>
-              {form.paradas.map((p, i) => (
+              {protocolo && form.paradas.map((p, i) => (
                 <Campo key={i} label={`${i + 1}ª cidade de parada`}>
                   <div className="flex gap-2">
                     <Input
@@ -309,17 +327,17 @@ const ProtocoloViagem = () => {
               ))}
             </Secao>
 
-            <Secao icon={CalendarDays} titulo="Viagem">
+            {protocolo && <Secao icon={CalendarDays} titulo="Viagem">
               <div className="grid grid-cols-2 gap-2">
                 <Campo label="Data de saída" obrigatorio><Input type="date" value={form.data_saida} onChange={(e) => set("data_saida", e.target.value)} /></Campo>
                 <Campo label="Hora" obrigatorio><Input type="time" value={form.hora_saida} onChange={(e) => set("hora_saida", e.target.value)} /></Campo>
                 <Campo label="Previsão de retorno" obrigatorio><Input type="date" value={form.data_retorno} onChange={(e) => set("data_retorno", e.target.value)} /></Campo>
                 <Campo label="Hora" obrigatorio><Input type="time" value={form.hora_retorno} onChange={(e) => set("hora_retorno", e.target.value)} /></Campo>
               </div>
-            </Secao>
+            </Secao>}
 
             <Secao icon={Bike} titulo="Deslocamento">
-              <Campo label="Está viajando de" obrigatorio>
+              <Campo label="Veículo" obrigatorio>
                 <div className="grid grid-cols-3 gap-2">
                   <Opcao ativo={form.meio_transporte === "moto"} onClick={() => set("meio_transporte", "moto")}><Bike className="h-4 w-4" />Moto</Opcao>
                   <Opcao ativo={form.meio_transporte === "carro"} onClick={() => set("meio_transporte", "carro")}><Car className="h-4 w-4" />Carro</Opcao>
@@ -329,7 +347,21 @@ const ProtocoloViagem = () => {
               {form.meio_transporte === "outros" && (
                 <Input maxLength={60} placeholder="Qual? Ex.: ônibus, avião" value={form.meio_transporte_outro} onChange={(e) => set("meio_transporte_outro", e.target.value)} />
               )}
-              <Campo label="Acompanhado" obrigatorio>
+              {form.tipo_aviso === "entre_regionais" && <>
+                <Campo label="Acompanhante" obrigatorio>
+                  <Select value={form.acompanhante_tipo ?? ""} onValueChange={(v) => set("acompanhante_tipo", v as Acompanhante)}>
+                    <SelectTrigger aria-label="Acompanhante"><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                    <SelectContent>{Object.entries(ACOMPANHANTES).map(([v, label]) => <SelectItem key={v} value={v}>{label}</SelectItem>)}</SelectContent>
+                  </Select>
+                </Campo>
+                <Campo label="Necessário contato regional" obrigatorio>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Opcao ativo={form.contato_regional === true} onClick={() => set("contato_regional", true)}>✅ Sim</Opcao>
+                    <Opcao ativo={form.contato_regional === false} onClick={() => set("contato_regional", false)}>❌ Não</Opcao>
+                  </div>
+                </Campo>
+              </>}
+              {protocolo && <><Campo label="Acompanhado" obrigatorio>
                 <div className="grid grid-cols-2 gap-2">
                   <Opcao ativo={form.acompanhado === true} onClick={() => set("acompanhado", true)}>Sim</Opcao>
                   <Opcao ativo={form.acompanhado === false} onClick={() => set("acompanhado", false)}>Não</Opcao>
@@ -340,14 +372,19 @@ const ProtocoloViagem = () => {
                   <Opcao ativo={form.com_cores === true} onClick={() => set("com_cores", true)}>Sim</Opcao>
                   <Opcao ativo={form.com_cores === false} onClick={() => set("com_cores", false)}>Não</Opcao>
                 </div>
-              </Campo>
+              </Campo></>}
             </Secao>
 
-            <Secao icon={Phone} titulo="Contato">
+            {protocolo && <Secao icon={Phone} titulo="Contato">
               <Campo label="Telefone / WhatsApp" obrigatorio>
                 <Input inputMode="tel" maxLength={20} value={form.telefone} onChange={(e) => set("telefone", e.target.value)} />
               </Campo>
-            </Secao>
+            </Secao>}
+
+            {!protocolo && form.meio_transporte && <section className="space-y-2 border-t p-4">
+              <h2 className="font-bold">Mensagem</h2>
+              <p className="whitespace-pre-wrap break-words text-sm">{montarMensagemAviso({ ...form, ...dadosIntegrante, tipo_aviso: form.tipo_aviso as "dentro_regional" | "entre_regionais", meio_transporte: form.meio_transporte })}</p>
+            </section>}
 
             <Card className="space-y-3 border-primary/40 p-4">
               <h2 className="flex items-center gap-2 text-sm font-bold text-primary"><Info className="h-4 w-4" /> Importante</h2>
@@ -356,7 +393,7 @@ const ProtocoloViagem = () => {
               ) : destinatario ? (
                 <>
                   <p className="text-sm">
-                    Ao enviar, o protocolo vai pelo WhatsApp para{" "}
+                    Destinatário: {" "}
                     <strong>{LABEL_DESTINATARIO[destinatario.tipo]} {destinatario.nome}</strong>.
                   </p>
                   {destinatario.fallback && (
@@ -386,14 +423,16 @@ const ProtocoloViagem = () => {
               userId={user?.id}
               onEditar={(p) => {
                 setForm({
+                  tipo_aviso: p.tipo_aviso ?? "protocolo_viagem",
+                  acompanhante_tipo: p.acompanhante_tipo ?? null, contato_regional: p.contato_regional ?? null,
                   id: p.id,
                   cidade_origem: p.cidade_origem, cidade_destino: p.cidade_destino,
                   paradas: p.paradas?.length ? p.paradas : [""],
-                  data_saida: p.data_saida, hora_saida: p.hora_saida,
-                  data_retorno: p.data_retorno, hora_retorno: p.hora_retorno,
+                  data_saida: p.data_saida ?? "", hora_saida: p.hora_saida ?? "",
+                  data_retorno: p.data_retorno ?? "", hora_retorno: p.hora_retorno ?? "",
                   meio_transporte: p.meio_transporte as MeioTransporte,
                   meio_transporte_outro: p.meio_transporte_outro ?? "",
-                  acompanhado: p.acompanhado, com_cores: p.com_cores, telefone: p.telefone,
+                  acompanhado: p.acompanhado ?? null, com_cores: p.com_cores ?? null, telefone: p.telefone ?? profile?.telefone ?? "",
                 });
                 setAba("registrar");
               }}
