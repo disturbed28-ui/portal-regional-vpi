@@ -20,6 +20,8 @@ import {
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ACOMPANHANTES, TIPOS_AVISO, intervaloHistorico, montarMensagemAviso, validarAviso, type TipoAviso, type Acompanhante } from "@/lib/avisoDeslocamento";
 import { buildWaMeLink, formatPhoneBR, logEnvioWhatsApp } from "@/lib/whatsapp";
 import {
   LABEL_DESTINATARIO, montarMensagemProtocolo, resolverDestinatario, formatarDataBR,
@@ -28,6 +30,9 @@ import {
 
 interface FormState {
   id: string | null;
+  tipo_aviso: TipoAviso;
+  acompanhante_tipo: Acompanhante | null;
+  contato_regional: boolean | null;
   cidade_origem: string;
   cidade_destino: string;
   paradas: string[];
@@ -43,6 +48,7 @@ interface FormState {
 }
 
 const vazio = (tel = ""): FormState => ({
+  tipo_aviso: "protocolo_viagem", acompanhante_tipo: null, contato_regional: null,
   id: null, cidade_origem: "", cidade_destino: "", paradas: [""],
   data_saida: "", hora_saida: "", data_retorno: "", hora_retorno: "",
   meio_transporte: null, meio_transporte_outro: "", acompanhado: null, com_cores: null, telefone: tel,
@@ -50,12 +56,12 @@ const vazio = (tel = ""): FormState => ({
 
 function Secao({ icon: Icon, titulo, children }: { icon: any; titulo: string; children: React.ReactNode }) {
   return (
-    <Card className="space-y-3 p-4">
+    <section className="space-y-3 border-b p-4">
       <h2 className="flex items-center gap-2 text-base font-bold text-primary">
         <Icon className="h-5 w-5" /> {titulo}
       </h2>
       {children}
-    </Card>
+    </section>
   );
 }
 
@@ -95,15 +101,17 @@ const ProtocoloViagem = () => {
   const [aba, setAba] = useState("registrar");
   const [form, setForm] = useState<FormState>(vazio());
   const [enviando, setEnviando] = useState(false);
+  const protocolo = form.tipo_aviso === "protocolo_viagem";
 
   const { data: integrante } = useQuery({
     queryKey: ["protocolo-integrante", user?.id],
     enabled: !!user?.id,
     queryFn: async () => {
+      if (!user) return null;
       const { data } = await supabase
         .from("integrantes_portal")
         .select("id, nome_colete, grau, cargo_nome, cargo_grau_texto, divisao_id, regional_id, divisao_texto, regional_texto")
-        .eq("profile_id", user!.id)
+        .eq("profile_id", user.id)
         .eq("ativo", true)
         .maybeSingle();
       return data;
@@ -111,7 +119,8 @@ const ProtocoloViagem = () => {
   });
 
   useEffect(() => {
-    if (profile?.telefone && !form.telefone && !form.id) setForm((f) => ({ ...f, telefone: profile.telefone! }));
+    const telefone = profile?.telefone;
+    if (telefone && !form.telefone && !form.id) setForm((f) => ({ ...f, telefone }));
   }, [profile?.telefone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const dadosIntegrante = {
@@ -144,6 +153,10 @@ const ProtocoloViagem = () => {
 
   const erros = useMemo(() => {
     const e: string[] = [];
+    if (!protocolo) {
+      if (!form.meio_transporte) e.push("Veículo");
+      return [...e, ...validarAviso({ ...form, ...dadosIntegrante, tipo_aviso: form.tipo_aviso as "dentro_regional" | "entre_regionais", meio_transporte: form.meio_transporte ?? "moto" })];
+    }
     if (!dadosIntegrante.nome_colete) e.push("Nome de colete não encontrado no seu cadastro");
     if (!form.cidade_origem.trim()) e.push("Cidade de origem");
     if (!form.cidade_destino.trim()) e.push("Cidade de destino");
@@ -158,29 +171,29 @@ const ProtocoloViagem = () => {
     if (form.com_cores === null) e.push("Com as Cores");
     if (!formatPhoneBR(form.telefone) || form.telefone.replace(/\D/g, "").length < 10) e.push("Telefone / WhatsApp");
     return e;
-  }, [form, dadosIntegrante.nome_colete]);
+  }, [form, dadosIntegrante.nome_colete, protocolo]);
 
   const handleEnviar = async () => {
     if (erros.length) {
       toast.error("Preencha: " + erros.join(", "), { duration: 6000, dismissible: false });
       return;
     }
-    if (!destinatario?.telefone || !user) return;
+    if (!destinatario?.telefone || !user || !form.meio_transporte) return;
 
     const paradas = form.paradas.map((p) => p.trim()).filter(Boolean);
-    const mensagem = montarMensagemProtocolo({
+    const mensagem = protocolo ? montarMensagemProtocolo({
       ...dadosIntegrante,
       cidade_origem: form.cidade_origem.trim(),
       cidade_destino: form.cidade_destino.trim(),
       paradas,
       data_saida: form.data_saida, hora_saida: form.hora_saida,
       data_retorno: form.data_retorno, hora_retorno: form.hora_retorno,
-      meio_transporte: form.meio_transporte!,
+      meio_transporte: form.meio_transporte,
       meio_transporte_outro: form.meio_transporte_outro,
       acompanhado: !!form.acompanhado, com_cores: !!form.com_cores,
       telefone: form.telefone,
-    });
-    const link = buildWaMeLink(destinatario.telefone, form.id ? `✏️ *PROTOCOLO ATUALIZADO*\n\n${mensagem}` : mensagem);
+    }) : montarMensagemAviso({ ...form, ...dadosIntegrante, tipo_aviso: form.tipo_aviso as "dentro_regional" | "entre_regionais", meio_transporte: form.meio_transporte });
+    const link = buildWaMeLink(destinatario.telefone, form.id ? `✏️ *${protocolo ? "PROTOCOLO" : "AVISO"} ATUALIZADO*\n\n${mensagem}` : mensagem);
     if (!link) return;
 
     // Abre o WhatsApp primeiro (evita bloqueio de pop-up), depois registra.
@@ -200,22 +213,22 @@ const ProtocoloViagem = () => {
       regional_texto: dadosIntegrante.regional_texto,
       cidade_origem: form.cidade_origem.trim(),
       cidade_destino: form.cidade_destino.trim(),
-      paradas,
-      data_saida: form.data_saida, hora_saida: form.hora_saida,
-      data_retorno: form.data_retorno, hora_retorno: form.hora_retorno,
-      meio_transporte: form.meio_transporte!,
+      meio_transporte: form.meio_transporte,
       meio_transporte_outro: form.meio_transporte === "outros" ? form.meio_transporte_outro.trim() : null,
-      acompanhado: !!form.acompanhado, com_cores: !!form.com_cores,
-      telefone: form.telefone,
       destinatario_nome: destinatario.nome,
       destinatario_cargo: LABEL_DESTINATARIO[destinatario.tipo],
       destinatario_telefone: destinatario.telefone,
       mensagem,
       status: "enviado",
     };
-    const { error } = form.id
-      ? await supabase.from("protocolos_viagem").update(registro).eq("id", form.id)
-      : await supabase.from("protocolos_viagem").insert(registro);
+    const completo = { ...registro, paradas, data_saida: form.data_saida, hora_saida: form.hora_saida,
+      data_retorno: form.data_retorno, hora_retorno: form.hora_retorno,
+      acompanhado: !!form.acompanhado, com_cores: !!form.com_cores, telefone: form.telefone };
+    const simples = { ...registro, tipo_aviso: form.tipo_aviso, acompanhante_tipo: form.tipo_aviso === "entre_regionais" ? form.acompanhante_tipo : null,
+      contato_regional: form.tipo_aviso === "entre_regionais" ? form.contato_regional : null };
+    const { error } = protocolo
+      ? form.id ? await supabase.from("protocolos_viagem").update(completo).eq("id", form.id) : await supabase.from("protocolos_viagem").insert(completo)
+      : form.id ? await supabase.from("avisos_deslocamento").update(simples).eq("id", form.id) : await supabase.from("avisos_deslocamento").insert(simples);
     setEnviando(false);
 
     if (error) {
@@ -229,13 +242,13 @@ const ProtocoloViagem = () => {
       destinatario_nome: destinatario.nome,
       destinatario_telefone: destinatario.telefone,
       template_chave: "protocolo_viagem",
-      template_titulo: "Protocolo de Viagem",
+      template_titulo: TIPOS_AVISO[form.tipo_aviso],
       mensagem_renderizada: mensagem,
       modulo_origem: "protocolo_viagem",
       regional_id: dadosIntegrante.regional_id,
       divisao_id: dadosIntegrante.divisao_id,
     });
-    toast.success(form.id ? "Protocolo atualizado e salvo no histórico" : "Protocolo salvo no histórico", { duration: 6000, dismissible: false });
+    toast.success(form.id ? "Aviso atualizado e salvo no histórico" : "Aviso salvo no histórico", { duration: 6000, dismissible: false });
     qc.invalidateQueries({ queryKey: ["protocolos-viagem"] });
     setForm(vazio(form.telefone));
   };
@@ -249,9 +262,8 @@ const ProtocoloViagem = () => {
           </Button>
           <div>
             <h1 className="flex items-center gap-2 text-lg font-bold leading-tight">
-              <Route className="h-5 w-5 text-primary" /> Protocolo de Viagem
+              <Route className="h-5 w-5 shrink-0 text-primary" /> Aviso de Deslocamento
             </h1>
-            <p className="text-xs text-muted-foreground">Cadastro de deslocamento do integrante</p>
           </div>
         </header>
 
@@ -262,9 +274,15 @@ const ProtocoloViagem = () => {
           </TabsList>
 
           <TabsContent value="registrar" className="space-y-3">
+            <Campo label="Tipo de aviso">
+              <Select value={form.tipo_aviso} disabled={!!form.id} onValueChange={(tipo) => setForm({ ...vazio(form.telefone), tipo_aviso: tipo as TipoAviso })}>
+                <SelectTrigger aria-label="Tipo de aviso"><SelectValue /></SelectTrigger>
+                <SelectContent>{Object.entries(TIPOS_AVISO).map(([valor, label]) => <SelectItem key={valor} value={valor}>{label}</SelectItem>)}</SelectContent>
+              </Select>
+            </Campo>
             {form.id && (
               <div className="flex items-center justify-between gap-2 rounded-md border border-primary/40 bg-primary/10 p-3 text-sm">
-                <span>Editando protocolo já enviado. Ao enviar, a versão atualizada vai para o responsável.</span>
+                <span>Editando aviso já enviado.</span>
                 <Button size="sm" variant="ghost" onClick={() => setForm(vazio(form.telefone))}>Cancelar</Button>
               </div>
             )}
@@ -277,13 +295,13 @@ const ProtocoloViagem = () => {
             </Secao>
 
             <Secao icon={MapPin} titulo="Rota">
-              <Campo label="Cidade de origem" obrigatorio>
+              <Campo label={form.tipo_aviso === "dentro_regional" ? "Bairro / cidade de origem" : "Cidade de origem"} obrigatorio>
                 <Input maxLength={80} placeholder="Ex.: São José dos Campos" value={form.cidade_origem} onChange={(e) => set("cidade_origem", e.target.value)} />
               </Campo>
-              <Campo label="Cidade de destino" obrigatorio>
+              <Campo label={form.tipo_aviso === "dentro_regional" ? "Bairro / cidade de destino" : "Cidade de destino"} obrigatorio>
                 <Input maxLength={80} placeholder="Ex.: Rio de Janeiro" value={form.cidade_destino} onChange={(e) => set("cidade_destino", e.target.value)} />
               </Campo>
-              {form.paradas.map((p, i) => (
+              {protocolo && form.paradas.map((p, i) => (
                 <Campo key={i} label={`${i + 1}ª cidade de parada`}>
                   <div className="flex gap-2">
                     <Input
@@ -309,17 +327,17 @@ const ProtocoloViagem = () => {
               ))}
             </Secao>
 
-            <Secao icon={CalendarDays} titulo="Viagem">
+            {protocolo && <Secao icon={CalendarDays} titulo="Viagem">
               <div className="grid grid-cols-2 gap-2">
                 <Campo label="Data de saída" obrigatorio><Input type="date" value={form.data_saida} onChange={(e) => set("data_saida", e.target.value)} /></Campo>
                 <Campo label="Hora" obrigatorio><Input type="time" value={form.hora_saida} onChange={(e) => set("hora_saida", e.target.value)} /></Campo>
                 <Campo label="Previsão de retorno" obrigatorio><Input type="date" value={form.data_retorno} onChange={(e) => set("data_retorno", e.target.value)} /></Campo>
                 <Campo label="Hora" obrigatorio><Input type="time" value={form.hora_retorno} onChange={(e) => set("hora_retorno", e.target.value)} /></Campo>
               </div>
-            </Secao>
+            </Secao>}
 
             <Secao icon={Bike} titulo="Deslocamento">
-              <Campo label="Está viajando de" obrigatorio>
+              <Campo label="Veículo" obrigatorio>
                 <div className="grid grid-cols-3 gap-2">
                   <Opcao ativo={form.meio_transporte === "moto"} onClick={() => set("meio_transporte", "moto")}><Bike className="h-4 w-4" />Moto</Opcao>
                   <Opcao ativo={form.meio_transporte === "carro"} onClick={() => set("meio_transporte", "carro")}><Car className="h-4 w-4" />Carro</Opcao>
@@ -329,7 +347,21 @@ const ProtocoloViagem = () => {
               {form.meio_transporte === "outros" && (
                 <Input maxLength={60} placeholder="Qual? Ex.: ônibus, avião" value={form.meio_transporte_outro} onChange={(e) => set("meio_transporte_outro", e.target.value)} />
               )}
-              <Campo label="Acompanhado" obrigatorio>
+              {form.tipo_aviso === "entre_regionais" && <>
+                <Campo label="Acompanhante" obrigatorio>
+                  <Select value={form.acompanhante_tipo ?? ""} onValueChange={(v) => set("acompanhante_tipo", v as Acompanhante)}>
+                    <SelectTrigger aria-label="Acompanhante"><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                    <SelectContent>{Object.entries(ACOMPANHANTES).map(([v, label]) => <SelectItem key={v} value={v}>{label}</SelectItem>)}</SelectContent>
+                  </Select>
+                </Campo>
+                <Campo label="Necessário contato regional" obrigatorio>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Opcao ativo={form.contato_regional === true} onClick={() => set("contato_regional", true)}>✅ Sim</Opcao>
+                    <Opcao ativo={form.contato_regional === false} onClick={() => set("contato_regional", false)}>❌ Não</Opcao>
+                  </div>
+                </Campo>
+              </>}
+              {protocolo && <><Campo label="Acompanhado" obrigatorio>
                 <div className="grid grid-cols-2 gap-2">
                   <Opcao ativo={form.acompanhado === true} onClick={() => set("acompanhado", true)}>Sim</Opcao>
                   <Opcao ativo={form.acompanhado === false} onClick={() => set("acompanhado", false)}>Não</Opcao>
@@ -340,14 +372,19 @@ const ProtocoloViagem = () => {
                   <Opcao ativo={form.com_cores === true} onClick={() => set("com_cores", true)}>Sim</Opcao>
                   <Opcao ativo={form.com_cores === false} onClick={() => set("com_cores", false)}>Não</Opcao>
                 </div>
-              </Campo>
+              </Campo></>}
             </Secao>
 
-            <Secao icon={Phone} titulo="Contato">
+            {protocolo && <Secao icon={Phone} titulo="Contato">
               <Campo label="Telefone / WhatsApp" obrigatorio>
                 <Input inputMode="tel" maxLength={20} value={form.telefone} onChange={(e) => set("telefone", e.target.value)} />
               </Campo>
-            </Secao>
+            </Secao>}
+
+            {!protocolo && form.meio_transporte && <section className="space-y-2 border-t p-4">
+              <h2 className="font-bold">Mensagem</h2>
+              <p className="whitespace-pre-wrap break-words text-sm">{montarMensagemAviso({ ...form, ...dadosIntegrante, tipo_aviso: form.tipo_aviso as "dentro_regional" | "entre_regionais", meio_transporte: form.meio_transporte })}</p>
+            </section>}
 
             <Card className="space-y-3 border-primary/40 p-4">
               <h2 className="flex items-center gap-2 text-sm font-bold text-primary"><Info className="h-4 w-4" /> Importante</h2>
@@ -356,7 +393,7 @@ const ProtocoloViagem = () => {
               ) : destinatario ? (
                 <>
                   <p className="text-sm">
-                    Ao enviar, o protocolo vai pelo WhatsApp para{" "}
+                    Destinatário: {" "}
                     <strong>{LABEL_DESTINATARIO[destinatario.tipo]} {destinatario.nome}</strong>.
                   </p>
                   {destinatario.fallback && (
@@ -386,14 +423,16 @@ const ProtocoloViagem = () => {
               userId={user?.id}
               onEditar={(p) => {
                 setForm({
+                  tipo_aviso: p.tipo_aviso ?? "protocolo_viagem",
+                  acompanhante_tipo: p.acompanhante_tipo ?? null, contato_regional: p.contato_regional ?? null,
                   id: p.id,
                   cidade_origem: p.cidade_origem, cidade_destino: p.cidade_destino,
                   paradas: p.paradas?.length ? p.paradas : [""],
-                  data_saida: p.data_saida, hora_saida: p.hora_saida,
-                  data_retorno: p.data_retorno, hora_retorno: p.hora_retorno,
+                  data_saida: p.data_saida ?? "", hora_saida: p.hora_saida ?? "",
+                  data_retorno: p.data_retorno ?? "", hora_retorno: p.hora_retorno ?? "",
                   meio_transporte: p.meio_transporte as MeioTransporte,
                   meio_transporte_outro: p.meio_transporte_outro ?? "",
-                  acompanhado: p.acompanhado, com_cores: p.com_cores, telefone: p.telefone,
+                  acompanhado: p.acompanhado ?? null, com_cores: p.com_cores ?? null, telefone: p.telefone ?? profile?.telefone ?? "",
                 });
                 setAba("registrar");
               }}
@@ -410,21 +449,47 @@ function HistoricoProtocolos({ userId, onEditar }: { userId?: string; onEditar: 
   const [busca, setBusca] = useState("");
   const [de, setDe] = useState("");
   const [ate, setAte] = useState("");
+  const [tipo, setTipo] = useState("todos");
+  const [modoData, setModoData] = useState("periodo");
+  const [mes, setMes] = useState("");
   const [cancelar, setCancelar] = useState<any | null>(null);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["protocolos-viagem", de, ate],
+  const limites = useMemo(() => {
+    if (modoData !== "mes" || !mes) return { de, ate };
+    const [ano, numeroMes] = mes.split("-").map(Number);
+    const ultimoDia = new Date(ano, numeroMes, 0).getDate();
+    return { de: `${mes}-01`, ate: `${mes}-${ultimoDia}` };
+  }, [modoData, mes, de, ate]);
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["protocolos-viagem", userId, limites],
+    enabled: !!userId,
     queryFn: async () => {
-      let q = supabase.from("protocolos_viagem").select("*").order("data_saida", { ascending: false }).limit(500);
-      if (de) q = q.gte("data_saida", de);
-      if (ate) q = q.lte("data_saida", ate);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data ?? [];
+      const intervalo = intervaloHistorico(limites.de, limites.ate);
+      const ler = async (tabela: "protocolos_viagem" | "avisos_deslocamento") => {
+        const registros: any[] = [];
+        for (let offset = 0; ; offset += 1000) {
+          let q = supabase.from(tabela).select("*").order("created_at", { ascending: false }).order("id").range(offset, offset + 999);
+          if (tabela === "protocolos_viagem") {
+            if (limites.de) q = q.gte("data_saida", limites.de);
+            if (limites.ate) q = q.lte("data_saida", limites.ate);
+          } else {
+            if (intervalo.inicio) q = q.gte("created_at", intervalo.inicio);
+            if (intervalo.fim) q = q.lte("created_at", intervalo.fim);
+          }
+          const { data: pagina, error } = await q;
+          if (error) throw error;
+          registros.push(...(pagina ?? []).map((p) => ({ ...p, tabela, tipo_aviso: "tipo_aviso" in p ? p.tipo_aviso : "protocolo_viagem" })));
+          if (!pagina || pagina.length < 1000) break;
+        }
+        return registros;
+      };
+      const grupos = await Promise.all([ler("protocolos_viagem"), ler("avisos_deslocamento")]);
+      return grupos.flat().sort((a, b) => (b.data_saida ?? b.created_at).localeCompare(a.data_saida ?? a.created_at));
     },
   });
 
   const lista = (data ?? []).filter((p) => {
+    if (tipo !== "todos" && p.tipo_aviso !== tipo) return false;
     const t = busca.trim().toLowerCase();
     if (!t) return true;
     return [p.nome_colete, p.divisao_texto, p.cidade_destino, p.cidade_origem].some((v) => (v || "").toLowerCase().includes(t));
@@ -432,37 +497,47 @@ function HistoricoProtocolos({ userId, onEditar }: { userId?: string; onEditar: 
 
   const confirmarCancelamento = async () => {
     if (!cancelar) return;
-    const { error } = await supabase.from("protocolos_viagem")
+    const { error } = await supabase.from(cancelar.tabela as "protocolos_viagem" | "avisos_deslocamento")
       .update({ status: "cancelado", cancelado_em: new Date().toISOString() }).eq("id", cancelar.id);
     setCancelar(null);
     if (error) return toast.error("Erro ao cancelar: " + error.message, { duration: 6000, dismissible: false });
-    toast.success("Protocolo cancelado", { duration: 6000, dismissible: false });
+    toast.success("Aviso cancelado", { duration: 6000, dismissible: false });
     qc.invalidateQueries({ queryKey: ["protocolos-viagem"] });
   };
 
   return (
     <div className="space-y-3">
-      <Card className="space-y-2 p-3">
+      <section className="space-y-2 border-b pb-3">
         <Input placeholder="Buscar integrante, divisão ou cidade" value={busca} onChange={(e) => setBusca(e.target.value)} />
+        <Select value={tipo} onValueChange={setTipo}>
+          <SelectTrigger aria-label="Filtrar tipo de aviso"><SelectValue /></SelectTrigger>
+          <SelectContent><SelectItem value="todos">Todos os tipos</SelectItem>{Object.entries(TIPOS_AVISO).map(([v, label]) => <SelectItem key={v} value={v}>{label}</SelectItem>)}</SelectContent>
+        </Select>
         <div className="grid grid-cols-2 gap-2">
-          <Input type="date" value={de} onChange={(e) => setDe(e.target.value)} aria-label="Saída a partir de" />
-          <Input type="date" value={ate} onChange={(e) => setAte(e.target.value)} aria-label="Saída até" />
+          <Opcao ativo={modoData === "periodo"} onClick={() => setModoData("periodo")}>Período</Opcao>
+          <Opcao ativo={modoData === "mes"} onClick={() => setModoData("mes")}>Mês</Opcao>
         </div>
-      </Card>
+        {modoData === "mes" ? <Input type="month" value={mes} onChange={(e) => setMes(e.target.value)} aria-label="Mês dos avisos" /> : <div className="grid grid-cols-2 gap-2">
+          <Input type="date" value={de} onChange={(e) => setDe(e.target.value)} aria-label="A partir de" />
+          <Input type="date" value={ate} onChange={(e) => setAte(e.target.value)} aria-label="Até" />
+        </div>}
+      </section>
 
       {isLoading ? (
         <p className="text-center text-sm text-muted-foreground">Carregando...</p>
-      ) : lista.length === 0 ? (
-        <p className="py-6 text-center text-sm text-muted-foreground">Nenhum protocolo encontrado.</p>
+      ) : isError ? <p className="text-sm text-destructive">Não foi possível carregar o histórico.</p> : lista.length === 0 ? (
+        <p className="py-6 text-center text-sm text-muted-foreground">Nenhum aviso encontrado.</p>
       ) : (
         lista.map((p) => {
           const cancelado = p.status === "cancelado";
           const dono = p.autor_profile_id === userId;
+          const antigo = p.tipo_aviso === "protocolo_viagem";
           return (
             <Card key={p.id} className={cn("space-y-2 p-3 text-sm", cancelado && "opacity-60")}>
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="break-words font-semibold">{p.nome_colete}</p>
+                  <p className="break-words text-xs font-semibold">{TIPOS_AVISO[p.tipo_aviso as TipoAviso]}</p>
                   <p className="break-words text-xs text-muted-foreground">{p.divisao_texto || p.regional_texto}</p>
                 </div>
                 <Badge variant={cancelado ? "destructive" : "secondary"} className="shrink-0">
@@ -472,13 +547,14 @@ function HistoricoProtocolos({ userId, onEditar }: { userId?: string; onEditar: 
               <p className="break-words">
                 {p.cidade_origem} → {[...(p.paradas ?? []), p.cidade_destino].join(" → ")}
               </p>
-              <p className="text-xs text-muted-foreground">
+              {antigo && <p className="text-xs text-muted-foreground">
                 Saída {formatarDataBR(p.data_saida)} {p.hora_saida}h · Retorno {formatarDataBR(p.data_retorno)} {p.hora_retorno}h
-              </p>
+              </p>}
               <p className="text-xs text-muted-foreground">
                 {p.meio_transporte === "outros" ? p.meio_transporte_outro || "Outros" : p.meio_transporte === "moto" ? "Moto" : "Carro"}
-                {" · "}Acompanhado: {p.acompanhado ? "Sim" : "Não"} · Cores: {p.com_cores ? "Sim" : "Não"}
+                {antigo ? ` · Acompanhado: ${p.acompanhado ? "Sim" : "Não"} · Cores: ${p.com_cores ? "Sim" : "Não"}` : p.tipo_aviso === "entre_regionais" ? ` · ${ACOMPANHANTES[p.acompanhante_tipo as Acompanhante]}` : ""}
               </p>
+              {p.tipo_aviso === "entre_regionais" && <p className="text-xs">Necessário contato regional: {p.contato_regional ? "✅ Sim" : "❌ Não"}</p>}
               <p className="text-xs text-muted-foreground">
                 Enviado para {p.destinatario_cargo} {p.destinatario_nome || "-"}
               </p>
@@ -500,9 +576,9 @@ function HistoricoProtocolos({ userId, onEditar }: { userId?: string; onEditar: 
       <AlertDialog open={!!cancelar} onOpenChange={(o) => !o && setCancelar(null)}>
         <AlertDialogContent className="w-[98vw] max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Cancelar protocolo?</AlertDialogTitle>
+            <AlertDialogTitle>Cancelar aviso?</AlertDialogTitle>
             <AlertDialogDescription>
-              Viagem para {cancelar?.cidade_destino} em {cancelar && formatarDataBR(cancelar.data_saida)}. O registro continua no histórico como cancelado.
+              Deslocamento para {cancelar?.cidade_destino}. O registro continua no histórico como cancelado.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

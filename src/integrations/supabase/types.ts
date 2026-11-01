@@ -794,6 +794,123 @@ export type Database = {
           },
         ]
       }
+      avisos_deslocamento: {
+        Row: {
+          acompanhante_tipo: string | null
+          autor_profile_id: string
+          cancelado_em: string | null
+          cidade_destino: string
+          cidade_origem: string
+          contato_regional: boolean | null
+          created_at: string
+          destinatario_cargo: string | null
+          destinatario_nome: string | null
+          destinatario_telefone: string | null
+          divisao_id: string | null
+          divisao_texto: string | null
+          grau_texto: string | null
+          id: string
+          integrante_id: string | null
+          meio_transporte: string
+          meio_transporte_outro: string | null
+          mensagem: string | null
+          nome_colete: string
+          regional_id: string | null
+          regional_texto: string | null
+          status: string
+          tipo_aviso: string
+          updated_at: string
+        }
+        Insert: {
+          acompanhante_tipo?: string | null
+          autor_profile_id: string
+          cancelado_em?: string | null
+          cidade_destino: string
+          cidade_origem: string
+          contato_regional?: boolean | null
+          created_at?: string
+          destinatario_cargo?: string | null
+          destinatario_nome?: string | null
+          destinatario_telefone?: string | null
+          divisao_id?: string | null
+          divisao_texto?: string | null
+          grau_texto?: string | null
+          id?: string
+          integrante_id?: string | null
+          meio_transporte: string
+          meio_transporte_outro?: string | null
+          mensagem?: string | null
+          nome_colete: string
+          regional_id?: string | null
+          regional_texto?: string | null
+          status?: string
+          tipo_aviso: string
+          updated_at?: string
+        }
+        Update: {
+          acompanhante_tipo?: string | null
+          autor_profile_id?: string
+          cancelado_em?: string | null
+          cidade_destino?: string
+          cidade_origem?: string
+          contato_regional?: boolean | null
+          created_at?: string
+          destinatario_cargo?: string | null
+          destinatario_nome?: string | null
+          destinatario_telefone?: string | null
+          divisao_id?: string | null
+          divisao_texto?: string | null
+          grau_texto?: string | null
+          id?: string
+          integrante_id?: string | null
+          meio_transporte?: string
+          meio_transporte_outro?: string | null
+          mensagem?: string | null
+          nome_colete?: string
+          regional_id?: string | null
+          regional_texto?: string | null
+          status?: string
+          tipo_aviso?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avisos_deslocamento_divisao_id_fkey"
+            columns: ["divisao_id"]
+            isOneToOne: false
+            referencedRelation: "divisoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avisos_deslocamento_divisao_id_fkey"
+            columns: ["divisao_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["divisao_id"]
+          },
+          {
+            foreignKeyName: "avisos_deslocamento_integrante_id_fkey"
+            columns: ["integrante_id"]
+            isOneToOne: false
+            referencedRelation: "integrantes_portal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avisos_deslocamento_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "regionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avisos_deslocamento_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["regional_id"]
+          },
+        ]
+      }
       cargas_historico: {
         Row: {
           created_at: string | null
