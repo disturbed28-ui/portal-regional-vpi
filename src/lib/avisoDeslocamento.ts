@@ -1,9 +1,9 @@
 export type TipoAviso = "protocolo_viagem" | "dentro_regional" | "entre_regionais";
 export type Acompanhante = "nenhum" | "esposa" | "filho" | "esposa_filho";
 export const TIPOS_AVISO: Record<TipoAviso, string> = {
-  protocolo_viagem: "Protocolo de viagem",
   dentro_regional: "Deslocamento dentro da regional",
   entre_regionais: "Deslocamento entre regionais",
+  protocolo_viagem: "Protocolo de viagem",
 };
 export const ACOMPANHANTES: Record<Acompanhante, string> = {
   nenhum: "Sem acompanhante", esposa: "🐆 Esposa", filho: "👶 Filho(a)", esposa_filho: "🐆 👶 Esposa e filho(a)",
