@@ -40,8 +40,12 @@ export function montarMensagemAviso(p: AvisoSimplificado): string {
   ].join("\n");
 }
 export function intervaloHistorico(de: string, ate: string) {
+  const inicio = de ? new Date(de) : null;
+  const fim = ate ? new Date(ate) : null;
+  inicio?.setUTCHours(3, 0, 0, 0);
+  fim?.setUTCHours(26, 59, 59, 999);
   return {
-    inicio: de ? new Date(`${de}T00:00:00-03:00`).toISOString() : null,
-    fim: ate ? new Date(`${ate}T23:59:59.999-03:00`).toISOString() : null,
+    inicio: inicio?.toISOString() ?? null,
+    fim: fim?.toISOString() ?? null,
   };
 }
