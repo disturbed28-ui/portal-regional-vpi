@@ -100,6 +100,7 @@ const ProtocoloViagem = () => {
   const { profile } = useProfile(user?.id);
   const [aba, setAba] = useState("registrar");
   const [form, setForm] = useState<FormState>(vazio());
+  const [tipoEscolhido, setTipoEscolhido] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const protocolo = form.tipo_aviso === "protocolo_viagem";
 
@@ -251,6 +252,7 @@ const ProtocoloViagem = () => {
     toast.success(form.id ? "Aviso atualizado e salvo no histórico" : "Aviso salvo no histórico", { duration: 6000, dismissible: false });
     qc.invalidateQueries({ queryKey: ["protocolos-viagem"] });
     setForm(vazio(form.telefone));
+    setTipoEscolhido(false);
   };
 
   return (
@@ -274,18 +276,23 @@ const ProtocoloViagem = () => {
           </TabsList>
 
           <TabsContent value="registrar" className="space-y-3">
-            <Campo label="Tipo de aviso">
-              <Select value={form.tipo_aviso} disabled={!!form.id} onValueChange={(tipo) => setForm({ ...vazio(form.telefone), tipo_aviso: tipo as TipoAviso })}>
-                <SelectTrigger aria-label="Tipo de aviso"><SelectValue /></SelectTrigger>
+            <Campo label="Tipo de aviso" obrigatorio>
+              <Select value={form.id || tipoEscolhido ? form.tipo_aviso : ""} disabled={!!form.id} onValueChange={(tipo) => { setTipoEscolhido(true); setForm({ ...vazio(form.telefone), tipo_aviso: tipo as TipoAviso }); }}>
+                <SelectTrigger aria-label="Tipo de aviso"><SelectValue placeholder="Selecione o tipo de aviso" /></SelectTrigger>
                 <SelectContent>{Object.entries(TIPOS_AVISO).map(([valor, label]) => <SelectItem key={valor} value={valor}>{label}</SelectItem>)}</SelectContent>
               </Select>
             </Campo>
+            {!form.id && !tipoEscolhido && (
+              <p className="text-center text-sm text-muted-foreground">Selecione o tipo de aviso para continuar.</p>
+            )}
             {form.id && (
               <div className="flex items-center justify-between gap-2 rounded-md border border-primary/40 bg-primary/10 p-3 text-sm">
                 <span>Editando aviso já enviado.</span>
-                <Button size="sm" variant="ghost" onClick={() => setForm(vazio(form.telefone))}>Cancelar</Button>
+                <Button size="sm" variant="ghost" onClick={() => { setTipoEscolhido(false); setForm(vazio(form.telefone)); }}>Cancelar</Button>
               </div>
             )}
+            {(form.id || tipoEscolhido) && <>
+
 
             <Secao icon={User} titulo="Dados do Integrante">
               <Campo label="Nome de Colete"><Travado valor={dadosIntegrante.nome_colete} /></Campo>
@@ -416,6 +423,7 @@ const ProtocoloViagem = () => {
                 <MessageCircle className="h-4 w-4" /> {form.id ? "Reenviar atualização via WhatsApp" : "Enviar via WhatsApp"}
               </Button>
             </Card>
+            </>}
           </TabsContent>
 
           <TabsContent value="historico">
