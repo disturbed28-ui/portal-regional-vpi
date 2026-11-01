@@ -1,3 +1,4 @@
+// @ts-expect-error bun test runtime
 import { describe, expect, test } from "bun:test";
 import { validarAviso, intervaloHistorico, type AvisoSimplificado } from "./avisoDeslocamento";
 const base: AvisoSimplificado = { tipo_aviso: "dentro_regional", nome_colete: "R.I.P", divisao_texto: "Centro SJC", cidade_origem: "Flamboyant", cidade_destino: "Jardim Oriente", meio_transporte: "moto", acompanhante_tipo: null, contato_regional: null };
