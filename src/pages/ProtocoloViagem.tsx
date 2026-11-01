@@ -252,6 +252,7 @@ const ProtocoloViagem = () => {
     toast.success(form.id ? "Aviso atualizado e salvo no histórico" : "Aviso salvo no histórico", { duration: 6000, dismissible: false });
     qc.invalidateQueries({ queryKey: ["protocolos-viagem"] });
     setForm(vazio(form.telefone));
+    setTipoEscolhido(false);
   };
 
   return (
