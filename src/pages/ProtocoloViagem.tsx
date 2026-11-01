@@ -449,21 +449,47 @@ function HistoricoProtocolos({ userId, onEditar }: { userId?: string; onEditar: 
   const [busca, setBusca] = useState("");
   const [de, setDe] = useState("");
   const [ate, setAte] = useState("");
+  const [tipo, setTipo] = useState("todos");
+  const [modoData, setModoData] = useState("periodo");
+  const [mes, setMes] = useState("");
   const [cancelar, setCancelar] = useState<any | null>(null);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["protocolos-viagem", de, ate],
+  const limites = useMemo(() => {
+    if (modoData !== "mes" || !mes) return { de, ate };
+    const [ano, numeroMes] = mes.split("-").map(Number);
+    const ultimoDia = new Date(ano, numeroMes, 0).getDate();
+    return { de: `${mes}-01`, ate: `${mes}-${ultimoDia}` };
+  }, [modoData, mes, de, ate]);
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["protocolos-viagem", userId, limites],
+    enabled: !!userId,
     queryFn: async () => {
-      let q = supabase.from("protocolos_viagem").select("*").order("data_saida", { ascending: false }).limit(500);
-      if (de) q = q.gte("data_saida", de);
-      if (ate) q = q.lte("data_saida", ate);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data ?? [];
+      const intervalo = intervaloHistorico(limites.de, limites.ate);
+      const ler = async (tabela: "protocolos_viagem" | "avisos_deslocamento") => {
+        const registros: any[] = [];
+        for (let offset = 0; ; offset += 1000) {
+          let q = supabase.from(tabela).select("*").order("created_at", { ascending: false }).order("id").range(offset, offset + 999);
+          if (tabela === "protocolos_viagem") {
+            if (limites.de) q = q.gte("data_saida", limites.de);
+            if (limites.ate) q = q.lte("data_saida", limites.ate);
+          } else {
+            if (intervalo.inicio) q = q.gte("created_at", intervalo.inicio);
+            if (intervalo.fim) q = q.lte("created_at", intervalo.fim);
+          }
+          const { data: pagina, error } = await q;
+          if (error) throw error;
+          registros.push(...(pagina ?? []).map((p) => ({ ...p, tabela, tipo_aviso: "tipo_aviso" in p ? p.tipo_aviso : "protocolo_viagem" })));
+          if (!pagina || pagina.length < 1000) break;
+        }
+        return registros;
+      };
+      const grupos = await Promise.all([ler("protocolos_viagem"), ler("avisos_deslocamento")]);
+      return grupos.flat().sort((a, b) => (b.data_saida ?? b.created_at).localeCompare(a.data_saida ?? a.created_at));
     },
   });
 
   const lista = (data ?? []).filter((p) => {
+    if (tipo !== "todos" && p.tipo_aviso !== tipo) return false;
     const t = busca.trim().toLowerCase();
     if (!t) return true;
     return [p.nome_colete, p.divisao_texto, p.cidade_destino, p.cidade_origem].some((v) => (v || "").toLowerCase().includes(t));
@@ -471,37 +497,47 @@ function HistoricoProtocolos({ userId, onEditar }: { userId?: string; onEditar: 
 
   const confirmarCancelamento = async () => {
     if (!cancelar) return;
-    const { error } = await supabase.from("protocolos_viagem")
+    const { error } = await supabase.from(cancelar.tabela as "protocolos_viagem" | "avisos_deslocamento")
       .update({ status: "cancelado", cancelado_em: new Date().toISOString() }).eq("id", cancelar.id);
     setCancelar(null);
     if (error) return toast.error("Erro ao cancelar: " + error.message, { duration: 6000, dismissible: false });
-    toast.success("Protocolo cancelado", { duration: 6000, dismissible: false });
+    toast.success("Aviso cancelado", { duration: 6000, dismissible: false });
     qc.invalidateQueries({ queryKey: ["protocolos-viagem"] });
   };
 
   return (
     <div className="space-y-3">
-      <Card className="space-y-2 p-3">
+      <section className="space-y-2 border-b pb-3">
         <Input placeholder="Buscar integrante, divisão ou cidade" value={busca} onChange={(e) => setBusca(e.target.value)} />
+        <Select value={tipo} onValueChange={setTipo}>
+          <SelectTrigger aria-label="Filtrar tipo de aviso"><SelectValue /></SelectTrigger>
+          <SelectContent><SelectItem value="todos">Todos os tipos</SelectItem>{Object.entries(TIPOS_AVISO).map(([v, label]) => <SelectItem key={v} value={v}>{label}</SelectItem>)}</SelectContent>
+        </Select>
         <div className="grid grid-cols-2 gap-2">
-          <Input type="date" value={de} onChange={(e) => setDe(e.target.value)} aria-label="Saída a partir de" />
-          <Input type="date" value={ate} onChange={(e) => setAte(e.target.value)} aria-label="Saída até" />
+          <Opcao ativo={modoData === "periodo"} onClick={() => setModoData("periodo")}>Período</Opcao>
+          <Opcao ativo={modoData === "mes"} onClick={() => setModoData("mes")}>Mês</Opcao>
         </div>
-      </Card>
+        {modoData === "mes" ? <Input type="month" value={mes} onChange={(e) => setMes(e.target.value)} aria-label="Mês dos avisos" /> : <div className="grid grid-cols-2 gap-2">
+          <Input type="date" value={de} onChange={(e) => setDe(e.target.value)} aria-label="A partir de" />
+          <Input type="date" value={ate} onChange={(e) => setAte(e.target.value)} aria-label="Até" />
+        </div>}
+      </section>
 
       {isLoading ? (
         <p className="text-center text-sm text-muted-foreground">Carregando...</p>
-      ) : lista.length === 0 ? (
-        <p className="py-6 text-center text-sm text-muted-foreground">Nenhum protocolo encontrado.</p>
+      ) : isError ? <p className="text-sm text-destructive">Não foi possível carregar o histórico.</p> : lista.length === 0 ? (
+        <p className="py-6 text-center text-sm text-muted-foreground">Nenhum aviso encontrado.</p>
       ) : (
         lista.map((p) => {
           const cancelado = p.status === "cancelado";
           const dono = p.autor_profile_id === userId;
+          const antigo = p.tipo_aviso === "protocolo_viagem";
           return (
             <Card key={p.id} className={cn("space-y-2 p-3 text-sm", cancelado && "opacity-60")}>
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="break-words font-semibold">{p.nome_colete}</p>
+                  <p className="break-words text-xs font-semibold">{TIPOS_AVISO[p.tipo_aviso as TipoAviso]}</p>
                   <p className="break-words text-xs text-muted-foreground">{p.divisao_texto || p.regional_texto}</p>
                 </div>
                 <Badge variant={cancelado ? "destructive" : "secondary"} className="shrink-0">
@@ -511,13 +547,14 @@ function HistoricoProtocolos({ userId, onEditar }: { userId?: string; onEditar: 
               <p className="break-words">
                 {p.cidade_origem} → {[...(p.paradas ?? []), p.cidade_destino].join(" → ")}
               </p>
-              <p className="text-xs text-muted-foreground">
+              {antigo && <p className="text-xs text-muted-foreground">
                 Saída {formatarDataBR(p.data_saida)} {p.hora_saida}h · Retorno {formatarDataBR(p.data_retorno)} {p.hora_retorno}h
-              </p>
+              </p>}
               <p className="text-xs text-muted-foreground">
                 {p.meio_transporte === "outros" ? p.meio_transporte_outro || "Outros" : p.meio_transporte === "moto" ? "Moto" : "Carro"}
-                {" · "}Acompanhado: {p.acompanhado ? "Sim" : "Não"} · Cores: {p.com_cores ? "Sim" : "Não"}
+                {antigo ? ` · Acompanhado: ${p.acompanhado ? "Sim" : "Não"} · Cores: ${p.com_cores ? "Sim" : "Não"}` : p.tipo_aviso === "entre_regionais" ? ` · ${ACOMPANHANTES[p.acompanhante_tipo as Acompanhante]}` : ""}
               </p>
+              {p.tipo_aviso === "entre_regionais" && <p className="text-xs">Necessário contato regional: {p.contato_regional ? "✅ Sim" : "❌ Não"}</p>}
               <p className="text-xs text-muted-foreground">
                 Enviado para {p.destinatario_cargo} {p.destinatario_nome || "-"}
               </p>
@@ -539,9 +576,9 @@ function HistoricoProtocolos({ userId, onEditar }: { userId?: string; onEditar: 
       <AlertDialog open={!!cancelar} onOpenChange={(o) => !o && setCancelar(null)}>
         <AlertDialogContent className="w-[98vw] max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Cancelar protocolo?</AlertDialogTitle>
+            <AlertDialogTitle>Cancelar aviso?</AlertDialogTitle>
             <AlertDialogDescription>
-              Viagem para {cancelar?.cidade_destino} em {cancelar && formatarDataBR(cancelar.data_saida)}. O registro continua no histórico como cancelado.
+              Deslocamento para {cancelar?.cidade_destino}. O registro continua no histórico como cancelado.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
