@@ -1,3 +1,7 @@
+# Aviso de Deslocamento
+- [ ] Renomear formulário e manter Protocolo de viagem; adicionar avisos dentro da regional e entre regionais, sem data/hora.
+- [ ] Preservar histórico e permissões; filtrar por tipo, mês ou período; testar e conferir fluxo autenticado.
+
 # Históricos de Treinamento e Estágio
 - [x] Adicionar filtro pelo cargo treinado/estagiado, preservando os demais filtros e acesso; filtros conferidos na sessão autenticada e no celular de 360 px sem rolagem horizontal.
 - [x] Exportar todo o histórico autorizado para Excel; downloads reais conferidos (9 treinamentos e 26 estágios, incluindo andamento/concluídos e todos os cargos). Quatro testes passaram; falta publicar a tela no portal.
