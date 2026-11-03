@@ -310,7 +310,14 @@ export async function consolidarArquivos(
     }
     
     // 4. Buscar no dicionário do Arquivo A pelo nome + divisão
-    const encontrado = buscarNoDicionario(resultadoA.dicionario, nomeColete, divisaoArquivoB);
+    const idArquivoB = findColumnValue(row, 'id_integrante', 'Id_Integrante', 'ID_Integrante', 'ID', 'registro_id', 'Registro', 'registro');
+    const idB = Number(idArquivoB);
+    const temIdB = Number.isSafeInteger(idB) && idB > 0;
+    // An explicit ID must never be replaced by a namesake's ID from file A.
+    const porId = temIdB ? resultadoA.integrantes.find(item => item.id_integrante === idB) : undefined;
+    const encontrado = temIdB
+      ? (porId ? { id: porId.id_integrante, data: porId.data_admissao, divisaoCompleta: porId.divisao_original } : null)
+      : buscarNoDicionario(resultadoA.dicionario, nomeColete, divisaoArquivoB);
     
     // DEBUG: Mostrar resultado da busca para primeiras linhas
     if (i < 3) {
@@ -333,11 +340,10 @@ export async function consolidarArquivos(
     
     // 5. Verificar se Arquivo B já tem id_integrante e data_entrada (arquivo já processado/COMPLETO)
     // Isso acontece quando o usuário usa um arquivo que já foi consolidado anteriormente
-    const idArquivoB = findColumnValue(row, 'id_integrante', 'Id_Integrante', 'ID_Integrante', 'ID');
     const dataArquivoB = findColumnValue(row, 'data_entrada', 'Data_Entrada', 'DataEntrada');
     
     // Determinar ID final: prioriza Arquivo A, mas usa B se existir
-    const idFinal = encontrado?.id || (idArquivoB ? parseInt(String(idArquivoB)) : 0);
+    const idFinal = temIdB ? idB : (encontrado?.id || 0);
     
     // Determinar data final: prioriza Arquivo A, mas usa B se existir
     const dataFinal = encontrado?.data || dataArquivoB || undefined;
@@ -360,14 +366,14 @@ export async function consolidarArquivos(
       lobo: converterBool(findColumnValue(row, 'Lobo', 'lobo')),
       tem_moto: converterBool(findColumnValue(row, 'TemMoto', 'tem_moto', 'Tem_Moto')),
       tem_carro: converterBool(findColumnValue(row, 'TemCarro', 'tem_carro', 'Tem_Carro')),
-      encontrado: !!encontrado || !!idArquivoB,  // Considera encontrado se tem ID do B
-      origem_id: encontrado ? 'arquivo_a' : (idArquivoB ? 'arquivo_a' : 'nao_encontrado')
+      encontrado: !!encontrado || temIdB,
+      origem_id: encontrado ? 'arquivo_a' : (temIdB ? 'arquivo_a' : 'nao_encontrado')
     };
     
     registros.push(registro);
     
     // Registrar não encontrados (apenas se não tem ID do arquivo B)
-    if (!encontrado && !idArquivoB) {
+    if (!encontrado && !temIdB) {
       console.warn(`[consolidarArquivos] NAO_ENCONTRADO: "${nomeColete}" | Divisão Arquivo B: "${divisaoArquivoB}" | Cargo: "${cargoGrau}"`);
       naoEncontrados.push({
         nome_colete: String(nomeColete).trim(),

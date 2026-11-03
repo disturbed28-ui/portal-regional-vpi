@@ -3,6 +3,7 @@ import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts'
 import { corsHeaders } from '../_shared/cors.ts'
 import { handleDatabaseError, logError } from '../_shared/error-handler.ts'
 import { resolverEscopo } from '../_shared/escopo-grau.ts'
+import { mesmoRegistroIntegrante } from '../_shared/identidadeIntegrante.ts'
 
 interface CampoAlterado {
   campo: string;
@@ -572,6 +573,21 @@ afastados_ignorados: z.array(z.object({
     afastados_ignorados = afastadosIgnoradosFiltrados;
     transferencias_internas = transferenciasFiltradas;
 
+    // Validate every identity before any write, including previews from older clients.
+    const alteracoesIdentidade = [...(atualizados || []), ...(reativados || [])];
+    for (let inicio = 0; inicio < alteracoesIdentidade.length; inicio += 200) {
+      const grupo = alteracoesIdentidade.slice(inicio, inicio + 200);
+      const { data: existentes, error: identidadeError } = await supabase
+        .from('integrantes_portal').select('id,registro_id')
+        .in('id', grupo.map(item => item.id));
+      if (identidadeError) throw identidadeError;
+      const registros = new Map((existentes || []).map(item => [item.id, item.registro_id]));
+      if (grupo.some(item => !mesmoRegistroIntegrante(registros.get(item.id), item.registro_id))) {
+        return new Response(JSON.stringify({ error: 'IDs diferentes não são a mesma pessoa. Reprocesse os arquivos; nenhuma alteração foi gravada.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+    }
+
     let insertedCount = 0;
     let updatedCount = 0;
     let inativadosCount = 0;
@@ -729,7 +745,6 @@ afastados_ignorados: z.array(z.object({
           const { error: reativarError } = await supabase
             .from('integrantes_portal')
             .update({
-              registro_id: r.registro_id,
               nome_colete: r.nome_colete,
               comando_texto: normalizarComandoParaSalvar(r.comando_texto),
               regional_texto: normalizarRegionalParaSalvar(r.regional_texto),
@@ -755,7 +770,8 @@ afastados_ignorados: z.array(z.object({
               
               ativo: true
             })
-            .eq('id', r.id);
+            .eq('id', r.id)
+            .eq('registro_id', r.registro_id);
 
           if (reativarError) {
             console.error('[admin-import-integrantes] Erro ao reativar:', r.nome_colete, reativarError);
@@ -798,7 +814,7 @@ afastados_ignorados: z.array(z.object({
       console.log('[admin-import-integrantes] Updating atualizados:', atualizados.length);
       
       for (const update of atualizados) {
-        const { id, ...updateData } = update;
+        const { id, registro_id, ...updateData } = update;
         
         // Fetch old data before updating
         const { data: oldData } = await supabase
@@ -848,7 +864,8 @@ afastados_ignorados: z.array(z.object({
         const { error: updateError } = await supabase
           .from('integrantes_portal')
           .update(updateDataEnriquecido)
-          .eq('id', id);
+          .eq('id', id)
+          .eq('registro_id', registro_id);
 
         if (updateError) {
           logError('admin-import-integrantes', updateError, { id });
