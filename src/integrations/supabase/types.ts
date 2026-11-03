@@ -2776,6 +2776,95 @@ export type Database = {
         }
         Relationships: []
       }
+      pesquisa_ciclo_versoes: {
+        Row: {
+          ciclo_id: string
+          criado_em: string
+          criado_por: string
+          hash_base: string
+          id: string
+          motivo: string | null
+          pdf_base64: string
+          snapshot: Json
+          versao: number
+        }
+        Insert: {
+          ciclo_id: string
+          criado_em?: string
+          criado_por: string
+          hash_base: string
+          id?: string
+          motivo?: string | null
+          pdf_base64: string
+          snapshot: Json
+          versao: number
+        }
+        Update: {
+          ciclo_id?: string
+          criado_em?: string
+          criado_por?: string
+          hash_base?: string
+          id?: string
+          motivo?: string | null
+          pdf_base64?: string
+          snapshot?: Json
+          versao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pesquisa_ciclo_versoes_ciclo_id_fkey"
+            columns: ["ciclo_id"]
+            isOneToOne: false
+            referencedRelation: "pesquisa_ciclos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pesquisa_ciclos: {
+        Row: {
+          fechado_em: string
+          fechado_por: string
+          fim: string
+          id: string
+          inicio: string
+          nome: string
+          regional_id: string
+        }
+        Insert: {
+          fechado_em?: string
+          fechado_por: string
+          fim: string
+          id?: string
+          inicio: string
+          nome: string
+          regional_id: string
+        }
+        Update: {
+          fechado_em?: string
+          fechado_por?: string
+          fim?: string
+          id?: string
+          inicio?: string
+          nome?: string
+          regional_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pesquisa_ciclos_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "regionais"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pesquisa_ciclos_regional_id_fkey"
+            columns: ["regional_id"]
+            isOneToOne: false
+            referencedRelation: "vw_estrutura_completa"
+            referencedColumns: ["regional_id"]
+          },
+        ]
+      }
       presencas: {
         Row: {
           confirmado_em: string | null
@@ -4425,6 +4514,21 @@ export type Database = {
           _regional_usuario: string
         }
         Returns: boolean
+      }
+      pesquisa_registrar_ciclo: {
+        Args: {
+          _autor: string
+          _fim: string
+          _hash: string
+          _inicio: string
+          _motivo?: string
+          _nome: string
+          _pdf: string
+          _regional: string
+          _revisar?: string
+          _snapshot: Json
+        }
+        Returns: string
       }
       protocolo_viagem_no_escopo: {
         Args: { _divisao_id: string; _regional_id: string }
