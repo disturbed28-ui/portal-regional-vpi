@@ -1,4 +1,5 @@
 # Conferência da carga de integrantes
+- [ ] Consolidar regra genérica de ID em mudanças de nome/regional e impedir resolução ambígua entre arquivos; testar Gigantes homônimos.
 - [x] Identificação por ID: removido retorno por nome, ID explícito da planilha preservado e proteção antes de qualquer gravação para conferências antigas. Homônimos testados; função implantada e pedido autenticado com IDs divergentes bloqueado (400), cadastro permaneceu intacto. Reprocessar arquivos da VP3 após publicar a tela.
 - [x] Remover cortes de nomes, divisão, cargo e dados de retorno; separar Antes e Depois e usar listas com largura limitada e rolagem vertical. Dois testes passaram; exemplos longos conferidos em 360 e 1280 px sem cortes ou rolagem horizontal. Carga real VP3 não refeita; falta publicar.
 
