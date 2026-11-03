@@ -2,7 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { z } from 'npm:zod@3';
 import { compararCiclos, podeFechar, recortarSnapshot, sanitizarSnapshot, type SnapshotCiclo } from '../_shared/pesquisaCiclos.ts';
-import { hashDe } from '../pesquisa-satisfacao-relatorio/calculo.ts';
+import { hashDe } from '../_shared/pesquisaHash.ts';
 import { gerarPdf } from './pdf.ts';
 const mes = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 const schema = z.object({ acao: z.enum(['gerencial', 'historico', 'visualizar', 'previa', 'fechar']), regionalId: z.string().uuid(), divisaoId: z.string().uuid().nullable().optional(), inicio: mes, fim: mes, nome: z.string().trim().min(1).max(120).optional(), hash: z.string().length(64).optional(), cicloId: z.string().uuid().optional(), versao: z.number().int().positive().optional(), motivo: z.string().trim().min(5).max(1000).optional(), confirmar: z.boolean().optional() }).strict().refine(v => v.inicio <= v.fim);
