@@ -34,7 +34,7 @@ export async function gerarPdf(d: SnapshotCiclo, oficial: boolean, nome?: string
     for (const m of i.medias) texto(`${m.rotulo}: ${n(m.media)} / 5 (${m.avaliacoes} avaliações)`);
   };
   const temas = (a: AnaliseCiclo | undefined, chave: 'pontosFortes' | 'pontosFracos' | 'sugestoes' | 'boasPraticas') => {
-    if (a?.estado !== 'ok') { texto(`Análise qualitativa: ${a?.estado || 'indisponível'}. Não incluída nesta fotografia.`); return; }
+    if (a?.estado !== 'ok') { texto('Análise qualitativa não disponível nesta fotografia.'); return; }
     if (!a[chave]?.length) texto('Sem temas identificados nesta categoria.');
     for (const t of a[chave] || []) {
       const base = a.respostasIncluidas || 0;
@@ -51,7 +51,7 @@ export async function gerarPdf(d: SnapshotCiclo, oficial: boolean, nome?: string
   texto('Pesquisa anônima: participação compara respostas ao efetivo, não pessoas únicas identificadas.', 9);
   secao('1. Resumo executivo'); ind(d.indicadores);
   texto(d.analise?.diagnostico || 'Diagnóstico não disponível nesta fotografia.');
-  texto(`Análise: ${d.analise?.geradoEm || 'não disponível'} | Referência: ${d.versaoAnalise}`, 9);
+  texto(`Análise: ${d.analise?.geradoEm ? new Date(d.analise.geradoEm).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : 'não disponível'} | Referência: ${d.versaoAnalise}`, 9);
   secao('2. Pontos fortes'); temas(d.analise, 'pontosFortes');
   texto('Boas práticas', 11, true); temas(d.analise, 'boasPraticas');
   secao('3. Pontos fracos'); temas(d.analise, 'pontosFracos');
@@ -62,7 +62,13 @@ export async function gerarPdf(d: SnapshotCiclo, oficial: boolean, nome?: string
     secao('4. Panorama das divisões');
     for (const v of d.divisoes) {
       if (y < 180) nova(); texto(v.nome, 12, true); ind(v.indicadores);
-      temas(v.analise, 'pontosFortes'); temas(v.analise, 'pontosFracos'); temas(v.analise, 'sugestoes');
+      if (v.analise?.estado === 'ok') {
+        for (const [titulo, chave] of [['Pontos fortes', 'pontosFortes'], ['Pontos fracos', 'pontosFracos'], ['Sugestões', 'sugestoes']] as const) {
+          texto(titulo, 10, true);
+          const resumida = { ...v.analise, [chave]: v.analise[chave]?.slice(0, 2) };
+          temas(resumida, chave);
+        }
+      } else texto(v.analise?.estado === 'amostra_insuficiente' ? 'Amostra insuficiente: análise qualitativa preservada por anonimato.' : 'Análise qualitativa não disponível nesta fotografia.');
     }
   }
   secao('5. Recomendações e pauta de reunião');

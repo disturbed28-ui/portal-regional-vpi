@@ -81,7 +81,8 @@ Deno.serve(async req => {
     if (sobreposto) return json({ error: 'O período se sobrepõe a um ciclo oficial existente.' }, 409);
     const anterior = (ciclos || []).find(c => c.fim < p.inicio);
     if (anterior) { const v = (await versoesDe(anterior.id))[0]; d.comparacao = compararCiclos(d, v?.snapshot as SnapshotCiclo | undefined); }
-    const proximaVersao = p.cicloId ? (await versoesDe(p.cicloId))[0]?.versao + 1 : 1;
+    const versaoAtual = p.cicloId ? (await versoesDe(p.cicloId))[0]?.versao : 0;
+    const proximaVersao = (versaoAtual || 0) + 1;
     const pdf = base64(await gerarPdf(d, true, p.nome, proximaVersao));
     const { data: id, error } = await admin.rpc('pesquisa_registrar_ciclo', { _regional: p.regionalId, _nome: p.nome, _inicio: p.inicio, _fim: p.fim, _autor: auth.user.id, _snapshot: d, _pdf: pdf, _hash: hash, _revisar: p.cicloId || null, _motivo: p.motivo || null });
     if (error) return json({ error: error.message }, 409);
