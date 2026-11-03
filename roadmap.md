@@ -1,4 +1,5 @@
 # Conferência da carga de integrantes
+- [ ] Identificar integrantes somente pelo ID e impedir atualizações/reativações por nome entre IDs diferentes; testar os casos de homônimos.
 - [x] Remover cortes de nomes, divisão, cargo e dados de retorno; separar Antes e Depois e usar listas com largura limitada e rolagem vertical. Dois testes passaram; exemplos longos conferidos em 360 e 1280 px sem cortes ou rolagem horizontal. Carga real VP3 não refeita; falta publicar.
 
 # Pesquisa de Satisfação — relatórios e ciclos
