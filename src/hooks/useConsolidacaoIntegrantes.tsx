@@ -4,6 +4,7 @@ import { processDelta, ProcessDeltaResult, ExcelIntegrante } from '@/lib/excelPa
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { mesmoRegistroIntegrante } from '../../supabase/functions/_shared/identidadeIntegrante';
+import type { IntegrantePortal } from '@/hooks/useIntegrantes';
 
 /**
  * Interface para o estado do lote de processamento
@@ -115,12 +116,13 @@ export function useConsolidacaoIntegrantes(userId?: string) {
       const consolidacao = await consolidarArquivos(arquivoA, arquivoB);
       
       // 3. Buscar integrantes do banco (ativos E inativos, para detectar retorno de ex-integrantes)
-      const { data: integrantesDB, error: dbError } = await supabase
-        .from('integrantes_portal')
-        .select('*');
-      
-      if (dbError) {
-        throw new Error('Erro ao buscar integrantes: ' + dbError.message);
+      const integrantesDB: IntegrantePortal[] = [];
+      for (let inicio = 0; ; inicio += 1000) {
+        const { data, error } = await supabase.from('integrantes_portal')
+          .select('*').order('id').range(inicio, inicio + 999);
+        if (error) throw new Error('Erro ao buscar integrantes: ' + error.message);
+        integrantesDB.push(...(data || []));
+        if (!data || data.length < 1000) break;
       }
 
       // 3.5. Buscar afastados ativos para excluir da lista de removidos

@@ -411,7 +411,8 @@ export const processDelta = (
   const dbInativos = dbData.filter((i) => i.ativo === false);
   const inativosPorRegistro = new Map(dbInativos.map((i) => [i.registro_id, i]));
 
-  const dbMap = new Map(dbAtivos.map((i) => [i.registro_id, i]));
+  // Identity is global; location scopes removals, not identity matching.
+  const dbMap = new Map(dbData.filter(i => i.ativo !== false).map((i) => [i.registro_id, i]));
   const excelIds = new Set(excelData.map((i) => i.id_integrante));
   const reativadosIds = new Set<string>();
 
