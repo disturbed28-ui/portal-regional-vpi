@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { 
   Download, 
@@ -172,7 +171,7 @@ export function TelaConferenciaImport({
   const alertaRemocaoMassiva = percentualRemocao > 30;
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 max-w-full space-y-4">
       {/* Header com ID do Lote */}
       <Card className="border-border/50">
         <CardHeader className="pb-3">
@@ -314,7 +313,7 @@ export function TelaConferenciaImport({
               </div>
             </CardHeader>
             <Separator />
-            <ScrollArea className="h-[300px]">
+            <div className="h-[300px] min-w-0 overflow-y-auto">
               <CardContent className="py-2 px-3 space-y-2">
                 {delta.novos.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">
@@ -332,8 +331,8 @@ export function TelaConferenciaImport({
                         disabled={readOnly}
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{novo.nome_colete}</p>
-                        <p className="text-xs text-muted-foreground truncate">
+                        <p className="text-sm font-medium break-words [overflow-wrap:anywhere]">{novo.nome_colete}</p>
+                        <p className="text-xs text-muted-foreground break-words [overflow-wrap:anywhere]">
                           {novo.divisao} • {novo.cargo_grau}
                         </p>
                       </div>
@@ -344,7 +343,7 @@ export function TelaConferenciaImport({
                   ))
                 )}
               </CardContent>
-            </ScrollArea>
+            </div>
           </Card>
         </TabsContent>
 
@@ -363,15 +362,15 @@ export function TelaConferenciaImport({
                 </p>
               </CardHeader>
               <Separator />
-              <ScrollArea className="max-h-[180px]">
+              <div className="max-h-[280px] min-w-0 overflow-y-auto">
                 <CardContent className="py-2 px-3 space-y-2">
                   {delta.reativados.map((item) => (
-                    <div key={item.antigo.id} className="p-2 rounded-md bg-muted/40">
-                      <p className="text-sm font-medium truncate">{item.novo.nome_colete}</p>
-                      <p className="text-xs text-muted-foreground truncate">
+                    <div key={item.antigo.id} className="min-w-0 p-2 rounded-md bg-muted/40">
+                      <p className="text-sm font-medium break-words [overflow-wrap:anywhere]">{item.novo.nome_colete}</p>
+                      <p className="text-xs text-muted-foreground break-words [overflow-wrap:anywhere]">
                         {item.novo.divisao} • {item.novo.cargo_grau}
                       </p>
-                      <p className="text-xs text-muted-foreground truncate">
+                      <p className="text-xs text-muted-foreground break-words [overflow-wrap:anywhere]">
                         Saída anterior: {item.motivo_anterior || 'não informado'} • match: {item.match_por}
                         {item.antigo.registro_id !== item.novo.id_integrante
                           ? ` • ID ${item.antigo.registro_id} → ${item.novo.id_integrante}`
@@ -380,7 +379,7 @@ export function TelaConferenciaImport({
                     </div>
                   ))}
                 </CardContent>
-              </ScrollArea>
+              </div>
             </Card>
           )}
 
@@ -411,7 +410,7 @@ export function TelaConferenciaImport({
               </div>
             </CardHeader>
             <Separator />
-            <ScrollArea className="h-[300px]">
+            <div className="h-[300px] min-w-0 overflow-y-auto">
               <CardContent className="py-2 px-3 space-y-2">
                 {delta.atualizados.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">
@@ -429,17 +428,16 @@ export function TelaConferenciaImport({
                         disabled={readOnly}
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{item.novo.nome_colete}</p>
-                        <p className="text-xs text-muted-foreground truncate">
+                        <p className="text-sm font-medium break-words [overflow-wrap:anywhere]">{item.novo.nome_colete}</p>
+                        <p className="text-xs text-muted-foreground break-words [overflow-wrap:anywhere]">
                           {item.novo.divisao}
                         </p>
-                        <ul className="mt-1 space-y-1">
+                        <ul className="mt-2 space-y-2">
                           {listarMudancasIntegrante(item.antigo, item.novo).map((m) => (
-                            <li key={m.label} className="text-xs leading-snug break-words">
-                              <span className="font-medium">{m.label}:</span>{' '}
-                              <span className="text-destructive line-through">{m.anterior}</span>
-                              {' → '}
-                              <span className="text-primary font-semibold">{m.novo}</span>
+                            <li key={m.label} className="min-w-0 text-xs leading-relaxed [overflow-wrap:anywhere]">
+                              <p className="font-medium">{m.label}</p>
+                              <p><span className="text-muted-foreground">Antes: </span><span className="text-destructive">{m.anterior}</span></p>
+                              <p><span className="text-muted-foreground">Depois: </span><span className="text-primary font-semibold">{m.novo}</span></p>
                             </li>
                           ))}
                         </ul>
@@ -448,7 +446,7 @@ export function TelaConferenciaImport({
                   ))
                 )}
               </CardContent>
-            </ScrollArea>
+            </div>
           </Card>
         </TabsContent>
 
@@ -486,7 +484,7 @@ export function TelaConferenciaImport({
               </div>
             </CardHeader>
             <Separator />
-            <ScrollArea className="h-[300px]">
+            <div className="h-[300px] min-w-0 overflow-y-auto">
               <CardContent className="py-2 px-3 space-y-2">
                 {delta.removidos.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">
@@ -524,8 +522,8 @@ export function TelaConferenciaImport({
                           disabled={readOnly}
                         />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{removido.nome_colete}</p>
-                          <p className="text-xs text-muted-foreground truncate">
+                          <p className="text-sm font-medium break-words [overflow-wrap:anywhere]">{removido.nome_colete}</p>
+                          <p className="text-xs text-muted-foreground break-words [overflow-wrap:anywhere]">
                             {removido.divisao_texto} • {removido.cargo_grau_texto}
                           </p>
                           {selecionado && (
@@ -560,7 +558,7 @@ export function TelaConferenciaImport({
                   })
                 )}
               </CardContent>
-            </ScrollArea>
+            </div>
           </Card>
         </TabsContent>
 
@@ -574,7 +572,7 @@ export function TelaConferenciaImport({
                 <span className="text-sm font-medium">Transferidos ({totalTransferidos})</span>
               </div>
             </CardHeader>
-            <ScrollArea className="max-h-[150px]">
+            <div className="max-h-[150px] min-w-0 overflow-y-auto">
               <CardContent className="py-2 px-3 space-y-1">
                 {delta.transferidos.length === 0 ? (
                   <p className="text-xs text-muted-foreground">Nenhuma transferência detectada</p>
@@ -587,7 +585,7 @@ export function TelaConferenciaImport({
                   ))
                 )}
               </CardContent>
-            </ScrollArea>
+            </div>
           </Card>
 
           {/* Não encontrados */}
@@ -598,7 +596,7 @@ export function TelaConferenciaImport({
                 <span className="text-sm font-medium">Não encontrados ({totalNaoEncontrados})</span>
               </div>
             </CardHeader>
-            <ScrollArea className="max-h-[150px]">
+            <div className="max-h-[150px] min-w-0 overflow-y-auto">
               <CardContent className="py-2 px-3 space-y-1">
                 {consolidacao.naoEncontrados.length === 0 ? (
                   <p className="text-xs text-muted-foreground">Todos os registros foram encontrados</p>
@@ -611,7 +609,7 @@ export function TelaConferenciaImport({
                   ))
                 )}
               </CardContent>
-            </ScrollArea>
+            </div>
           </Card>
         </TabsContent>
       </Tabs>
