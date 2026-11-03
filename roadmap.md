@@ -1,3 +1,8 @@
+# Pesquisa de Satisfação — relatórios e ciclos
+- [ ] Preparar plano de implementação com reutilização do painel, análises, permissões e brasão original.
+- [ ] Implementar PDF gerencial, fechamento oficial com prévia, histórico preservado e comparações normalizadas.
+- [ ] Testar regras de acesso, anonimato, sobreposição, imutabilidade e comparação; conferir PDFs e fluxos autorizados.
+
 # Aviso de Deslocamento
 - [x] Renomear formulário e manter Protocolo de viagem; adicionar avisos dentro da regional e entre regionais, sem data/hora.
 - [x] Preservar histórico e permissões; filtrar por tipo, mês ou período; quatro testes passaram e tela autenticada conferida em desktop e celular sem transbordamento.
