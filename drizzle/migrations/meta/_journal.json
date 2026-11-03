@@ -99,6 +99,13 @@
       "when": 1793493330038,
       "tag": "0013_avisos_deslocamento_simplificados",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793670064013,
+      "tag": "0014_pesquisa_ciclos_oficiais",
+      "breakpoints": true
     }
   ]
 }
