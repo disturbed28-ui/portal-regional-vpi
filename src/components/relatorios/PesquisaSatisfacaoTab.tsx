@@ -39,7 +39,7 @@ const nomeCurto = (n: string) => n.replace(/^DIVISAO\s+/i, '').replace(/\s*-\s*S
 const fmt = (n: number | null) => (n === null ? '—' : n.toFixed(1).replace('.', ','));
 
 export function PesquisaSatisfacaoTab() {
-  const [modo, setModo] = useState<'atual' | 'mes' | 'intervalo'>('atual');
+  const [modo, setModo] = useState<'atual' | 'mes' | 'intervalo'>('intervalo');
   const [mes, setMes] = useState(mesAtual);
   const [inicio, setInicio] = useState(meses[2]);
   const [fim, setFim] = useState(mesAtual);
