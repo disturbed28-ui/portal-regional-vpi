@@ -21,6 +21,7 @@ const bodySchema = z.object({
   regionalId: z.string().uuid().nullable().optional(),
   divisaoId: z.string().uuid().nullable().optional(),
   inicio: mes, fim: mes,
+  fotografia: z.boolean().optional(),
 }).strict().refine(b => b.inicio <= b.fim);
 
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), {
@@ -28,8 +29,8 @@ const json = (data: unknown, status = 200) => new Response(JSON.stringify(data),
 });
 
 let cacheLinhas: { rows: Resposta[]; ate: number } | undefined;
-async function lerRespostas(): Promise<Resposta[]> {
-  if (cacheLinhas && cacheLinhas.ate > Date.now()) return cacheLinhas.rows;
+async function lerRespostas(frescas = false): Promise<Resposta[]> {
+  if (!frescas && cacheLinhas && cacheLinhas.ate > Date.now()) return cacheLinhas.rows;
   const key = Deno.env.get('LOVABLE_API_KEY'), conn = Deno.env.get('GOOGLE_SHEETS_API_KEY');
   if (!key || !conn) throw Object.assign(new Error('Conexão com a planilha não configurada.'), { status: 503 });
   const res = await fetch(`${GATEWAY}/spreadsheets/${RESPOSTAS_ID}/values/'Respostas Pesquisa'!A2:AC?valueRenderOption=UNFORMATTED_VALUE`, {
@@ -201,7 +202,7 @@ Deno.serve(async req => {
     const { data: cfg } = await admin.from('system_settings').select('valor_texto').eq('chave', 'pesquisa_min_respostas_qualitativo').maybeSingle();
     const minimo = Math.max(2, Number(cfg?.valor_texto) || 5);
     const { inicio, fim } = parsed.data;
-    const todas = (await lerRespostas()).filter(r => r.regionalId === regionalId && noPeriodo(r, inicio, fim));
+    const todas = (await lerRespostas(parsed.data.fotografia)).filter(r => r.regionalId === regionalId && noPeriodo(r, inicio, fim));
     const nomes = new Map<string, string>(divisoesPermitidas.map((d: any) => [d.id, d.nome]));
     const rs = divisaoId ? todas.filter(r => r.divisaoId === divisaoId) : todas;
     // Only read scope IDs, never member identity or any link to anonymous answers.
@@ -222,6 +223,7 @@ Deno.serve(async req => {
     const outrosTextos = (l: Resposta[]) => amostraOk(l) ? l.map(r => r.outros).filter(Boolean) : [];
     const p = { regionalId, divisaoId, inicio, fim };
     const resposta: Record<string, unknown> = { escopo, minimo, periodo: { inicio, fim }, indicadores: ind, outros: outrosTextos(rs) };
+    if (parsed.data.fotografia) resposta.hashFonte = await hashDe(rs);
     resposta.analise = rs.length ? await analise(req, admin, p, rs, minimo, nomes) : { estado: 'sem_respostas' };
     if (!divisaoId) {
       const grupos = new Map<string, Resposta[]>();
@@ -231,7 +233,7 @@ Deno.serve(async req => {
       let disparos = 0;
       for (const [id, l] of [...grupos.entries()].sort((a, b) => b[1].length - a[1].length)) {
         const item: Record<string, unknown> = { divisaoId: id, nome: nomes.get(id) || l[0].divisao, indicadores: indicadores(l, efetivo.porDivisao.get(id) || 0) };
-        if (amostraOk(l) && disparos < 4) { item.analise = await analise(req, admin, { ...p, divisaoId: id }, l, minimo, nomes); disparos++; }
+        if (amostraOk(l) && (parsed.data.fotografia || disparos < 4)) { item.analise = await analise(req, admin, { ...p, divisaoId: id }, l, minimo, nomes); disparos++; }
         else item.analise = amostraOk(l) ? { estado: 'processando' } : { estado: 'amostra_insuficiente', minimo };
         lista.push(item);
       }
