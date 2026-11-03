@@ -1,12 +1,22 @@
 import { PDFDocument, StandardFonts, rgb } from 'npm:pdf-lib@1.17.1';
 import type { SnapshotCiclo, AnaliseCiclo, IndicadoresCiclo } from '../_shared/pesquisaCiclos.ts';
+import brasaoAsset from './brasao_regional_vp1.png.asset.json' with { type: 'json' };
+
+let brasaoCache: Uint8Array | undefined;
+async function lerBrasao() {
+  if (brasaoCache) return brasaoCache;
+  const resposta = await fetch(new URL(brasaoAsset.url, 'https://vp1.app.br'));
+  if (!resposta.ok) throw new Error('Não foi possível carregar o brasão do relatório. Tente novamente.');
+  brasaoCache = new Uint8Array(await resposta.arrayBuffer());
+  return brasaoCache;
+}
 
 // Print tokens, matching the portal's neutral brand palette on white paper.
 const tinta = rgb(.067, .09, .13), secundario = rgb(.33, .37, .42), linha = rgb(.75, .78, .8);
 export async function gerarPdf(d: SnapshotCiclo, oficial: boolean, nome?: string, versao = 1, brasao?: Uint8Array) {
   const doc = await PDFDocument.create();
   const regular = await doc.embedFont(StandardFonts.Helvetica), bold = await doc.embedFont(StandardFonts.HelveticaBold);
-  const marca = brasao ? await doc.embedPng(brasao) : undefined;
+  const marca = await doc.embedPng(brasao || await lerBrasao());
   let page = doc.addPage([595.28, 841.89]), y = 750;
   const periodo = `${d.periodo.inicio} a ${d.periodo.fim}`;
   const clean = (s: string) => s.replace(/[\u0000-\u001f]/g, ' ').replace(/[^\u0020-\u007e\u00a0-\u00ff\u2013\u2014\u2018\u2019\u201c\u201d\u2022\u2026]/g, ' ');

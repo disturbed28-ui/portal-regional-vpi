@@ -2,7 +2,7 @@
 - [x] Preparar plano com reutilização do painel, análises e permissões.
 - [x] Implementar PDF gerencial, fechamento/revisões com prévia e armazenamento imutável; histórico e comparações numéricas/proporções por título normalizado.
 - [x] 23 testes passaram; PDF real da Vale I (104/167) e oito páginas conferidos; corrigidas repetições e datas. Conta Comando não pode fechar (403); funções implantadas e compilação sem erros.
-- [ ] Adicionar marca d’água: falta arquivo original do brasão VP1.
+- [x] Adicionar marca d’água com o brasão original fornecido, sem QR e margem externa branca.
 - [ ] Conferir aba em celular/computador, fechamento/revisão oficiais e concorrência: sessão disponível não acessa a página Relatórios nem tem cargo autorizado para fechar.
 - [ ] Concluir alinhamento semântico dos temas e independência das consultas históricas da planilha; implementação atual documentada em docs/pesquisa-ciclos-entrega.md.
 
