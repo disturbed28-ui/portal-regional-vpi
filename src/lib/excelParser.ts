@@ -45,7 +45,7 @@ export interface TransferenciaDetectada {
 export interface ReativacaoDetectada {
   antigo: IntegrantePortal;
   novo: ExcelIntegrante;
-  match_por: 'registro_id' | 'nome_colete' | 'nome_colete_data_entrada';
+  match_por: 'registro_id';
   motivo_anterior: string | null;
 }
 
@@ -410,14 +410,6 @@ export const processDelta = (
   // Ex-integrantes (inativos) de qualquer regional — candidatos a RETORNO
   const dbInativos = dbData.filter((i) => i.ativo === false);
   const inativosPorRegistro = new Map(dbInativos.map((i) => [i.registro_id, i]));
-  const inativosPorNome = new Map<string, IntegrantePortal[]>();
-  dbInativos.forEach((i) => {
-    const chave = normalizarParaComparacao(i.nome_colete);
-    if (!chave) return;
-    const lista = inativosPorNome.get(chave) || [];
-    lista.push(i);
-    inativosPorNome.set(chave, lista);
-  });
 
   const dbMap = new Map(dbAtivos.map((i) => [i.registro_id, i]));
   const excelIds = new Set(excelData.map((i) => i.id_integrante));
@@ -440,33 +432,6 @@ export const processDelta = (
         });
         console.log('[processDelta] ♻️ Retorno detectado por ID:', excelItem.nome_colete, `(${excelItem.id_integrante})`);
         return;
-      }
-
-      // Fallback: novo ID gerado — casar por nome de colete (+ data de entrada quando disponível)
-      const candidatos = (inativosPorNome.get(normalizarParaComparacao(excelItem.nome_colete)) || [])
-        .filter((c) => !reativadosIds.has(c.id));
-
-      if (candidatos.length > 0) {
-        const porDataEntrada = excelItem.data_entrada
-          ? candidatos.filter((c) => c.data_entrada === excelItem.data_entrada)
-          : [];
-
-        const escolhido = porDataEntrada.length === 1
-          ? porDataEntrada[0]
-          : (candidatos.length === 1 ? candidatos[0] : null);
-
-        if (escolhido) {
-          reativadosIds.add(escolhido.id);
-          reativados.push({
-            antigo: escolhido,
-            novo: excelItem,
-            match_por: porDataEntrada.length === 1 ? 'nome_colete_data_entrada' : 'nome_colete',
-            motivo_anterior: escolhido.motivo_inativacao || null
-          });
-          console.log('[processDelta] ♻️ Retorno detectado por nome:', excelItem.nome_colete,
-            `(antigo ${escolhido.registro_id} → novo ${excelItem.id_integrante})`);
-          return;
-        }
       }
 
       // Novo integrante

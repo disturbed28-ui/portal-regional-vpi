@@ -3,6 +3,7 @@ import { consolidarArquivos, validarArquivos, ConsolidacaoResult, RegistroConsol
 import { processDelta, ProcessDeltaResult, ExcelIntegrante } from '@/lib/excelParser';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { mesmoRegistroIntegrante } from '../../supabase/functions/_shared/identidadeIntegrante';
 
 /**
  * Interface para o estado do lote de processamento
@@ -313,6 +314,12 @@ export function useConsolidacaoIntegrantes(userId?: string) {
       const novosParaImportar = lote.delta.novos.filter(n => lote.selecao.novos.has(n.id_integrante));
       const atualizadosParaImportar = lote.delta.atualizados.filter(a => lote.selecao.atualizados.has(a.antigo.id));
       const reativadosParaImportar = lote.delta.reativados.filter(r => lote.selecao.atualizados.has(r.antigo.id));
+      // Also reject a stale preview created before ID-only matching was applied.
+      if ([...atualizadosParaImportar, ...reativadosParaImportar].some(
+        item => !mesmoRegistroIntegrante(item.antigo.registro_id, item.novo.id_integrante)
+      )) {
+        throw new Error('A conferência contém IDs diferentes para o mesmo cadastro. Reprocesse os arquivos; nenhuma alteração foi enviada.');
+      }
       
       // Separar removidos por tipo de tratamento
       const removidosSelecionados = lote.delta.removidos.filter(r => lote.selecao.removidos.has(r.id));
