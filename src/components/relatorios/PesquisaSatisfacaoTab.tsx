@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, ChevronDown, Info, Sparkles } from 'lucide-react';
+import { PesquisaCiclos } from './PesquisaCiclos';
 
 type Tema = { tema: string; resumo: string; respostas: number; divisoes: number; comentarios: string[] };
 type Analise = {
@@ -126,6 +127,7 @@ export function PesquisaSatisfacaoTab() {
           )}
         </>
       )}
+      {escopo?.regionalId && d?.indicadores && <PesquisaCiclos key={`${escopo.regionalId}-${escopo.divisaoId || divisaoId || 'todas'}`} regionalId={escopo.regionalId} divisaoId={escopo.divisaoId || divisaoId} inicio={periodo.inicio} fim={periodo.fim} />}
     </div>
   );
 }
