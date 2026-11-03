@@ -1,7 +1,10 @@
 # Pesquisa de Satisfação — relatórios e ciclos
-- [ ] Preparar plano de implementação com reutilização do painel, análises, permissões e brasão original.
-- [ ] Implementar PDF gerencial, fechamento oficial com prévia, histórico preservado e comparações normalizadas.
-- [ ] Testar regras de acesso, anonimato, sobreposição, imutabilidade e comparação; conferir PDFs e fluxos autorizados.
+- [x] Preparar plano com reutilização do painel, análises e permissões.
+- [x] Implementar PDF gerencial, fechamento/revisões com prévia e armazenamento imutável; histórico e comparações numéricas/proporções por título normalizado.
+- [x] 23 testes passaram; PDF real da Vale I (104/167) e oito páginas conferidos; corrigidas repetições e datas. Conta Comando não pode fechar (403); funções implantadas e compilação sem erros.
+- [ ] Adicionar marca d’água: falta arquivo original do brasão VP1.
+- [ ] Conferir aba em celular/computador, fechamento/revisão oficiais e concorrência: sessão disponível não acessa a página Relatórios nem tem cargo autorizado para fechar.
+- [ ] Concluir alinhamento semântico dos temas e independência das consultas históricas da planilha; implementação atual documentada em docs/pesquisa-ciclos-entrega.md.
 
 # Aviso de Deslocamento
 - [x] Renomear formulário e manter Protocolo de viagem; adicionar avisos dentro da regional e entre regionais, sem data/hora.
