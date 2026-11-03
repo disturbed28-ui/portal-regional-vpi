@@ -1,3 +1,6 @@
+# Conferência da carga de integrantes
+- [x] Remover cortes de nomes, divisão, cargo e dados de retorno; separar Antes e Depois e usar listas com largura limitada e rolagem vertical. Dois testes passaram; exemplos longos conferidos em 360 e 1280 px sem cortes ou rolagem horizontal. Carga real VP3 não refeita; falta publicar.
+
 # Pesquisa de Satisfação — relatórios e ciclos
 - [x] Preparar plano com reutilização do painel, análises e permissões.
 - [x] Implementar PDF gerencial, fechamento/revisões com prévia e armazenamento imutável; histórico e comparações numéricas/proporções por título normalizado.
