@@ -266,13 +266,17 @@ export async function parseArquivoA(file: File): Promise<ParseArquivoAResult> {
                 data: dataAdmissao,
                 divisaoCompleta: divisaoParaChave
               };
-              dicionario.set(chave, dadosIntegrante);
+              const anterior = dicionario.get(chave);
+              dicionario.set(chave, anterior && anterior.id !== numeroId
+                ? { id: 0, data: null, divisaoCompleta: divisaoParaChave }
+                : dadosIntegrante);
               
               if (divisaoAtual && divisaoAtual !== regionalAtual) {
                 const chaveAlternativa = criarChaveBusca(nome, regionalAtual);
-                if (!dicionario.has(chaveAlternativa)) {
-                  dicionario.set(chaveAlternativa, dadosIntegrante);
-                }
+                const alternativa = dicionario.get(chaveAlternativa);
+                dicionario.set(chaveAlternativa, alternativa && alternativa.id !== numeroId
+                  ? { id: 0, data: null, divisaoCompleta: regionalAtual }
+                  : dadosIntegrante);
               }
             }
           } else if (primeiraColuna && primeiraColuna.length > 2) {
@@ -345,7 +349,7 @@ export function buscarNoDicionario(
   const chave = criarChaveBusca(nome, divisao);
   const resultadoExato = dicionario.get(chave);
   if (resultadoExato) {
-    return resultadoExato;
+    return resultadoExato.id > 0 ? resultadoExato : null;
   }
   
   // 2. Busca com fallback parcial para divisões truncadas
@@ -362,6 +366,7 @@ export function buscarNoDicionario(
     return null;
   }
   
+  const candidatos = new Map<number, { id: number; data: string | null; divisaoCompleta: string }>();
   for (const [key, valor] of dicionario.entries()) {
     const partes = key.split('|');
     if (partes.length !== 2) continue;
@@ -378,10 +383,10 @@ export function buscarNoDicionario(
     // Ou se começa com ela (ex: "EXTREMO" contido em "EXTREMO LESTE")
     if (divisaoChaveSemSufixo.startsWith(divisaoSemSufixo) || 
         divisaoChaveSemSufixo.includes(divisaoSemSufixo)) {
-      console.log(`[buscarNoDicionario] Fallback parcial: "${nome}" com divisão "${divisao}" → encontrado em "${valor.divisaoCompleta}"`);
-      return valor;
+      if (valor.id <= 0) return null;
+      candidatos.set(valor.id, valor);
     }
   }
   
-  return null;
+  return candidatos.size === 1 ? Array.from(candidatos.values())[0] : null;
 }

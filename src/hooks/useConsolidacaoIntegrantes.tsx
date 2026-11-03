@@ -4,6 +4,7 @@ import { processDelta, ProcessDeltaResult, ExcelIntegrante } from '@/lib/excelPa
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { mesmoRegistroIntegrante } from '../../supabase/functions/_shared/identidadeIntegrante';
+import type { IntegrantePortal } from '@/hooks/useIntegrantes';
 
 /**
  * Interface para o estado do lote de processamento
