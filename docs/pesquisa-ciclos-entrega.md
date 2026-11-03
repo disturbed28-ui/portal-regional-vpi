@@ -36,7 +36,7 @@
 - Último sinal de compilação: sem erros.
 
 ## Ainda não concluído
-- Brasão original ausente: não foi redesenhado nem substituído; falta fornecer o arquivo para marca d’água.
+- Brasão original fornecido e integrado como marca d’água nos PDFs novos, com recorte circular removendo QR e margem branca externa, sem redesenho; PDFs oficiais já armazenados permanecem imutáveis.
 - Conferência visual da aba em computador/celular e fechamento/revisão/download oficial completos dependem de uma sessão com acesso à página e autorização para fechar. Nenhum ciclo real foi criado apenas para teste.
 - Testes de concorrência/imutabilidade contra registros reais e inspeção do PDF oficial ainda pendentes; as proteções foram implementadas, mas não se deve afirmar validação completa.
 - Comparação qualitativa alinha títulos normalizados, não equivalência semântica entre títulos diferentes; análise aprofundada de evolução dos temas ainda não implementada. O PDF informa essa limitação e não chama ausência de menção de resolução.
