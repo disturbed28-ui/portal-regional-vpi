@@ -43,6 +43,8 @@ Acrescentar à aba **Relatórios → Pesquisa de Satisfação** a emissão de PD
 - Salvar somente agregados e análises sanitizadas nos snapshots históricos. Manter hashes técnicos das respostas, sem identidade de participantes, para integridade e prevenção de duplicidade.
 - Validar fechamento e revisão no servidor e proteger PDFs em armazenamento privado; o servidor fornece somente a versão compatível com o escopo autorizado.
 - Conferir o brasão original e o gerador de PDF já usados no projeto antes de escolher a implementação; se o brasão original não estiver disponível, solicitar o arquivo, sem redesenhá-lo.
+- A inspeção não encontrou gerador de PDF nem brasão original no projeto: implementar um gerador compartilhado; o arquivo original do brasão precisa ser fornecido para finalizar a identidade do documento.
+- Os temas atuais já têm contagens validadas, mas não proporções nem associação histórica de temas equivalentes: acrescentar esses dados para comparações sem expor respostas individuais. O mínimo atual protege análises qualitativas; conservar os indicadores numéricos conforme as regras vigentes.
 - Registrar as decisões estruturais em `AGENTS.md` e manter o acompanhamento das tarefas em `roadmap.md`.
 
 ## Validação e entrega
