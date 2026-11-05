@@ -43,10 +43,10 @@ export async function gerarPdf(d: SnapshotCiclo, oficial: boolean, nome?: string
     texto(`${i.respostas} respostas | Efetivo de referência: ${i.participacao?.integrantesAtivos ?? '—'} | Participação: ${n(i.participacao?.percentual)}%`, 10, true);
     for (const m of i.medias) texto(`${m.rotulo}: ${n(m.media)} / 5 (${m.avaliacoes} avaliações)`);
   };
-  const temAnalise = (a: AnaliseCiclo | undefined) => a?.estado === 'ok' || a?.estado === 'desatualizada';
+  const temAnalise = (a: AnaliseCiclo | undefined) => a?.estado === 'ok';
   const avisoAnalise = (a: AnaliseCiclo | undefined) => a?.estado === 'amostra_insuficiente'
     ? 'Amostra insuficiente: análise qualitativa preservada por anonimato.'
-    : a?.estado === 'processando' ? 'Análise qualitativa ainda em processamento — gere o relatório novamente em alguns minutos.'
+    : (a?.estado === 'processando' || a?.estado === 'desatualizada') ? 'Análise qualitativa ainda em processamento — gere o relatório novamente em alguns minutos.'
     : 'Análise qualitativa não disponível neste relatório.';
   const temas = (a: AnaliseCiclo | undefined, chave: 'pontosFortes' | 'pontosFracos' | 'sugestoes' | 'boasPraticas') => {
     if (!temAnalise(a)) return;
@@ -67,7 +67,6 @@ export async function gerarPdf(d: SnapshotCiclo, oficial: boolean, nome?: string
   secao('1. Resumo executivo'); ind(d.indicadores);
   texto(d.analise?.diagnostico || (temAnalise(d.analise) ? 'Diagnóstico não informado.' : avisoAnalise(d.analise)));
   texto(`Análise: ${d.analise?.geradoEm ? new Date(d.analise.geradoEm).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : 'não disponível'} | Referência: ${d.versaoAnalise}`, 9);
-  if (d.analise?.estado === 'desatualizada') texto('Observação: análise qualitativa baseada na leitura anterior; uma atualização está em andamento.', 9);
   if (temAnalise(d.analise)) {
     secao('2. Pontos fortes'); temas(d.analise, 'pontosFortes');
     texto('Boas práticas', 11, true); temas(d.analise, 'boasPraticas');
