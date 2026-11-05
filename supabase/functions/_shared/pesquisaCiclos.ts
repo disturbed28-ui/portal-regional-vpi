@@ -12,7 +12,7 @@ function limparAnalise(a?: AnaliseCiclo): AnaliseCiclo | undefined {
   if (!a) return undefined;
   // Whitelist, never persist or export original comments or response identifiers.
   const out: AnaliseCiclo = { estado: a.estado, geradoEm: a.geradoEm, respostasIncluidas: a.respostasIncluidas };
-  if (a.estado !== 'ok') return out;
+  if (a.estado !== 'ok' && a.estado !== 'desatualizada') return out;
   out.diagnostico = a.diagnostico;
   out.recomendacoes = a.recomendacoes;
   for (const chave of listas) out[chave] = a[chave]?.map(t => ({ tema: t.tema, resumo: t.resumo, respostas: t.respostas, divisoes: t.divisoes }));
