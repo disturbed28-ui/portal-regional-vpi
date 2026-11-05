@@ -43,8 +43,13 @@ export async function gerarPdf(d: SnapshotCiclo, oficial: boolean, nome?: string
     texto(`${i.respostas} respostas | Efetivo de referência: ${i.participacao?.integrantesAtivos ?? '—'} | Participação: ${n(i.participacao?.percentual)}%`, 10, true);
     for (const m of i.medias) texto(`${m.rotulo}: ${n(m.media)} / 5 (${m.avaliacoes} avaliações)`);
   };
+  const temAnalise = (a: AnaliseCiclo | undefined) => a?.estado === 'ok' || a?.estado === 'desatualizada';
+  const avisoAnalise = (a: AnaliseCiclo | undefined) => a?.estado === 'amostra_insuficiente'
+    ? 'Amostra insuficiente: análise qualitativa preservada por anonimato.'
+    : a?.estado === 'processando' ? 'Análise qualitativa ainda em processamento — gere o relatório novamente em alguns minutos.'
+    : 'Análise qualitativa não disponível neste relatório.';
   const temas = (a: AnaliseCiclo | undefined, chave: 'pontosFortes' | 'pontosFracos' | 'sugestoes' | 'boasPraticas') => {
-    if (a?.estado !== 'ok') { texto('Análise qualitativa não disponível nesta fotografia.'); return; }
+    if (!temAnalise(a)) return;
     if (!a[chave]?.length) texto('Sem temas identificados nesta categoria.');
     for (const t of a[chave] || []) {
       const base = a.respostasIncluidas || 0;
@@ -60,30 +65,33 @@ export async function gerarPdf(d: SnapshotCiclo, oficial: boolean, nome?: string
   texto(`Emitido em ${new Date(d.geradoEm).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })} (São Paulo)${oficial ? ' | Versão ' + versao : ''}`);
   texto('Pesquisa anônima: participação compara respostas ao efetivo, não pessoas únicas identificadas.', 9);
   secao('1. Resumo executivo'); ind(d.indicadores);
-  texto(d.analise?.diagnostico || 'Diagnóstico não disponível nesta fotografia.');
+  texto(d.analise?.diagnostico || (temAnalise(d.analise) ? 'Diagnóstico não informado.' : avisoAnalise(d.analise)));
   texto(`Análise: ${d.analise?.geradoEm ? new Date(d.analise.geradoEm).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) : 'não disponível'} | Referência: ${d.versaoAnalise}`, 9);
-  secao('2. Pontos fortes'); temas(d.analise, 'pontosFortes');
-  texto('Boas práticas', 11, true); temas(d.analise, 'boasPraticas');
-  secao('3. Pontos fracos'); temas(d.analise, 'pontosFracos');
-  texto('Sugestões de melhoria', 11, true); temas(d.analise, 'sugestoes');
+  if (d.analise?.estado === 'desatualizada') texto('Observação: análise qualitativa baseada na leitura anterior; uma atualização está em andamento.', 9);
+  if (temAnalise(d.analise)) {
+    secao('2. Pontos fortes'); temas(d.analise, 'pontosFortes');
+    texto('Boas práticas', 11, true); temas(d.analise, 'boasPraticas');
+    secao('3. Pontos fracos'); temas(d.analise, 'pontosFracos');
+    texto('Sugestões de melhoria', 11, true); temas(d.analise, 'sugestoes');
+  } else { secao('2–3. Análise qualitativa'); texto(avisoAnalise(d.analise)); }
   texto('Atividades sugeridas', 11, true);
   for (const a of d.indicadores.atividades) texto(`${a.rotulo}: ${a.quantidade} (${n(a.percentual)}%)`);
   if (d.divisoes?.length) {
     secao('4. Panorama das divisões');
     for (const v of d.divisoes) {
       if (y < 180) nova(); texto(v.nome, 12, true); ind(v.indicadores);
-      if (v.analise?.estado === 'ok') {
+      if (temAnalise(v.analise)) {
         for (const [titulo, chave] of [['Pontos fortes', 'pontosFortes'], ['Pontos fracos', 'pontosFracos'], ['Sugestões', 'sugestoes']] as const) {
           texto(titulo, 10, true);
           const resumida = { ...v.analise, [chave]: v.analise[chave]?.slice(0, 2) };
           temas(resumida, chave);
         }
-      } else texto(v.analise?.estado === 'amostra_insuficiente' ? 'Amostra insuficiente: análise qualitativa preservada por anonimato.' : 'Análise qualitativa não disponível nesta fotografia.');
+      } else texto(avisoAnalise(v.analise));
     }
   }
   secao('5. Recomendações e pauta de reunião');
   for (const r of d.analise?.recomendacoes || []) texto(r);
-  if (!d.analise?.recomendacoes?.length) texto('Recomendações não disponíveis nesta fotografia.');
+  if (!d.analise?.recomendacoes?.length) texto(temAnalise(d.analise) ? 'Sem recomendações registradas.' : avisoAnalise(d.analise));
   texto('Decisões: __________________________________________________________');
   texto('Responsáveis: _______________________________________________________');
   texto('Prazos: ____________________________________________________________');
