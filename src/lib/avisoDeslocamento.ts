@@ -16,6 +16,7 @@ export interface AvisoSimplificado {
   meio_transporte_outro?: string | null;
   acompanhante_tipo: Acompanhante | null;
   contato_regional: boolean | null;
+  observacoes?: string | null;
 }
 export function validarAviso(p: AvisoSimplificado): string[] {
   const erros: string[] = [];
@@ -37,6 +38,7 @@ export function montarMensagemAviso(p: AvisoSimplificado): string {
     ...(p.tipo_aviso === "entre_regionais" ? [`*Acompanhante:* ${ACOMPANHANTES[p.acompanhante_tipo ?? "nenhum"]}`] : []), "",
     `*Origem:* ${p.cidade_origem.trim()}`, `*Destino:* ${p.cidade_destino.trim()}`,
     ...(p.tipo_aviso === "entre_regionais" ? ["", `*Necessário contato regional:* ${p.contato_regional ? "✅ Sim" : "❌ Não"}`] : []),
+    ...(p.observacoes?.trim() ? ["", `*Observações:* ${p.observacoes.trim()}`] : []),
   ].join("\n");
 }
 export function intervaloHistorico(de: string, ate: string) {

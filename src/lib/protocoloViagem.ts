@@ -129,6 +129,7 @@ export interface DadosProtocolo {
   acompanhado: boolean;
   com_cores: boolean;
   telefone: string;
+  observacoes?: string | null;
 }
 
 export function formatarDataBR(d: string): string {
@@ -183,5 +184,6 @@ export function montarMensagemProtocolo(p: DadosProtocolo): string {
     `*Com as Cores:* ${p.com_cores ? "Sim" : "Não"}`,
     "",
     `📞 *Contato:* ${formatarTelefoneBR(p.telefone)}`,
+    ...(p.observacoes?.trim() ? ["", `*Observações:* ${p.observacoes.trim()}`] : []),
   ].join("\n");
 }
