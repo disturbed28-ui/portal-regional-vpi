@@ -12,6 +12,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -45,6 +46,7 @@ interface FormState {
   acompanhado: boolean | null;
   com_cores: boolean | null;
   telefone: string;
+  observacoes: string;
 }
 
 const vazio = (tel = ""): FormState => ({
@@ -52,6 +54,7 @@ const vazio = (tel = ""): FormState => ({
   id: null, cidade_origem: "", cidade_destino: "", paradas: [""],
   data_saida: "", hora_saida: "", data_retorno: "", hora_retorno: "",
   meio_transporte: null, meio_transporte_outro: "", acompanhado: null, com_cores: null, telefone: tel,
+  observacoes: "",
 });
 
 function Secao({ icon: Icon, titulo, children }: { icon: any; titulo: string; children: React.ReactNode }) {
@@ -221,6 +224,7 @@ const ProtocoloViagem = () => {
       destinatario_telefone: destinatario.telefone,
       mensagem,
       status: "enviado",
+      observacoes: form.observacoes.trim() || null,
     };
     const completo = { ...registro, paradas, data_saida: form.data_saida, hora_saida: form.hora_saida,
       data_retorno: form.data_retorno, hora_retorno: form.hora_retorno,
@@ -388,6 +392,18 @@ const ProtocoloViagem = () => {
               </Campo>
             </Secao>}
 
+            <Secao icon={Info} titulo="Observações">
+              <Campo label="Observações (opcional)">
+                <Textarea
+                  maxLength={500}
+                  rows={3}
+                  placeholder="Ex.: motivo do deslocamento, previsão de passagem por outra cidade, contato adicional..."
+                  value={form.observacoes}
+                  onChange={(e) => set("observacoes", e.target.value)}
+                />
+              </Campo>
+            </Secao>
+
             {!protocolo && form.meio_transporte && <section className="space-y-2 border-t p-4">
               <h2 className="font-bold">Mensagem</h2>
               <p className="whitespace-pre-wrap break-words text-sm">{montarMensagemAviso({ ...form, ...dadosIntegrante, tipo_aviso: form.tipo_aviso as "dentro_regional" | "entre_regionais", meio_transporte: form.meio_transporte })}</p>
@@ -441,6 +457,7 @@ const ProtocoloViagem = () => {
                   meio_transporte: p.meio_transporte as MeioTransporte,
                   meio_transporte_outro: p.meio_transporte_outro ?? "",
                   acompanhado: p.acompanhado ?? null, com_cores: p.com_cores ?? null, telefone: p.telefone ?? profile?.telefone ?? "",
+                  observacoes: p.observacoes ?? "",
                 });
                 setAba("registrar");
               }}
@@ -563,6 +580,7 @@ function HistoricoProtocolos({ userId, onEditar }: { userId?: string; onEditar: 
                 {antigo ? ` · Acompanhado: ${p.acompanhado ? "Sim" : "Não"} · Cores: ${p.com_cores ? "Sim" : "Não"}` : p.tipo_aviso === "entre_regionais" ? ` · ${ACOMPANHANTES[p.acompanhante_tipo as Acompanhante]}` : ""}
               </p>
               {p.tipo_aviso === "entre_regionais" && <p className="text-xs">Necessário contato regional: {p.contato_regional ? "✅ Sim" : "❌ Não"}</p>}
+              {p.observacoes && <p className="whitespace-pre-wrap break-words text-xs">Obs.: {p.observacoes}</p>}
               <p className="text-xs text-muted-foreground">
                 Enviado para {p.destinatario_cargo} {p.destinatario_nome || "-"}
               </p>
