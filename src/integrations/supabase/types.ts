@@ -815,6 +815,7 @@ export type Database = {
           meio_transporte_outro: string | null
           mensagem: string | null
           nome_colete: string
+          observacoes: string | null
           regional_id: string | null
           regional_texto: string | null
           status: string
@@ -841,6 +842,7 @@ export type Database = {
           meio_transporte_outro?: string | null
           mensagem?: string | null
           nome_colete: string
+          observacoes?: string | null
           regional_id?: string | null
           regional_texto?: string | null
           status?: string
@@ -867,6 +869,7 @@ export type Database = {
           meio_transporte_outro?: string | null
           mensagem?: string | null
           nome_colete?: string
+          observacoes?: string | null
           regional_id?: string | null
           regional_texto?: string | null
           status?: string
@@ -3344,6 +3347,7 @@ export type Database = {
           meio_transporte_outro: string | null
           mensagem: string | null
           nome_colete: string
+          observacoes: string | null
           paradas: string[]
           regional_id: string | null
           regional_texto: string | null
@@ -3375,6 +3379,7 @@ export type Database = {
           meio_transporte_outro?: string | null
           mensagem?: string | null
           nome_colete: string
+          observacoes?: string | null
           paradas?: string[]
           regional_id?: string | null
           regional_texto?: string | null
@@ -3406,6 +3411,7 @@ export type Database = {
           meio_transporte_outro?: string | null
           mensagem?: string | null
           nome_colete?: string
+          observacoes?: string | null
           paradas?: string[]
           regional_id?: string | null
           regional_texto?: string | null

@@ -106,6 +106,13 @@
       "when": 1793670064013,
       "tag": "0014_pesquisa_ciclos_oficiais",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1794011225295,
+      "tag": "0015_observacoes_avisos_deslocamento",
+      "breakpoints": true
     }
   ]
 }
