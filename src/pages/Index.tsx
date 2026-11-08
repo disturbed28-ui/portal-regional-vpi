@@ -103,10 +103,6 @@ const Index = () => {
   useEffect(() => {
     if (isLoggedIn && !profileLoading && profile && !profile.nome_colete) {
       console.log("[Index] Usuário sem nome_colete, redirecionando para perfil...");
-      toast({
-        title: "Complete seu cadastro",
-        description: "Por favor, adicione seu nome de colete para continuar.",
-      });
       navigate("/perfil");
     }
   }, [isLoggedIn, profileLoading, profile, navigate, toast]);

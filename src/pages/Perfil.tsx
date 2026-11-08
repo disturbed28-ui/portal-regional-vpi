@@ -16,20 +16,23 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useScreenAccess } from "@/hooks/useScreenAccess";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Instagram, AlertTriangle } from "lucide-react";
-import { validateInstagram, isInstagramPendente } from "@/lib/instagramUtils";
+import { ArrowLeft, Instagram } from "lucide-react";
+import { INSTAGRAM_NA } from "@/lib/instagramUtils";
+import { Checkbox } from "@/components/ui/checkbox";
+import { validarCadastroPerfil, cadastroPerfilPendente } from "../../supabase/functions/_shared/cadastroPerfil";
 import { CobrarAnaliseCard } from "@/components/perfil/CobrarAnaliseCard";
 
 const Perfil = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, loading: authLoading } = useAuth();
-  const { profile } = useProfile(user?.id);
+  const { profile, loading: profileLoading } = useProfile(user?.id);
   const { hasAccess, loading: loadingAccess } = useScreenAccess('/perfil', user?.id);
   const [nomeColete, setNomeColete] = useState("");
   const [telefone, setTelefone] = useState("");
   const [instagram, setInstagram] = useState("");
-  const [savingInstagram, setSavingInstagram] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [naoInformarInstagram, setNaoInformarInstagram] = useState(false);
 
   // Carregar dados existentes do perfil
   useEffect(() => {
@@ -40,18 +43,19 @@ const Perfil = () => {
       setTelefone(profile.telefone);
     }
     if ((profile as any)?.instagram) {
-      setInstagram((profile as any).instagram);
+      setInstagram(profile.instagram === INSTAGRAM_NA ? "" : profile.instagram);
+      setNaoInformarInstagram(profile.instagram === INSTAGRAM_NA);
     }
   }, [profile]);
 
-  const instagramPendente = isInstagramPendente((profile as any)?.instagram);
+  const cadastroInicial = !!profile && cadastroPerfilPendente(profile);
 
   const getStatusMessage = () => {
     switch (profile?.profile_status) {
       case 'Pendente':
         return {
           type: 'info',
-          message: 'Preencha seu nome de colete para solicitar entrada no clube'
+          message: 'Seu cadastro será encaminhado para análise após o envio.'
         };
       case 'Analise':
         return {
@@ -110,111 +114,36 @@ const Perfil = () => {
   const userPhoto = profile?.photo_url || user?.user_metadata?.avatar_url || "";
 
   const handleEnviar = async () => {
-    if (!nomeColete.trim()) {
-      toast({
-        title: "Erro",
-        description: "Digite um nome de colete.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!telefone.trim()) {
-      toast({
-        title: "Erro",
-        description: "Digite um telefone celular.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Apenas mudar status se for Pendente ou Recusado
-    // Usuários Ativo/Inativo mantêm seu status
-    const currentStatus = profile?.profile_status || 'Pendente';
-    const newStatus = (currentStatus === 'Ativo' || currentStatus === 'Inativo') 
-      ? currentStatus 
-      : 'Analise';
-
+    if (!user || saving) return;
+    let dados;
     try {
-      // Chamar edge function em vez de UPDATE direto
+      dados = validarCadastroPerfil({ nome_colete: nomeColete, telefone, instagram: naoInformarInstagram ? INSTAGRAM_NA : instagram });
+    } catch (error) {
+      toast({ title: "Confira seus dados", description: error instanceof Error ? error.message : "Dados inválidos", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    try {
       const { data, error } = await supabase.functions.invoke('update-profile', {
-        body: {
-          user_id: user?.id,
-          nome_colete: nomeColete.trim(),
-          telefone: telefone.trim(),
-          profile_status: newStatus
-        }
+        body: { user_id: user.id, ...dados }
       });
-
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-
-      toast({
-        title: "Sucesso",
-        description: currentStatus === 'Ativo' || currentStatus === 'Inativo'
-          ? "Telefone atualizado com sucesso"
-          : profile?.profile_status === 'Recusado'
-            ? "Solicitacao reenviada para analise"
-            : "Nome de colete enviado para analise",
-      });
-
-      setTimeout(() => {
-        navigate("/");
-      }, 1500);
+      if (!data?.success) throw new Error(data?.error || 'Não foi possível salvar seu cadastro.');
+      // A leitura do destino consulta os dados persistidos, sem depender do realtime.
+      window.dispatchEvent(new CustomEvent('profile-saved', { detail: user.id }));
+      toast({ title: cadastroInicial ? "Cadastro concluído" : "Dados atualizados", description: data.data?.profile_status === 'Analise' ? "Seu cadastro está aguardando análise." : "Seus dados foram salvos." });
+      navigate("/", { replace: true });
     } catch (error) {
-      console.error('Error updating profile:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Falha ao enviar';
-      toast({
-        title: "Erro",
-        description: errorMessage,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleSalvarInstagram = async () => {
-    const result = validateInstagram(instagram);
-    if (!result.valid || !result.normalized) {
-      toast({
-        title: "Instagram inválido",
-        description: result.error || "Informe um @ válido ou N/A.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!user?.id) return;
-
-    setSavingInstagram(true);
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ instagram: result.normalized })
-        .eq('id', user.id);
-
-      if (error) throw error;
-
-      setInstagram(result.normalized);
-      toast({
-        title: "Instagram salvo",
-        description: "Obrigado! Você já pode continuar usando o sistema.",
-      });
-    } catch (error) {
-      console.error('Erro ao salvar Instagram:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível salvar o Instagram. Tente novamente.",
-        variant: "destructive",
-      });
+      toast({ title: "Não foi possível salvar", description: error instanceof Error ? error.message : "Tente novamente.", variant: "destructive" });
     } finally {
-      setSavingInstagram(false);
+      setSaving(false);
     }
   };
 
   const integrante = profile?.integrante;
 
   // Loading de autenticacao ou permissoes
-  if (authLoading || loadingAccess) {
+  if (authLoading || loadingAccess || profileLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -245,7 +174,7 @@ const Perfil = () => {
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              <h1 className="text-2xl font-semibold text-foreground">Meu Perfil</h1>
+              <h1 className="text-2xl font-semibold text-foreground">{cadastroInicial ? "Cadastro do integrante" : "Meu Perfil"}</h1>
             </div>
             
             <div className="flex items-center gap-4">
@@ -300,24 +229,6 @@ const Perfil = () => {
           />
         )}
 
-        {/* Alerta de Instagram pendente */}
-        {instagramPendente && (
-          <Card className="border-yellow-500 bg-yellow-500/10">
-            <CardContent className="p-4 flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="text-sm font-semibold text-yellow-700 dark:text-yellow-300">
-                  Preencha seu @ do Instagram
-                </p>
-                <p className="text-xs text-yellow-700/90 dark:text-yellow-300/90">
-                  Para continuar utilizando o sistema, informe o seu @ do Instagram no campo abaixo.
-                  Caso não possua, digite <strong>N/A</strong>.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Accordion com seções */}
         <Accordion type="multiple" defaultValue={["basicos", "estrutura"]} className="space-y-2">
           
@@ -328,11 +239,11 @@ const Perfil = () => {
                 <span className="text-base font-medium">📧 Dados Básicos</span>
               </AccordionTrigger>
               <AccordionContent className="px-6 pb-6">
-                <div className="space-y-4">
+                <fieldset disabled={saving} className="space-y-4">
                   {/* Nome de Colete (editável) */}
                   <div>
                     <Label htmlFor="nomeColete" className="text-sm font-medium">
-                      Nome de Colete
+                      Nome de Colete (obrigatório)
                     </Label>
                     <Input
                       id="nomeColete"
@@ -348,7 +259,7 @@ const Perfil = () => {
                   {/* Telefone (editável) */}
                   <div>
                     <Label htmlFor="telefone" className="text-sm font-medium">
-                      Telefone Celular
+                      Celular / WhatsApp com DDD (obrigatório)
                     </Label>
                     <Input
                       id="telefone"
@@ -360,40 +271,22 @@ const Perfil = () => {
                     />
                   </div>
 
-                  {/* Instagram (com botão de salvar próprio) */}
-                  <div>
+                  <div className="space-y-3">
                     <Label htmlFor="instagram" className="text-sm font-medium flex items-center gap-1.5">
-                      <Instagram className="h-4 w-4" />
-                      Instagram
-                      {instagramPendente && (
-                        <Badge variant="destructive" className="ml-1 text-[10px] h-4 px-1.5">
-                          Pendente
-                        </Badge>
-                      )}
+                      <Instagram className="h-4 w-4" /> Instagram (opcional)
                     </Label>
-                    <div className="flex gap-2 mt-1">
-                      <Input
-                        id="instagram"
-                        type="text"
-                        placeholder="@seuusuario  ou  N/A"
-                        value={instagram}
-                        onChange={(e) => setInstagram(e.target.value)}
-                        className="flex-1"
-                      />
-                      <Button
-                        type="button"
-                        onClick={handleSalvarInstagram}
-                        disabled={savingInstagram || !instagram.trim()}
-                        size="sm"
-                      >
-                        {savingInstagram ? "Salvando..." : "Salvar"}
-                      </Button>
+                    <Input id="instagram" type="text" placeholder="@seuusuario" value={instagram}
+                      disabled={naoInformarInstagram} autoCapitalize="none" autoCorrect="off" maxLength={32}
+                      onChange={(e) => setInstagram(e.target.value)} />
+                    <div className="flex items-start gap-2">
+                      <Checkbox id="naoInformarInstagram" checked={naoInformarInstagram}
+                        onCheckedChange={(checked) => setNaoInformarInstagram(checked === true)} />
+                      <Label htmlFor="naoInformarInstagram" className="text-sm leading-5 cursor-pointer">
+                        Não tenho Instagram / prefiro não informar
+                      </Label>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Informe seu @ do Instagram. Se não possuir conta, digite <strong>N/A</strong>.
-                    </p>
                   </div>
-                  
+
                   {/* Status (somente leitura) */}
                   <div>
                     <Label className="text-sm font-medium">Status do Perfil</Label>
@@ -408,7 +301,7 @@ const Perfil = () => {
                       </Badge>
                     </div>
                   </div>
-                </div>
+                </fieldset>
               </AccordionContent>
             </AccordionItem>
           </Card>
@@ -538,9 +431,10 @@ const Perfil = () => {
           <CardContent className="p-4">
             <Button 
               onClick={handleEnviar}
+              disabled={saving}
               className="w-full"
             >
-              💾 Salvar Alterações
+              {saving ? "Salvando..." : cadastroInicial ? "Concluir cadastro" : "Salvar alterações"}
             </Button>
           </CardContent>
         </Card>

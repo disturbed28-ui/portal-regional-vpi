@@ -149,6 +149,10 @@ export const useProfile = (userId: string | undefined) => {
     };
 
     fetchProfile();
+    const onProfileSaved = (event: Event) => {
+      if ((event as CustomEvent<string>).detail === userId) void fetchProfile();
+    };
+    window.addEventListener("profile-saved", onProfileSaved);
 
     // Subscribe to profile changes
     const channel = supabase
@@ -327,6 +331,7 @@ export const useProfile = (userId: string | undefined) => {
       .subscribe();
 
     return () => {
+      window.removeEventListener("profile-saved", onProfileSaved);
       supabase.removeChannel(channel);
       supabase.removeChannel(integranteChannel);
     };
