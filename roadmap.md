@@ -1,3 +1,6 @@
+# Agenda — visitantes externos
+- [ ] Corrigir ação de remoção de externos sem tratar o ID da presença como ID de integrante; testar e conferir exclusão na tela sem alterar presenças reais.
+
 # Divergência do Gigante — registro 129666
 - [x] Vínculos do registro 129666 e perfil corretos na VP2, mas divisão em texto VP1; snapshot de 03/11 correto e de 08/11 divergente, sem auditoria suficiente para atribuir a uma operação específica. Nenhuma outra divergência real entre divisão e vínculo nos ativos (CMD tem apenas diferença de formato).
 - [x] Textos de Gigante corrigidos, trigger mantém rótulos coerentes com IDs consistentes; presença usa ID primeiro e leituras paginadas. 12 testes passaram; busca e detalhes conferidos autenticados. Presença antiga no Bonde VP1 preservada, sem criar ou excluir registros para teste.
