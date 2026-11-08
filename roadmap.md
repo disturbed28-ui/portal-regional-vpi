@@ -1,3 +1,6 @@
+# Agenda — visitantes externos
+- [x] Externos usam exclusão pelo ID da presença, integrantes mantêm justificativa/ausência; seis testes passaram e inclusão/exclusão autenticada de visitante de teste confirmada na tela e no banco, preservando R.pirata e demais presenças reais. Falta publicar a tela no portal.
+
 # Divergência do Gigante — registro 129666
 - [x] Vínculos do registro 129666 e perfil corretos na VP2, mas divisão em texto VP1; snapshot de 03/11 correto e de 08/11 divergente, sem auditoria suficiente para atribuir a uma operação específica. Nenhuma outra divergência real entre divisão e vínculo nos ativos (CMD tem apenas diferença de formato).
 - [x] Textos de Gigante corrigidos, trigger mantém rótulos coerentes com IDs consistentes; presença usa ID primeiro e leituras paginadas. 12 testes passaram; busca e detalhes conferidos autenticados. Presença antiga no Bonde VP1 preservada, sem criar ou excluir registros para teste.
