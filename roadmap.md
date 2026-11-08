@@ -1,3 +1,7 @@
+# Divergência do Gigante — registro 129666
+- [ ] Rastrear divisão VP1 versus vínculo VP2 na busca, detalhes e presença; verificar casos semelhantes.
+- [ ] Corrigir a origem e os dados comprovadamente inconsistentes; testar sem confundir homônimos ou alterar presenças históricas.
+
 # Conferência da carga de integrantes
 - [x] Cargas de integrantes usam ID global mesmo com mudança de nome/regional; removidos mantêm escopo da carga. Leitura paginada e recuperação ambígua de ID entre arquivos bloqueada; 11 testes passaram, incluindo Gigantes de Vale 2/Centro SJC. Falta publicar e reprocessar os arquivos reais.
 - [x] Identificação por ID: removido retorno por nome, ID explícito da planilha preservado e proteção antes de qualquer gravação para conferências antigas. Homônimos testados; função implantada e pedido autenticado com IDs divergentes bloqueado (400), cadastro permaneceu intacto. Reprocessar arquivos da VP3 após publicar a tela.
