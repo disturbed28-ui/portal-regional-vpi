@@ -1,3 +1,7 @@
+# Divergência do Gigante — registro 129666
+- [x] Vínculos do registro 129666 e perfil corretos na VP2, mas divisão em texto VP1; snapshot de 03/11 correto e de 08/11 divergente, sem auditoria suficiente para atribuir a uma operação específica. Nenhuma outra divergência real entre divisão e vínculo nos ativos (CMD tem apenas diferença de formato).
+- [x] Textos de Gigante corrigidos, trigger mantém rótulos coerentes com IDs consistentes; presença usa ID primeiro e leituras paginadas. 12 testes passaram; busca e detalhes conferidos autenticados. Presença antiga no Bonde VP1 preservada, sem criar ou excluir registros para teste.
+
 # Conferência da carga de integrantes
 - [x] Cargas de integrantes usam ID global mesmo com mudança de nome/regional; removidos mantêm escopo da carga. Leitura paginada e recuperação ambígua de ID entre arquivos bloqueada; 11 testes passaram, incluindo Gigantes de Vale 2/Centro SJC. Falta publicar e reprocessar os arquivos reais.
 - [x] Identificação por ID: removido retorno por nome, ID explícito da planilha preservado e proteção antes de qualquer gravação para conferências antigas. Homônimos testados; função implantada e pedido autenticado com IDs divergentes bloqueado (400), cadastro permaneceu intacto. Reprocessar arquivos da VP3 após publicar a tela.

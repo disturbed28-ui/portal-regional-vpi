@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { logError } from '../_shared/error-handler.ts';
+import { pertenceDivisaoPresenca } from '../_shared/divisaoPresenca.ts';
 
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
@@ -116,6 +117,21 @@ Deno.serve(async (req) => {
         .trim();
     };
 
+    // Paginated reads keep division/CMD loading complete even above 1000 members.
+    const carregarAtivos = async (regionalId?: string) => {
+      const rows: any[] = [];
+      for (let offset = 0; ; offset += 1000) {
+        let query = supabaseAdmin.from('integrantes_portal')
+          .select('id, profile_id, divisao_id, divisao_texto')
+          .eq('ativo', true).order('id').range(offset, offset + 999);
+        if (regionalId) query = query.eq('regional_id', regionalId);
+        const { data, error } = await query;
+        if (error) return { data: null, error };
+        rows.push(...(data || []));
+        if (!data || data.length < 1000) return { data: rows, error: null };
+      }
+    };
+
     // ========================================================================
     // ACTION: initialize - Inicializar lista de presença para DIVISÃO
     // ========================================================================
@@ -138,10 +154,7 @@ Deno.serve(async (req) => {
       }
       
       // Buscar TODOS os integrantes ativos
-      const { data: allIntegrantes, error: integrantesError } = await supabaseAdmin
-        .from('integrantes_portal')
-        .select('id, profile_id, divisao_texto')
-        .eq('ativo', true);
+      const { data: allIntegrantes, error: integrantesError } = await carregarAtivos();
       
       if (integrantesError) {
         console.error('[manage-presenca] Erro ao buscar integrantes:', integrantesError);
@@ -153,10 +166,9 @@ Deno.serve(async (req) => {
       
       // Filtrar integrantes da divisão usando normalização com match exato
       const divisaoNormalizada = normalizeText(divisao.nome);
-      const integrantes = (allIntegrantes || []).filter(i => {
-        const divisaoIntegranteNormalizada = normalizeText(i.divisao_texto || '');
-        return divisaoIntegranteNormalizada === divisaoNormalizada;
-      });
+      const integrantes = (allIntegrantes || []).filter(i =>
+        typeof divisao_id === 'string' && pertenceDivisaoPresenca(i, divisao_id, divisao.nome)
+      );
       
       console.log('[manage-presenca] Divisão normalizada:', divisaoNormalizada);
       console.log('[manage-presenca] Integrantes encontrados:', integrantes.length);
@@ -228,11 +240,7 @@ Deno.serve(async (req) => {
       console.log('[manage-presenca] Divisões da regional:', divisoes?.length || 0);
       
       // Buscar TODOS os integrantes ativos da regional
-      const { data: integrantes, error: integrantesError } = await supabaseAdmin
-        .from('integrantes_portal')
-        .select('id, profile_id, divisao_texto')
-        .eq('ativo', true)
-        .eq('regional_id', regional_id);
+      const { data: integrantes, error: integrantesError } = await carregarAtivos(regional_id);
       
       if (integrantesError) {
         console.error('[manage-presenca] Erro ao buscar integrantes:', integrantesError);
@@ -308,14 +316,12 @@ Deno.serve(async (req) => {
         );
       }
       
-      const divisaoNormalizada = normalizeText(divisao.nome);
-      
       // Verificar se já existem integrantes DESTA divisão no evento
       const { data: presencasExistentes, error: checkError } = await supabaseAdmin
         .from('presencas')
         .select(`
           id,
-          integrante:integrantes_portal (divisao_texto)
+          integrante:integrantes_portal (divisao_id, divisao_texto)
         `)
         .eq('evento_agenda_id', evento_agenda_id)
         .not('integrante_id', 'is', null);
@@ -329,10 +335,9 @@ Deno.serve(async (req) => {
       }
       
       // Verificar se alguma presença é da mesma divisão
-      const jaPossui = (presencasExistentes || []).some((p: any) => {
-        const divIntegrante = normalizeText(p.integrante?.divisao_texto || '');
-        return divIntegrante === divisaoNormalizada;
-      });
+      const jaPossui = (presencasExistentes || []).some((p: any) =>
+        p.integrante && pertenceDivisaoPresenca(p.integrante, divisao_id, divisao.nome)
+      );
       
       if (jaPossui) {
         console.log('[manage-presenca] Divisão já carregada neste evento CMD');
@@ -343,10 +348,7 @@ Deno.serve(async (req) => {
       }
       
       // Buscar integrantes da divisão
-      const { data: allIntegrantes, error: integrantesError } = await supabaseAdmin
-        .from('integrantes_portal')
-        .select('id, profile_id, divisao_texto')
-        .eq('ativo', true);
+      const { data: allIntegrantes, error: integrantesError } = await carregarAtivos();
       
       if (integrantesError) {
         console.error('[manage-presenca] Erro ao buscar integrantes:', integrantesError);
@@ -356,10 +358,9 @@ Deno.serve(async (req) => {
         );
       }
       
-      const integrantes = (allIntegrantes || []).filter(i => {
-        const divisaoIntegranteNormalizada = normalizeText(i.divisao_texto || '');
-        return divisaoIntegranteNormalizada === divisaoNormalizada;
-      });
+      const integrantes = (allIntegrantes || []).filter(i =>
+        typeof divisao_id === 'string' && pertenceDivisaoPresenca(i, divisao_id, divisao.nome)
+      );
       
       console.log('[manage-presenca] CMD: Integrantes da divisão:', integrantes.length);
       
@@ -417,7 +418,7 @@ Deno.serve(async (req) => {
         // Buscar dados do integrante para verificar sua divisão
         const { data: integrante } = await supabaseAdmin
           .from('integrantes_portal')
-          .select('divisao_texto')
+          .select('divisao_id, divisao_texto')
           .eq('id', integrante_id)
           .single();
         
@@ -439,13 +440,9 @@ Deno.serve(async (req) => {
           divisaoEvento = divisaoData?.nome || null;
         }
 
-        // Normalizar divisões para comparação
-        const divisaoIntegranteNorm = normalizeText(integrante?.divisao_texto || '');
-        const divisaoEventoNorm = normalizeText(divisaoEvento || '');
-        
-        // Verificar se divisões são diferentes
-        const divisaoDiferente = divisaoEventoNorm && divisaoIntegranteNorm && 
-          divisaoIntegranteNorm !== divisaoEventoNorm;
+        // Compare resolved IDs, not potentially stale labels.
+        const divisaoDiferente = integrante && evento?.divisao_id &&
+          !pertenceDivisaoPresenca(integrante, evento.divisao_id, divisaoEvento || '');
         
         const justificativaTipo = divisaoDiferente ? '(outra divisão)' : null;
         
@@ -481,7 +478,7 @@ Deno.serve(async (req) => {
         // Não existe registro - criar novo
         const { data: integranteNovo } = await supabaseAdmin
           .from('integrantes_portal')
-          .select('divisao_texto')
+          .select('divisao_id, divisao_texto')
           .eq('id', integrante_id)
           .single();
         
@@ -501,11 +498,8 @@ Deno.serve(async (req) => {
           divisaoEventoNomeNovo = divisaoData?.nome || null;
         }
         
-        const divisaoIntegranteNormNovo = normalizeText(integranteNovo?.divisao_texto || '');
-        const divisaoEventoNormNovo = normalizeText(divisaoEventoNomeNovo || '');
-        
-        const divisaoDiferenteNovo = divisaoEventoNormNovo && divisaoIntegranteNormNovo && 
-          divisaoIntegranteNormNovo !== divisaoEventoNormNovo;
+        const divisaoDiferenteNovo = integranteNovo && eventoNovo?.divisao_id &&
+          !pertenceDivisaoPresenca(integranteNovo, eventoNovo.divisao_id, divisaoEventoNomeNovo || '');
         
         const justificativaTipoNovo = divisaoDiferenteNovo ? '(outra divisão)' : null;
         
