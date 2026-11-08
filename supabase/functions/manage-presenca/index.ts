@@ -316,8 +316,6 @@ Deno.serve(async (req) => {
         );
       }
       
-      const divisaoNormalizada = normalizeText(divisao.nome);
-      
       // Verificar se já existem integrantes DESTA divisão no evento
       const { data: presencasExistentes, error: checkError } = await supabaseAdmin
         .from('presencas')
@@ -442,11 +440,7 @@ Deno.serve(async (req) => {
           divisaoEvento = divisaoData?.nome || null;
         }
 
-        // Normalizar divisões para comparação
-        const divisaoIntegranteNorm = normalizeText(integrante?.divisao_texto || '');
-        const divisaoEventoNorm = normalizeText(divisaoEvento || '');
-        
-        // Verificar se divisões são diferentes
+        // Compare resolved IDs, not potentially stale labels.
         const divisaoDiferente = integrante && evento?.divisao_id &&
           !pertenceDivisaoPresenca(integrante, evento.divisao_id, divisaoEvento || '');
         
@@ -503,9 +497,6 @@ Deno.serve(async (req) => {
             .single();
           divisaoEventoNomeNovo = divisaoData?.nome || null;
         }
-        
-        const divisaoIntegranteNormNovo = normalizeText(integranteNovo?.divisao_texto || '');
-        const divisaoEventoNormNovo = normalizeText(divisaoEventoNomeNovo || '');
         
         const divisaoDiferenteNovo = integranteNovo && eventoNovo?.divisao_id &&
           !pertenceDivisaoPresenca(integranteNovo, eventoNovo.divisao_id, divisaoEventoNomeNovo || '');
