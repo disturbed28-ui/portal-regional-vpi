@@ -44,6 +44,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useAfastamentosAtivos } from "@/hooks/useAfastamentosAtivos";
 import { AfastamentoBadge } from "@/components/shared/AfastamentoBadge";
 import { abreviarDivisao } from "@/lib/normalizarTextoHierarquia";
+import { acaoRemoverParticipante } from "@/lib/acaoPresenca";
 
 interface ListaPresencaProps {
   event: CalendarEvent | null;
@@ -455,6 +456,15 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     setJustificativaDialog({ open: true, integranteId });
   };
 
+  const handleRemoverParticipante = async (participante: { id: string; presencaId: string; isExterno?: boolean }) => {
+    const acao = acaoRemoverParticipante(participante);
+    if (acao.action === 'delete_presenca') {
+      await excluirDaLista(acao.presenca_id);
+      return;
+    }
+    handleMarcarAusente(acao.integrante_id);
+  };
+
   const handleConfirmarAusencia = async (justificativa: string) => {
     if (!justificativaDialog.integranteId) return;
     
@@ -562,7 +572,7 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
     const _visitantesInternos = presencas
       .filter(p => p.status === 'visitante' && p.integrante_id !== null)
       .map(p => ({
-        ...p.integrante!,
+        ...p.integrante,
         presencaId: p.id,
         isVisitante: true,
         isExterno: false,
@@ -716,8 +726,9 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
             variant="ghost"
             size="sm"
             className="h-8 w-8 p-0 flex-shrink-0"
-            onClick={() => handleMarcarAusente(integrante.id)}
-            title="Marcar como ausente"
+            onClick={() => handleRemoverParticipante(integrante)}
+            title={integrante.isExterno ? "Excluir visitante externo" : "Marcar como ausente"}
+            aria-label={integrante.isExterno ? `Excluir visitante externo ${integrante.nome_colete}` : `Marcar ${integrante.nome_colete} como ausente`}
           >
             <X className="h-4 w-4 text-red-600" />
           </Button>
@@ -1128,8 +1139,9 @@ export function ListaPresenca({ event, open, onOpenChange }: ListaPresencaProps)
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => handleMarcarAusente(integrante.id)}
-                                    title="Marcar como ausente"
+                                    onClick={() => handleRemoverParticipante(integrante)}
+                                    title={(integrante as any).isExterno ? "Excluir visitante externo" : "Marcar como ausente"}
+                                    aria-label={(integrante as any).isExterno ? `Excluir visitante externo ${integrante.nome_colete}` : `Marcar ${integrante.nome_colete} como ausente`}
                                   >
                                     <X className="h-4 w-4 text-red-600" />
                                   </Button>
