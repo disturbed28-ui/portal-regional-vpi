@@ -1,5 +1,5 @@
 # Agenda — visitantes externos
-- [ ] Corrigir ação de remoção de externos sem tratar o ID da presença como ID de integrante; testar e conferir exclusão na tela sem alterar presenças reais.
+- [x] Externos usam exclusão pelo ID da presença, integrantes mantêm justificativa/ausência; seis testes passaram e inclusão/exclusão autenticada de visitante de teste confirmada na tela e no banco, preservando R.pirata e demais presenças reais. Falta publicar a tela no portal.
 
 # Divergência do Gigante — registro 129666
 - [x] Vínculos do registro 129666 e perfil corretos na VP2, mas divisão em texto VP1; snapshot de 03/11 correto e de 08/11 divergente, sem auditoria suficiente para atribuir a uma operação específica. Nenhuma outra divergência real entre divisão e vínculo nos ativos (CMD tem apenas diferença de formato).
