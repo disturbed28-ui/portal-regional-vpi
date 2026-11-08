@@ -4,6 +4,7 @@ import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { handleDatabaseError, logError } from '../_shared/error-handler.ts';
 import { sendEmail, renderNewProfileTemplate } from '../_shared/email-service.ts';
+import { validarCadastroPerfil, statusAposCadastro } from '../_shared/cadastroPerfil.ts';
 
 // Função para enviar notificação por email aos admins
 // Agora usa o serviço centralizado _shared/email-service.ts
@@ -106,16 +107,33 @@ serve(async (req) => {
   }
 
   try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const authClient = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_ANON_KEY') ?? '', { global: { headers: { Authorization: authHeader } } });
+    const { data: authData, error: authError } = await authClient.auth.getUser(authHeader.slice(7));
+    if (authError || !authData.user) {
+      return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
     const requestSchema = z.object({
       user_id: z.string().uuid('ID de usuário inválido'),
       nome_colete: z.string().trim().min(1, 'Nome de colete é obrigatório').max(100),
-      telefone: z.string().max(20).optional(),
+      telefone: z.string().trim().min(1, 'Telefone é obrigatório').max(20),
+      instagram: z.string().max(32).nullable().optional(),
       profile_status: z.string().max(50).optional()
     });
 
-    const { user_id, nome_colete, telefone, profile_status } = requestSchema.parse(await req.json());
-    
-    console.log('Request data:', { user_id, nome_colete, telefone, profile_status });
+    const request = requestSchema.parse(await req.json());
+    const { user_id } = request;
+    if (user_id !== authData.user.id) {
+      return new Response(JSON.stringify({ error: 'Você só pode editar seu próprio cadastro.' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    let dadosCadastro;
+    try { dadosCadastro = validarCadastroPerfil(request); }
+    catch (error) {
+      return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Dados inválidos' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
 
     // Usar service role para bypass RLS
     const supabaseAdmin = createClient(
@@ -125,15 +143,15 @@ serve(async (req) => {
 
     console.log('Updating profile for user_id:', user_id);
 
-    const updateData: any = {
-      nome_colete: nome_colete.trim(),
-      profile_status: profile_status || 'Analise',
+    const { data: atual, error: leituraError } = await supabaseAdmin.from('profiles').select('profile_status,nome_colete').eq('id', user_id).single();
+    if (leituraError || !atual) throw new Error('Cadastro não encontrado');
+    const statusAtual = atual.profile_status || 'Pendente';
+    const updateData = {
+      ...dadosCadastro,
+      nome_colete: (statusAtual === 'Ativo' || statusAtual === 'Inativo') ? atual.nome_colete : dadosCadastro.nome_colete,
+      profile_status: statusAposCadastro(statusAtual),
       observacao: null
     };
-
-    if (telefone) {
-      updateData.telefone = telefone.trim();
-    }
 
     const { data, error } = await supabaseAdmin
       .from('profiles')
