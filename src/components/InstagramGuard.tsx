@@ -3,12 +3,12 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
-import { isInstagramPendente } from "@/lib/instagramUtils";
+import { cadastroPerfilPendente } from "../../supabase/functions/_shared/cadastroPerfil";
 
 /**
- * Bloqueia a navegação enquanto o usuário não preencher o @ do Instagram no perfil.
+ * Encaminha cadastros incompletos para o formulário único.
  *
- * Usuários autenticados com `profiles.instagram` vazio são redirecionados para /perfil
+ * Usuários autenticados com dados essenciais pendentes são redirecionados para /perfil
  * (exceto em rotas públicas/auxiliares listadas em ALLOWED_PATHS).
  */
 const ALLOWED_PATHS = new Set<string>([
@@ -29,7 +29,7 @@ export const InstagramGuard = ({ children }: { children: React.ReactNode }) => {
     if (authLoading || profileLoading) return;
     if (!user || !profile) return;
 
-    const pending = isInstagramPendente((profile as any).instagram);
+    const pending = cadastroPerfilPendente(profile);
 
     if (!pending) {
       toastShownRef.current = false;
@@ -39,9 +39,11 @@ export const InstagramGuard = ({ children }: { children: React.ReactNode }) => {
     // Não redirecionar em rotas permitidas
     if (ALLOWED_PATHS.has(location.pathname)) return;
 
-    if (!toastShownRef.current) {
-      toast.warning("Preencha seu @ do Instagram", {
-        description: "Para continuar usando o sistema, informe seu @ do Instagram (ou N/A caso não possua).",
+    const primeiroCadastro = !profile.nome_colete?.trim();
+    if (!primeiroCadastro && !toastShownRef.current) {
+      toast.warning("Complete seus dados", {
+        description: "Informe seu telefone e, se desejar, seu Instagram. Você pode escolher não informar a rede social.",
+        dismissible: false,
         duration: 6000,
       });
       toastShownRef.current = true;

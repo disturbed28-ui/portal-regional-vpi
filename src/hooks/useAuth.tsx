@@ -116,6 +116,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   }
                 });
               } else {
+                window.dispatchEvent(new CustomEvent('profile-saved', { detail: session.user.id }));
                 console.log('[useAuth] Profile creation result:', data);
                 logLoginAccess(session.user.id, window.location.pathname);
 
@@ -125,7 +126,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   if (data?.new_user) {
                     toast({
                       title: "Bem-vindo!",
-                      description: "Seu perfil foi criado com sucesso.",
+                      description: "Preencha seus dados para concluir o cadastro.",
                     });
                   } else {
                     toast({

@@ -1,3 +1,7 @@
+# Cadastro único no primeiro acesso
+- [x] Reunir nome de colete, telefone obrigatório e Instagram opcional com opção de não informar; endpoint autenticado salva tudo junto e mantém aprovação existente; sete testes passaram.
+- [x] Gravação na conta existente confirmada em HTTP 200 sem mudar contatos, retorno ao início sem aviso e tela em 360/1280 px conferida; sem transbordamento ou erros de compilação. Cadastro com uma nova conta Google não exercitado; falta publicar a tela no portal.
+
 # Agenda — visitantes externos
 - [x] Externos usam exclusão pelo ID da presença, integrantes mantêm justificativa/ausência; seis testes passaram e inclusão/exclusão autenticada de visitante de teste confirmada na tela e no banco, preservando R.pirata e demais presenças reais. Falta publicar a tela no portal.
 
