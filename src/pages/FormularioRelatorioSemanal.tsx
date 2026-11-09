@@ -18,6 +18,7 @@ import { useSubmitRelatorioSemanal, SubmitRelatorioParams } from "@/hooks/useRel
 import { useAcoesResolucaoDelta } from "@/hooks/useAcoesResolucaoDelta";
 import { format } from "date-fns";
 import { incorporarMovimentosCMD, periodoMensalCMD } from "@/lib/movimentacoesMensaisCMD";
+import { intervalosAcoesSociais, montarAcoesSociaisRelatorio } from "@/lib/acoesSociaisRelatorio";
 
 // Constante com nomes de dias da semana
 const DIAS_SEMANA_NOMES = [
@@ -858,100 +859,67 @@ const FormularioRelatorioSemanal = () => {
     carregarInadimplencias();
   }, [divisaoSelecionada]);
 
-  // T6: Carregar ações sociais da semana + passivo (semana anterior não reportada)
+  // Load disjoint CMD periods, excluding IDs already saved in authorized reports.
   useEffect(() => {
+    let cancelado = false;
     const carregarAcoesSociaisDaSemana = async () => {
+      if (modoEdicao === "editar" || acoesSociais.length > 0 || !divisaoSelecionada || !formConfig) return;
+      setCarregandoAcoesSociaisAuto(true);
       try {
-        // Não sobrescrever quando estiver em modo de edição
-        if (modoEdicao === "editar") return;
-
-        // Se já houver ações carregadas (de relatório existente ou digitadas), não sobrescrever
-        if (acoesSociais && acoesSociais.length > 0) return;
-
-        // Precisamos ter divisaoSelecionada e formConfig carregados
-        if (!divisaoSelecionada || !formConfig) return;
-
-        setCarregandoAcoesSociaisAuto(true);
-
-        const semana = semanaResposta; // USAR semanaResposta ao invés de calcularSemanaOperacional()
-
-        // Calcular semana anterior à semanaResposta (para buscar passivo)
-        const inicioSemanaAnterior = new Date(semana.periodo_inicio);
-        inicioSemanaAnterior.setDate(inicioSemanaAnterior.getDate() - 7);
-        const fimSemanaAnterior = new Date(semana.periodo_fim);
-        fimSemanaAnterior.setDate(fimSemanaAnterior.getDate() - 7);
-
-        // Buscar ações da SEMANA SELECIONADA (semanaResposta)
-        const { data: acoesSemanaAtual, error: errorAtual } = await supabase
-          .from("acoes_sociais_registros")
-          .select("id, data_acao, escopo_acao, tipo_acao_nome_snapshot, descricao_acao")
-          .eq("divisao_relatorio_id", divisaoSelecionada.id)
-          .gte("data_acao", formatDateToSQL(semana.periodo_inicio))
-          .lte("data_acao", formatDateToSQL(semana.periodo_fim))
-          .eq("foi_reportada_em_relatorio", false);
-
-        // Buscar ações da SEMANA ANTERIOR (à semanaResposta) que NÃO foram reportadas
-        const { data: acoesSemanaAnterior, error: errorAnterior } = await supabase
-          .from("acoes_sociais_registros")
-          .select("id, data_acao, escopo_acao, tipo_acao_nome_snapshot, descricao_acao")
-          .eq("divisao_relatorio_id", divisaoSelecionada.id)
-          .gte("data_acao", formatDateToSQL(inicioSemanaAnterior))
-          .lte("data_acao", formatDateToSQL(fimSemanaAnterior))
-          .eq("foi_reportada_em_relatorio", false);
-
-        setCarregandoAcoesSociaisAuto(false);
-
-        if (errorAtual || errorAnterior) {
-          console.error("[FormularioRelatorioSemanal] Erro ao carregar ações:", errorAtual || errorAnterior);
-          return;
+        const limites = intervalosAcoesSociais(semanaResposta);
+        const registros = [];
+        const idsReportados = new Set<string>();
+        // Both sources can exceed PostgREST's 1000-row limit.
+        for (let inicio = 0; ; inicio += 1000) {
+          const { data, error } = await supabase
+            .from("acoes_sociais_registros")
+            .select("id, data_acao, escopo_acao, tipo_acao_nome_snapshot, descricao_acao, foi_reportada_em_relatorio")
+            .eq("divisao_relatorio_id", divisaoSelecionada.id)
+            .gte("data_acao", limites.inicioAnterior)
+            .lte("data_acao", limites.fim)
+            .eq("foi_reportada_em_relatorio", false)
+            .order("data_acao", { ascending: false })
+            .order("id")
+            .range(inicio, inicio + 999);
+          if (error) throw error;
+          registros.push(...(data || []));
+          if (!data || data.length < 1000) break;
         }
-
-        // Montar itens da semana atual
-        const itensSemanaAtual = (acoesSemanaAtual || []).map((acao: any) => ({
-          data_acao: acao.data_acao,
-          titulo: acao.tipo_acao_nome_snapshot
-            ? `${acao.tipo_acao_nome_snapshot} - ${acao.escopo_acao}`
-            : acao.escopo_acao,
-          descricao: acao.descricao_acao || "",
-          status: "Concluída",
-          origem: "form_acoes_sociais",
-          registro_id: acao.id,
-          marcador_relatorio: "semana_atual",
-        }));
-
-        // Montar itens passivos (semana anterior não reportada)
-        const itensPassivo = (acoesSemanaAnterior || []).map((acao: any) => ({
-          data_acao: acao.data_acao,
-          titulo: acao.tipo_acao_nome_snapshot
-            ? `${acao.tipo_acao_nome_snapshot} - ${acao.escopo_acao}`
-            : acao.escopo_acao,
-          descricao: acao.descricao_acao || "",
-          status: "Concluída",
-          origem: "form_acoes_sociais",
-          registro_id: acao.id,
-          marcador_relatorio: "semana_anterior_nao_reportada",
-        }));
-
-        const itensResumo = [...itensSemanaAtual, ...itensPassivo];
-
-        if (itensResumo.length > 0) {
-          setTeveAcoesSociais(true);
-          setAcoesSociais(itensResumo);
-          console.log("[FormularioRelatorioSemanal] Ações carregadas:", {
-            semanaAtual: itensSemanaAtual.length,
-            passivo: itensPassivo.length,
-          });
-        } else {
-          console.log("[FormularioRelatorioSemanal] Nenhuma ação social encontrada");
+        for (let inicio = 0; ; inicio += 1000) {
+          const { data, error } = await supabase
+            .from("relatorios_semanais_divisao")
+            .select("id, acoes_sociais_json")
+            .eq("divisao_relatorio_id", divisaoSelecionada.id)
+            .order("id")
+            .range(inicio, inicio + 999);
+          if (error) throw error;
+          for (const relatorio of data || []) {
+            if (!Array.isArray(relatorio.acoes_sociais_json)) continue;
+            for (const item of relatorio.acoes_sociais_json) {
+              if (item && typeof item === "object" && "registro_id" in item && typeof item.registro_id === "string") {
+                idsReportados.add(item.registro_id);
+              }
+            }
+          }
+          if (!data || data.length < 1000) break;
         }
+        if (cancelado) return;
+        const itens = montarAcoesSociaisRelatorio(registros, semanaResposta, idsReportados);
+        // Preserve anything typed while the requests were in flight.
+        setAcoesSociais(atuais => atuais.length > 0 ? atuais : itens);
+        if (itens.length > 0) setTeveAcoesSociais(true);
       } catch (error) {
-        setCarregandoAcoesSociaisAuto(false);
-        console.error("[FormularioRelatorioSemanal] Erro inesperado ao carregar ações:", error);
+        if (cancelado) return;
+        console.error("[FormularioRelatorioSemanal] Erro ao carregar ações:", error);
+        toast({ title: "Não foi possível carregar as ações sociais", description: "Tente abrir o formulário novamente.", variant: "destructive" });
+      } finally {
+        if (!cancelado) setCarregandoAcoesSociaisAuto(false);
       }
     };
-
     carregarAcoesSociaisDaSemana();
-  }, [divisaoSelecionada, formConfig, modoEdicao, acoesSociais, semanaResposta]);
+    return () => { cancelado = true; };
+    // Removing an item must not trigger automatic loading again.
+  }, [divisaoSelecionada, formConfig, modoEdicao, semanaResposta]);
 
   // Reconcile each monthly block independently, including saved reports, without
   // overwriting edits. Re-run for a fresh query or when entering edit mode.
@@ -1761,21 +1729,28 @@ const FormularioRelatorioSemanal = () => {
                       : "bg-muted/50"
                   )}
                 >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
+                  <div className="flex justify-between items-start gap-3">
+                    <div className="min-w-0 flex-1 break-words">
                       <h4 className="text-sm font-medium">Ação Social #{idx + 1}</h4>
                       {acao.marcador_relatorio === "semana_anterior_nao_reportada" && (
                         <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1 font-medium">
-                          ⚠️ Esta ação não foi reportada no relatório da semana anterior. Revise e exclua se não fizer
-                          sentido manter.
+                          Esta ação não foi reportada no período anterior.
                         </p>
                       )}
                       {acao.origem === "form_acoes_sociais" && (
                         <p className="text-xs text-muted-foreground mt-1">(Importada do formulário de ações sociais)</p>
                       )}
                     </div>
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setAcoesSociais(acoesSociais.filter((_: any, i: number) => i !== idx))}>
-                      <Trash2 className="h-4 w-4" />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-11 w-11 shrink-0 bg-background text-destructive border-destructive/50 hover:bg-destructive hover:text-destructive-foreground"
+                      title="Excluir ação deste relatório"
+                      aria-label={`Excluir ação social ${idx + 1} deste relatório`}
+                      onClick={() => setAcoesSociais(atuais => atuais.filter((_, i) => i !== idx))}
+                    >
+                      <Trash2 className="h-5 w-5" />
                     </Button>
                   </div>
 
