@@ -1,6 +1,6 @@
 # Relatório CMD — ações sociais
-- [ ] Corrigir sobreposição entre ações do período e ações antigas pendentes; preservar ações já reportadas.
-- [ ] Tornar o botão de excluir visível e acessível no celular; testar classificação e remoção sem gravar relatório real.
+- [x] Corrigir sobreposição: passivo usava sete dias em períodos CMD de dez dias; intervalos agora separados e IDs já salvos excluídos mesmo com flag pendente (153 registros históricos encontrados, oito na janela atual). Leituras paginadas, sem alteração de registros históricos ou permissões; seis testes passaram em UTC e São Paulo.
+- [x] Botão de excluir com contraste, borda, nome acessível e 44 px; conferido em 360/1280 px, remoção local confirmada sem envio. Compilação OK. Conta atual sem integrante ativo vinculado impede conferir carregamento automático real; falta publicar a tela no portal.
 
 # Cadastro único no primeiro acesso
 - [x] Reunir nome de colete, telefone obrigatório e Instagram opcional com opção de não informar; endpoint autenticado salva tudo junto e mantém aprovação existente; sete testes passaram.
