@@ -1,3 +1,7 @@
+# Relatório CMD — ações sociais
+- [x] Corrigir sobreposição: passivo usava sete dias em períodos CMD de dez dias; intervalos agora separados e IDs já salvos excluídos mesmo com flag pendente (153 registros históricos encontrados, oito na janela atual). Leituras paginadas, sem alteração de registros históricos ou permissões; seis testes passaram em UTC e São Paulo.
+- [x] Botão de excluir com contraste, borda, nome acessível e 44 px; conferido em 360/1280 px, remoção local confirmada sem envio. Compilação OK. Conta atual sem integrante ativo vinculado impede conferir carregamento automático real; falta publicar a tela no portal.
+
 # Cadastro único no primeiro acesso
 - [x] Reunir nome de colete, telefone obrigatório e Instagram opcional com opção de não informar; endpoint autenticado salva tudo junto e mantém aprovação existente; sete testes passaram.
 - [x] Gravação na conta existente confirmada em HTTP 200 sem mudar contatos, retorno ao início sem aviso e tela em 360/1280 px conferida; sem transbordamento ou erros de compilação. Cadastro com uma nova conta Google não exercitado; falta publicar a tela no portal.
