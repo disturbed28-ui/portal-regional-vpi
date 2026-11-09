@@ -1,3 +1,7 @@
+# Relatório CMD — ações sociais
+- [ ] Corrigir sobreposição entre ações do período e ações antigas pendentes; preservar ações já reportadas.
+- [ ] Tornar o botão de excluir visível e acessível no celular; testar classificação e remoção sem gravar relatório real.
+
 # Cadastro único no primeiro acesso
 - [x] Reunir nome de colete, telefone obrigatório e Instagram opcional com opção de não informar; endpoint autenticado salva tudo junto e mantém aprovação existente; sete testes passaram.
 - [x] Gravação na conta existente confirmada em HTTP 200 sem mudar contatos, retorno ao início sem aviso e tela em 360/1280 px conferida; sem transbordamento ou erros de compilação. Cadastro com uma nova conta Google não exercitado; falta publicar a tela no portal.
