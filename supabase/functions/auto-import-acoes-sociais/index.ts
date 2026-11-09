@@ -268,6 +268,7 @@ Deno.serve(async (req) => {
     });
 
     // 6. Buscar TODOS os hashes existentes (paginação para ultrapassar limite de 1000)
+    const corteAcoes = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10); // janela de 30 dias
     const allHashStrings: string[] = [];
     let hashOffset = 0;
     const hashPageSize = 1000;
@@ -276,6 +277,7 @@ Deno.serve(async (req) => {
         .from('acoes_sociais_registros')
         .select('hash_deduplicacao')
         .not('hash_deduplicacao', 'is', null)
+        .gte('data_acao', corteAcoes)
         .range(hashOffset, hashOffset + hashPageSize - 1);
       if (!hashPage || hashPage.length === 0) break;
       allHashStrings.push(...hashPage.map(h => h.hash_deduplicacao));
@@ -340,6 +342,7 @@ Deno.serve(async (req) => {
         const descricao = (registro.descricao || '').trim();
         const divisaoPlanilha = (registro.divisao || '').trim();
 
+        if (dataAcao && dataAcao < corteAcoes) continue; // fora da janela de 30 dias
         if (!dataAcao || !isValidResponsavel(responsavel)) {
           if (responsavel) erros++;
           continue;
