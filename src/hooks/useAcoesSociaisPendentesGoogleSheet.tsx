@@ -403,10 +403,12 @@ export const useAcoesSociaisPendentesGoogleSheet = (
       }
 
       // 4. Buscar hashes existentes no banco
+      const corteAcoes = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10); // janela de 30 dias
       const { data: hashesExistentes, error: hashError } = await supabase
         .from("acoes_sociais_registros")
         .select("hash_deduplicacao")
-        .not("hash_deduplicacao", "is", null);
+        .not("hash_deduplicacao", "is", null)
+        .gte("data_acao", corteAcoes);
 
       if (hashError) {
         throw new Error(`Erro ao buscar hashes: ${hashError.message}`);
@@ -443,6 +445,7 @@ export const useAcoesSociaisPendentesGoogleSheet = (
 
       for (const registro of acoesDaRegional) {
         const dataAcao = registro.data_acao_parsed;
+        if (dataAcao && dataAcao < corteAcoes) continue; // fora da janela de 30 dias
         const responsavel = registro.responsavel;
         const divisaoPlanilha = registro.divisao;
         const tipoAcao = registro.tipo_acao;
