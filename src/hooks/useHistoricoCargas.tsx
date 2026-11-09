@@ -44,7 +44,7 @@ export const useHistoricoCargas = (options?: { enabled?: boolean; regionalId?: s
         );
       }
 
-      const { data: cargas, error } = await supabase
+      const { data: cargas, error } = await (supabase as any)
         .from('cargas_historico')
         .select('data_carga, total_integrantes, divisoes:dados_snapshot->divisoes')
         .eq('tipo_carga', 'integrantes')
@@ -59,9 +59,9 @@ export const useHistoricoCargas = (options?: { enabled?: boolean; regionalId?: s
       }
 
       // Filtrar apenas a última carga de cada mês
-      const cargasPorMes = new Map<string, typeof cargas[0]>();
+      const cargasPorMes = new Map<string, { data_carga: string; total_integrantes: number; divisoes: DivisaoSnapshot[] | null }>();
 
-      cargas.forEach(carga => {
+      (cargas as any[]).forEach((carga: any) => {
         const mesAno = format(new Date(carga.data_carga), 'yyyy-MM');
         
         // Se não existe carga para este mês OU a atual é mais recente
