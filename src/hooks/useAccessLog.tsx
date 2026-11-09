@@ -47,17 +47,19 @@ export const useAccessLog = () => {
 
     lastLogRef.current = { rota, timestamp: now };
 
-    try {
-      await supabase.from("user_access_logs").insert({
+    // Registro em segundo plano: não segura a navegação
+    void supabase
+      .from("user_access_logs")
+      .insert({
         user_id: userId,
         tipo_evento: "page_view",
         rota,
         origem: "frontend",
         user_agent: navigator.userAgent,
+      })
+      .then(({ error }) => {
+        if (error) console.error("[useAccessLog] Error logging page view:", error);
       });
-    } catch (error) {
-      console.error("[useAccessLog] Error logging page view:", error);
-    }
   }, []);
 
   return { logLogin, logPageView };

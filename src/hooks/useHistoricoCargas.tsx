@@ -46,7 +46,7 @@ export const useHistoricoCargas = (options?: { enabled?: boolean; regionalId?: s
 
       const { data: cargas, error } = await supabase
         .from('cargas_historico')
-        .select('data_carga, total_integrantes, dados_snapshot, tipo_carga')
+        .select('data_carga, total_integrantes, divisoes:dados_snapshot->divisoes')
         .eq('tipo_carga', 'integrantes')
         .order('data_carga', { ascending: true });
 
@@ -77,8 +77,7 @@ export const useHistoricoCargas = (options?: { enabled?: boolean; regionalId?: s
 
       // Processar dados filtrados
       const cargasProcessadas: CargaHistorica[] = cargasFiltradas.map((carga) => {
-        const snapshot = carga.dados_snapshot as { divisoes?: DivisaoSnapshot[] };
-        let divisoes = snapshot?.divisoes || [];
+        let divisoes = ((carga as any).divisoes as DivisaoSnapshot[] | null) || [];
         
         // Se temos filtro de regional, filtrar apenas divisões dessa regional
         if (divisoesRegionalSet && divisoesRegionalSet.size > 0) {
