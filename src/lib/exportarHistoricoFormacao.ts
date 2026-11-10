@@ -18,7 +18,7 @@ export function linhasHistoricoFormacao(registros: (TreinamentoHistorico | Estag
     "Grau do estágio": "grau_estagio" in r ? r.grau_estagio : "",
     "Status": r.status,
     "Data de início": dataExcel(r.data_inicio),
-    "Término previsto": "data_termino_previsto" in r ? dataExcel(r.data_termino_previsto) : "",
+    "Término previsto": dataExcel(r.data_termino_previsto),
     "Data de encerramento": dataExcel(r.data_encerramento),
     "Tipo de encerramento": r.tipo_encerramento || "",
     "Solicitante": r.solicitante_nome_colete,
