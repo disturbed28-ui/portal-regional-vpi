@@ -127,7 +127,7 @@ export function HistoricoEstagio({ userId, readOnly = false }: HistoricoEstagioP
               try { await exportarHistoricoFormacao(registrosExportacao, "Estágio"); }
               catch { toast.error("Não foi possível exportar o histórico."); }
             }}>
-            <FileDown className="h-4 w-4 shrink-0" /> Exportar tudo para Excel
+            <FileDown className="h-4 w-4 shrink-0" /> Exportar para Excel
           </Button>
 
           {/* Contador */}

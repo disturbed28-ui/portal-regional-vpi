@@ -127,7 +127,7 @@ export const HistoricoTreinamento = ({ userId, readOnly = false }: HistoricoTrei
               try { await exportarHistoricoFormacao(registrosExportacao, "Treinamento"); }
               catch { toast.error("Não foi possível exportar o histórico."); }
             }}>
-            <FileDown className="h-4 w-4 shrink-0" /> Exportar tudo para Excel
+            <FileDown className="h-4 w-4 shrink-0" /> Exportar para Excel
           </Button>
 
           {/* Contador */}
