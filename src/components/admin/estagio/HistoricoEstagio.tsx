@@ -123,8 +123,8 @@ export function HistoricoEstagio({ userId, readOnly = false }: HistoricoEstagioP
           </div>
 
           <Button variant="outline" className="w-full min-h-10 gap-2" disabled={registrosExportacao.length === 0}
-            onClick={() => {
-              try { exportarHistoricoFormacao(registrosExportacao, "Estágio"); }
+            onClick={async () => {
+              try { await exportarHistoricoFormacao(registrosExportacao, "Estágio"); }
               catch { toast.error("Não foi possível exportar o histórico."); }
             }}>
             <FileDown className="h-4 w-4 shrink-0" /> Exportar tudo para Excel

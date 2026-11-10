@@ -123,8 +123,8 @@ export const HistoricoTreinamento = ({ userId, readOnly = false }: HistoricoTrei
           </div>
 
           <Button variant="outline" className="w-full min-h-10 gap-2" disabled={registrosExportacao.length === 0}
-            onClick={() => {
-              try { exportarHistoricoFormacao(registrosExportacao, "Treinamento"); }
+            onClick={async () => {
+              try { await exportarHistoricoFormacao(registrosExportacao, "Treinamento"); }
               catch { toast.error("Não foi possível exportar o histórico."); }
             }}>
             <FileDown className="h-4 w-4 shrink-0" /> Exportar tudo para Excel
