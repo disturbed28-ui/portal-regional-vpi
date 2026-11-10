@@ -17,8 +17,9 @@ describe("histórico de formação", () => {
     const linhas = linhasHistoricoFormacao([
       { ...base, cargo_treinamento_id: "a", cargo_treinamento_nome: "Social", status: "Em Andamento" },
       { ...base, id: "2", cargo_estagio_id: "b", cargo_estagio_nome: "Diretor", grau_estagio: "VI", status: "Concluído", data_encerramento: "2026-10-31" },
-    ]);
+    ], { p: "VIII" });
     expect(linhas.length).toBe(2);
+    expect(linhas[0]["Grau atual"]).toBe("VIII");
     expect(linhas[0]["Cargo"]).toBe("Social");
     expect(linhas[1]["Cargo"]).toBe("Diretor");
     expect(linhas[1]["Data de encerramento"]).toBe("31/10/2026");
