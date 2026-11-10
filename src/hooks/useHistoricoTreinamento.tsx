@@ -17,6 +17,7 @@ export interface TreinamentoHistorico {
   tipo_encerramento?: string;
   data_inicio: string;
   data_encerramento?: string;
+  data_termino_previsto?: string;
   solicitante_nome_colete: string;
   observacoes?: string;
 }
@@ -78,6 +79,8 @@ export const useHistoricoTreinamento = ({ userId }: UseHistoricoTreinamentoParam
             divisao_id,
             regional_id,
             data_aprovacao,
+            data_inicio_treinamento,
+            data_termino_previsto,
             solicitante_nome_colete,
             integrantes_portal!solicitacoes_treinamento_integrante_id_fkey(nome_colete),
             cargos!solicitacoes_treinamento_cargo_treinamento_id_fkey(nome),
@@ -115,6 +118,7 @@ export const useHistoricoTreinamento = ({ userId }: UseHistoricoTreinamentoParam
             cargos!treinamentos_historico_cargo_treinamento_id_fkey(nome),
             solicitacoes_treinamento!treinamentos_historico_solicitacao_id_fkey(
               solicitante_nome_colete,
+              data_termino_previsto,
               divisao_id,
               regional_id
             )
@@ -137,7 +141,8 @@ export const useHistoricoTreinamento = ({ userId }: UseHistoricoTreinamentoParam
             divisao_nome: sol.divisoes?.nome || "N/A",
             regional_id: sol.regional_id,
             status: "Em Andamento",
-            data_inicio: sol.data_aprovacao || "",
+            data_inicio: sol.data_inicio_treinamento || sol.data_aprovacao || "",
+            data_termino_previsto: sol.data_termino_previsto || undefined,
             solicitante_nome_colete: sol.solicitante_nome_colete,
           });
         });
@@ -168,6 +173,7 @@ export const useHistoricoTreinamento = ({ userId }: UseHistoricoTreinamentoParam
             tipo_encerramento: hist.tipo_encerramento,
             data_inicio: hist.data_inicio || "",
             data_encerramento: hist.data_encerramento,
+            data_termino_previsto: hist.solicitacoes_treinamento?.data_termino_previsto || undefined,
             solicitante_nome_colete: hist.solicitacoes_treinamento?.solicitante_nome_colete || "N/A",
             observacoes: hist.observacoes,
           });
@@ -236,7 +242,7 @@ export const useHistoricoTreinamento = ({ userId }: UseHistoricoTreinamentoParam
   }, [treinamentos]);
 
   return {
-    registrosExportacao: treinamentos,
+    registrosExportacao: treinamentosFiltrados,
     cargosDisponiveis: cargosDoHistorico(treinamentos.map((t) => ({ id: t.cargo_treinamento_id, nome: t.cargo_treinamento_nome }))),
     filtroCargo,
     setFiltroCargo,

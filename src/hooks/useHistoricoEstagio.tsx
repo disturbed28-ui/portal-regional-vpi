@@ -249,7 +249,7 @@ export const useHistoricoEstagio = ({ userId }: UseHistoricoEstagioParams) => {
   }, [estagios]);
 
   return {
-    registrosExportacao: estagios,
+    registrosExportacao: estagiosFiltrados,
     cargosDisponiveis: cargosDoHistorico(estagios.map((e) => ({ id: e.cargo_estagio_id, nome: e.cargo_estagio_nome }))),
     filtroCargo,
     setFiltroCargo,
