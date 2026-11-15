@@ -127,6 +127,13 @@
       "when": 1794236960730,
       "tag": "0017_otimizar_cargas_e_acessos",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794768562208,
+      "tag": "0018_formularios_globais_leitura_autenticada",
+      "breakpoints": true
     }
   ]
 }

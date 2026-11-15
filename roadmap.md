@@ -1,3 +1,6 @@
+# Formulários globais
+- [ ] Corrigir leitura dos globais entre regionais, conferir configuração de INSIGHTS e testar acesso sem ampliar leitura de respostas.
+
 # Relatório CMD — ações sociais
 - [x] Corrigir sobreposição: passivo usava sete dias em períodos CMD de dez dias; intervalos agora separados e IDs já salvos excluídos mesmo com flag pendente (153 registros históricos encontrados, oito na janela atual). Leituras paginadas, sem alteração de registros históricos ou permissões; seis testes passaram em UTC e São Paulo.
 - [x] Botão de excluir com contraste, borda, nome acessível e 44 px; conferido em 360/1280 px, remoção local confirmada sem envio. Compilação OK. Conta atual sem integrante ativo vinculado impede conferir carregamento automático real; falta publicar a tela no portal.

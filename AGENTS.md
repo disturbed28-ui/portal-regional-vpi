@@ -24,3 +24,4 @@
 - Member hierarchy labels are canonicalized from consistent existing organizational IDs by a database trigger without moving members; attendance division matching shares an ID-first helper with text fallback only for unresolved IDs, preventing stale labels from loading another regional's members.
 - Attendance removal dispatches external visitors by presence ID to deletion and registered members by member ID to absence; external visitors have no member identity.
 - First-access registration and profile edits submit contact fields atomically through the authenticated own-profile endpoint; shared validation and explicit post-save profile refresh prevent partial registration and duplicate completion prompts while preserving server-read approval status.
+- Global form catalog visibility is enforced by authenticated RLS across regionals; publishing a global catalog entry never grants access to its underlying responses or bypasses screen permissions.

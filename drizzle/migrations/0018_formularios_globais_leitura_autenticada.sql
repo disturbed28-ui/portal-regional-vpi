@@ -1,0 +1,1 @@
+ALTER POLICY "Usuarios podem ver formularios ativos da sua regional" ON public.formularios_catalogo TO authenticated USING (ativo = true AND (global = true OR regional_id IN (SELECT p.regional_id FROM public.profiles p WHERE p.id = (SELECT auth.uid())::text)));
