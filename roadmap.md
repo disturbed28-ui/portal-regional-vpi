@@ -1,5 +1,5 @@
 # Formulários globais
-- [ ] Corrigir leitura dos globais entre regionais, conferir configuração de INSIGHTS e testar acesso sem ampliar leitura de respostas.
+- [x] Corrigir leitura dos globais entre regionais e marcar INSIGHTS como global; conta autorizada do diretor do Litoral Norte confirmou listagem e abertura de INSIGHTS, PD e Aviso de Deslocamento, sem alterar acesso às respostas.
 
 # Relatório CMD — ações sociais
 - [x] Corrigir sobreposição: passivo usava sete dias em períodos CMD de dez dias; intervalos agora separados e IDs já salvos excluídos mesmo com flag pendente (153 registros históricos encontrados, oito na janela atual). Leituras paginadas, sem alteração de registros históricos ou permissões; seis testes passaram em UTC e São Paulo.
