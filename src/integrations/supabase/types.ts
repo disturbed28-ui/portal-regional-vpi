@@ -4437,6 +4437,7 @@ export type Database = {
         Args: { _integrante_id: string; _user_id: string }
         Returns: boolean
       }
+      is_integrante_ativo: { Args: never; Returns: boolean }
       is_integrante_avaliado_por_dr: {
         Args: { _integrante_id: string }
         Returns: boolean
@@ -4445,6 +4446,7 @@ export type Database = {
         Args: { _integrante_id: string }
         Returns: boolean
       }
+      is_usuario_cadastrado: { Args: never; Returns: boolean }
       mark_conversation_read: {
         Args: { _conversation_id: string }
         Returns: number
