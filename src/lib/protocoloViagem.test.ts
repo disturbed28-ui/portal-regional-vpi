@@ -1,3 +1,4 @@
+// @ts-expect-error bun test runtime
 import { describe, expect, it } from "bun:test";
 import { ordemDestinatarios } from "./protocoloViagem";
 
