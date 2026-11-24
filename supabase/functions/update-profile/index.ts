@@ -18,47 +18,16 @@ async function notifyAdminsNovoCadastroPendente(profileData: any): Promise<void>
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
     
-    // Buscar admins
-    const { data: adminRoles, error: adminError } = await supabaseAdmin
-      .from('user_roles')
-      .select('user_id')
-      .eq('role', 'admin');
-    
-    if (adminError || !adminRoles || adminRoles.length === 0) {
-      console.warn('[update-profile] ⚠️ Nenhum admin encontrado:', adminError);
-      return;
-    }
-    
-    console.log(`[update-profile] 👥 Encontrados ${adminRoles.length} admins`);
-    
-    // Buscar emails dos admins
-    const adminIds = adminRoles.map((r: any) => r.user_id);
-    let adminEmails: string[] = [];
-    
-    // Tentar buscar emails via getUserById
-    const emailPromises = adminIds.map(async (id: string) => {
-      try {
-        const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(id);
-        if (userError) {
-          console.error(`[update-profile] ⚠️ Erro ao buscar usuário ${id}:`, userError);
-          return null;
-        }
-        return userData?.user?.email;
-      } catch (err) {
-        console.error(`[update-profile] ⚠️ Exceção ao buscar usuário ${id}:`, err);
-        return null;
-      }
+    // A mesma seleção server-side usada pelo pedido de análise no WhatsApp.
+    const { data: destinatarios, error: adminError } = await supabaseAdmin.rpc('cadastro_destinatarios', {
+      _user_id: profileData.id, _canal: 'email',
     });
-    
-    const emails = await Promise.all(emailPromises);
-    adminEmails = emails.filter(Boolean) as string[];
-    
-    console.log('[update-profile] 📧 Emails encontrados:', adminEmails);
-    
-    // Fallback: email hardcoded
-    if (adminEmails.length === 0) {
-      console.warn('[update-profile] ⚠️ FALLBACK: Usando email hardcoded');
-      adminEmails = ['diretor.regional.vale1@gmail.com'];
+    if (adminError) throw adminError;
+    const adminEmails = [...new Set<string>((destinatarios ?? [])
+      .map((d: { email: string | null }) => d.email).filter((e: string | null): e is string => !!e))];
+    if (!adminEmails.length) {
+      console.error('[update-profile] Nenhum destinatário de cadastro disponível, inclusive responsável alternativo.');
+      return;
     }
     
     console.log(`[update-profile] ✅ Total de ${adminEmails.length} email(s) para notificação`);
@@ -173,10 +142,12 @@ serve(async (req) => {
     // Verificar se deve notificar admins
     if (data.profile_status === 'Pendente') {
       console.log('[update-profile] 🔔 Status Pendente detectado, disparando notificação...');
-      // Disparar notificação de forma não-bloqueante
-      notifyAdminsNovoCadastroPendente(data).catch(err => {
+      // Mantém a execução depois da resposta, sem bloquear o cadastro.
+      const notificacao = notifyAdminsNovoCadastroPendente(data).catch(err => {
         console.error('[update-profile] ⚠️ Falha ao enviar notificação (não-crítico):', err);
       });
+      // @ts-ignore EdgeRuntime is provided by the hosted function runtime
+      EdgeRuntime.waitUntil(notificacao);
     } else {
       console.log('[update-profile] ℹ️ Status não é Pendente, sem notificação');
     }

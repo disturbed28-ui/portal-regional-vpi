@@ -1,0 +1,2 @@
+GRANT EXECUTE ON FUNCTION public.cadastro_selecionar_destinatarios(jsonb,uuid,text,text) TO authenticated, supabase_read_only_user;
+GRANT EXECUTE ON FUNCTION public.cadastro_destinatarios(text,text) TO supabase_read_only_user;

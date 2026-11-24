@@ -4384,6 +4384,24 @@ export type Database = {
       }
     }
     Functions: {
+      cadastro_destinatarios: {
+        Args: { _canal: string; _user_id: string }
+        Returns: {
+          email: string
+          nome: string
+          profile_id: string
+          telefone: string
+        }[]
+      }
+      cadastro_selecionar_destinatarios: {
+        Args: {
+          _canal: string
+          _candidatos: Json
+          _regional: string
+          _responsavel: string
+        }
+        Returns: Json
+      }
       cargo_normalize: { Args: { cargo_texto: string }; Returns: string }
       delete_conversation: {
         Args: { _conversation_id: string }
