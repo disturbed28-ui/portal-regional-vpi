@@ -25,7 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ACOMPANHANTES, TIPOS_AVISO, intervaloHistorico, montarMensagemAviso, validarAviso, type TipoAviso, type Acompanhante } from "@/lib/avisoDeslocamento";
 import { buildWaMeLink, formatPhoneBR, logEnvioWhatsApp } from "@/lib/whatsapp";
 import {
-  LABEL_DESTINATARIO, montarMensagemProtocolo, resolverDestinatario, formatarDataBR,
+  LABEL_DESTINATARIO, montarMensagemProtocolo, resolverDestinatario, formatarDataBR, destinatarioComAlternativaPropria,
   type MeioTransporte,
 } from "@/lib/protocoloViagem";
 
@@ -140,9 +140,9 @@ const ProtocoloViagem = () => {
     regional_texto: integrante?.regional_texto || profile?.regional || "",
   };
 
-  const { data: destinatario, isLoading: carregandoDest } = useQuery({
-    queryKey: ["protocolo-destinatario", dadosIntegrante.cargo, dadosIntegrante.divisao_id, dadosIntegrante.regional_id, integrante?.grau],
-    enabled: !!(dadosIntegrante.divisao_id || dadosIntegrante.regional_id),
+  const { data: responsavelHierarquico, isPending: carregandoDest, isError: erroDestinatario } = useQuery({
+    queryKey: ["protocolo-destinatario", user?.id, dadosIntegrante.integrante_id, dadosIntegrante.cargo, dadosIntegrante.divisao_id, dadosIntegrante.regional_id, integrante?.grau],
+    enabled: !!user && !!profile,
     queryFn: () =>
       resolverDestinatario({
         cargo: dadosIntegrante.cargo,
@@ -152,6 +152,10 @@ const ProtocoloViagem = () => {
         grau: integrante?.grau ?? null,
       }),
   });
+  const destinatario = !carregandoDest && !erroDestinatario && user
+    ? destinatarioComAlternativaPropria(responsavelHierarquico ?? null, {
+      nome: dadosIntegrante.nome_colete, telefone: profile?.telefone, profileId: user.id,
+    }) : null;
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -413,13 +417,19 @@ const ProtocoloViagem = () => {
               <h2 className="flex items-center gap-2 text-sm font-bold text-primary"><Info className="h-4 w-4" /> Importante</h2>
               {carregandoDest ? (
                 <p className="text-sm text-muted-foreground">Localizando responsável...</p>
+              ) : erroDestinatario ? (
+                <p className="text-sm text-destructive">Não foi possível consultar os responsáveis. Tente novamente em alguns instantes.</p>
               ) : destinatario ? (
                 <>
                   <p className="text-sm">
                     Destinatário: {" "}
                     <strong>{LABEL_DESTINATARIO[destinatario.tipo]} {destinatario.nome}</strong>.
                   </p>
-                  {destinatario.fallback && (
+                  {destinatario.tipo === "proprio" ? (
+                    <p className="text-sm text-muted-foreground">
+                      Nenhum responsável com telefone disponível. O aviso será enviado ao seu próprio WhatsApp para você encaminhar ao responsável.
+                    </p>
+                  ) : destinatario.fallback && (
                     <p className="text-xs text-muted-foreground">
                       {LABEL_DESTINATARIO[destinatario.tipoPreferido]} não localizado ou sem telefone — enviando ao {LABEL_DESTINATARIO[destinatario.tipo]}.
                     </p>
@@ -427,7 +437,7 @@ const ProtocoloViagem = () => {
                 </>
               ) : (
                 <p className="text-sm text-destructive">
-                  Não foi possível localizar um responsável com telefone cadastrado para sua divisão/regional. Procure a administração.
+                  Nenhum responsável com telefone disponível. Cadastre seu telefone no Perfil para enviar ao seu próprio WhatsApp.
                 </p>
               )}
               <Button
@@ -436,7 +446,7 @@ const ProtocoloViagem = () => {
                 disabled={!destinatario?.telefone || enviando}
                 onClick={handleEnviar}
               >
-                <MessageCircle className="h-4 w-4" /> {form.id ? "Reenviar atualização via WhatsApp" : "Enviar via WhatsApp"}
+                <MessageCircle className="h-4 w-4 shrink-0" /> <span className="whitespace-normal">{destinatario?.tipo === "proprio" ? "Enviar ao meu WhatsApp" : form.id ? "Reenviar atualização via WhatsApp" : "Enviar via WhatsApp"}</span>
               </Button>
             </Card>
             </>}

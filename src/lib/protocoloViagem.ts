@@ -8,13 +8,15 @@ export type TipoDestinatario =
   | "sub_diretor"
   | "diretor_divisao"
   | "operacional_regional"
-  | "diretor_regional";
+  | "diretor_regional"
+  | "proprio";
 
 export const LABEL_DESTINATARIO: Record<TipoDestinatario, string> = {
   sub_diretor: "Subdiretor",
   diretor_divisao: "Diretor de Divisão",
   operacional_regional: "Operacional Regional",
   diretor_regional: "Diretor Regional",
+  proprio: "Próprio integrante",
 };
 
 /**
@@ -52,6 +54,8 @@ function casaTipo(cargo: string, tipo: TipoDestinatario): boolean {
       return c.includes("operacional") && c.includes("regional") && !c.includes("cmd");
     case "diretor_regional":
       return c.includes("diretor") && c.includes("regional") && !c.includes("sub");
+    case "proprio":
+      return false;
   }
 }
 
@@ -62,6 +66,21 @@ export interface Destinatario {
   profileId: string | null;
   fallback: boolean;
   tipoPreferido: TipoDestinatario;
+}
+
+/** Só usa o próprio cadastro após uma busca bem-sucedida sem responsável disponível. */
+export function destinatarioComAlternativaPropria(
+  responsavel: Destinatario | null,
+  proprio: { nome: string; telefone: string | null | undefined; profileId: string },
+): Destinatario | null {
+  if (responsavel?.telefone) return responsavel;
+  const telefone = proprio.telefone?.trim();
+  const digitos = telefone?.replace(/\D/g, "") ?? "";
+  const valido = digitos.length === 10 || digitos.length === 11 ||
+    (digitos.startsWith("55") && (digitos.length === 12 || digitos.length === 13));
+  if (!telefone || !valido) return null;
+  return { tipo: "proprio", nome: proprio.nome, telefone, profileId: proprio.profileId,
+    fallback: true, tipoPreferido: "proprio" };
 }
 
 export async function resolverDestinatario(params: {
@@ -87,7 +106,8 @@ export async function resolverDestinatario(params: {
       if (!params.regionalId) continue;
       q = q.eq("regional_id", params.regionalId).ilike("cargo_grau_texto", "%regional%");
     }
-    const { data } = await q;
+    const { data, error } = await q;
+    if (error) throw error;
     const candidatos = (data ?? []).filter(
       (r) => r.id !== params.integranteId && casaTipo(String(r.cargo_grau_texto || ""), tipo),
     );
@@ -96,15 +116,16 @@ export async function resolverDestinatario(params: {
     const ids = candidatos.map((c) => c.profile_id).filter((x): x is string => !!x);
     const tel = new Map<string, string | null>();
     if (ids.length) {
-      const { data: perfis } = await supabase.from("profiles").select("id, telefone").in("id", ids);
+      const { data: perfis, error: erroPerfis } = await supabase.from("profiles").select("id, telefone").in("id", ids);
+      if (erroPerfis) throw erroPerfis;
       (perfis ?? []).forEach((p) => tel.set(p.id, p.telefone ?? null));
     }
     const comTel = candidatos.find((c) => c.profile_id && tel.get(c.profile_id));
-    if (!comTel) continue; // sem telefone, tenta o próximo nível
+    if (!comTel?.profile_id) continue; // sem telefone, tenta o próximo nível
     return {
       tipo,
       nome: comTel.nome_colete,
-      telefone: tel.get(comTel.profile_id!) ?? null,
+      telefone: tel.get(comTel.profile_id) ?? null,
       profileId: comTel.profile_id,
       fallback: i > 0,
       tipoPreferido: ordem[0],

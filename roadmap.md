@@ -30,9 +30,10 @@
 - [ ] Concluir alinhamento semântico dos temas e independência das consultas históricas da planilha; implementação atual documentada em docs/pesquisa-ciclos-entrega.md.
 
 # Aviso de Deslocamento
+- [x] Permitir envio ao próprio WhatsApp nos três tipos quando nenhum responsável tiver telefone; responsáveis existentes preservados. 16 testes passaram; três opções conferidas autenticadas, aviso temporário salvo (201), telefone/link próprios e histórico confirmados, teste removido. Celular e computador conferidos; falta publicar.
 - [x] Renomear formulário e manter Protocolo de viagem; adicionar avisos dentro da regional e entre regionais, sem data/hora.
 - [x] Preservar histórico e permissões; filtrar por tipo, mês ou período; quatro testes passaram e tela autenticada conferida em desktop e celular sem transbordamento.
-- [ ] Conferir envio e leitura de um novo aviso: sessão disponível é CMD, sem responsável com telefone nesse escopo; envio bloqueado corretamente. Falta publicar a tela no portal.
+- [x] Conferir envio e leitura de um novo aviso: sessão CMD sem responsável usou a alternativa ao próprio WhatsApp; aviso temporário salvo e lido no histórico, link próprio confirmado sem enviar mensagem real e registro de teste removido. Falta publicar a tela no portal.
 
 # Históricos de Treinamento e Estágio
 - [x] Adicionar filtro pelo cargo treinado/estagiado, preservando os demais filtros e acesso; filtros conferidos na sessão autenticada e no celular de 360 px sem rolagem horizontal.

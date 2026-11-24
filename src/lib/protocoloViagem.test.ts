@@ -1,6 +1,6 @@
 // @ts-expect-error bun test runtime
 import { describe, expect, it } from "bun:test";
-import { ordemDestinatarios } from "./protocoloViagem";
+import { destinatarioComAlternativaPropria, ordemDestinatarios, type Destinatario } from "./protocoloViagem";
 
 describe("ordemDestinatarios", () => {
   it("integrante comum: subdiretor primeiro, diretor da divisão se não houver subdiretor", () => {
@@ -46,5 +46,29 @@ describe("ordemDestinatarios", () => {
       "operacional_regional",
       "diretor_regional",
     ]);
+  });
+});
+
+describe("alternativa ao próprio WhatsApp nos avisos", () => {
+  const proprio = { nome: "Integrante", telefone: "12999998888", profileId: "remetente" };
+  it("sem responsável, usa o telefone e identidade do próprio remetente", () => {
+    expect(destinatarioComAlternativaPropria(null, proprio)).toMatchObject({
+      tipo: "proprio", nome: "Integrante", telefone: "12999998888", profileId: "remetente", fallback: true,
+    });
+  });
+  it("preserva o responsável disponível em vez de enviar para si mesmo", () => {
+    const responsavel: Destinatario = { tipo: "diretor_divisao", nome: "Diretor", telefone: "12988887777",
+      profileId: "diretor", fallback: true, tipoPreferido: "sub_diretor" };
+    expect(destinatarioComAlternativaPropria(responsavel, proprio)).toBe(responsavel);
+  });
+  it("responsável sem telefone permite a alternativa própria", () => {
+    const responsavel: Destinatario = { tipo: "sub_diretor", nome: "Subdiretor", telefone: null,
+      profileId: null, fallback: false, tipoPreferido: "sub_diretor" };
+    expect(destinatarioComAlternativaPropria(responsavel, proprio)?.telefone).toBe("12999998888");
+  });
+  it("sem telefone próprio válido, não inventa um destinatário", () => {
+    for (const telefone of [null, "", "   ", "N/A", "123", "123456789012"]) {
+      expect(destinatarioComAlternativaPropria(null, { ...proprio, telefone })).toBeNull();
+    }
   });
 });
