@@ -4560,6 +4560,14 @@ export type Database = {
         Args: { _divisao_id: string; _regional_id: string }
         Returns: boolean
       }
+      resolver_cargo_id_integrante: {
+        Args: {
+          p_cargo_grau_texto: string
+          p_cargo_nome: string
+          p_grau: string
+        }
+        Returns: string
+      }
       unaccent: { Args: { "": string }; Returns: string }
       user_grau_num: { Args: { _user_id: string }; Returns: number }
       user_has_screen_permission:
